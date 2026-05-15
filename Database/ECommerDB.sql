@@ -1,0 +1,76 @@
+-- 1. Nhóm Người dùng
+CREATE TABLE Roles (RoleId SERIAL PRIMARY KEY, RoleName VARCHAR(50) NOT NULL);
+CREATE TABLE Users (UserId SERIAL PRIMARY KEY, RoleId INT, Username VARCHAR(50) NOT NULL UNIQUE, PasswordHash VARCHAR(255) NOT NULL, FullName VARCHAR(100) NOT NULL, Email VARCHAR(100), Phone VARCHAR(20), CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, IsActive BOOLEAN DEFAULT TRUE);
+CREATE TABLE Customers (CustomerId SERIAL PRIMARY KEY, FullName VARCHAR(100) NOT NULL, Phone VARCHAR(20) NOT NULL UNIQUE, Email VARCHAR(100), Address VARCHAR(255), CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+
+-- 2. Nhóm Danh mục & Thuộc tính
+CREATE TABLE Categories (CategoryId SERIAL PRIMARY KEY, CategoryName VARCHAR(100) NOT NULL, Description TEXT);
+CREATE TABLE Brands (BrandId SERIAL PRIMARY KEY, BrandName VARCHAR(100) NOT NULL);
+CREATE TABLE Attributes (AttributeId SERIAL PRIMARY KEY, AttributeName VARCHAR(50) NOT NULL);
+CREATE TABLE AttributeValues (ValueId SERIAL PRIMARY KEY, AttributeId INT, ValueName VARCHAR(50) NOT NULL);
+CREATE TABLE ProductConditions (ConditionId SERIAL PRIMARY KEY, ConditionName VARCHAR(50) NOT NULL, Description VARCHAR(255));
+
+-- 3. Nhóm Sản phẩm & Biến thể
+CREATE TABLE Products (ProductId SERIAL PRIMARY KEY, CategoryId INT, BrandId INT, ProductName VARCHAR(200) NOT NULL, Description TEXT, CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE ProductVariants (VariantId SERIAL PRIMARY KEY, ProductId INT, ConditionId INT, SKU VARCHAR(50) UNIQUE, BasePrice DECIMAL(18,2) NOT NULL, SalePrice DECIMAL(18,2));
+CREATE TABLE VariantAttributeValues (VariantId INT, ValueId INT, PRIMARY KEY (VariantId, ValueId));
+CREATE TABLE ProductImages (ImageId SERIAL PRIMARY KEY, VariantId INT, ImageUrl VARCHAR(500) NOT NULL, IsMain BOOLEAN DEFAULT FALSE);
+
+-- 4. Nhóm Nhập hàng
+CREATE TABLE Suppliers (SupplierId SERIAL PRIMARY KEY, SupplierName VARCHAR(150) NOT NULL, ContactPhone VARCHAR(20), Address VARCHAR(255));
+CREATE TABLE PurchaseOrders (POId SERIAL PRIMARY KEY, SupplierId INT, UserId INT, ImportDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP, TotalAmount DECIMAL(18,2) NOT NULL, TaxFee DECIMAL(18,2) DEFAULT 0, ShippingFee DECIMAL(18,2) DEFAULT 0, Status VARCHAR(50));
+CREATE TABLE PurchaseOrderDetails (PODetailId SERIAL PRIMARY KEY, POId INT, VariantId INT, Quantity INT NOT NULL, ImportPrice DECIMAL(18,2) NOT NULL);
+
+-- 5. Nhóm Kho & IMEI
+CREATE TABLE InventoryItems (IMEI VARCHAR(50) PRIMARY KEY, VariantId INT, PODetailId INT, Status VARCHAR(50) DEFAULT 'InStock', ImportedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+
+-- 6. Nhóm Bán hàng
+CREATE TABLE WarrantyPackages (PackageId SERIAL PRIMARY KEY, PackageName VARCHAR(100) NOT NULL, DurationMonths INT NOT NULL, Price DECIMAL(18,2) NOT NULL);
+CREATE TABLE Vouchers (VoucherCode VARCHAR(50) PRIMARY KEY, DiscountAmount DECIMAL(18,2), DiscountPercentage FLOAT, ValidFrom TIMESTAMP, ValidTo TIMESTAMP, IsActive BOOLEAN DEFAULT TRUE);
+CREATE TABLE Orders (OrderId SERIAL PRIMARY KEY, CustomerId INT, UserId INT, VoucherCode VARCHAR(50), OrderDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP, TotalAmount DECIMAL(18,2) NOT NULL, DiscountAmount DECIMAL(18,2) DEFAULT 0, FinalAmount DECIMAL(18,2) NOT NULL, PaymentMethod VARCHAR(50), OrderStatus VARCHAR(50));
+CREATE TABLE OrderItems (OrderItemId SERIAL PRIMARY KEY, OrderId INT, IMEI VARCHAR(50), PackageId INT, SellingPrice DECIMAL(18,2) NOT NULL, WarrantyPrice DECIMAL(18,2) DEFAULT 0);
+
+-- 7. Nhóm Hậu mãi & Hệ thống
+CREATE TABLE Warranties (WarrantyId SERIAL PRIMARY KEY, IMEI VARCHAR(50), CustomerId INT, StartDate TIMESTAMP NOT NULL, EndDate TIMESTAMP NOT NULL, Status VARCHAR(50));
+CREATE TABLE Reviews (ReviewId SERIAL PRIMARY KEY, VariantId INT, CustomerId INT, Rating INT CHECK (Rating >= 1 AND Rating <= 5), Comment TEXT, CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE AuditLogs (LogId SERIAL PRIMARY KEY, UserId INT, Action VARCHAR(100) NOT NULL, TableName VARCHAR(50), RecordId VARCHAR(50), CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+
+-- 8. Quản lý Nội dung
+CREATE TABLE Sliders (SliderId SERIAL PRIMARY KEY, Title VARCHAR(200), ImageUrl VARCHAR(500) NOT NULL, LinkUrl VARCHAR(500), DisplayOrder INT DEFAULT 0, IsActive BOOLEAN DEFAULT TRUE, CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE Banners (BannerId SERIAL PRIMARY KEY, Position VARCHAR(50), ImageUrl VARCHAR(500) NOT NULL, LinkUrl VARCHAR(500), IsActive BOOLEAN DEFAULT TRUE);
+CREATE TABLE News (PostId SERIAL PRIMARY KEY, UserId INT, Title VARCHAR(255) NOT NULL, Summary VARCHAR(500), Content TEXT, Thumbnail VARCHAR(500), CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, IsActive BOOLEAN DEFAULT TRUE);
+
+-- 9. Nhóm Chatbot
+CREATE TABLE ChatSessions (SessionId SERIAL PRIMARY KEY, CustomerId INT, GuestSessionToken VARCHAR(255), StartTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP, EndTime TIMESTAMP, Status VARCHAR(50) DEFAULT 'Active');
+CREATE TABLE ChatMessages (MessageId SERIAL PRIMARY KEY, SessionId INT, SenderType VARCHAR(50) NOT NULL, MessageContent TEXT NOT NULL, SentAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+
+-- NỐI KHÓA NGOẠI
+ALTER TABLE Users ADD CONSTRAINT FK_Users_Roles FOREIGN KEY (RoleId) REFERENCES Roles(RoleId);
+ALTER TABLE AttributeValues ADD CONSTRAINT FK_AttrValues_Attributes FOREIGN KEY (AttributeId) REFERENCES Attributes(AttributeId);
+ALTER TABLE Products ADD CONSTRAINT FK_Products_Categories FOREIGN KEY (CategoryId) REFERENCES Categories(CategoryId);
+ALTER TABLE Products ADD CONSTRAINT FK_Products_Brands FOREIGN KEY (BrandId) REFERENCES Brands(BrandId);
+ALTER TABLE ProductVariants ADD CONSTRAINT FK_Variants_Products FOREIGN KEY (ProductId) REFERENCES Products(ProductId);
+ALTER TABLE ProductVariants ADD CONSTRAINT FK_Variants_Conditions FOREIGN KEY (ConditionId) REFERENCES ProductConditions(ConditionId);
+ALTER TABLE VariantAttributeValues ADD CONSTRAINT FK_VarAttr_Variants FOREIGN KEY (VariantId) REFERENCES ProductVariants(VariantId);
+ALTER TABLE VariantAttributeValues ADD CONSTRAINT FK_VarAttr_AttrValues FOREIGN KEY (ValueId) REFERENCES AttributeValues(ValueId);
+ALTER TABLE ProductImages ADD CONSTRAINT FK_Images_Variants FOREIGN KEY (VariantId) REFERENCES ProductVariants(VariantId);
+ALTER TABLE PurchaseOrders ADD CONSTRAINT FK_PO_Suppliers FOREIGN KEY (SupplierId) REFERENCES Suppliers(SupplierId);
+ALTER TABLE PurchaseOrders ADD CONSTRAINT FK_PO_Users FOREIGN KEY (UserId) REFERENCES Users(UserId);
+ALTER TABLE PurchaseOrderDetails ADD CONSTRAINT FK_PODetails_PO FOREIGN KEY (POId) REFERENCES PurchaseOrders(POId);
+ALTER TABLE PurchaseOrderDetails ADD CONSTRAINT FK_PODetails_Variants FOREIGN KEY (VariantId) REFERENCES ProductVariants(VariantId);
+ALTER TABLE InventoryItems ADD CONSTRAINT FK_Inventory_Variants FOREIGN KEY (VariantId) REFERENCES ProductVariants(VariantId);
+ALTER TABLE InventoryItems ADD CONSTRAINT FK_Inventory_PODetails FOREIGN KEY (PODetailId) REFERENCES PurchaseOrderDetails(PODetailId);
+ALTER TABLE Orders ADD CONSTRAINT FK_Orders_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(CustomerId);
+ALTER TABLE Orders ADD CONSTRAINT FK_Orders_Users FOREIGN KEY (UserId) REFERENCES Users(UserId);
+ALTER TABLE Orders ADD CONSTRAINT FK_Orders_Vouchers FOREIGN KEY (VoucherCode) REFERENCES Vouchers(VoucherCode);
+ALTER TABLE OrderItems ADD CONSTRAINT FK_OrderItems_Orders FOREIGN KEY (OrderId) REFERENCES Orders(OrderId);
+ALTER TABLE OrderItems ADD CONSTRAINT FK_OrderItems_Inventory FOREIGN KEY (IMEI) REFERENCES InventoryItems(IMEI);
+ALTER TABLE OrderItems ADD CONSTRAINT FK_OrderItems_Packages FOREIGN KEY (PackageId) REFERENCES WarrantyPackages(PackageId);
+ALTER TABLE Warranties ADD CONSTRAINT FK_Warranties_Inventory FOREIGN KEY (IMEI) REFERENCES InventoryItems(IMEI);
+ALTER TABLE Warranties ADD CONSTRAINT FK_Warranties_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(CustomerId);
+ALTER TABLE Reviews ADD CONSTRAINT FK_Reviews_Variants FOREIGN KEY (VariantId) REFERENCES ProductVariants(VariantId);
+ALTER TABLE Reviews ADD CONSTRAINT FK_Reviews_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(CustomerId);
+ALTER TABLE AuditLogs ADD CONSTRAINT FK_AuditLogs_Users FOREIGN KEY (UserId) REFERENCES Users(UserId);
+ALTER TABLE News ADD CONSTRAINT FK_News_Users FOREIGN KEY (UserId) REFERENCES Users(UserId);
+ALTER TABLE ChatSessions ADD CONSTRAINT FK_ChatSessions_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(CustomerId);
+ALTER TABLE ChatMessages ADD CONSTRAINT FK_ChatMessages_ChatSessions FOREIGN KEY (SessionId) REFERENCES ChatSessions(SessionId);

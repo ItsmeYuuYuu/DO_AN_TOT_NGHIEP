@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { Skeleton } from '@/components/Skeleton';
-import { Button } from '@/components/Button';
 
 const CustomerHome: React.FC = () => {
   const { products, loading } = useProducts();
@@ -29,9 +28,12 @@ const CustomerHome: React.FC = () => {
                   <p className="text-white/80 text-sm mb-6 hidden md:block leading-relaxed">
                     Đẳng cấp công nghệ mới với khung viền Titan siêu bền, chip A17 Pro mạnh mẽ nhất.
                   </p>
-                  <Button size="lg" className="bg-white text-blue-600 hover:bg-slate-100 border-none shadow-lg">
-                    MUA NGAY CHỈ TỪ 24.990K
-                  </Button>
+                  <Link
+                    to="/products"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-700 font-black text-sm rounded-xl shadow-xl hover:bg-yellow-400 hover:text-blue-900 transition-all duration-200 hover:-translate-y-0.5"
+                  >
+                    MUA NGAY CHỈ TỪ 24.990K →
+                  </Link>
                 </div>
               </div>
               {/* Decorative graphic element */}
@@ -40,10 +42,10 @@ const CustomerHome: React.FC = () => {
 
             {/* Side Banners */}
             <div className="hidden lg:flex flex-col gap-4">
-              <div className="flex-1 bg-red-500 rounded-xl p-6 relative overflow-hidden shadow-sm group cursor-pointer">
-                <h4 className="text-white font-bold text-lg mb-1 relative z-10">Laptop Gaming</h4>
-                <p className="text-white/80 text-xs relative z-10">Giảm đến 5 triệu đồng</p>
-                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
+              <div className="flex-1 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-6 relative overflow-hidden shadow-sm group cursor-pointer">
+                <h4 className="text-white font-bold text-lg mb-1 relative z-10">Thu cũ đổi mới</h4>
+                <p className="text-white/90 text-xs relative z-10">Trợ giá lên đến 2 triệu đồng</p>
+                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/20 rounded-full group-hover:scale-150 transition-transform duration-500" />
               </div>
               <div className="flex-1 bg-slate-900 rounded-xl p-6 relative overflow-hidden shadow-sm group cursor-pointer">
                 <h4 className="text-white font-bold text-lg mb-1 relative z-10">Phụ kiện Apple</h4>
@@ -115,8 +117,8 @@ const CustomerHome: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           {[
             { name: 'iPhone', icon: '📱' },
-            { name: 'Macbook', icon: '💻' },
-            { name: 'iPad', icon: '📠' },
+            { name: 'Samsung', icon: '📲' },
+            { name: 'iPad', icon: '平板' },
             { name: 'AirPods', icon: '🎧' },
             { name: 'Watch', icon: '⌚' },
             { name: 'Cáp, sạc', icon: '🔌' },

@@ -7,6 +7,7 @@ import { Pagination } from '@/components/Pagination';
 import { usersApi } from '@/features/users/api/usersApi';
 import type { UserItem } from '@/features/users/api/usersApi';
 import { formatDate } from '@/utils/formatters';
+import { Users, UserCheck } from 'lucide-react';
 
 const PAGE_SIZE = 10;
 
@@ -16,10 +17,13 @@ const roleColors: Record<string, string> = {
   Customer: 'bg-slate-100 text-slate-600 border border-slate-200',
 };
 
+type Tab = 'staff' | 'customer';
+
 const AdminUsers: React.FC = () => {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('staff');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -41,7 +45,13 @@ const AdminUsers: React.FC = () => {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  const filtered = users.filter(u =>
+  // Split by role
+  const staffUsers    = users.filter(u => (u.roleid ?? 0) <= 2);    // Admin + Staff
+  const customerUsers = users.filter(u => (u.roleid ?? 0) === 3);   // Customer
+
+  const source = tab === 'staff' ? staffUsers : customerUsers;
+
+  const filtered = source.filter(u =>
     u.username.toLowerCase().includes(search.toLowerCase()) ||
     u.fullname.toLowerCase().includes(search.toLowerCase()) ||
     (u.email ?? '').toLowerCase().includes(search.toLowerCase())
@@ -49,7 +59,11 @@ const AdminUsers: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const openCreate = () => { setEditing({ isactive: true, roleid: 3 }); setModalOpen(true); };
+  const openCreate = () => {
+    // preset roleid based on current tab
+    setEditing({ isactive: true, roleid: tab === 'staff' ? 2 : 3 });
+    setModalOpen(true);
+  };
   const openEdit = (u: UserItem) => { setEditing({ ...u }); setModalOpen(true); };
   const closeModal = () => { setModalOpen(false); setEditing(null); };
 
@@ -166,14 +180,57 @@ const AdminUsers: React.FC = () => {
     },
   ];
 
+  const handleTabChange = (t: Tab) => {
+    setTab(t);
+    setSearch('');
+    setPage(1);
+  };
+
   return (
     <div className="space-y-5">
+      {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-black text-slate-800">Quản lý Tài khoản</h2>
-          <p className="text-sm text-slate-500">{filtered.length} tài khoản</p>
+          <p className="text-sm text-slate-500">
+            {staffUsers.length} nhân viên · {customerUsers.length} khách hàng
+          </p>
         </div>
-        <Button size="sm" onClick={openCreate}>+ Thêm tài khoản</Button>
+        <Button size="sm" onClick={openCreate}>
+          + Thêm {tab === 'staff' ? 'nhân viên' : 'khách hàng'}
+        </Button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => handleTabChange('staff')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            tab === 'staff'
+              ? 'bg-white text-blue-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <UserCheck size={16} />
+          Nhân Viên
+          <span className={`text-xs px-1.5 py-0.5 rounded-full font-black ${tab === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'}`}>
+            {staffUsers.length}
+          </span>
+        </button>
+        <button
+          onClick={() => handleTabChange('customer')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            tab === 'customer'
+              ? 'bg-white text-emerald-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Users size={16} />
+          Khách Hàng
+          <span className={`text-xs px-1.5 py-0.5 rounded-full font-black ${tab === 'customer' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
+            {customerUsers.length}
+          </span>
+        </button>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
@@ -181,7 +238,7 @@ const AdminUsers: React.FC = () => {
       <div className="bg-white rounded-xl border border-slate-200 p-4">
         <div className="max-w-sm">
           <Input
-            placeholder="Tìm theo tên, username, email..."
+            placeholder={`Tìm ${tab === 'staff' ? 'nhân viên' : 'khách hàng'} theo tên, username, email...`}
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
@@ -192,7 +249,7 @@ const AdminUsers: React.FC = () => {
 
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} itemCount={filtered.length} pageSize={PAGE_SIZE} />
 
-      <Modal isOpen={modalOpen} onClose={closeModal} title={editing?.userid ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản mới'}>
+      <Modal isOpen={modalOpen} onClose={closeModal} title={editing?.userid ? 'Chỉnh sửa tài khoản' : `Thêm ${tab === 'staff' ? 'nhân viên' : 'khách hàng'}`}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <Input label="Tên đăng nhập *" value={editing?.username ?? ''} onChange={e => setEditing(p => ({ ...p, username: e.target.value }))} placeholder="username" />
@@ -207,12 +264,17 @@ const AdminUsers: React.FC = () => {
             <label className="text-sm font-medium text-slate-700 block mb-1.5">Vai trò</label>
             <select
               className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500"
-              value={editing?.roleid ?? 3}
+              value={editing?.roleid ?? (tab === 'staff' ? 2 : 3)}
               onChange={e => setEditing(p => ({ ...p, roleid: parseInt(e.target.value) }))}
             >
-              <option value={1}>Admin</option>
-              <option value={2}>Staff</option>
-              <option value={3}>Customer</option>
+              {tab === 'staff' ? (
+                <>
+                  <option value={1}>Admin</option>
+                  <option value={2}>Staff</option>
+                </>
+              ) : (
+                <option value={3}>Customer</option>
+              )}
             </select>
           </div>
           <div className="flex gap-3 pt-2">

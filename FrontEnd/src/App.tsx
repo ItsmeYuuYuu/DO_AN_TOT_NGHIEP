@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import AuthGuard from '@/components/AuthGuard';
 
 // ── Layouts ───────────────────────────────────────────────────────────────────
@@ -7,7 +7,7 @@ import { CustomerLayout } from '@/layouts/CustomerLayout';
 import { AdminLayout }    from '@/layouts/AdminLayout';
 import { StaffLayout }    from '@/layouts/StaffLayout';
 
-// ── Page loader skeleton ──────────────────────────────────────────────────────
+// ── Skeleton loader ───────────────────────────────────────────────────────────
 const PageLoader = () => (
   <div className="min-h-screen bg-slate-50 flex items-center justify-center">
     <div className="space-y-3 w-full max-w-2xl px-8">
@@ -21,12 +21,15 @@ const PageLoader = () => (
   </div>
 );
 
-// ── Lazy pages ────────────────────────────────────────────────────────────────
-// Customer
-const CustomerHome    = lazy(() => import('@/portals/customer/CustomerHome'));
-const LoginPage       = lazy(() => import('@/portals/customer/LoginPage'));
+// ── Customer pages ────────────────────────────────────────────────────────────
+const CustomerHome      = lazy(() => import('@/portals/customer/CustomerHome'));
+const LoginPage         = lazy(() => import('@/portals/customer/LoginPage'));
+const ProductDetailPage = lazy(() => import('@/portals/customer/ProductDetailPage'));
+const CartPage          = lazy(() => import('@/portals/customer/CartPage'));
+const CheckoutPage      = lazy(() => import('@/portals/customer/CheckoutPage'));
+const ProfilePage       = lazy(() => import('@/portals/customer/ProfilePage'));
 
-// Admin
+// ── Admin pages ───────────────────────────────────────────────────────────────
 const AdminDashboard     = lazy(() => import('@/portals/admin/AdminDashboard'));
 const AdminProducts      = lazy(() => import('@/portals/admin/AdminProducts'));
 const AdminOrders        = lazy(() => import('@/portals/admin/AdminOrders'));
@@ -34,54 +37,54 @@ const AdminUsers         = lazy(() => import('@/portals/admin/AdminUsers'));
 const AdminCategoryBrand = lazy(() => import('@/portals/admin/AdminCategoryBrand'));
 const AdminCustomers     = lazy(() => import('@/portals/admin/AdminCustomers'));
 
-// Staff
+// ── Staff pages ───────────────────────────────────────────────────────────────
 const StaffOrders = lazy(() => import('@/portals/staff/StaffOrders'));
 
-// Misc
+// ── Misc ─────────────────────────────────────────────────────────────────────
 const UnauthorizedPage = lazy(() => import('@/portals/UnauthorizedPage'));
 
-// ── App ───────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
 
-          {/* ═══ PUBLIC — Customer Portal ════════════════════════════════════ */}
-          <Route path="/" element={<CustomerLayout />}>
-            <Route index element={<CustomerHome />} />
-            <Route path="auth/login" element={<LoginPage />} />
-            {/* TODO: /products/:id, /cart, /checkout, /account/orders */}
+        {/* ═══ PUBLIC — Customer Portal ════════════════════════════════════ */}
+        <Route path="/" element={<CustomerLayout />}>
+          <Route index                    element={<CustomerHome />} />
+          <Route path="auth/login"        element={<LoginPage />} />
+          <Route path="product/:id"       element={<ProductDetailPage />} />
+          <Route path="cart"              element={<CartPage />} />
+          <Route path="checkout"          element={<CheckoutPage />} />
+          <Route path="profile"           element={<ProfilePage />} />
+        </Route>
+
+        {/* ═══ PROTECTED — Admin ═══════════════════════════════════════════ */}
+        <Route element={<AuthGuard allowedRoles={['Admin']} />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index                  element={<AdminDashboard />} />
+            <Route path="products"        element={<AdminProducts />} />
+            <Route path="orders"          element={<AdminOrders />} />
+            <Route path="users"           element={<AdminUsers />} />
+            <Route path="customers"       element={<AdminCustomers />} />
+            <Route path="categories"      element={<AdminCategoryBrand />} />
+            <Route path="brands"          element={<Navigate to="/admin/categories" replace />} />
           </Route>
+        </Route>
 
-          {/* ═══ PROTECTED — Admin (role: Admin only) ════════════════════════ */}
-          <Route element={<AuthGuard allowedRoles={['Admin']} />}>
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="products"   element={<AdminProducts />} />
-              <Route path="orders"     element={<AdminOrders />} />
-              <Route path="users"      element={<AdminUsers />} />
-              <Route path="customers"  element={<AdminCustomers />} />
-              <Route path="categories" element={<AdminCategoryBrand />} />
-              <Route path="brands"     element={<Navigate to="/admin/categories" replace />} />
-            </Route>
+        {/* ═══ PROTECTED — Staff ═══════════════════════════════════════════ */}
+        <Route element={<AuthGuard allowedRoles={['Admin', 'Staff']} />}>
+          <Route path="/staff" element={<StaffLayout />}>
+            <Route index element={<StaffOrders />} />
           </Route>
+        </Route>
 
-          {/* ═══ PROTECTED — Staff (role: Admin or Staff) ════════════════════ */}
-          <Route element={<AuthGuard allowedRoles={['Admin', 'Staff']} />}>
-            <Route path="/staff" element={<StaffLayout />}>
-              <Route index element={<StaffOrders />} />
-              {/* TODO: /staff/inventory, /staff/purchase-orders */}
-            </Route>
-          </Route>
+        {/* ═══ Utility ═════════════════════════════════════════════════════ */}
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        <Route path="*"             element={<Navigate to="/" replace />} />
 
-          {/* ═══ Utility routes ══════════════════════════════════════════════ */}
-          <Route path="/unauthorized" element={<UnauthorizedPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+      </Routes>
+    </Suspense>
   );
 };
 

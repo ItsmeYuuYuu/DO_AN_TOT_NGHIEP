@@ -6,6 +6,7 @@ import {
   isAuthenticated,
   type AuthUser,
 } from '../utils/authUtils';
+import { authApi } from '../api/authApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AuthContextValue {
@@ -44,7 +45,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshAuth();
   }, [refreshAuth]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.warn('Logout API failed or endpoint missing, clearing local session anyway.');
+    }
     const role = user?.rolename;
     clearSession();
     setUser(null);

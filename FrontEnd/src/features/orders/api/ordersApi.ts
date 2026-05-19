@@ -30,6 +30,6 @@ export const ordersApi = {
   getByCustomer: (customerId: number) => apiClient.get<Order[]>(`/Orders/customer/${customerId}`),
   create: (data: Partial<Order>) => apiClient.post<Order>('/Orders', data),
   update: (id: number, data: Partial<Order>) => apiClient.put(`/Orders/${id}`, data),
-  updateStatus: (id: number, status: string) => apiClient.patch(`/Orders/${id}/status`, JSON.stringify(status)),
+  updateStatus: (id: number, status: string) => apiClient.patch(`/Orders/${id}/status`, { status }),
   delete: (id: number) => apiClient.delete(`/Orders/${id}`),
 };

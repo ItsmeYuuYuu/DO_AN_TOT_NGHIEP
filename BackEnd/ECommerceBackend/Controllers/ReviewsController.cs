@@ -1,6 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
+using ECommerceBackend.DTOs.Reviews;
+using Microsoft.AspNetCore.Authorization;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace ECommerceBackend.Controllers
 {
@@ -12,53 +18,110 @@ namespace ECommerceBackend.Controllers
 
         public ReviewsController(ECommerceContext context) => _context = context;
 
+        private static ReviewDto MapToDto(Review r) => new ReviewDto(
+            r.Reviewid,
+            r.Variantid,
+            r.Customerid,
+            r.Rating,
+            r.Comment,
+            r.Createdat,
+            r.Customer?.Fullname,
+            r.Variant?.Sku
+        );
+
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Review>>> GetReviews()
-            => await _context.Reviews.Include(r => r.Customer).Include(r => r.Variant).ToListAsync();
+        public async Task<ActionResult<IEnumerable<ReviewDto>>> GetReviews()
+        {
+            var reviews = await _context.Reviews
+                .Include(r => r.Customer)
+                .Include(r => r.Variant)
+                .ToListAsync();
+            return Ok(reviews.Select(MapToDto));
+        }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Review>> GetReview(int id)
+        public async Task<ActionResult<ReviewDto>> GetReview(int id)
         {
-            var review = await _context.Reviews.Include(r => r.Customer).Include(r => r.Variant)
+            var review = await _context.Reviews
+                .Include(r => r.Customer)
+                .Include(r => r.Variant)
                 .FirstOrDefaultAsync(r => r.Reviewid == id);
+
             if (review == null) return NotFound();
-            return review;
+            return Ok(MapToDto(review));
         }
 
         [HttpGet("variant/{variantId}")]
-        public async Task<ActionResult<IEnumerable<Review>>> GetReviewsByVariant(int variantId)
-            => await _context.Reviews.Include(r => r.Customer)
+        public async Task<ActionResult<IEnumerable<ReviewDto>>> GetReviewsByVariant(int variantId)
+        {
+            var reviews = await _context.Reviews
+                .Include(r => r.Customer)
+                .Include(r => r.Variant)
                 .Where(r => r.Variantid == variantId)
                 .OrderByDescending(r => r.Createdat)
                 .ToListAsync();
+            return Ok(reviews.Select(MapToDto));
+        }
 
         [HttpPost]
-        public async Task<ActionResult<Review>> PostReview(Review review)
+        [Authorize]
+        public async Task<ActionResult<ReviewDto>> PostReview([FromBody] CreateReviewRequestDto dto)
         {
+            var review = new Review
+            {
+                Variantid = dto.Variantid,
+                Customerid = dto.Customerid,
+                Rating = dto.Rating,
+                Comment = dto.Comment,
+                Createdat = DateTime.UtcNow
+            };
+
             _context.Reviews.Add(review);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetReview), new { id = review.Reviewid }, review);
+
+            var createdReview = await _context.Reviews
+                .Include(r => r.Customer)
+                .Include(r => r.Variant)
+                .FirstOrDefaultAsync(r => r.Reviewid == review.Reviewid);
+
+            return CreatedAtAction(nameof(GetReview), new { id = review.Reviewid }, MapToDto(createdReview!));
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutReview(int id, Review review)
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> PutReview(int id, [FromBody] UpdateReviewRequestDto dto)
         {
-            if (id != review.Reviewid) return BadRequest();
-            _context.Entry(review).State = EntityState.Modified;
-            try { await _context.SaveChangesAsync(); }
+            var review = await _context.Reviews.FindAsync(id);
+            if (review == null) return NotFound();
+
+            review.Rating = dto.Rating;
+            review.Comment = dto.Comment;
+
+            try 
+            { 
+                await _context.SaveChangesAsync(); 
+            }
             catch (DbUpdateConcurrencyException)
             {
                 if (!_context.Reviews.Any(e => e.Reviewid == id)) return NotFound();
                 throw;
             }
-            return NoContent();
+
+            var updatedReview = await _context.Reviews
+                .Include(r => r.Customer)
+                .Include(r => r.Variant)
+                .FirstOrDefaultAsync(r => r.Reviewid == review.Reviewid);
+
+            return Ok(MapToDto(updatedReview!));
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteReview(int id)
         {
             var review = await _context.Reviews.FindAsync(id);
             if (review == null) return NotFound();
+
             _context.Reviews.Remove(review);
             await _context.SaveChangesAsync();
             return NoContent();

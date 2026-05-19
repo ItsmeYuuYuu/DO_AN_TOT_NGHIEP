@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
+using ECommerceBackend.DTOs.Categories;
 
 namespace ECommerceBackend.Controllers
 {
@@ -14,44 +15,63 @@ namespace ECommerceBackend.Controllers
 
         // GET: api/Categories
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
-            => await _context.Categories.ToListAsync();
+        public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories()
+        {
+            var categories = await _context.Categories.ToListAsync();
+            return Ok(categories.Select(c => new CategoryDto(c.Categoryid, c.Categoryname, c.Description)));
+        }
 
         // GET: api/Categories/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Category>> GetCategory(int id)
+        public async Task<ActionResult<CategoryDto>> GetCategory(int id)
         {
             var category = await _context.Categories.FindAsync(id);
             if (category == null) return NotFound();
-            return category;
+            return Ok(new CategoryDto(category.Categoryid, category.Categoryname, category.Description));
         }
 
         // POST: api/Categories
         [HttpPost]
-        public async Task<ActionResult<Category>> PostCategory(Category category)
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        public async Task<ActionResult<CategoryDto>> PostCategory([FromBody] CreateCategoryRequestDto dto)
         {
+            var category = new Category
+            {
+                Categoryname = dto.Categoryname,
+                Description = dto.Description
+            };
             _context.Categories.Add(category);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetCategory), new { id = category.Categoryid }, category);
+            
+            var responseDto = new CategoryDto(category.Categoryid, category.Categoryname, category.Description);
+            return CreatedAtAction(nameof(GetCategory), new { id = category.Categoryid }, responseDto);
         }
 
         // PUT: api/Categories/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCategory(int id, Category category)
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutCategory(int id, [FromBody] UpdateCategoryRequestDto dto)
         {
-            if (id != category.Categoryid) return BadRequest();
-            _context.Entry(category).State = EntityState.Modified;
+            var category = await _context.Categories.FindAsync(id);
+            if (category == null) return NotFound();
+
+            category.Categoryname = dto.Categoryname;
+            category.Description = dto.Description;
+
             try { await _context.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException)
             {
                 if (!_context.Categories.Any(e => e.Categoryid == id)) return NotFound();
                 throw;
             }
-            return NoContent();
+            
+            var responseDto = new CategoryDto(category.Categoryid, category.Categoryname, category.Description);
+            return Ok(responseDto);
         }
 
         // DELETE: api/Categories/5
         [HttpDelete("{id}")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
             var category = await _context.Categories.FindAsync(id);

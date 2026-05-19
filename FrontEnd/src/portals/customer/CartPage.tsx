@@ -43,12 +43,12 @@ const CartPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           {items.map(item => (
             <div key={item.variantId} className="bg-white rounded-2xl border border-slate-100 p-4 flex gap-4 shadow-sm hover:shadow-md transition-shadow">
-              <Link to={`/product/${item.productId}`} className="shrink-0">
+              <Link to={`/products/${item.productId}`} className="shrink-0">
                 <img src={item.imageUrl} alt={item.productName} className="w-20 h-20 object-contain rounded-xl bg-slate-50 border border-slate-100 p-1"
                   onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/80x80?text=SP'; }} />
               </Link>
               <div className="flex-1 min-w-0">
-                <Link to={`/product/${item.productId}`}>
+                <Link to={`/products/${item.productId}`}>
                   <h3 className="font-bold text-slate-900 hover:text-blue-600 transition-colors line-clamp-2">{item.productName}</h3>
                 </Link>
                 {item.variantName && (

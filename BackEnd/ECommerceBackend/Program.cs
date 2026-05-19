@@ -7,14 +7,27 @@ using ECommerceBackend.Models;
 using ECommerceBackend.Data;
 using ECommerceBackend.Services;
 using ECommerceBackend.Filters;
+using ECommerceBackend.DTOs.Common;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── JWT Settings ──────────────────────────────────────────────────────────────
+// ── JWT Settings & Startup Secret Validation ─────────────────────────────────
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
 var secretKey   = jwtSection["SecretKey"]!;
 var issuer      = jwtSection["Issuer"]!;
 var audience    = jwtSection["Audience"]!;
+
+if (string.IsNullOrEmpty(secretKey) || secretKey.Contains("Dev_Safe_Placeholder_Key"))
+{
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.WriteLine("=========================================================================");
+    Console.WriteLine("WARNING: Using dev-safe placeholder JWT SecretKey.");
+    Console.WriteLine("Please set the actual JWT SecretKey via user-secrets or environment variables.");
+    Console.WriteLine("=========================================================================");
+    Console.ResetColor();
+}
+
 var key         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
 // ── Authentication & Authorization ───────────────────────────────────────────
@@ -56,11 +69,38 @@ builder.Services.AddControllers(options =>
     })
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.ReferenceHandler =
-            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles)
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(e => e.Value != null && e.Value.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value!.Errors.Select(e => e.ErrorMessage).ToArray()
+                );
 
-// ── EF Core ───────────────────────────────────────────────────────────────────
+            var apiError = new ApiErrorDto("Dữ liệu đầu vào không hợp lệ.", errors);
+            return new BadRequestObjectResult(apiError);
+        };
+    });
+
+// ── EF Core & Connection String Verification ──────────────────────────────────
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString) || connectionString.Contains("YOUR_LOCAL_DB_PASSWORD"))
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine("=========================================================================");
+    Console.WriteLine("CRITICAL ERROR: Connection string 'DefaultConnection' is missing or has placeholder value!");
+    Console.WriteLine("Please configure user-secrets or environment variables (see walkthrough.md).");
+    Console.WriteLine("=========================================================================");
+    Console.ResetColor();
+    throw new InvalidOperationException("ECommerceBackend cannot start: ConnectionStrings:DefaultConnection is using placeholder. Run 'dotnet user-secrets set' to configure.");
+}
+
 builder.Services.AddDbContext<ECommerceContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>

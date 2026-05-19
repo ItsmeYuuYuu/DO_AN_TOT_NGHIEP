@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ECommerceBackend.Models;
+using ECommerceBackend.DTOs.Auth;
+using ECommerceBackend.DTOs.Common;
 
 namespace ECommerceBackend.Controllers
 {
@@ -21,30 +23,16 @@ namespace ECommerceBackend.Controllers
             _config  = config;
         }
 
-        // ── DTOs ──────────────────────────────────────────────────────────────
-        public record LoginRequest(string Username, string Password);
-
-        public record LoginResponse(
-            int    Userid,
-            string Username,
-            string Fullname,
-            string? Email,
-            int?   Roleid,
-            string Rolename,
-            string AccessToken,
-            int    ExpiresIn    // seconds
-        );
-
         // ── POST /api/auth/login ──────────────────────────────────────────────
         /// <summary>
         /// Xác thực người dùng và trả về JWT Access Token.
         /// </summary>
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Username) ||
                 string.IsNullOrWhiteSpace(request.Password))
-                return BadRequest(new { message = "Email và Mật khẩu không được để trống." });
+                return BadRequest(new ApiErrorDto("Email và Mật khẩu không được để trống."));
 
             // Tìm user theo username (email) — must be active
             var user = await _context.Users
@@ -54,12 +42,12 @@ namespace ECommerceBackend.Controllers
                     u.Isactive == true);
 
             if (user == null)
-                return Unauthorized(new { message = "Tài khoản không tồn tại hoặc đã bị vô hiệu hóa." });
+                return Unauthorized(new ApiErrorDto("Tài khoản không tồn tại hoặc đã bị vô hiệu hóa."));
 
             // BCrypt verify
             bool passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.Passwordhash);
             if (!passwordValid)
-                return Unauthorized(new { message = "Mật khẩu không chính xác." });
+                return Unauthorized(new ApiErrorDto("Mật khẩu không chính xác."));
 
             // ── Build JWT ─────────────────────────────────────────────────────
             var jwt          = _config.GetSection("JwtSettings");
@@ -95,7 +83,7 @@ namespace ECommerceBackend.Controllers
 
             var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
-            return Ok(new LoginResponse(
+            return Ok(new LoginResponseDto(
                 Userid:      user.Userid,
                 Username:    user.Username,
                 Fullname:    user.Fullname,
@@ -105,6 +93,17 @@ namespace ECommerceBackend.Controllers
                 AccessToken: tokenString,
                 ExpiresIn:   expiryMins * 60
             ));
+        }
+
+        // ── POST /api/auth/logout ─────────────────────────────────────────────
+        /// <summary>
+        /// Dummy endpoint cho thao tác đăng xuất, hiện tại chỉ trả về 200 OK.
+        /// </summary>
+        [HttpPost("logout")]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public IActionResult Logout()
+        {
+            return Ok(new ApiMessageDto("Đăng xuất thành công."));
         }
 
         // ── GET /api/auth/me ──────────────────────────────────────────────────
@@ -125,21 +124,19 @@ namespace ECommerceBackend.Controllers
 
             if (user == null) return NotFound();
 
-            return Ok(new
-            {
-                user.Userid,
-                user.Username,
-                user.Fullname,
-                user.Email,
-                user.Roleid,
-                Rolename = user.Role?.Rolename ?? "Customer",
-            });
+            return Ok(new MeResponseDto(
+                Userid: user.Userid,
+                Username: user.Username,
+                Fullname: user.Fullname,
+                Email: user.Email,
+                Roleid: user.Roleid,
+                Rolename: user.Role?.Rolename ?? "Customer"
+            ));
         }
 
-        // ── POST /api/auth/change-password ───────────────────────────────────
         [HttpPost("change-password")]
         [Microsoft.AspNetCore.Authorization.Authorize]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto req)
         {
             var userIdClaim = User.FindFirst("userid")?.Value;
             if (userIdClaim == null || int.Parse(userIdClaim) != req.Userid)
@@ -149,13 +146,11 @@ namespace ECommerceBackend.Controllers
             if (user == null) return NotFound();
 
             if (!BCrypt.Net.BCrypt.Verify(req.OldPassword, user.Passwordhash))
-                return BadRequest(new { message = "Mật khẩu cũ không đúng." });
+                return BadRequest(new ApiErrorDto("Mật khẩu cũ không đúng."));
 
             user.Passwordhash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Đổi mật khẩu thành công." });
+            return Ok(new ApiMessageDto("Đổi mật khẩu thành công."));
         }
-
-        public record ChangePasswordRequest(int Userid, string OldPassword, string NewPassword);
     }
 }

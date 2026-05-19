@@ -1,6 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
+using ECommerceBackend.DTOs.Inventory;
+using Microsoft.AspNetCore.Authorization;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace ECommerceBackend.Controllers
 {
@@ -12,53 +18,119 @@ namespace ECommerceBackend.Controllers
 
         public InventoryController(ECommerceContext context) => _context = context;
 
+        private static InventoryItemDto MapToDto(Inventoryitem i) => new InventoryItemDto(
+            i.Imei,
+            i.Variantid,
+            i.Podetailid,
+            i.Status,
+            i.Importedat,
+            i.Variant?.Sku,
+            i.Variant?.Product?.Productname
+        );
+
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Inventoryitem>>> GetInventoryItems()
-            => await _context.Inventoryitems.Include(i => i.Variant).ThenInclude(v => v!.Product).ToListAsync();
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetInventoryItems()
+        {
+            var items = await _context.Inventoryitems
+                .Include(i => i.Variant)
+                .ThenInclude(v => v!.Product)
+                .ToListAsync();
+            return Ok(items.Select(MapToDto));
+        }
 
         [HttpGet("{imei}")]
-        public async Task<ActionResult<Inventoryitem>> GetInventoryItem(string imei)
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<ActionResult<InventoryItemDto>> GetInventoryItem(string imei)
         {
-            var item = await _context.Inventoryitems.Include(i => i.Variant)
+            var item = await _context.Inventoryitems
+                .Include(i => i.Variant)
+                .ThenInclude(v => v!.Product)
                 .FirstOrDefaultAsync(i => i.Imei == imei);
             if (item == null) return NotFound();
-            return item;
+            return Ok(MapToDto(item));
         }
 
         [HttpGet("variant/{variantId}")]
-        public async Task<ActionResult<IEnumerable<Inventoryitem>>> GetByVariant(int variantId)
-            => await _context.Inventoryitems.Where(i => i.Variantid == variantId).ToListAsync();
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetByVariant(int variantId)
+        {
+            var items = await _context.Inventoryitems
+                .Include(i => i.Variant)
+                .ThenInclude(v => v!.Product)
+                .Where(i => i.Variantid == variantId)
+                .ToListAsync();
+            return Ok(items.Select(MapToDto));
+        }
 
         [HttpGet("status/{status}")]
-        public async Task<ActionResult<IEnumerable<Inventoryitem>>> GetByStatus(string status)
-            => await _context.Inventoryitems
-                .Include(i => i.Variant).ThenInclude(v => v!.Product)
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetByStatus(string status)
+        {
+            var items = await _context.Inventoryitems
+                .Include(i => i.Variant)
+                .ThenInclude(v => v!.Product)
                 .Where(i => i.Status == status)
                 .ToListAsync();
+            return Ok(items.Select(MapToDto));
+        }
 
         [HttpPost]
-        public async Task<ActionResult<Inventoryitem>> PostInventoryItem(Inventoryitem item)
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<ActionResult<InventoryItemDto>> PostInventoryItem([FromBody] CreateInventoryItemRequestDto dto)
         {
+            var item = new Inventoryitem
+            {
+                Imei = dto.Imei,
+                Variantid = dto.Variantid,
+                Podetailid = dto.Podetailid,
+                Status = dto.Status ?? "Available",
+                Importedat = dto.Importedat ?? DateTime.UtcNow
+            };
+
             _context.Inventoryitems.Add(item);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetInventoryItem), new { imei = item.Imei }, item);
+
+            var createdItem = await _context.Inventoryitems
+                .Include(i => i.Variant)
+                .ThenInclude(v => v!.Product)
+                .FirstOrDefaultAsync(i => i.Imei == item.Imei);
+
+            return CreatedAtAction(nameof(GetInventoryItem), new { imei = item.Imei }, MapToDto(createdItem!));
         }
 
         [HttpPut("{imei}")]
-        public async Task<IActionResult> PutInventoryItem(string imei, Inventoryitem item)
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> PutInventoryItem(string imei, [FromBody] UpdateInventoryItemRequestDto dto)
         {
-            if (imei != item.Imei) return BadRequest();
-            _context.Entry(item).State = EntityState.Modified;
+            var item = await _context.Inventoryitems.FindAsync(imei);
+            if (item == null) return NotFound();
+
+            item.Variantid = dto.Variantid;
+            item.Podetailid = dto.Podetailid;
+            item.Status = dto.Status;
+            if (dto.Importedat.HasValue)
+            {
+                item.Importedat = dto.Importedat.Value;
+            }
+
             try { await _context.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException)
             {
                 if (!_context.Inventoryitems.Any(e => e.Imei == imei)) return NotFound();
                 throw;
             }
-            return NoContent();
+
+            var updatedItem = await _context.Inventoryitems
+                .Include(i => i.Variant)
+                .ThenInclude(v => v!.Product)
+                .FirstOrDefaultAsync(i => i.Imei == imei);
+
+            return Ok(MapToDto(updatedItem!));
         }
 
         [HttpDelete("{imei}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteInventoryItem(string imei)
         {
             var item = await _context.Inventoryitems.FindAsync(imei);

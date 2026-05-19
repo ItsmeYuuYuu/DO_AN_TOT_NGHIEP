@@ -40,7 +40,7 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (!isLoggedIn) { navigate('/auth/login'); return; }
     setLoadingOrders(true);
-    apiClient.get<Order[]>(`/Orders/customer/${user?.userid}`)
+    apiClient.get<Order[]>(`/Orders/user/${user?.userid}`)
       .then(r => setOrders(r.data))
       .catch(() => setOrders([]))
       .finally(() => setLoadingOrders(false));

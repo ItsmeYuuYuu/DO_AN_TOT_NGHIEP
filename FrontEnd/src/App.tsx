@@ -42,6 +42,7 @@ const StaffOrders = lazy(() => import('@/portals/staff/StaffOrders'));
 
 // ── Misc ─────────────────────────────────────────────────────────────────────
 const UnauthorizedPage = lazy(() => import('@/portals/UnauthorizedPage'));
+const PlaceholderPage  = lazy(() => import('@/portals/PlaceholderPage'));
 
 // ─────────────────────────────────────────────────────────────────────────────
 const App: React.FC = () => {
@@ -53,10 +54,17 @@ const App: React.FC = () => {
         <Route path="/" element={<CustomerLayout />}>
           <Route index                    element={<CustomerHome />} />
           <Route path="auth/login"        element={<LoginPage />} />
-          <Route path="product/:id"       element={<ProductDetailPage />} />
+          <Route path="auth/register"     element={<PlaceholderPage />} />
+          <Route path="forgot-password"   element={<PlaceholderPage />} />
+          <Route path="products"          element={<PlaceholderPage />} />
+          <Route path="products/:id"      element={<ProductDetailPage />} />
+          <Route path="search"            element={<PlaceholderPage />} />
+          <Route path="news"              element={<PlaceholderPage />} />
+          <Route path="promotions"        element={<PlaceholderPage />} />
           <Route path="cart"              element={<CartPage />} />
           <Route path="checkout"          element={<CheckoutPage />} />
           <Route path="profile"           element={<ProfilePage />} />
+          <Route path="order-lookup"      element={<PlaceholderPage />} />
         </Route>
 
         {/* ═══ PROTECTED — Admin ═══════════════════════════════════════════ */}
@@ -69,6 +77,7 @@ const App: React.FC = () => {
             <Route path="customers"       element={<AdminCustomers />} />
             <Route path="categories"      element={<AdminCategoryBrand />} />
             <Route path="brands"          element={<Navigate to="/admin/categories" replace />} />
+            <Route path="vouchers"        element={<PlaceholderPage />} />
           </Route>
         </Route>
 
@@ -76,6 +85,9 @@ const App: React.FC = () => {
         <Route element={<AuthGuard allowedRoles={['Admin', 'Staff']} />}>
           <Route path="/staff" element={<StaffLayout />}>
             <Route index element={<StaffOrders />} />
+            <Route path="inventory"       element={<PlaceholderPage />} />
+            <Route path="purchase-orders" element={<PlaceholderPage />} />
+            <Route path="warranties"      element={<PlaceholderPage />} />
           </Route>
         </Route>
 

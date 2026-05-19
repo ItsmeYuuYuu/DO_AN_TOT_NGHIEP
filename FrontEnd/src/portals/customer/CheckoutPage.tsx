@@ -88,6 +88,7 @@ const CheckoutPage: React.FC = () => {
         note: form.note,
         orderdate: new Date().toISOString(),
         totalamount: grandTotal,
+        items: items.map(i => ({ variantid: i.variantId, quantity: i.quantity })),
       });
       clearCart();
       setSuccess(true);

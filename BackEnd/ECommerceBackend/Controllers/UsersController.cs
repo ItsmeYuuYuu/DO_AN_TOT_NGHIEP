@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
+using ECommerceBackend.DTOs.Users;
 
 namespace ECommerceBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
     public class UsersController : ControllerBase
     {
         private readonly ECommerceContext _context;
@@ -14,40 +16,87 @@ namespace ECommerceBackend.Controllers
 
         // GET: api/Users
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
-            => await _context.Users.Include(u => u.Role).ToListAsync();
+        public async Task<ActionResult<IEnumerable<UserListItemDto>>> GetUsers()
+        {
+            var users = await _context.Users.Include(u => u.Role).ToListAsync();
+            return Ok(users.Select(u => new UserListItemDto(
+                u.Userid, u.Username, u.Fullname, u.Email, u.Phone, u.Roleid, u.Role?.Rolename, u.Isactive, u.Createdat
+            )));
+        }
 
         // GET: api/Users/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<User>> GetUser(int id)
+        public async Task<ActionResult<UserListItemDto>> GetUser(int id)
         {
-            var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Userid == id);
-            if (user == null) return NotFound();
-            return user;
+            var u = await _context.Users.Include(r => r.Role).FirstOrDefaultAsync(x => x.Userid == id);
+            if (u == null) return NotFound();
+            return Ok(new UserListItemDto(
+                u.Userid, u.Username, u.Fullname, u.Email, u.Phone, u.Roleid, u.Role?.Rolename, u.Isactive, u.Createdat
+            ));
         }
 
         // POST: api/Users
         [HttpPost]
-        public async Task<ActionResult<User>> PostUser(User user)
+        public async Task<ActionResult<UserListItemDto>> PostUser([FromBody] CreateUserRequestDto dto)
         {
+            var user = new User
+            {
+                Username = dto.Username,
+                Passwordhash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                Fullname = dto.Fullname,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                Roleid = dto.Roleid,
+                Isactive = dto.Isactive ?? true,
+                Createdat = DateTime.UtcNow
+            };
+
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetUser), new { id = user.Userid }, user);
+
+            // Load role
+            await _context.Entry(user).Reference(u => u.Role).LoadAsync();
+
+            var responseDto = new UserListItemDto(
+                user.Userid, user.Username, user.Fullname, user.Email, user.Phone, user.Roleid, user.Role?.Rolename, user.Isactive, user.Createdat
+            );
+
+            return CreatedAtAction(nameof(GetUser), new { id = user.Userid }, responseDto);
         }
 
         // PUT: api/Users/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser(int id, User user)
+        public async Task<IActionResult> PutUser(int id, [FromBody] UpdateUserRequestDto dto)
         {
-            if (id != user.Userid) return BadRequest();
-            _context.Entry(user).State = EntityState.Modified;
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            user.Fullname = dto.Fullname;
+            user.Email = dto.Email;
+            user.Phone = dto.Phone;
+            user.Roleid = dto.Roleid;
+            
+            if (dto.Isactive.HasValue)
+                user.Isactive = dto.Isactive.Value;
+
+            if (!string.IsNullOrWhiteSpace(dto.NewPassword))
+                user.Passwordhash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+
             try { await _context.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException)
             {
                 if (!_context.Users.Any(e => e.Userid == id)) return NotFound();
                 throw;
             }
-            return NoContent();
+
+            // Load role
+            await _context.Entry(user).Reference(u => u.Role).LoadAsync();
+
+            var responseDto = new UserListItemDto(
+                user.Userid, user.Username, user.Fullname, user.Email, user.Phone, user.Roleid, user.Role?.Rolename, user.Isactive, user.Createdat
+            );
+
+            return Ok(responseDto);
         }
 
         // DELETE: api/Users/5
@@ -69,7 +118,7 @@ namespace ECommerceBackend.Controllers
             if (user == null) return NotFound();
             user.Isactive = !user.Isactive;
             await _context.SaveChangesAsync();
-            return Ok(new { user.Userid, user.Isactive });
+            return Ok(new ToggleUserActiveResponseDto(user.Userid, user.Isactive));
         }
     }
 }

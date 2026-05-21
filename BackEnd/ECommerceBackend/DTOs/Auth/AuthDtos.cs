@@ -33,4 +33,29 @@ namespace ECommerceBackend.DTOs.Auth
         [Required(ErrorMessage = "Mật khẩu mới không được để trống")] 
         [MinLength(6, ErrorMessage = "Mật khẩu mới phải có ít nhất 6 ký tự")] string NewPassword
     );
+
+    public record RegisterRequestDto(
+        [Required(ErrorMessage = "Tên đăng nhập không được để trống")]
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "Tên đăng nhập từ 3-50 ký tự")]
+        string Username,
+
+        [Required(ErrorMessage = "Mật khẩu không được để trống")]
+        [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự")]
+        string Password,
+
+        [Required(ErrorMessage = "Họ tên không được để trống")]
+        string Fullname,
+
+        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        string? Email,
+
+        [StringLength(20)]
+        string? Phone
+    );
+
+    public record ForgotPasswordRequestDto(
+        [Required(ErrorMessage = "Email không được để trống")]
+        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        string Email
+    );
 }

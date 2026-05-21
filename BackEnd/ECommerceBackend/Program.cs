@@ -7,10 +7,18 @@ using ECommerceBackend.Models;
 using ECommerceBackend.Data;
 using ECommerceBackend.Services;
 using ECommerceBackend.Filters;
+using ECommerceBackend.Middlewares;
 using ECommerceBackend.DTOs.Common;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .WriteTo.Console());
 
 // ── JWT Settings & Startup Secret Validation ─────────────────────────────────
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
@@ -60,6 +68,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<AuditLogService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AuditLogService>());
 builder.Services.AddScoped<AuditActionFilter>();
+
+// ── Health Checks ─────────────────────────────────────────────────────────────
+builder.Services.AddHealthChecks();
 
 // ── Controllers + JSON + Global Audit Filter ─────────────────────────────────
 builder.Services.AddControllers(options =>
@@ -146,6 +157,10 @@ var app = builder.Build();
 await DbInitializer.SeedAsync(app.Services);
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseSerilogRequestLogging();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -157,5 +172,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();   // ← Must come before UseAuthorization
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/api/health");
 
 app.Run();
+
+public partial class Program { }

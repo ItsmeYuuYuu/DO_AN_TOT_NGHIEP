@@ -152,5 +152,51 @@ namespace ECommerceBackend.Controllers
             await _context.SaveChangesAsync();
             return Ok(new ApiMessageDto("Đổi mật khẩu thành công."));
         }
+
+        // ── POST /api/auth/register ───────────────────────────────────────────
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequestDto req)
+        {
+            // Check username uniqueness
+            bool exists = await _context.Users.AnyAsync(u => u.Username == req.Username);
+            if (exists)
+                return BadRequest(new ApiErrorDto("Tên đăng nhập đã tồn tại.", null));
+
+            // Resolve Customer role from DB — không hardcode RoleId
+            var customerRole = await _context.Roles.FirstOrDefaultAsync(r => r.Rolename == "Customer");
+            if (customerRole == null)
+                return StatusCode(500, new ApiErrorDto("Hệ thống chưa cấu hình role Customer. Vui lòng liên hệ Admin.", null));
+
+            var user = new User
+            {
+                Username     = req.Username,
+                Passwordhash = BCrypt.Net.BCrypt.HashPassword(req.Password),
+                Fullname     = req.Fullname,
+                Email        = req.Email,
+                Phone        = req.Phone,
+                Roleid       = customerRole.Roleid,
+                Isactive     = true,
+                Createdat    = DateTime.UtcNow
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return Ok(new ApiMessageDto("Đăng ký thành công. Bạn có thể đăng nhập ngay."));
+        }
+
+        // ── POST /api/auth/forgot-password ────────────────────────────────────
+        // Stub: không gửi email thật ở P4. Luôn trả 200 để không lộ thông tin user.
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto req)
+        {
+            // Intentional: do not reveal whether the email exists (security)
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
+            if (user != null)
+            {
+                // TODO P5: integrate email service (SMTP/SendGrid) to send reset link
+                Console.WriteLine($"[ForgotPassword-Stub] User {user.Username} requested password reset.");
+            }
+            return Ok(new ApiMessageDto("Nếu email này tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu."));
+        }
     }
 }

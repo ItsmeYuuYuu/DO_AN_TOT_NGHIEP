@@ -108,7 +108,44 @@ namespace ECommerceBackend.Controllers
             return Ok(orders.Select(MapToDto));
         }
 
-        // POST: api/Orders
+        // GET: api/Orders/lookup?phone=&orderid= — public, no auth, limited fields only
+        [HttpGet("lookup")]
+        public async Task<ActionResult<IEnumerable<OrderLookupDto>>> LookupOrders(
+            [FromQuery] string? phone,
+            [FromQuery] int? orderid)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+                return BadRequest(new ApiErrorDto("Vui lòng nhập số điện thoại để tra cứu.", null));
+
+            var query = _context.Orders
+                .Include(o => o.Customer)
+                .Where(o => o.Customer != null && o.Customer.Phone == phone);
+
+            if (orderid.HasValue)
+                query = query.Where(o => o.Orderid == orderid);
+
+            var orders = await query
+                .OrderByDescending(o => o.Orderdate)
+                .Take(20) // safety cap
+                .ToListAsync();
+
+            // Return limited safe fields — no IMEI, no internal details
+            var result = orders.Select(o => new OrderLookupDto(
+                o.Orderid,
+                o.Orderdate,
+                o.Orderstatus,
+                o.Totalamount,
+                o.Discountamount,
+                o.Finalamount,
+                o.Paymentmethod,
+                o.Vouchercode,
+                o.Orderitems.Count
+            ));
+
+            return Ok(result);
+        }
+
+
         [HttpPost]
         [Microsoft.AspNetCore.Authorization.Authorize]
         public async Task<ActionResult<OrderDetailDto>> PostOrder([FromBody] CreateOrderRequestDto dto)

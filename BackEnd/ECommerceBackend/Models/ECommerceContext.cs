@@ -220,7 +220,7 @@ public partial class ECommerceContext : DbContext
                 .HasColumnName("starttime");
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
-                .HasDefaultValueSql("'Active'::character varying")
+                .HasDefaultValueSql("'Active'")
                 .HasColumnName("status");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.Chatsessions)
@@ -271,7 +271,7 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Podetailid).HasColumnName("podetailid");
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
-                .HasDefaultValueSql("'InStock'::character varying")
+                .HasDefaultValueSql("'InStock'")
                 .HasColumnName("status");
             entity.Property(e => e.Variantid).HasColumnName("variantid");
 

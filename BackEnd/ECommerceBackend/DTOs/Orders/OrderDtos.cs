@@ -66,4 +66,17 @@ namespace ECommerceBackend.DTOs.Orders
     );
 
     public record UpdateOrderStatusResponseDto(int Orderid, string Orderstatus);
+
+    /// <summary>Safe limited DTO for public order lookup — no IMEI, no internal fields.</summary>
+    public record OrderLookupDto(
+        int Orderid,
+        DateTime? Orderdate,
+        string? Orderstatus,
+        decimal Totalamount,
+        decimal? Discountamount,
+        decimal Finalamount,
+        string? Paymentmethod,
+        string? Vouchercode,
+        int ItemCount
+    );
 }

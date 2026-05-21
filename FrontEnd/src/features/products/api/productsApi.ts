@@ -25,6 +25,8 @@ export interface ProductVariant {
 export const productsApi = {
   getAll: () => apiClient.get<Product[]>('/Products'),
   getById: (id: number) => apiClient.get<Product>(`/Products/${id}`),
+  search: (params: { q?: string; categoryId?: number; brandId?: number; minPrice?: number; maxPrice?: number }) =>
+    apiClient.get<Product[]>('/Products/search', { params }),
   create: (data: Partial<Product>) => apiClient.post<Product>('/Products', data),
   update: (id: number, data: Partial<Product>) => apiClient.put(`/Products/${id}`, data),
   delete: (id: number) => apiClient.delete(`/Products/${id}`),

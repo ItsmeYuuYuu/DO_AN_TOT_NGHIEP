@@ -36,6 +36,19 @@ namespace ECommerceBackend.Controllers
             return Ok(vouchers.Select(MapToDto));
         }
 
+        // GET: api/Vouchers/active — public endpoint for Promotions page
+        [HttpGet("active")]
+        public async Task<ActionResult<IEnumerable<VoucherDto>>> GetActiveVouchers()
+        {
+            var now = DateTime.Now;
+            var vouchers = await _context.Vouchers
+                .Where(v => v.Isactive == true
+                    && (v.Validfrom == null || v.Validfrom <= now)
+                    && (v.Validto == null || v.Validto >= now))
+                .ToListAsync();
+            return Ok(vouchers.Select(MapToDto));
+        }
+
         [HttpGet("{code}")]
         [Authorize]
         public async Task<ActionResult<VoucherDto>> GetVoucher(string code)

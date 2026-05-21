@@ -21,28 +21,39 @@ const PageLoader = () => (
   </div>
 );
 
-// ── Customer pages ────────────────────────────────────────────────────────────
+// ── Customer pages ───────────────────────────────────────────────────
 const CustomerHome      = lazy(() => import('@/portals/customer/CustomerHome'));
 const LoginPage         = lazy(() => import('@/portals/customer/LoginPage'));
 const ProductDetailPage = lazy(() => import('@/portals/customer/ProductDetailPage'));
+const ProductsListPage  = lazy(() => import('@/portals/customer/ProductsListPage'));
+const SearchPage        = lazy(() => import('@/portals/customer/SearchPage'));
+const NewsPage          = lazy(() => import('@/portals/customer/NewsPage'));
+const PromotionsPage    = lazy(() => import('@/portals/customer/PromotionsPage'));
+const OrderLookupPage   = lazy(() => import('@/portals/customer/OrderLookupPage'));
 const CartPage          = lazy(() => import('@/portals/customer/CartPage'));
 const CheckoutPage      = lazy(() => import('@/portals/customer/CheckoutPage'));
 const ProfilePage       = lazy(() => import('@/portals/customer/ProfilePage'));
+// Batch 2 — Auth (wired after Batch 2 is done)
+const RegisterPage      = lazy(() => import('@/portals/customer/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('@/portals/customer/ForgotPasswordPage'));
 
-// ── Admin pages ───────────────────────────────────────────────────────────────
+// ── Admin pages ───────────────────────────────────────────────────
 const AdminDashboard     = lazy(() => import('@/portals/admin/AdminDashboard'));
 const AdminProducts      = lazy(() => import('@/portals/admin/AdminProducts'));
 const AdminOrders        = lazy(() => import('@/portals/admin/AdminOrders'));
 const AdminUsers         = lazy(() => import('@/portals/admin/AdminUsers'));
 const AdminCategoryBrand = lazy(() => import('@/portals/admin/AdminCategoryBrand'));
 const AdminCustomers     = lazy(() => import('@/portals/admin/AdminCustomers'));
+const AdminVouchers      = lazy(() => import('@/portals/admin/AdminVouchers'));
 
 // ── Staff pages ───────────────────────────────────────────────────────────────
-const StaffOrders = lazy(() => import('@/portals/staff/StaffOrders'));
+const StaffOrders         = lazy(() => import('@/portals/staff/StaffOrders'));
+const StaffInventory      = lazy(() => import('@/portals/staff/StaffInventory'));
+const StaffPurchaseOrders = lazy(() => import('@/portals/staff/StaffPurchaseOrders'));
+const StaffWarranties     = lazy(() => import('@/portals/staff/StaffWarranties'));
 
 // ── Misc ─────────────────────────────────────────────────────────────────────
 const UnauthorizedPage = lazy(() => import('@/portals/UnauthorizedPage'));
-const PlaceholderPage  = lazy(() => import('@/portals/PlaceholderPage'));
 
 // ─────────────────────────────────────────────────────────────────────────────
 const App: React.FC = () => {
@@ -54,17 +65,17 @@ const App: React.FC = () => {
         <Route path="/" element={<CustomerLayout />}>
           <Route index                    element={<CustomerHome />} />
           <Route path="auth/login"        element={<LoginPage />} />
-          <Route path="auth/register"     element={<PlaceholderPage />} />
-          <Route path="forgot-password"   element={<PlaceholderPage />} />
-          <Route path="products"          element={<PlaceholderPage />} />
+          <Route path="auth/register"     element={<RegisterPage />} />
+          <Route path="forgot-password"   element={<ForgotPasswordPage />} />
+          <Route path="products"          element={<ProductsListPage />} />
           <Route path="products/:id"      element={<ProductDetailPage />} />
-          <Route path="search"            element={<PlaceholderPage />} />
-          <Route path="news"              element={<PlaceholderPage />} />
-          <Route path="promotions"        element={<PlaceholderPage />} />
+          <Route path="search"            element={<SearchPage />} />
+          <Route path="news"              element={<NewsPage />} />
+          <Route path="promotions"        element={<PromotionsPage />} />
           <Route path="cart"              element={<CartPage />} />
           <Route path="checkout"          element={<CheckoutPage />} />
           <Route path="profile"           element={<ProfilePage />} />
-          <Route path="order-lookup"      element={<PlaceholderPage />} />
+          <Route path="order-lookup"      element={<OrderLookupPage />} />
         </Route>
 
         {/* ═══ PROTECTED — Admin ═══════════════════════════════════════════ */}
@@ -77,7 +88,7 @@ const App: React.FC = () => {
             <Route path="customers"       element={<AdminCustomers />} />
             <Route path="categories"      element={<AdminCategoryBrand />} />
             <Route path="brands"          element={<Navigate to="/admin/categories" replace />} />
-            <Route path="vouchers"        element={<PlaceholderPage />} />
+            <Route path="vouchers"        element={<AdminVouchers />} />
           </Route>
         </Route>
 
@@ -85,9 +96,9 @@ const App: React.FC = () => {
         <Route element={<AuthGuard allowedRoles={['Admin', 'Staff']} />}>
           <Route path="/staff" element={<StaffLayout />}>
             <Route index element={<StaffOrders />} />
-            <Route path="inventory"       element={<PlaceholderPage />} />
-            <Route path="purchase-orders" element={<PlaceholderPage />} />
-            <Route path="warranties"      element={<PlaceholderPage />} />
+            <Route path="inventory"       element={<StaffInventory />} />
+            <Route path="purchase-orders" element={<StaffPurchaseOrders />} />
+            <Route path="warranties"      element={<StaffWarranties />} />
           </Route>
         </Route>
 

@@ -79,6 +79,43 @@ namespace ECommerceBackend.Controllers
             return Ok(products.Select(MapToDto));
         }
 
+        // GET: api/Products/search?q=&categoryId=&brandId=&minPrice=&maxPrice=
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<ProductListItemDto>>> SearchProducts(
+            [FromQuery] string? q,
+            [FromQuery] int? categoryId,
+            [FromQuery] int? brandId,
+            [FromQuery] decimal? minPrice,
+            [FromQuery] decimal? maxPrice)
+        {
+            var query = _context.Products
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Condition)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Productimages)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(q))
+                query = query.Where(p => p.Productname.Contains(q) || (p.Description != null && p.Description.Contains(q)));
+
+            if (categoryId.HasValue)
+                query = query.Where(p => p.Categoryid == categoryId);
+
+            if (brandId.HasValue)
+                query = query.Where(p => p.Brandid == brandId);
+
+            if (minPrice.HasValue)
+                query = query.Where(p => p.Productvariants.Any(v => (v.Saleprice ?? v.Baseprice) >= minPrice));
+
+            if (maxPrice.HasValue)
+                query = query.Where(p => p.Productvariants.Any(v => (v.Saleprice ?? v.Baseprice) <= maxPrice));
+
+            var products = await query.ToListAsync();
+            return Ok(products.Select(MapToDto));
+        }
+
         // GET: api/Products/5
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductDetailDto>> GetProduct(int id)

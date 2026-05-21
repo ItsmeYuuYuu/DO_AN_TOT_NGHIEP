@@ -276,6 +276,46 @@ BackEnd/ECommerceBackend/DTOs/
 
 ---
 
+## P4 - Feature completion for placeholder routes
+
+### P4.1 Scope
+Replace all "Feature under development" placeholder pages/routes with working modules and real API integrations.
+
+### P4.2 Priority order
+1. **Customer-facing modules first**
+   - `/products`
+   - `/search`
+   - `/news`
+   - `/promotions`
+   - `/order-lookup`
+2. **Auth support modules**
+   - `/auth/register`
+   - `/forgot-password`
+3. **Backoffice modules**
+   - `/admin/vouchers`
+   - `/staff/inventory`
+   - `/staff/purchase-orders`
+   - `/staff/warranties`
+
+### P4.3 Backend/API requirements
+- Add missing endpoints required by these screens.
+- Reuse DTO-first contract and `ApiErrorDto` standards from P1/P2/P3.
+- Keep authorization/role matrix enforced for Admin/Staff/Customer flows.
+- Do not introduce major DB schema changes without approval.
+
+### P4.4 Frontend requirements
+- Remove placeholder mappings and wire real pages/components.
+- Connect each page to real APIs with loading/error/empty states.
+- Ensure route consistency and no dead links.
+
+### P4 acceptance criteria
+- No target route in section P4.2 shows placeholder content.
+- Customer routes are usable end-to-end with real data.
+- Backoffice routes perform expected CRUD/actions with correct role permissions.
+- Build passes for backend/frontend and smoke tests for each new route are documented.
+
+---
+
 ## 6) Implementation Order For DTO Work (recommended)
 
 1. **Users DTOs first**

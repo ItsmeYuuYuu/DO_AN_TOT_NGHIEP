@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '@/api/apiClient';
-import { ShoppingCart, Plus, Calendar, User } from 'lucide-react';
+import { ShoppingCart, Plus, Calendar, User, Edit2, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 
 interface PurchaseOrderDetail {
@@ -33,12 +33,14 @@ const StaffPurchaseOrders: React.FC = () => {
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPo, setEditingPo] = useState<PurchaseOrder | null>(null);
   const [saving, setSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     supplierid: '',
-    userid: '', // In reality, we might fetch from current logged-in user, but let's allow input for now
+    userid: '', 
     status: 'Pending',
     variantid: '',
     quantity: 1,
@@ -65,27 +67,58 @@ const StaffPurchaseOrders: React.FC = () => {
     }
   };
 
+  const openAddModal = () => {
+    setEditingPo(null);
+    setFormData({ supplierid: '', userid: '', status: 'Pending', variantid: '', quantity: 1, importprice: 0 });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (po: PurchaseOrder) => {
+    setEditingPo(po);
+    setFormData({
+      supplierid: po.supplierid?.toString() || '',
+      userid: po.userid?.toString() || '',
+      status: po.status || 'Pending',
+      variantid: po.details[0]?.variantid?.toString() || '',
+      quantity: po.details[0]?.quantity || 1,
+      importprice: po.details[0]?.importprice || 0
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingPo(null);
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await apiClient.post('/PurchaseOrders', {
-        supplierid: Number(formData.supplierid),
-        userid: Number(formData.userid),
-        status: formData.status,
-        details: [
-          {
-            variantid: Number(formData.variantid),
-            quantity: Number(formData.quantity),
-            importprice: Number(formData.importprice)
-          }
-        ]
-      });
+      if (editingPo) {
+        await apiClient.put(`/PurchaseOrders/${editingPo.poid}`, {
+          supplierid: Number(formData.supplierid),
+          userid: Number(formData.userid),
+          status: formData.status
+        });
+      } else {
+        await apiClient.post('/PurchaseOrders', {
+          supplierid: Number(formData.supplierid),
+          userid: Number(formData.userid),
+          status: formData.status,
+          details: [
+            {
+              variantid: Number(formData.variantid),
+              quantity: Number(formData.quantity),
+              importprice: Number(formData.importprice)
+            }
+          ]
+        });
+      }
       fetchData();
-      setIsModalOpen(false);
-      setFormData({ supplierid: '', userid: '', status: 'Pending', variantid: '', quantity: 1, importprice: 0 });
+      closeModal();
     } catch (err) {
-      alert('Không thể lưu đơn nhập hàng. Hãy kiểm tra lại dữ liệu.');
+      alert(editingPo ? 'Không thể cập nhật đơn nhập hàng.' : 'Không thể lưu đơn nhập hàng. Hãy kiểm tra lại dữ liệu.');
     } finally {
       setSaving(false);
     }
@@ -101,7 +134,7 @@ const StaffPurchaseOrders: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-800">Đơn nhập hàng (PO)</h1>
           <p className="text-slate-500 text-sm">Quản lý các đơn nhập hàng từ nhà cung cấp</p>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+        <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
           <Plus size={18} /> Tạo PO mới
         </button>
       </div>
@@ -115,13 +148,14 @@ const StaffPurchaseOrders: React.FC = () => {
               <th className="p-4">Ngày nhập</th>
               <th className="p-4 text-right">Tổng tiền</th>
               <th className="p-4 text-center">Trạng thái</th>
+              <th className="p-4 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={5} className="p-4"><Skeleton className="h-10 w-full" /></td></tr>
+              <tr><td colSpan={6} className="p-4"><Skeleton className="h-10 w-full" /></td></tr>
             ) : pos.length === 0 ? (
-              <tr><td colSpan={5} className="p-8 text-center text-slate-400">Không có dữ liệu</td></tr>
+              <tr><td colSpan={6} className="p-8 text-center text-slate-400">Không có dữ liệu</td></tr>
             ) : pos.map(po => (
               <tr key={po.poid} className="hover:bg-slate-50 transition-colors">
                 <td className="p-4 font-bold text-slate-800 flex items-center gap-2">
@@ -138,6 +172,11 @@ const StaffPurchaseOrders: React.FC = () => {
                     {po.status}
                   </span>
                 </td>
+                <td className="p-4 text-right">
+                  <button onClick={() => openEditModal(po)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                    <Edit2 size={16} />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -147,8 +186,9 @@ const StaffPurchaseOrders: React.FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-              <h2 className="text-lg font-black text-slate-800">Tạo Đơn Nhập Hàng (PO)</h2>
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h2 className="text-lg font-black text-slate-800">{editingPo ? `Sửa Đơn Nhập Hàng #${editingPo.poid}` : 'Tạo Đơn Nhập Hàng (PO)'}</h2>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
@@ -160,7 +200,7 @@ const StaffPurchaseOrders: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">User ID * (Người tạo)</label>
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">User ID * (Người xử lý)</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input type="number" required value={formData.userid} onChange={e => setFormData({ ...formData, userid: e.target.value })}
@@ -168,26 +208,28 @@ const StaffPurchaseOrders: React.FC = () => {
                 </div>
               </div>
               
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mt-4 space-y-3">
-                <p className="text-xs font-black text-slate-700">CHI TIẾT SẢN PHẨM NHẬP (Demo 1 item)</p>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Variant ID *</label>
-                  <input type="number" required value={formData.variantid} onChange={e => setFormData({ ...formData, variantid: e.target.value })}
-                    className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-medium" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+              {!editingPo && (
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mt-4 space-y-3">
+                  <p className="text-xs font-black text-slate-700">CHI TIẾT SẢN PHẨM NHẬP (Demo 1 item)</p>
                   <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Số lượng *</label>
-                    <input type="number" min="1" required value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Variant ID *</label>
+                    <input type="number" required value={formData.variantid} onChange={e => setFormData({ ...formData, variantid: e.target.value })}
                       className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-medium" />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Giá nhập *</label>
-                    <input type="number" min="0" required value={formData.importprice} onChange={e => setFormData({ ...formData, importprice: Number(e.target.value) })}
-                      className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-medium" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Số lượng *</label>
+                      <input type="number" min="1" required value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-medium" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Giá nhập *</label>
+                      <input type="number" min="0" required value={formData.importprice} onChange={e => setFormData({ ...formData, importprice: Number(e.target.value) })}
+                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-medium" />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
               
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Trạng thái</label>
@@ -200,10 +242,10 @@ const StaffPurchaseOrders: React.FC = () => {
               </div>
 
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Hủy</button>
-                <button type="submit" disabled={saving || !formData.supplierid || !formData.userid || !formData.variantid} 
+                <button type="button" onClick={closeModal} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Hủy</button>
+                <button type="submit" disabled={saving || !formData.supplierid || !formData.userid || (!editingPo && !formData.variantid)} 
                   className="flex-1 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-60 transition-colors">
-                  {saving ? 'Đang lưu...' : 'Tạo PO'}
+                  {saving ? 'Đang lưu...' : (editingPo ? 'Cập nhật' : 'Tạo PO')}
                 </button>
               </div>
             </form>

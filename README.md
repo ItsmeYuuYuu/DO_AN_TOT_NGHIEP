@@ -1,86 +1,160 @@
-# 🛒 E-Commerce System (Full-Stack)
+# ECommerce - Do An Tot Nghiep
 
-Dự án Hệ thống Thương mại Điện tử hiện đại, tích hợp đầy đủ tính năng quản trị (Admin), nhân viên (Staff) và khách hàng (Customer).
+He thong thuong mai dien tu ban dien thoai xach tay, gom 3 vai tro chinh:
+- Admin
+- Staff
+- Customer
 
-## 🚀 Công nghệ sử dụng
+Du an duoc trien khai full-stack voi Frontend (React + Vite), Backend (ASP.NET Core Web API), va Database (PostgreSQL).
 
-### Backend
-- **Framework:** .NET 8 Web API
-- **Database:** PostgreSQL
-- **ORM:** Entity Framework Core (Fluent API)
-- **Security:** 
-  - **JWT (JSON Web Token):** Xác thực và phân quyền (Role-based Authorization).
-  - **BCrypt:** Mã hóa mật khẩu an toàn.
-- **Features:** 
-  - **Audit Logs:** Hệ thống ghi log thao tác chạy ngầm (Background Service) đảm bảo hiệu suất.
-  - **Database Indexing:** Tối ưu hóa truy vấn cho hàng triệu bản ghi.
-  - **Auto-seeding:** Tự động khởi tạo dữ liệu mẫu khi chạy ứng dụng.
+## 1) Cong nghe chinh
 
 ### Frontend
-- **Framework:** React 18 + Vite
-- **Styling:** Tailwind CSS (Modern Retail Light Mode)
-- **State Management:** Hooks & Context API
-- **Networking:** Axios (Interceptor tích hợp JWT)
-- **Routing:** React Router v6 (Auth Guard bảo vệ tuyến đường)
+- React 18 + TypeScript + Vite
+- React Router v6
+- Axios
+- Tailwind CSS
 
----
+### Backend
+- ASP.NET Core Web API (.NET 8/9)
+- Entity Framework Core
+- JWT Authentication + Role-based Authorization
+- BCrypt password hashing
 
-## 🏗️ Cấu trúc dự án
+### Database
+- PostgreSQL
+
+## 2) Tong quan chuc nang
+
+### Da hoan thien den cuoi P4
+- Auth: login, me, change-password, logout, register, forgot-password (stub).
+- Catalog: products list/detail/search, categories, brands, variants.
+- Order core flow (P2): tao don, tru ton kho, ap voucher, transition status, cancel hoan kho.
+- Customer pages: home, product detail, cart, checkout, profile, products, search, news, promotions, order lookup.
+- Admin pages: dashboard, products, orders, users, customers, categories/brands, vouchers.
+- Staff pages: orders, inventory (list/create/update), purchase orders (list/create/update), warranties (list/create/update).
+- Security (P1): DTO-first, validation, role guards, standardized error format (`ApiErrorDto`), secrets cleanup.
+- Quality/ops (P3): tests, migrations baseline, logging middleware, correlation id, health check, CI workflow.
+
+### Luu y
+- `forgot-password` hien la stub (khong gui email that).
+- Chua co E2E browser test cho frontend (Playwright) trong scope hien tai.
+
+## 3) Cau truc thu muc
 
 ```text
 ECommerce/
-├── BackEnd/
-│   └── ECommerceBackend/      # .NET 8 Web API Project
-│       ├── Controllers/       # API Endpoints (Auth, Products, Orders,...)
-│       ├── Data/              # DbContext & Seeding logic
-│       ├── Filters/           # Custom Filters (Audit Logs)
-│       ├── Models/            # Database Entities
-│       └── Services/          # Background Services
-├── FrontEnd/                  # React Application
-│   ├── src/
-│   │   ├── api/               # Axios client configuration
-│   │   ├── components/        # Shared components (DataTable, Modal, AuthGuard,...)
-│   │   ├── features/          # Business logic per module
-│   │   ├── layouts/           # Page structures (Admin, Staff, Customer)
-│   │   └── portals/           # Main views for each role
-└── .gitignore                 # Cấu hình bỏ qua các file rác
+├─ BackEnd/
+│  ├─ ECommerceBackend/
+│  │  ├─ Controllers/         # API endpoints
+│  │  ├─ DTOs/                # Request/Response DTOs theo module
+│  │  ├─ Models/              # EF entities + DbContext
+│  │  ├─ Data/                # Seed/init data
+│  │  ├─ Services/            # Background services (audit...)
+│  │  ├─ Filters/             # Action filters
+│  │  ├─ Middlewares/         # Global exception, correlation id...
+│  │  └─ Migrations/          # EF migrations
+│  └─ ECommerceBackend.Tests/ # xUnit integration tests
+├─ FrontEnd/
+│  ├─ src/
+│  │  ├─ api/                 # Axios client
+│  │  ├─ components/          # Shared UI components
+│  │  ├─ features/            # Feature modules (auth/products/orders...)
+│  │  ├─ layouts/             # Admin/Staff/Customer layouts
+│  │  ├─ portals/             # Page-level screens
+│  │  ├─ hooks/               # Reusable hooks
+│  │  └─ utils/               # Helpers/formatters
+│  └─ ...
+├─ docs/
+│  └─ database_migration_guide.md
+├─ .github/
+│  └─ workflows/ci.yml
+└─ ANTIGRAVITY_EXECUTION_SPEC.md
 ```
 
----
+## 4) Yeu cau moi truong
 
-## 🔐 Tài khoản mặc định (Dành cho Testing)
+- Node.js 20+ (khuyen nghi)
+- .NET SDK 8+ (hoac version dang dung trong project)
+- PostgreSQL
 
-| Vai trò | Email | Mật khẩu |
-| :--- | :--- | :--- |
-| **Quản trị (Admin)** | `admin300475@gmail.com` | `Admin@300475!` |
-| **Nhân viên (Staff)** | `staff01@gmail.com` | `Staff@123456!` |
+## 5) Huong dan chay local
 
----
+### 5.1 Backend
 
-## 🛠️ Hướng dẫn cài đặt
+```bash
+cd BackEnd/ECommerceBackend
+dotnet restore
+```
 
-### 1. Backend
-1. Đảm bảo đã cài đặt **PostgreSQL**.
-2. Cấu hình chuỗi kết nối trong `appsettings.json`.
-3. Mở Terminal tại `BackEnd/ECommerceBackend`:
-   ```bash
-   dotnet restore
-   dotnet run
-   ```
-   *Lưu ý: Ứng dụng sẽ tự động tạo bảng và đổ dữ liệu mẫu ở lần chạy đầu tiên.*
+Thiet lap secrets local (bat buoc):
 
-### 2. Frontend
-1. Mở Terminal tại `FrontEnd`:
-   ```bash
-   npm install
-   npm run dev
-   ```
-2. Truy cập: `http://localhost:5173`
+```bash
+dotnet user-secrets init
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=ECommerDB;Username=postgres;Password=YOUR_PASSWORD"
+dotnet user-secrets set "JwtSettings:SecretKey" "YOUR_SECRET_KEY_MIN_32_CHARS"
+```
 
----
+Chay backend:
 
-## ✨ Tính năng nổi bật
-- **Giao diện Modern Light Mode:** Tối ưu trải nghiệm mua sắm bán lẻ.
-- **Bảo mật đa lớp:** Từ validation ở client đến hashing và JWT ở server.
-- **Hệ thống Quản trị toàn diện:** Quản lý sản phẩm, đơn hàng, người dùng với bảng dữ liệu thông minh (Data Table).
-- **Audit Logging:** Theo dõi mọi thay đổi dữ liệu (POST/PUT/DELETE) của người dùng.
+```bash
+dotnet run
+```
+
+### 5.2 Frontend
+
+```bash
+cd FrontEnd
+npm install
+npm run dev
+```
+
+Mac dinh truy cap: `http://localhost:5173`
+
+## 6) Build va test
+
+### Backend
+```bash
+cd BackEnd/ECommerceBackend
+dotnet build
+dotnet test
+```
+
+### Frontend
+```bash
+cd FrontEnd
+npm run build
+```
+
+## 7) Migration database
+
+Tham khao huong dan chi tiet:
+- `docs/database_migration_guide.md`
+
+Lenh co ban:
+
+```bash
+cd BackEnd/ECommerceBackend
+dotnet ef migrations add <MigrationName>
+dotnet ef database update
+```
+
+## 8) Nhanh ve API va bao mat
+
+- Auth bang JWT Bearer token.
+- Role matrix chinh: `Admin`, `Staff`, `Customer`.
+- Error format chuan:
+  - `ApiErrorDto { message, errors? }`
+- Khong hardcode credentials trong source tracked.
+
+## 9) Tinh trang roadmap
+
+- P0: done
+- P1: done
+- P2: done
+- P3: done
+- P4: done
+
+Phase tiep theo (goi y):
+- P5: nang cap UX/chot nghiep vu con lai + E2E browser tests + toi uu hieu nang nang cao.
+

@@ -84,7 +84,7 @@ namespace ECommerceBackend.Controllers
                 Imei = dto.Imei,
                 Variantid = dto.Variantid,
                 Podetailid = dto.Podetailid,
-                Status = dto.Status ?? "Available",
+                Status = dto.Status ?? "InStock",
                 Importedat = dto.Importedat ?? DateTime.UtcNow
             };
 

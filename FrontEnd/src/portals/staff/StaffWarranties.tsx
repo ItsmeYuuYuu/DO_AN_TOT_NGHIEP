@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '@/api/apiClient';
-import { ShieldAlert, Plus, ShieldCheck, Clock, User } from 'lucide-react';
+import { ShieldAlert, Plus, ShieldCheck, Clock, User, Edit2, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 
 interface Warranty {
@@ -17,6 +17,7 @@ const StaffWarranties: React.FC = () => {
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingWarranty, setEditingWarranty] = useState<Warranty | null>(null);
   const [saving, setSaving] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -44,28 +45,57 @@ const StaffWarranties: React.FC = () => {
     }
   };
 
+  const openAddModal = () => {
+    setEditingWarranty(null);
+    setFormData({
+      imei: '',
+      customerid: '',
+      startdate: new Date().toISOString().split('T')[0],
+      enddate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+      status: 'Active'
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (w: Warranty) => {
+    setEditingWarranty(w);
+    setFormData({
+      imei: w.imei || '',
+      customerid: w.customerid?.toString() || '',
+      startdate: new Date(w.startdate).toISOString().split('T')[0],
+      enddate: new Date(w.enddate).toISOString().split('T')[0],
+      status: w.status || 'Active'
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingWarranty(null);
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await apiClient.post('/Warranties', {
+      const payload = {
         imei: formData.imei,
         customerid: Number(formData.customerid),
         startdate: new Date(formData.startdate).toISOString(),
         enddate: new Date(formData.enddate).toISOString(),
         status: formData.status
-      });
+      };
+
+      if (editingWarranty) {
+        await apiClient.put(`/Warranties/${editingWarranty.warrantyid}`, payload);
+      } else {
+        await apiClient.post('/Warranties', payload);
+      }
+      
       fetchWarranties();
-      setIsModalOpen(false);
-      setFormData({
-        imei: '',
-        customerid: '',
-        startdate: new Date().toISOString().split('T')[0],
-        enddate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-        status: 'Active'
-      });
+      closeModal();
     } catch (err) {
-      alert('Không thể lưu phiếu bảo hành. Vui lòng kiểm tra lại thông tin.');
+      alert(editingWarranty ? 'Không thể cập nhật phiếu bảo hành.' : 'Không thể lưu phiếu bảo hành. Vui lòng kiểm tra lại thông tin.');
     } finally {
       setSaving(false);
     }
@@ -80,7 +110,7 @@ const StaffWarranties: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-800">Quản lý Bảo hành</h1>
           <p className="text-slate-500 text-sm">Quản lý thông tin bảo hành thiết bị của khách hàng</p>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+        <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
           <Plus size={18} /> Tạo thẻ bảo hành
         </button>
       </div>
@@ -94,13 +124,14 @@ const StaffWarranties: React.FC = () => {
               <th className="p-4">Ngày kích hoạt</th>
               <th className="p-4">Hạn bảo hành</th>
               <th className="p-4 text-center">Trạng thái</th>
+              <th className="p-4 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={5} className="p-4"><Skeleton className="h-10 w-full" /></td></tr>
+              <tr><td colSpan={6} className="p-4"><Skeleton className="h-10 w-full" /></td></tr>
             ) : warranties.length === 0 ? (
-              <tr><td colSpan={5} className="p-8 text-center text-slate-400">Không có dữ liệu bảo hành</td></tr>
+              <tr><td colSpan={6} className="p-8 text-center text-slate-400">Không có dữ liệu bảo hành</td></tr>
             ) : warranties.map(w => (
               <tr key={w.warrantyid} className="hover:bg-slate-50 transition-colors">
                 <td className="p-4 font-bold text-slate-800 flex items-center gap-2">
@@ -119,6 +150,11 @@ const StaffWarranties: React.FC = () => {
                     {w.status}
                   </span>
                 </td>
+                <td className="p-4 text-right">
+                  <button onClick={() => openEditModal(w)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                    <Edit2 size={16} />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -128,16 +164,17 @@ const StaffWarranties: React.FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-              <h2 className="text-lg font-black text-slate-800">Thêm Phiếu Bảo Hành Mới</h2>
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h2 className="text-lg font-black text-slate-800">{editingWarranty ? 'Sửa Thẻ Bảo Hành' : 'Thêm Phiếu Bảo Hành'}</h2>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">IMEI *</label>
-                <input type="text" required
+                <input type="text" required disabled={!!editingWarranty}
                   value={formData.imei}
                   onChange={e => setFormData({ ...formData, imei: e.target.value })}
-                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-bold uppercase" />
+                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-bold uppercase disabled:bg-slate-100" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Customer ID *</label>
@@ -175,7 +212,7 @@ const StaffWarranties: React.FC = () => {
                 </select>
               </div>
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Hủy</button>
+                <button type="button" onClick={closeModal} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Hủy</button>
                 <button type="submit" disabled={saving || !formData.imei || !formData.customerid} 
                   className="flex-1 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-60 transition-colors">
                   {saving ? 'Đang lưu...' : 'Lưu lại'}

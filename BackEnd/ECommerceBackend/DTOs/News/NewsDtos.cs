@@ -25,10 +25,8 @@ namespace ECommerceBackend.DTOs.News
 
         string? Content,
 
+        [StringLength(500, ErrorMessage = "Đường dẫn ảnh không quá 500 ký tự")]
         string? Thumbnail,
-
-        [Required(ErrorMessage = "Mã tác giả là bắt buộc")]
-        int? Userid,
 
         bool? Isactive
     );
@@ -43,6 +41,7 @@ namespace ECommerceBackend.DTOs.News
 
         string? Content,
 
+        [StringLength(500, ErrorMessage = "Đường dẫn ảnh không quá 500 ký tự")]
         string? Thumbnail,
 
         bool? Isactive

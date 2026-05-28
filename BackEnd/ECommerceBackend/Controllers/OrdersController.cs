@@ -22,7 +22,7 @@ namespace ECommerceBackend.Controllers
         {
             var customer = o.Customer != null ? new CustomerLiteDto(o.Customer.Customerid, o.Customer.Fullname, o.Customer.Phone, o.Customer.Email) : null;
             var items = o.Orderitems.Select(i => new OrderItemDto(
-                i.Orderitemid, i.Orderid, i.Imei, i.Sellingprice, i.Warrantyprice, i.Packageid
+                i.Orderitemid, i.Orderid, i.Imei, i.Sellingprice, i.Warrantyprice, i.Packageid, i.Package?.Packagename
             )).ToList();
 
             return new OrderListItemDto(
@@ -34,7 +34,7 @@ namespace ECommerceBackend.Controllers
         {
             var customer = o.Customer != null ? new CustomerLiteDto(o.Customer.Customerid, o.Customer.Fullname, o.Customer.Phone, o.Customer.Email) : null;
             var items = o.Orderitems.Select(i => new OrderItemDto(
-                i.Orderitemid, i.Orderid, i.Imei, i.Sellingprice, i.Warrantyprice, i.Packageid
+                i.Orderitemid, i.Orderid, i.Imei, i.Sellingprice, i.Warrantyprice, i.Packageid, i.Package?.Packagename
             )).ToList();
 
             return new OrderDetailDto(
@@ -50,6 +50,7 @@ namespace ECommerceBackend.Controllers
             var orders = await _context.Orders
                 .Include(o => o.Customer)
                 .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Package)
                 .ToListAsync();
             
             return Ok(orders.Select(MapToDto));
@@ -62,6 +63,8 @@ namespace ECommerceBackend.Controllers
         {
             var order = await _context.Orders
                 .Include(o => o.Customer)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Package)
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.ImeiNavigation)
                         .ThenInclude(inv => inv!.Variant)
@@ -79,6 +82,7 @@ namespace ECommerceBackend.Controllers
         {
             var orders = await _context.Orders
                 .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Package)
                 .Where(o => o.Customerid == customerId)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
@@ -101,6 +105,7 @@ namespace ECommerceBackend.Controllers
 
             var orders = await _context.Orders
                 .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Package)
                 .Where(o => o.Userid == userId)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
@@ -231,6 +236,14 @@ namespace ECommerceBackend.Controllers
                         return BadRequest(new ApiErrorDto($"Sản phẩm (VariantId: {reqItem.Variantid}) không đủ tồn kho (Chỉ còn {availableItems.Count}).", null));
 
                     decimal price = variant.Saleprice ?? variant.Baseprice;
+                    Warrantypackage? package = null;
+                    if (reqItem.Packageid.HasValue)
+                    {
+                        package = await _context.Warrantypackages.FindAsync(reqItem.Packageid);
+                        if (package == null) 
+                            return BadRequest(new ApiErrorDto($"Gói bảo hành ID {reqItem.Packageid} không tồn tại.", null));
+                    }
+                    decimal packagePrice = package?.Price ?? 0;
                     
                     foreach (var invItem in availableItems)
                     {
@@ -239,10 +252,12 @@ namespace ECommerceBackend.Controllers
                         var orderItem = new Orderitem
                         {
                             Imei = invItem.Imei,
-                            Sellingprice = price
+                            Sellingprice = price,
+                            Packageid = package?.Packageid,
+                            Warrantyprice = packagePrice > 0 ? packagePrice : null
                         };
                         order.Orderitems.Add(orderItem);
-                        order.Totalamount += price;
+                        order.Totalamount += price + packagePrice;
                     }
                 }
 
@@ -277,6 +292,7 @@ namespace ECommerceBackend.Controllers
                 var created = await _context.Orders
                     .Include(o => o.Customer)
                     .Include(o => o.Orderitems)
+                        .ThenInclude(oi => oi.Package)
                     .FirstOrDefaultAsync(o => o.Orderid == order.Orderid);
 
                 return CreatedAtAction(nameof(GetOrder), new { id = order.Orderid }, MapToDetailDto(created!));

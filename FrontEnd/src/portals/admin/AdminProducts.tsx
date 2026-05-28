@@ -8,6 +8,7 @@ import { useProducts } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/api/productsApi';
 import { productsApi } from '@/features/products/api/productsApi';
 import { formatCurrency, formatDate } from '@/utils/formatters';
+import { VariantAttributesModal } from './VariantAttributesModal';
 
 const PAGE_SIZE = 10;
 
@@ -18,6 +19,7 @@ const AdminProducts: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
 
   // Filter & paginate
   const filtered = products.filter(p =>
@@ -176,9 +178,10 @@ const AdminProducts: React.FC = () => {
         onClose={closeModal}
         title={editing?.productid ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
       >
-        <div className="space-y-4">
-          <Input
-            label="Tên sản phẩm *"
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <Input
+              label="Tên sản phẩm *"
             value={editing?.productname ?? ''}
             onChange={e => setEditing(prev => ({ ...prev, productname: e.target.value }))}
             placeholder="VD: iPhone 15 Pro Max 256GB"
@@ -215,6 +218,34 @@ const AdminProducts: React.FC = () => {
               />
             </div>
           </div>
+
+          {editing?.productid && editing.productvariants && (
+            <div className="pt-4 border-t border-slate-100">
+              <h3 className="text-sm font-bold text-slate-800 mb-3">Các phiên bản (Variants)</h3>
+              {editing.productvariants.length === 0 ? (
+                <p className="text-xs text-slate-500">Chưa có phiên bản nào.</p>
+              ) : (
+                <div className="space-y-2">
+                  {editing.productvariants.map(v => (
+                    <div key={v.variantid} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">SKU: {v.sku}</p>
+                        <p className="text-[10px] text-slate-500">Giá: {formatCurrency(v.saleprice ?? v.baseprice)}</p>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => setActiveVariantId(v.variantid)}
+                        className="px-3 py-1.5 bg-white border border-slate-300 rounded-md text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors"
+                      >
+                        Thuộc tính
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2">
             <Button onClick={handleSave} isLoading={saving} className="flex-1">
               {editing?.productid ? 'Cập nhật' : 'Thêm mới'}
@@ -223,8 +254,17 @@ const AdminProducts: React.FC = () => {
               Hủy
             </Button>
           </div>
+          </div>
         </div>
       </Modal>
+
+      {activeVariantId && (
+        <VariantAttributesModal 
+          isOpen={true} 
+          variantId={activeVariantId} 
+          onClose={() => setActiveVariantId(null)} 
+        />
+      )}
     </div>
   );
 };

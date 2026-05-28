@@ -33,6 +33,7 @@ const OrderLookupPage   = lazy(() => import('@/portals/customer/OrderLookupPage'
 const CartPage          = lazy(() => import('@/portals/customer/CartPage'));
 const CheckoutPage      = lazy(() => import('@/portals/customer/CheckoutPage'));
 const ProfilePage       = lazy(() => import('@/portals/customer/ProfilePage'));
+const CustomerChat      = lazy(() => import('@/portals/customer/CustomerChat'));
 // Batch 2 — Auth (wired after Batch 2 is done)
 const RegisterPage      = lazy(() => import('@/portals/customer/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/portals/customer/ForgotPasswordPage'));
@@ -45,6 +46,12 @@ const AdminUsers         = lazy(() => import('@/portals/admin/AdminUsers'));
 const AdminCategoryBrand = lazy(() => import('@/portals/admin/AdminCategoryBrand'));
 const AdminCustomers     = lazy(() => import('@/portals/admin/AdminCustomers'));
 const AdminVouchers      = lazy(() => import('@/portals/admin/AdminVouchers'));
+const AdminAttributes    = lazy(() => import('@/portals/admin/AdminAttributes'));
+const AdminWarrantyPackages = lazy(() => import('@/portals/admin/AdminWarrantyPackages'));
+const AdminNews          = lazy(() => import('@/portals/admin/AdminNews'));
+const AdminBanners       = lazy(() => import('@/portals/admin/AdminBanners'));
+const AdminSliders       = lazy(() => import('@/portals/admin/AdminSliders'));
+const AdminAuditLogs     = lazy(() => import('@/portals/admin/AdminAuditLogs'));
 
 // ── Staff pages ───────────────────────────────────────────────────────────────
 const StaffOrders         = lazy(() => import('@/portals/staff/StaffOrders'));
@@ -70,6 +77,7 @@ const App: React.FC = () => {
           <Route path="products"          element={<ProductsListPage />} />
           <Route path="products/:id"      element={<ProductDetailPage />} />
           <Route path="search"            element={<SearchPage />} />
+          <Route path="chat"              element={<CustomerChat />} />
           <Route path="news"              element={<NewsPage />} />
           <Route path="promotions"        element={<PromotionsPage />} />
           <Route path="cart"              element={<CartPage />} />
@@ -88,7 +96,13 @@ const App: React.FC = () => {
             <Route path="customers"       element={<AdminCustomers />} />
             <Route path="categories"      element={<AdminCategoryBrand />} />
             <Route path="brands"          element={<Navigate to="/admin/categories" replace />} />
+            <Route path="attributes"      element={<AdminAttributes />} />
             <Route path="vouchers"        element={<AdminVouchers />} />
+            <Route path="warranty-packages" element={<AdminWarrantyPackages />} />
+            <Route path="news"            element={<AdminNews />} />
+            <Route path="banners"         element={<AdminBanners />} />
+            <Route path="sliders"         element={<AdminSliders />} />
+            <Route path="auditlogs"       element={<AdminAuditLogs />} />
           </Route>
         </Route>
 

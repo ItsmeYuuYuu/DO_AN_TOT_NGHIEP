@@ -1,11 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { Skeleton } from '@/components/Skeleton';
+import { bannersApi } from '@/features/content/api/bannersApi';
+import type { Banner } from '@/features/content/api/bannersApi';
+import { slidersApi } from '@/features/content/api/slidersApi';
+import type { Slider } from '@/features/content/api/slidersApi';
 
 const CustomerHome: React.FC = () => {
   const { products, loading } = useProducts();
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [sliders, setSliders] = useState<Slider[]>([]);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    bannersApi.getActive().then(setBanners).catch(() => {});
+    slidersApi.getActive().then(setSliders).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (sliders.length > 1) {
+      const interval = setInterval(() => {
+        setActiveSlide(prev => (prev + 1) % sliders.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [sliders]);
 
   return (
     <div className="bg-slate-50 min-h-screen pb-12">
@@ -13,45 +34,58 @@ const CustomerHome: React.FC = () => {
       <section className="bg-white px-4 py-6 md:py-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            {/* Main Slider Placeholder */}
-            <div className="lg:col-span-3 aspect-[16/7] bg-blue-600 rounded-xl relative overflow-hidden group shadow-md">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 to-transparent z-10" />
-              <div className="absolute inset-0 flex items-center p-8 md:p-12 z-20">
-                <div className="max-w-md">
-                  <span className="inline-block bg-yellow-400 text-blue-950 text-[10px] font-bold px-2 py-1 rounded mb-4 uppercase tracking-wider">
-                    Sự kiện mới nhất
-                  </span>
-                  <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4">
-                    IPHONE 15 PRO <br />
-                    TITAN TỰ NHIÊN
-                  </h2>
-                  <p className="text-white/80 text-sm mb-6 hidden md:block leading-relaxed">
-                    Đẳng cấp công nghệ mới với khung viền Titan siêu bền, chip A17 Pro mạnh mẽ nhất.
-                  </p>
-                  <Link
-                    to="/products"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-700 font-black text-sm rounded-xl shadow-xl hover:bg-yellow-400 hover:text-blue-900 transition-all duration-200 hover:-translate-y-0.5"
-                  >
-                    MUA NGAY CHỈ TỪ 24.990K →
-                  </Link>
+            {/* Main Slider Placeholder / Dynamic */}
+            <div className="lg:col-span-3 aspect-[16/7] bg-slate-100 rounded-xl relative overflow-hidden shadow-md">
+              {sliders.length > 0 ? (
+                <>
+                  {sliders.map((s, idx) => (
+                    <div 
+                      key={s.sliderid} 
+                      className={`absolute inset-0 transition-opacity duration-700 ${idx === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                    >
+                      <img src={s.imageurl} alt={s.title} className="w-full h-full object-cover" />
+                      {s.linkurl && (
+                        <Link to={s.linkurl} className="absolute inset-0 z-20" aria-label={s.title} />
+                      )}
+                    </div>
+                  ))}
+                  {/* Indicators */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-30">
+                    {sliders.map((_, idx) => (
+                      <button 
+                        key={idx} 
+                        onClick={() => setActiveSlide(idx)}
+                        className={`h-2 rounded-full transition-all ${idx === activeSlide ? 'w-6 bg-blue-600' : 'w-2 bg-white/60 hover:bg-white'}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400">
+                  <span>Slider</span>
                 </div>
-              </div>
-              {/* Decorative graphic element */}
-              <div className="absolute right-[-10%] top-1/2 -translate-y-1/2 w-3/5 aspect-square bg-blue-400/20 rounded-full blur-3xl" />
+              )}
             </div>
 
             {/* Side Banners */}
             <div className="hidden lg:flex flex-col gap-4">
-              <div className="flex-1 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-6 relative overflow-hidden shadow-sm group cursor-pointer">
-                <h4 className="text-white font-bold text-lg mb-1 relative z-10">Thu cũ đổi mới</h4>
-                <p className="text-white/90 text-xs relative z-10">Trợ giá lên đến 2 triệu đồng</p>
-                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/20 rounded-full group-hover:scale-150 transition-transform duration-500" />
-              </div>
-              <div className="flex-1 bg-slate-900 rounded-xl p-6 relative overflow-hidden shadow-sm group cursor-pointer">
-                <h4 className="text-white font-bold text-lg mb-1 relative z-10">Phụ kiện Apple</h4>
-                <p className="text-white/80 text-xs relative z-10">Ưu đãi 20% khi mua kèm</p>
-                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
-              </div>
+              {banners.slice(0, 2).map((b) => (
+                <div key={b.bannerid} className="flex-1 rounded-xl relative overflow-hidden shadow-sm bg-slate-100">
+                  <img src={b.imageurl} alt="banner" className="w-full h-full object-cover" />
+                  {b.linkurl && (
+                    <Link to={b.linkurl} className="absolute inset-0" aria-label="banner link" />
+                  )}
+                </div>
+              ))}
+              {banners.length === 0 && (
+                <>
+                  <div className="flex-1 bg-slate-200 rounded-xl" />
+                  <div className="flex-1 bg-slate-200 rounded-xl" />
+                </>
+              )}
+              {banners.length === 1 && (
+                <div className="flex-1 bg-slate-200 rounded-xl" />
+              )}
             </div>
           </div>
         </div>

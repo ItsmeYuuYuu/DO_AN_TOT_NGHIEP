@@ -13,7 +13,8 @@ namespace ECommerceBackend.DTOs.Orders
         string? Imei,
         decimal Sellingprice,
         decimal? Warrantyprice,
-        int? Packageid
+        int? Packageid,
+        string? Packagename
     );
 
     public record OrderListItemDto(
@@ -47,7 +48,8 @@ namespace ECommerceBackend.DTOs.Orders
 
     public record CreateOrderItemRequestDto(
         [Required] int Variantid, 
-        [Range(1, 1000, ErrorMessage = "Số lượng phải từ 1 đến 1000")] int Quantity
+        [Range(1, 1000, ErrorMessage = "Số lượng phải từ 1 đến 1000")] int Quantity,
+        int? Packageid = null
     );
 
     public record CreateOrderRequestDto(

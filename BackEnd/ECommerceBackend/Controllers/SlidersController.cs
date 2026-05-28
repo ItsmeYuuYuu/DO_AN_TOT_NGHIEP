@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Sliders;
+using ECommerceBackend.DTOs.Common;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,7 +45,7 @@ namespace ECommerceBackend.Controllers
         public async Task<ActionResult<SliderDto>> GetSlider(int id)
         {
             var slider = await _context.Sliders.FindAsync(id);
-            if (slider == null) return NotFound();
+            if (slider == null) return NotFound(new ApiErrorDto("Slider không tồn tại.", null));
             return Ok(MapToDto(slider));
         }
 
@@ -71,7 +72,7 @@ namespace ECommerceBackend.Controllers
         public async Task<IActionResult> PutSlider(int id, [FromBody] UpdateSliderRequestDto dto)
         {
             var slider = await _context.Sliders.FindAsync(id);
-            if (slider == null) return NotFound();
+            if (slider == null) return NotFound(new ApiErrorDto("Slider không tồn tại.", null));
 
             slider.Title = dto.Title;
             slider.Imageurl = dto.Imageurl;
@@ -85,7 +86,7 @@ namespace ECommerceBackend.Controllers
             try { await _context.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.Sliders.Any(e => e.Sliderid == id)) return NotFound();
+                if (!_context.Sliders.Any(e => e.Sliderid == id)) return NotFound(new ApiErrorDto("Slider không tồn tại.", null));
                 throw;
             }
             return Ok(MapToDto(slider));
@@ -96,7 +97,7 @@ namespace ECommerceBackend.Controllers
         public async Task<IActionResult> DeleteSlider(int id)
         {
             var slider = await _context.Sliders.FindAsync(id);
-            if (slider == null) return NotFound();
+            if (slider == null) return NotFound(new ApiErrorDto("Slider không tồn tại.", null));
             _context.Sliders.Remove(slider);
             await _context.SaveChangesAsync();
             return NoContent();

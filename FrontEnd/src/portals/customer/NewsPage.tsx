@@ -1,18 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import apiClient from '@/api/apiClient';
+import { newsApi } from '@/features/content/api/newsApi';
+import type { News as NewsItem } from '@/features/content/api/newsApi';
 import { Calendar, User, ChevronRight, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
-
-interface NewsItem {
-  postid: number;
-  title?: string;
-  summary?: string;
-  content?: string;
-  thumbnail?: string;
-  createdat?: string;
-  isactive?: boolean;
-  authorName?: string;
-}
 
 const NewsPage: React.FC = () => {
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
@@ -20,8 +10,8 @@ const NewsPage: React.FC = () => {
   const [selectedPost, setSelectedPost] = useState<NewsItem | null>(null);
 
   useEffect(() => {
-    apiClient.get<NewsItem[]>('/News/active')
-      .then(res => setNewsList(res.data))
+    newsApi.getActive()
+      .then(res => setNewsList(res))
       .catch(() => setNewsList([]))
       .finally(() => setLoading(false));
   }, []);

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.News;
+using ECommerceBackend.DTOs.Common;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,7 +49,7 @@ namespace ECommerceBackend.Controllers
         public async Task<ActionResult<NewsDto>> GetNewsItem(int id)
         {
             var news = await _context.News.Include(n => n.User).FirstOrDefaultAsync(n => n.Postid == id);
-            if (news == null) return NotFound();
+            if (news == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
             return Ok(MapToDto(news));
         }
 
@@ -56,13 +57,17 @@ namespace ECommerceBackend.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<NewsDto>> PostNews([FromBody] CreateNewsRequestDto dto)
         {
+            var claimUserId = User.FindFirst("userid")?.Value;
+            if (string.IsNullOrEmpty(claimUserId))
+                return BadRequest(new ApiErrorDto("Không xác định được danh tính người tạo.", null));
+
             var news = new News
             {
                 Title = dto.Title,
                 Summary = dto.Summary,
                 Content = dto.Content,
                 Thumbnail = dto.Thumbnail,
-                Userid = dto.Userid,
+                Userid = int.Parse(claimUserId),
                 Createdat = DateTime.UtcNow,
                 Isactive = dto.Isactive ?? true
             };
@@ -79,7 +84,7 @@ namespace ECommerceBackend.Controllers
         public async Task<IActionResult> PutNews(int id, [FromBody] UpdateNewsRequestDto dto)
         {
             var news = await _context.News.FindAsync(id);
-            if (news == null) return NotFound();
+            if (news == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
 
             news.Title = dto.Title;
             news.Summary = dto.Summary;
@@ -93,7 +98,7 @@ namespace ECommerceBackend.Controllers
             try { await _context.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.News.Any(e => e.Postid == id)) return NotFound();
+                if (!_context.News.Any(e => e.Postid == id)) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
                 throw;
             }
 
@@ -106,7 +111,7 @@ namespace ECommerceBackend.Controllers
         public async Task<IActionResult> DeleteNews(int id)
         {
             var news = await _context.News.FindAsync(id);
-            if (news == null) return NotFound();
+            if (news == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
             _context.News.Remove(news);
             await _context.SaveChangesAsync();
             return NoContent();

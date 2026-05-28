@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Users, Layers, Tag, Users2, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Users, Layers, Tag, Users2, LogOut, Activity } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 
 const navGroups: { group: string; items: { label: string; to: string; icon: React.ReactNode; end?: boolean }[] }[] = [
@@ -23,13 +23,24 @@ const navGroups: { group: string; items: { label: string; to: string; icon: Reac
       { label: 'Sản phẩm', to: '/admin/products', icon: <Package size={18} /> },
       { label: 'Danh mục', to: '/admin/categories', icon: <Layers size={18} /> },
       { label: 'Thương hiệu', to: '/admin/brands', icon: <Tag size={18} /> },
+      { label: 'Thuộc tính', to: '/admin/attributes', icon: <Tag size={18} /> },
+    ],
+  },
+  {
+    group: 'Nội dung',
+    items: [
+      { label: 'Tin tức', to: '/admin/news', icon: <Tag size={18} /> },
+      { label: 'Banners', to: '/admin/banners', icon: <Tag size={18} /> },
+      { label: 'Sliders', to: '/admin/sliders', icon: <Tag size={18} /> },
     ],
   },
   {
     group: 'Hệ thống',
     items: [
       { label: 'Tài khoản', to: '/admin/users', icon: <Users size={18} /> },
+      { label: 'Nhật ký hệ thống', to: '/admin/auditlogs', icon: <Activity size={18} /> },
       { label: 'Voucher', to: '/admin/vouchers', icon: <Tag size={18} /> },
+      { label: 'Gói bảo hành', to: '/admin/warranty-packages', icon: <Tag size={18} /> },
     ],
   },
 ];

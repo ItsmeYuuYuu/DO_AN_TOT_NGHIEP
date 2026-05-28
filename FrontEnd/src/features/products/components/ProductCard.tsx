@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { Product } from '../api/productsApi';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, getDiscountPercent } from '@/utils/formatters';
 import { Button } from '@/components/Button';
 
 interface ProductCardProps {
@@ -13,9 +13,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const mainImage = firstVariant?.productimages?.find((img) => img.ismain)?.imageurl
     ?? firstVariant?.productimages?.[0]?.imageurl;
 
-  const discount = firstVariant?.saleprice && firstVariant.saleprice < firstVariant.baseprice
-    ? Math.round(((firstVariant.baseprice - firstVariant.saleprice) / firstVariant.baseprice) * 100)
-    : 0;
+  const discount = getDiscountPercent(firstVariant?.baseprice, firstVariant?.saleprice);
 
   return (
     <div className="product-card flex flex-col h-full group bg-white">
@@ -36,7 +34,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         )}
 
         {/* Discount Badge */}
-        {discount > 0 && (
+        {discount && (
           <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
             -{discount}%
           </div>

@@ -65,6 +65,8 @@ builder.Services
 builder.Services.AddAuthorization();
 
 // ── Audit Log (Singleton background service + scoped filter) ─────────────────────
+builder.Services.AddScoped<ECommerceBackend.Services.Chat.IAiProvider, ECommerceBackend.Services.Chat.MockAiProvider>();
+builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatOrchestratorService, ECommerceBackend.Services.Chat.ChatOrchestratorService>();
 builder.Services.AddSingleton<AuditLogService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AuditLogService>());
 builder.Services.AddScoped<AuditActionFilter>();

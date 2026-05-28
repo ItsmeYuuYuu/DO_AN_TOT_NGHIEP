@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ShoppingCart, Star, Shield, Truck, RotateCcw, Plus, Minus, Check } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 import { useCart } from '@/features/orders/context/CartContext';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, getDiscountPercent } from '@/utils/formatters';
+import { ProductReviews } from './ProductReviews';
 
 interface ProductVariant {
   variantid: number;
@@ -87,9 +88,7 @@ const ProductDetailPage: React.FC = () => {
   const images = product.productimages ?? [];
   const imgSrc = (i: number) =>
     images[i]?.imageurl ?? `https://placehold.co/600x600?text=${encodeURIComponent(product.productname)}`;
-  const discount = selectedVariant && selectedVariant.baseprice > selectedVariant.saleprice
-    ? Math.round((1 - selectedVariant.saleprice / selectedVariant.baseprice) * 100)
-    : 0;
+  const discount = getDiscountPercent(selectedVariant?.baseprice, selectedVariant?.saleprice);
   const inCart = selectedVariant ? isInCart(selectedVariant.variantid) : false;
 
   return (
@@ -166,7 +165,7 @@ const ProductDetailPage: React.FC = () => {
               <span className="text-4xl font-black text-orange-500">
                 {formatCurrency(selectedVariant.saleprice ?? selectedVariant.baseprice)}
               </span>
-              {discount > 0 && (
+              {discount && (
                 <>
                   <span className="text-lg text-slate-400 line-through font-medium">
                     {formatCurrency(selectedVariant.baseprice)}
@@ -272,6 +271,9 @@ const ProductDetailPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Reviews */}
+      <ProductReviews variantId={selectedVariant?.variantid} />
     </div>
   );
 };

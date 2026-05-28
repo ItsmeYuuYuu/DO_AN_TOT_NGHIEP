@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Banners;
+using ECommerceBackend.DTOs.Common;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Linq;
@@ -43,7 +44,7 @@ namespace ECommerceBackend.Controllers
         public async Task<ActionResult<BannerDto>> GetBanner(int id)
         {
             var banner = await _context.Banners.FindAsync(id);
-            if (banner == null) return NotFound();
+            if (banner == null) return NotFound(new ApiErrorDto("Banner không tồn tại.", null));
             return Ok(MapToDto(banner));
         }
 
@@ -69,7 +70,7 @@ namespace ECommerceBackend.Controllers
         public async Task<IActionResult> PutBanner(int id, [FromBody] UpdateBannerRequestDto dto)
         {
             var banner = await _context.Banners.FindAsync(id);
-            if (banner == null) return NotFound();
+            if (banner == null) return NotFound(new ApiErrorDto("Banner không tồn tại.", null));
 
             banner.Imageurl = dto.Imageurl;
             banner.Linkurl = dto.Linkurl;
@@ -82,7 +83,7 @@ namespace ECommerceBackend.Controllers
             try { await _context.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.Banners.Any(e => e.Bannerid == id)) return NotFound();
+                if (!_context.Banners.Any(e => e.Bannerid == id)) return NotFound(new ApiErrorDto("Banner không tồn tại.", null));
                 throw;
             }
             return Ok(MapToDto(banner));
@@ -93,7 +94,7 @@ namespace ECommerceBackend.Controllers
         public async Task<IActionResult> DeleteBanner(int id)
         {
             var banner = await _context.Banners.FindAsync(id);
-            if (banner == null) return NotFound();
+            if (banner == null) return NotFound(new ApiErrorDto("Banner không tồn tại.", null));
             _context.Banners.Remove(banner);
             await _context.SaveChangesAsync();
             return NoContent();

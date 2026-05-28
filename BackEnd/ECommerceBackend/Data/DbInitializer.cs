@@ -87,14 +87,20 @@ public static class DbInitializer
         if (!context.Brands.Any())
         {
             context.Brands.AddRange(
-                new Brand { Brandid = 1, Brandname = "Apple" },
-                new Brand { Brandid = 2, Brandname = "Samsung" },
-                new Brand { Brandid = 3, Brandname = "ASUS" },
-                new Brand { Brandid = 4, Brandname = "Dell" },
-                new Brand { Brandid = 5, Brandname = "Sony" },
-                new Brand { Brandid = 6, Brandname = "Xiaomi" },
-                new Brand { Brandid = 7, Brandname = "Lenovo" },
-                new Brand { Brandid = 8, Brandname = "HP" }
+                new Brand { Brandid = 1, Brandname = "Google Pixel" },
+                new Brand { Brandid = 2, Brandname = "vivo" },
+                new Brand { Brandid = 3, Brandname = "iQOO" },
+                new Brand { Brandid = 4, Brandname = "Honor" },
+                new Brand { Brandid = 5, Brandname = "OnePlus" },
+                new Brand { Brandid = 6, Brandname = "OPPO" },
+                new Brand { Brandid = 7, Brandname = "Realme" },
+                new Brand { Brandid = 8, Brandname = "Xiaomi" },
+                new Brand { Brandid = 9, Brandname = "Huawei" },
+                new Brand { Brandid = 10, Brandname = "Meizu" },
+                new Brand { Brandid = 11, Brandname = "iPhone" },
+                new Brand { Brandid = 12, Brandname = "Samsung" },
+                new Brand { Brandid = 13, Brandname = "Sony" },
+                new Brand { Brandid = 14, Brandname = "Nothing Phone" }
             );
             await context.SaveChangesAsync();
         }
@@ -115,41 +121,125 @@ public static class DbInitializer
         {
             var products = new[]
             {
-                new Product { Productid = 1,  Categoryid = 1, Brandid = 1, Productname = "iPhone 15 Pro Max 256GB", Description = "Siêu phẩm iPhone 2024 với chip A17 Pro, màn hình 6.7 inch Super Retina XDR, camera 48MP.", Createdat = DateTime.Now },
-                new Product { Productid = 2,  Categoryid = 1, Brandid = 1, Productname = "iPhone 15 128GB", Description = "iPhone 15 tiêu chuẩn với chip A16 Bionic, camera Dynamic Island và cổng USB-C.", Createdat = DateTime.Now },
-                new Product { Productid = 3,  Categoryid = 1, Brandid = 1, Productname = "iPhone 14 Pro 256GB", Description = "iPhone 14 Pro với tính năng Dynamic Island, Always-On Display và camera 48MP.", Createdat = DateTime.Now },
-                new Product { Productid = 4,  Categoryid = 1, Brandid = 2, Productname = "Samsung Galaxy S24 Ultra 512GB", Description = "Flagship Samsung 2024 với S Pen tích hợp, chip Snapdragon 8 Gen 3, camera 200MP.", Createdat = DateTime.Now },
-                new Product { Productid = 5,  Categoryid = 1, Brandid = 2, Productname = "Samsung Galaxy Z Fold 5", Description = "Điện thoại gập cao cấp nhất của Samsung với màn hình trong 7.6 inch.", Createdat = DateTime.Now },
-                new Product { Productid = 6,  Categoryid = 2, Brandid = 1, Productname = "MacBook Pro 14 M3 Pro", Description = "MacBook Pro 14 inch chip M3 Pro, màn hình Liquid Retina XDR, pin 18 giờ.", Createdat = DateTime.Now },
-                new Product { Productid = 7,  Categoryid = 2, Brandid = 3, Productname = "ASUS ROG Strix G16 RTX 4070", Description = "Laptop gaming mạnh mẽ với RTX 4070, màn hình 165Hz, tản nhiệt Tri-Fan.", Createdat = DateTime.Now },
-                new Product { Productid = 8,  Categoryid = 2, Brandid = 4, Productname = "Dell XPS 15 OLED 2024", Description = "Dell XPS 15 với màn hình OLED 3.5K, Intel Core Ultra 7, thiết kế premium.", Createdat = DateTime.Now },
-                new Product { Productid = 9,  Categoryid = 3, Brandid = 1, Productname = "iPad Pro M4 11 inch", Description = "iPad Pro thế hệ mới nhất với chip M4, màn hình OLED Ultra Retina XDR siêu mỏng.", Createdat = DateTime.Now },
-                new Product { Productid = 10, Categoryid = 3, Brandid = 2, Productname = "Samsung Galaxy Tab S9 Ultra", Description = "Máy tính bảng Android cao cấp, màn hình AMOLED 14.6 inch, S Pen đi kèm.", Createdat = DateTime.Now },
-                new Product { Productid = 11, Categoryid = 4, Brandid = 1, Productname = "AirPods Pro 2 (USB-C)", Description = "Tai nghe AirPods Pro thế hệ 2, chống ồn chủ động H2, âm thanh Lossless.", Createdat = DateTime.Now },
-                new Product { Productid = 12, Categoryid = 4, Brandid = 5, Productname = "Sony WH-1000XM5", Description = "Tai nghe chụp tai flagship Sony, chống ồn tốt nhất thị trường, pin 30 giờ.", Createdat = DateTime.Now },
-                new Product { Productid = 13, Categoryid = 5, Brandid = 1, Productname = "Apple Watch Series 9 GPS 45mm", Description = "Đồng hồ thông minh Apple Watch Series 9, chip S9, Double Tap gesture.", Createdat = DateTime.Now },
-                new Product { Productid = 14, Categoryid = 5, Brandid = 2, Productname = "Samsung Galaxy Watch 6 Classic 47mm", Description = "Galaxy Watch 6 Classic với bezel xoay, theo dõi sức khỏe toàn diện.", Createdat = DateTime.Now },
+                new Product { Productid = 101, Categoryid = 1, Brandid = 1, Productname = "Google Pixel 8 Pro", Description = "Điện thoại Google Pixel cao cấp nhất với chip Tensor G3 và camera AI.", Createdat = DateTime.Now },
+                new Product { Productid = 102, Categoryid = 1, Brandid = 1, Productname = "Google Pixel 8", Description = "Google Pixel 8 nhỏ gọn, chip Tensor G3 mạnh mẽ.", Createdat = DateTime.Now },
+                new Product { Productid = 103, Categoryid = 1, Brandid = 1, Productname = "Google Pixel 7a", Description = "Điện thoại Pixel tầm trung với camera xuất sắc.", Createdat = DateTime.Now },
+                
+                new Product { Productid = 201, Categoryid = 1, Brandid = 2, Productname = "vivo X100 Pro", Description = "Flagship camera kết hợp Zeiss.", Createdat = DateTime.Now },
+                new Product { Productid = 202, Categoryid = 1, Brandid = 2, Productname = "vivo V29 5G", Description = "Chuyên gia chân dung với vòng sáng Aura.", Createdat = DateTime.Now },
+                new Product { Productid = 203, Categoryid = 1, Brandid = 2, Productname = "vivo Y36", Description = "Thiết kế trẻ trung, sạc nhanh 44W.", Createdat = DateTime.Now },
+
+                new Product { Productid = 301, Categoryid = 1, Brandid = 3, Productname = "iQOO 12 Pro", Description = "Siêu phẩm gaming với chip Snapdragon 8 Gen 3.", Createdat = DateTime.Now },
+                new Product { Productid = 302, Categoryid = 1, Brandid = 3, Productname = "iQOO Neo 9", Description = "Hiệu năng đỉnh cao trong tầm giá.", Createdat = DateTime.Now },
+                new Product { Productid = 303, Categoryid = 1, Brandid = 3, Productname = "iQOO Z8", Description = "Pin khủng, sạc siêu tốc 120W.", Createdat = DateTime.Now },
+
+                new Product { Productid = 401, Categoryid = 1, Brandid = 4, Productname = "Honor Magic6 Pro", Description = "Flagship Honor với camera Falcon, pin silicon-carbon.", Createdat = DateTime.Now },
+                new Product { Productid = 402, Categoryid = 1, Brandid = 4, Productname = "Honor 90", Description = "Màn hình bảo vệ mắt đỉnh cao, camera 200MP.", Createdat = DateTime.Now },
+                new Product { Productid = 403, Categoryid = 1, Brandid = 4, Productname = "Honor X9b", Description = "Thiết kế siêu bền chống va đập.", Createdat = DateTime.Now },
+
+                new Product { Productid = 501, Categoryid = 1, Brandid = 5, Productname = "OnePlus 12", Description = "Flagship Killer 2024, Snapdragon 8 Gen 3, Hasselblad.", Createdat = DateTime.Now },
+                new Product { Productid = 502, Categoryid = 1, Brandid = 5, Productname = "OnePlus 12R", Description = "Hiệu năng mạnh mẽ với pin lớn.", Createdat = DateTime.Now },
+                new Product { Productid = 503, Categoryid = 1, Brandid = 5, Productname = "OnePlus Nord 3", Description = "Tầm trung cực mạnh, sạc 80W.", Createdat = DateTime.Now },
+
+                new Product { Productid = 601, Categoryid = 1, Brandid = 6, Productname = "OPPO Find N3", Description = "Điện thoại gập siêu mỏng nhẹ, camera Hasselblad.", Createdat = DateTime.Now },
+                new Product { Productid = 602, Categoryid = 1, Brandid = 6, Productname = "OPPO Reno11 Pro", Description = "Thiết kế đẹp mắt, camera chân dung tele.", Createdat = DateTime.Now },
+                new Product { Productid = 603, Categoryid = 1, Brandid = 6, Productname = "OPPO A98 5G", Description = "Màn hình 120Hz, pin bền bỉ.", Createdat = DateTime.Now },
+
+                new Product { Productid = 701, Categoryid = 1, Brandid = 7, Productname = "Realme GT5 Pro", Description = "Flagship Realme Snapdragon 8 Gen 3, camera tele xịn.", Createdat = DateTime.Now },
+                new Product { Productid = 702, Categoryid = 1, Brandid = 7, Productname = "Realme 11 Pro+", Description = "Màn hình cong đẹp, camera 200MP.", Createdat = DateTime.Now },
+                new Product { Productid = 703, Categoryid = 1, Brandid = 7, Productname = "Realme C67", Description = "Smartphone quốc dân giá cực rẻ.", Createdat = DateTime.Now },
+
+                new Product { Productid = 801, Categoryid = 1, Brandid = 8, Productname = "Xiaomi 14 Ultra", Description = "Quái thú nhiếp ảnh với cụm camera Leica.", Createdat = DateTime.Now },
+                new Product { Productid = 802, Categoryid = 1, Brandid = 8, Productname = "Xiaomi 14", Description = "Flagship nhỏ gọn mạnh mẽ.", Createdat = DateTime.Now },
+                new Product { Productid = 803, Categoryid = 1, Brandid = 8, Productname = "Redmi Note 13 Pro+", Description = "Siêu phẩm tầm trung có chống nước IP68.", Createdat = DateTime.Now },
+
+                new Product { Productid = 901, Categoryid = 1, Brandid = 9, Productname = "Huawei Mate 60 Pro", Description = "Flagship Huawei có kết nối vệ tinh, thiết kế đẳng cấp.", Createdat = DateTime.Now },
+                new Product { Productid = 902, Categoryid = 1, Brandid = 9, Productname = "Huawei P60 Pro", Description = "Ông vua nhiếp ảnh thiếu sáng.", Createdat = DateTime.Now },
+                new Product { Productid = 903, Categoryid = 1, Brandid = 9, Productname = "Huawei Nova 11", Description = "Smartphone thời trang mỏng nhẹ.", Createdat = DateTime.Now },
+
+                new Product { Productid = 1001, Categoryid = 1, Brandid = 10, Productname = "Meizu 21 Pro", Description = "Flagship Meizu cuối cùng, thiết kế vuông vức tinh tế.", Createdat = DateTime.Now },
+                new Product { Productid = 1002, Categoryid = 1, Brandid = 10, Productname = "Meizu 21", Description = "Viền màn hình trắng siêu mỏng.", Createdat = DateTime.Now },
+                new Product { Productid = 1003, Categoryid = 1, Brandid = 10, Productname = "Meizu 20 Infinity", Description = "Điện thoại viền siêu mỏng, mặt lưng kính đặc biệt.", Createdat = DateTime.Now },
+
+                new Product { Productid = 1101, Categoryid = 1, Brandid = 11, Productname = "iPhone 15 Pro Max", Description = "Khung Titan, chip A17 Pro, cổng USB-C.", Createdat = DateTime.Now },
+                new Product { Productid = 1102, Categoryid = 1, Brandid = 11, Productname = "iPhone 15", Description = "Dynamic Island cho dòng tiêu chuẩn.", Createdat = DateTime.Now },
+                new Product { Productid = 1103, Categoryid = 1, Brandid = 11, Productname = "iPhone 13", Description = "Chiếc iPhone quốc dân với giá cực tốt.", Createdat = DateTime.Now },
+
+                new Product { Productid = 1201, Categoryid = 1, Brandid = 12, Productname = "Samsung Galaxy S24 Ultra", Description = "Thiết kế phẳng, khung Titan, Galaxy AI.", Createdat = DateTime.Now },
+                new Product { Productid = 1202, Categoryid = 1, Brandid = 12, Productname = "Samsung Galaxy Z Fold5", Description = "Điện thoại gập cỡ lớn tối ưu đa nhiệm.", Createdat = DateTime.Now },
+                new Product { Productid = 1203, Categoryid = 1, Brandid = 12, Productname = "Samsung Galaxy A54 5G", Description = "Điện thoại tầm trung bán chạy nhất.", Createdat = DateTime.Now },
+
+                new Product { Productid = 1301, Categoryid = 1, Brandid = 13, Productname = "Sony Xperia 1 V", Description = "Cảm biến Exmor T mới, màn hình 4K HDR.", Createdat = DateTime.Now },
+                new Product { Productid = 1302, Categoryid = 1, Brandid = 13, Productname = "Sony Xperia 5 V", Description = "Điện thoại gọn nhẹ, hiệu năng cao.", Createdat = DateTime.Now },
+                new Product { Productid = 1303, Categoryid = 1, Brandid = 13, Productname = "Sony Xperia 10 V", Description = "Pin khủng nhất trong phân khúc mỏng nhẹ.", Createdat = DateTime.Now },
+
+                new Product { Productid = 1401, Categoryid = 1, Brandid = 14, Productname = "Nothing Phone (2)", Description = "Mặt lưng LED Glyph độc đáo, chip Snapdragon 8+ Gen 1.", Createdat = DateTime.Now },
+                new Product { Productid = 1402, Categoryid = 1, Brandid = 14, Productname = "Nothing Phone (2a)", Description = "Thiết kế khác biệt cho phân khúc tầm trung.", Createdat = DateTime.Now },
+                new Product { Productid = 1403, Categoryid = 1, Brandid = 14, Productname = "Nothing Phone (1)", Description = "Phiên bản tiên phong với mặt lưng trong suốt.", Createdat = DateTime.Now }
             };
             context.Products.AddRange(products);
             await context.SaveChangesAsync();
 
             var variants = new[]
             {
-                new Productvariant { Variantid = 1,  Productid = 1,  Conditionid = 1, Sku = "IPH15PM-256-NAT", Baseprice = 34_990_000, Saleprice = 32_490_000 },
-                new Productvariant { Variantid = 2,  Productid = 1,  Conditionid = 1, Sku = "IPH15PM-256-BLK", Baseprice = 34_990_000, Saleprice = 32_490_000 },
-                new Productvariant { Variantid = 3,  Productid = 2,  Conditionid = 1, Sku = "IPH15-128-BLK",   Baseprice = 22_990_000, Saleprice = 21_490_000 },
-                new Productvariant { Variantid = 4,  Productid = 3,  Conditionid = 1, Sku = "IPH14PRO-256-BLK",Baseprice = 28_990_000, Saleprice = 24_990_000 },
-                new Productvariant { Variantid = 5,  Productid = 4,  Conditionid = 1, Sku = "SGSUS24U-512-BLK",Baseprice = 36_990_000, Saleprice = 33_990_000 },
-                new Productvariant { Variantid = 6,  Productid = 5,  Conditionid = 1, Sku = "SGZF5-256-BLK",   Baseprice = 42_990_000, Saleprice = 39_990_000 },
-                new Productvariant { Variantid = 7,  Productid = 6,  Conditionid = 1, Sku = "MBP14-M3PRO-18",  Baseprice = 52_990_000, Saleprice = 49_990_000 },
-                new Productvariant { Variantid = 8,  Productid = 7,  Conditionid = 1, Sku = "ROG-G16-RTX4070",  Baseprice = 45_990_000, Saleprice = 42_990_000 },
-                new Productvariant { Variantid = 9,  Productid = 8,  Conditionid = 1, Sku = "DELL-XPS15-OLED",  Baseprice = 55_990_000, Saleprice = null },
-                new Productvariant { Variantid = 10, Productid = 9,  Conditionid = 1, Sku = "IPADPROM4-11-256",  Baseprice = 28_990_000, Saleprice = 27_490_000 },
-                new Productvariant { Variantid = 11, Productid = 10, Conditionid = 1, Sku = "TABS9U-512-GRY",    Baseprice = 32_990_000, Saleprice = 29_990_000 },
-                new Productvariant { Variantid = 12, Productid = 11, Conditionid = 1, Sku = "APP2-USBC",         Baseprice = 6_990_000, Saleprice = 5_990_000 },
-                new Productvariant { Variantid = 13, Productid = 12, Conditionid = 1, Sku = "SONY-XM5-BLK",     Baseprice = 8_490_000, Saleprice = 7_490_000 },
-                new Productvariant { Variantid = 14, Productid = 13, Conditionid = 1, Sku = "AW9-GPS-45-MID",    Baseprice = 12_490_000, Saleprice = 11_490_000 },
-                new Productvariant { Variantid = 15, Productid = 14, Conditionid = 1, Sku = "GW6C-47-SLV",       Baseprice = 10_490_000, Saleprice = 9_490_000 },
+                new Productvariant { Variantid = 1011, Productid = 101, Conditionid = 1, Sku = "PIX8P-128", Baseprice = 24990000, Saleprice = 23990000 },
+                new Productvariant { Variantid = 1012, Productid = 101, Conditionid = 1, Sku = "PIX8P-256", Baseprice = 26990000, Saleprice = null },
+                new Productvariant { Variantid = 1021, Productid = 102, Conditionid = 1, Sku = "PIX8-128", Baseprice = 18990000, Saleprice = 17990000 },
+                new Productvariant { Variantid = 1031, Productid = 103, Conditionid = 1, Sku = "PIX7A-128", Baseprice = 10990000, Saleprice = 9990000 },
+
+                new Productvariant { Variantid = 2011, Productid = 201, Conditionid = 1, Sku = "VIV-X100P-256", Baseprice = 29990000, Saleprice = 28990000 },
+                new Productvariant { Variantid = 2021, Productid = 202, Conditionid = 1, Sku = "VIV-V29-128", Baseprice = 11990000, Saleprice = 10990000 },
+                new Productvariant { Variantid = 2031, Productid = 203, Conditionid = 1, Sku = "VIV-Y36-128", Baseprice = 6990000, Saleprice = 6490000 },
+
+                new Productvariant { Variantid = 3011, Productid = 301, Conditionid = 1, Sku = "IQO-12P-256", Baseprice = 19990000, Saleprice = 18990000 },
+                new Productvariant { Variantid = 3021, Productid = 302, Conditionid = 1, Sku = "IQO-N9-256", Baseprice = 12990000, Saleprice = 11990000 },
+                new Productvariant { Variantid = 3031, Productid = 303, Conditionid = 1, Sku = "IQO-Z8-128", Baseprice = 7990000, Saleprice = null },
+
+                new Productvariant { Variantid = 4011, Productid = 401, Conditionid = 1, Sku = "HON-M6P-256", Baseprice = 25990000, Saleprice = 24990000 },
+                new Productvariant { Variantid = 4021, Productid = 402, Conditionid = 1, Sku = "HON-90-256", Baseprice = 10990000, Saleprice = 9990000 },
+                new Productvariant { Variantid = 4031, Productid = 403, Conditionid = 1, Sku = "HON-X9B-256", Baseprice = 8990000, Saleprice = null },
+
+                new Productvariant { Variantid = 5011, Productid = 501, Conditionid = 1, Sku = "ONE-12-256", Baseprice = 22990000, Saleprice = 21990000 },
+                new Productvariant { Variantid = 5021, Productid = 502, Conditionid = 1, Sku = "ONE-12R-256", Baseprice = 15990000, Saleprice = 14990000 },
+                new Productvariant { Variantid = 5031, Productid = 503, Conditionid = 1, Sku = "ONE-N3-128", Baseprice = 10990000, Saleprice = 9990000 },
+
+                new Productvariant { Variantid = 6011, Productid = 601, Conditionid = 1, Sku = "OPP-FN3-512", Baseprice = 44990000, Saleprice = 42990000 },
+                new Productvariant { Variantid = 6021, Productid = 602, Conditionid = 1, Sku = "OPP-R11P-256", Baseprice = 16990000, Saleprice = 15990000 },
+                new Productvariant { Variantid = 6031, Productid = 603, Conditionid = 1, Sku = "OPP-A98-256", Baseprice = 8990000, Saleprice = 8490000 },
+
+                new Productvariant { Variantid = 7011, Productid = 701, Conditionid = 1, Sku = "RME-GT5P-256", Baseprice = 16990000, Saleprice = 15990000 },
+                new Productvariant { Variantid = 7021, Productid = 702, Conditionid = 1, Sku = "RME-11PP-256", Baseprice = 11990000, Saleprice = 10990000 },
+                new Productvariant { Variantid = 7031, Productid = 703, Conditionid = 1, Sku = "RME-C67-128", Baseprice = 5990000, Saleprice = null },
+
+                new Productvariant { Variantid = 8011, Productid = 801, Conditionid = 1, Sku = "XIA-14U-512", Baseprice = 32990000, Saleprice = 31990000 },
+                new Productvariant { Variantid = 8021, Productid = 802, Conditionid = 1, Sku = "XIA-14-256", Baseprice = 22990000, Saleprice = 21990000 },
+                new Productvariant { Variantid = 8031, Productid = 803, Conditionid = 1, Sku = "XIA-RN13PP-256", Baseprice = 10990000, Saleprice = 10490000 },
+
+                new Productvariant { Variantid = 9011, Productid = 901, Conditionid = 1, Sku = "HUA-M60P-512", Baseprice = 39990000, Saleprice = 38990000 },
+                new Productvariant { Variantid = 9021, Productid = 902, Conditionid = 1, Sku = "HUA-P60P-256", Baseprice = 29990000, Saleprice = null },
+                new Productvariant { Variantid = 9031, Productid = 903, Conditionid = 1, Sku = "HUA-N11-256", Baseprice = 11990000, Saleprice = 10990000 },
+
+                new Productvariant { Variantid = 10011, Productid = 1001, Conditionid = 1, Sku = "MEI-21P-256", Baseprice = 19990000, Saleprice = 18990000 },
+                new Productvariant { Variantid = 10021, Productid = 1002, Conditionid = 1, Sku = "MEI-21-256", Baseprice = 15990000, Saleprice = 14990000 },
+                new Productvariant { Variantid = 10031, Productid = 1003, Conditionid = 1, Sku = "MEI-20I-256", Baseprice = 22990000, Saleprice = null },
+
+                new Productvariant { Variantid = 11011, Productid = 1101, Conditionid = 1, Sku = "IPH-15PM-256", Baseprice = 34990000, Saleprice = 32990000 },
+                new Productvariant { Variantid = 11012, Productid = 1101, Conditionid = 1, Sku = "IPH-15PM-512", Baseprice = 40990000, Saleprice = 38990000 },
+                new Productvariant { Variantid = 11021, Productid = 1102, Conditionid = 1, Sku = "IPH-15-128", Baseprice = 22990000, Saleprice = 21490000 },
+                new Productvariant { Variantid = 11031, Productid = 1103, Conditionid = 1, Sku = "IPH-13-128", Baseprice = 15990000, Saleprice = 14990000 },
+
+                new Productvariant { Variantid = 12011, Productid = 1201, Conditionid = 1, Sku = "SAM-S24U-256", Baseprice = 33990000, Saleprice = 31990000 },
+                new Productvariant { Variantid = 12012, Productid = 1201, Conditionid = 1, Sku = "SAM-S24U-512", Baseprice = 37990000, Saleprice = 35990000 },
+                new Productvariant { Variantid = 12021, Productid = 1202, Conditionid = 1, Sku = "SAM-ZF5-256", Baseprice = 40990000, Saleprice = 38990000 },
+                new Productvariant { Variantid = 12031, Productid = 1203, Conditionid = 1, Sku = "SAM-A54-128", Baseprice = 10490000, Saleprice = 9490000 },
+
+                new Productvariant { Variantid = 13011, Productid = 1301, Conditionid = 1, Sku = "SON-1V-256", Baseprice = 35990000, Saleprice = 34990000 },
+                new Productvariant { Variantid = 13021, Productid = 1302, Conditionid = 1, Sku = "SON-5V-128", Baseprice = 27990000, Saleprice = 26990000 },
+                new Productvariant { Variantid = 13031, Productid = 1303, Conditionid = 1, Sku = "SON-10V-128", Baseprice = 11990000, Saleprice = null },
+
+                new Productvariant { Variantid = 14011, Productid = 1401, Conditionid = 1, Sku = "NOT-P2-256", Baseprice = 17990000, Saleprice = 16990000 },
+                new Productvariant { Variantid = 14021, Productid = 1402, Conditionid = 1, Sku = "NOT-P2A-128", Baseprice = 9990000, Saleprice = 8990000 },
+                new Productvariant { Variantid = 14031, Productid = 1403, Conditionid = 1, Sku = "NOT-P1-128", Baseprice = 11990000, Saleprice = 10990000 }
             };
             context.Productvariants.AddRange(variants);
             await context.SaveChangesAsync();

@@ -258,9 +258,18 @@ export const CustomerLayout: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Page Content */}
-      <main className="flex-1">
+      <main className="flex-1 relative">
         <Outlet />
+        {/* Floating Chat Button */}
+        <Link 
+          to="/chat" 
+          className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 z-[9999] group"
+        >
+          <span className="absolute right-full mr-4 bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap shadow-lg pointer-events-none">
+            Chat với Trợ lý ảo
+          </span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        </Link>
       </main>
 
       {/* Modern Retail Footer */}

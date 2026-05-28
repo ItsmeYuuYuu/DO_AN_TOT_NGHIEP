@@ -31,3 +31,10 @@ export const truncate = (str: string, maxLength = 80): string => {
 export const generateOrderCode = (id: number): string => {
   return `ORD-${String(id).padStart(6, '0')}`;
 };
+
+export const getDiscountPercent = (basePrice?: number | null, salePrice?: number | null): number | null => {
+  if (basePrice && salePrice && basePrice > 0 && salePrice < basePrice) {
+    return Math.round(((basePrice - salePrice) / basePrice) * 100);
+  }
+  return null;
+};

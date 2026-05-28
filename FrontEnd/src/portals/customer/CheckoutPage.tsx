@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, User, CheckCircle, ShoppingBag, ArrowLeft } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 import { useCart } from '@/features/orders/context/CartContext';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { formatCurrency } from '@/utils/formatters';
+import { warrantyPackagesApi } from '@/features/orders/api/warrantyPackagesApi';
+import type { WarrantyPackage } from '@/features/orders/api/warrantyPackagesApi';
 
 interface CheckoutForm {
   fullname: string;
@@ -30,6 +32,13 @@ const CheckoutPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  
+  const [packages, setPackages] = useState<WarrantyPackage[]>([]);
+  const [selectedPackages, setSelectedPackages] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    warrantyPackagesApi.getAll().then(setPackages).catch(console.error);
+  }, []);
 
   if (items.length === 0 && !success) {
     return (
@@ -64,7 +73,15 @@ const CheckoutPage: React.FC = () => {
   }
 
   const shipping = totalPrice >= 2_000_000 ? 0 : 30_000;
-  const grandTotal = totalPrice + shipping;
+  
+  const totalWarrantyPrice = items.reduce((sum, item) => {
+    const pkgId = selectedPackages[item.variantId];
+    if (!pkgId) return sum;
+    const pkg = packages.find(p => p.packageid === pkgId);
+    return sum + (pkg?.price || 0) * item.quantity;
+  }, 0);
+
+  const grandTotal = totalPrice + shipping + totalWarrantyPrice;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -88,7 +105,11 @@ const CheckoutPage: React.FC = () => {
         note: form.note,
         orderdate: new Date().toISOString(),
         totalamount: grandTotal,
-        items: items.map(i => ({ variantid: i.variantId, quantity: i.quantity })),
+        items: items.map(i => ({ 
+          variantid: i.variantId, 
+          quantity: i.quantity,
+          packageid: selectedPackages[i.variantId] || null
+        })),
       });
       clearCart();
       setSuccess(true);
@@ -181,14 +202,40 @@ const CheckoutPage: React.FC = () => {
               <h2 className="font-black text-slate-900 text-lg mb-4">Đơn hàng</h2>
               <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
                 {items.map(item => (
-                  <div key={item.variantId} className="flex items-center gap-3">
-                    <img src={item.imageUrl} alt={item.productName} className="w-10 h-10 object-contain rounded-lg bg-slate-50 border border-slate-100 p-0.5"
-                      onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/40x40'; }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-slate-900 truncate">{item.productName}</p>
-                      <p className="text-xs text-slate-400">x{item.quantity}</p>
+                  <div key={item.variantId} className="flex flex-col gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <img src={item.imageUrl} alt={item.productName} className="w-10 h-10 object-contain rounded-lg bg-white border border-slate-100 p-0.5"
+                        onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/40x40'; }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-slate-900 truncate">{item.productName}</p>
+                        <p className="text-xs text-slate-400">x{item.quantity}</p>
+                      </div>
+                      <span className="text-xs font-bold text-slate-700">{formatCurrency(item.price * item.quantity)}</span>
                     </div>
-                    <span className="text-xs font-bold text-slate-700">{formatCurrency(item.price * item.quantity)}</span>
+                    {packages.length > 0 && (
+                      <div className="mt-1">
+                        <select 
+                          className="w-full text-xs bg-white border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-500 text-slate-600"
+                          value={selectedPackages[item.variantId] || ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setSelectedPackages(prev => {
+                              const next = { ...prev };
+                              if (!val) delete next[item.variantId];
+                              else next[item.variantId] = parseInt(val);
+                              return next;
+                            });
+                          }}
+                        >
+                          <option value="">Không mua kèm bảo hành mở rộng</option>
+                          {packages.map(p => (
+                            <option key={p.packageid} value={p.packageid}>
+                              {p.packagename} (+{formatCurrency(p.price)}/sp)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -202,6 +249,12 @@ const CheckoutPage: React.FC = () => {
                     {shipping === 0 ? 'Miễn phí' : formatCurrency(shipping)}
                   </span>
                 </div>
+                {totalWarrantyPrice > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Gói bảo hành</span>
+                    <span className="text-blue-600 font-semibold">{formatCurrency(totalWarrantyPrice)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-black text-slate-900 text-base pt-2 border-t border-slate-100">
                   <span>Tổng cộng</span>
                   <span className="text-orange-500">{formatCurrency(grandTotal)}</span>

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Package, LogOut, ChevronRight, Clock, LayoutDashboard, ClipboardList } from 'lucide-react';
+import { User, Package, LogOut, ChevronRight, Clock, LayoutDashboard, ClipboardList, Star } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import apiClient from '@/api/apiClient';
 import { formatCurrency } from '@/utils/formatters';
+import { MyReviews } from './MyReviews';
 
 interface Order {
   orderid: number;
@@ -11,6 +12,13 @@ interface Order {
   orderstatus: string;
   totalamount: number;
   shippingaddress: string;
+  orderitems?: {
+    orderitemid: number;
+    imei?: string;
+    sellingprice: number;
+    warrantyprice?: number;
+    packagename?: string;
+  }[];
 }
 
 const statusColor = (s: string) => {
@@ -36,6 +44,7 @@ const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn) { navigate('/auth/login'); return; }
@@ -78,6 +87,7 @@ const ProfilePage: React.FC = () => {
             {[
               { icon: <User size={16} />, label: 'Thông tin cá nhân', active: true },
               { icon: <Package size={16} />, label: 'Đơn hàng của tôi', active: false },
+              { icon: <Star size={16} />, label: 'Đánh giá của tôi', active: false },
             ].map((item, i) => (
               <button key={i} className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${item.active ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}>
                 <span className="flex items-center gap-2">{item.icon}{item.label}</span>
@@ -156,28 +166,54 @@ const ProfilePage: React.FC = () => {
             ) : (
               <div className="space-y-3">
                 {orders.map(order => (
-                  <div key={order.orderid} className="flex items-center gap-4 p-4 border border-slate-100 rounded-xl hover:border-slate-200 transition-colors">
-                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
-                      <Package size={18} className="text-slate-400" />
+                  <div key={order.orderid} className="border border-slate-100 rounded-xl hover:border-slate-200 transition-colors bg-white">
+                    <div 
+                      className="flex items-center gap-4 p-4 cursor-pointer"
+                      onClick={() => setExpandedId(expandedId === order.orderid ? null : order.orderid)}
+                    >
+                      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
+                        <Package size={18} className="text-slate-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-900 text-sm">Đơn #{order.orderid}</p>
+                        <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                          <Clock size={10} /> {new Date(order.orderdate).toLocaleDateString('vi-VN')}
+                          {order.shippingaddress && ` · ${order.shippingaddress}`}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 flex items-center gap-4">
+                        <div>
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${statusColor(order.orderstatus)}`}>
+                            {statusLabel(order.orderstatus)}
+                          </span>
+                          <p className="text-sm font-black text-slate-900 mt-1">{formatCurrency(order.totalamount)}</p>
+                        </div>
+                        <ChevronRight size={16} className={`text-slate-400 transition-transform ${expandedId === order.orderid ? 'rotate-90' : ''}`} />
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-slate-900 text-sm">Đơn #{order.orderid}</p>
-                      <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                        <Clock size={10} /> {new Date(order.orderdate).toLocaleDateString('vi-VN')}
-                        {order.shippingaddress && ` · ${order.shippingaddress}`}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${statusColor(order.orderstatus)}`}>
-                        {statusLabel(order.orderstatus)}
-                      </span>
-                      <p className="text-sm font-black text-slate-900 mt-1">{formatCurrency(order.totalamount)}</p>
-                    </div>
+                    {expandedId === order.orderid && order.orderitems && (
+                      <div className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-2 bg-slate-50 rounded-b-xl">
+                        {order.orderitems.map(item => (
+                          <div key={item.orderitemid} className="flex justify-between items-center text-sm py-1">
+                            <div>
+                              <p className="font-semibold text-slate-700">IMEI: {item.imei || 'Đang chờ'}</p>
+                              {(item.warrantyprice ?? 0) > 0 && (
+                                <p className="text-xs text-orange-600 font-medium">Kèm bảo hành: {item.packagename} (+{formatCurrency(item.warrantyprice!)})</p>
+                              )}
+                            </div>
+                            <span className="font-bold text-slate-900">{formatCurrency(item.sellingprice)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* My Reviews */}
+          <MyReviews />
         </div>
       </div>
     </div>

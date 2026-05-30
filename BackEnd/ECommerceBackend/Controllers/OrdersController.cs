@@ -335,13 +335,11 @@ namespace ECommerceBackend.Controllers
         [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusRequestDto dto)
         {
-            var validTransitions = new Dictionary<string, List<string>>
+            var validTransitions = new Dictionary<string, string[]>
             {
-                { "Pending", new List<string> { "Confirmed", "Cancelled" } },
-                { "Confirmed", new List<string> { "Shipping", "Cancelled" } },
-                { "Shipping", new List<string> { "Delivered" } },
-                { "Delivered", new List<string>() },
-                { "Cancelled", new List<string>() }
+                { "Pending", new[] { "Processing", "Cancelled" } },
+                { "Processing", new[] { "Shipped", "Cancelled" } },
+                { "Shipped", new[] { "Completed", "Cancelled" } }
             };
 
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -356,11 +354,11 @@ namespace ECommerceBackend.Controllers
                 string currentStatus = order.Orderstatus ?? "Pending";
                 string newStatus = dto.Status;
                 
-                if (currentStatus == "Cancelled" || currentStatus == "Delivered")
+                if (currentStatus == "Cancelled" || currentStatus == "Completed")
                 {
                     return BadRequest(new ApiErrorDto($"Đơn hàng đã ở trạng thái kết thúc ({currentStatus}) và không thể thay đổi.", null));
                 }
-                
+
                 if (!validTransitions.ContainsKey(currentStatus) || !validTransitions[currentStatus].Contains(newStatus))
                 {
                     return BadRequest(new ApiErrorDto($"Không thể chuyển trạng thái từ '{currentStatus}' sang '{newStatus}'.", null));
@@ -390,6 +388,84 @@ namespace ECommerceBackend.Controllers
             {
                 await transaction.RollbackAsync();
                 return StatusCode(500, new ApiErrorDto("Lỗi khi cập nhật trạng thái đơn hàng.", new Dictionary<string, string[]> { { "Error", new[] { ex.Message } } }));
+            }
+        }
+
+        // POST: api/Orders/bulk-status
+        [HttpPost("bulk-status")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> BulkUpdateStatus([FromBody] BulkUpdateStatusRequestDto dto, [FromServices] ILogger<OrdersController> logger)
+        {
+            var validTransitions = new Dictionary<string, string[]>
+            {
+                { "Pending", new[] { "Processing", "Cancelled" } },
+                { "Processing", new[] { "Shipped", "Cancelled" } },
+                { "Shipped", new[] { "Completed", "Cancelled" } }
+            };
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var orders = await _context.Orders
+                    .Include(o => o.Orderitems)
+                    .Where(o => dto.OrderIds.Contains(o.Orderid))
+                    .ToListAsync();
+
+                if (!orders.Any())
+                    return BadRequest(new ApiErrorDto("Không tìm thấy đơn hàng nào.", null));
+
+                var updatedOrderIds = new List<int>();
+                var failed = new List<BulkUpdateFailedItemDto>();
+
+                foreach (var order in orders)
+                {
+                    string currentStatus = order.Orderstatus ?? "Pending";
+                    string newStatus = dto.Status;
+
+                    if (currentStatus == "Cancelled" || currentStatus == "Completed")
+                    {
+                        failed.Add(new BulkUpdateFailedItemDto(order.Orderid, $"Đơn hàng đã ở trạng thái kết thúc ({currentStatus})."));
+                        continue;
+                    }
+
+                    if (!validTransitions.ContainsKey(currentStatus) || !validTransitions[currentStatus].Contains(newStatus))
+                    {
+                        failed.Add(new BulkUpdateFailedItemDto(order.Orderid, $"Không thể chuyển từ '{currentStatus}' sang '{newStatus}'."));
+                        continue;
+                    }
+
+                    if (newStatus == "Cancelled")
+                    {
+                        // Hoàn tồn kho
+                        var imeis = order.Orderitems.Where(i => i.Imei != null).Select(i => i.Imei).ToList();
+                        if (imeis.Any())
+                        {
+                            var inventoryItems = await _context.Inventoryitems.Where(i => imeis.Contains(i.Imei)).ToListAsync();
+                            foreach (var inv in inventoryItems)
+                            {
+                                inv.Status = "InStock";
+                            }
+                        }
+                    }
+
+                    order.Orderstatus = newStatus;
+                    updatedOrderIds.Add(order.Orderid);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                string message = failed.Any() 
+                    ? $"Cập nhật thành công {updatedOrderIds.Count} đơn hàng, {failed.Count} lỗi."
+                    : $"Đã cập nhật thành công {updatedOrderIds.Count} đơn hàng.";
+
+                return Ok(new BulkUpdateStatusResponseDto(updatedOrderIds, failed, message));
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Lỗi hệ thống khi cập nhật trạng thái đơn hàng hàng loạt.");
+                await transaction.RollbackAsync();
+                return StatusCode(500, new ApiErrorDto("Lỗi hệ thống khi cập nhật trạng thái.", null));
             }
         }
 

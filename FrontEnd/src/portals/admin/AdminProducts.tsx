@@ -9,6 +9,9 @@ import type { Product } from '@/features/products/api/productsApi';
 import { productsApi } from '@/features/products/api/productsApi';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { VariantAttributesModal } from './VariantAttributesModal';
+import { ProductFormWizard } from './ProductFormWizard';
+import { brandsApi } from '@/features/brands/api/brandsApi';
+import { categoriesApi } from '@/features/categories/api/categoriesApi';
 
 const PAGE_SIZE = 10;
 
@@ -16,20 +19,38 @@ const AdminProducts: React.FC = () => {
   const { products, loading, error, refetch, deleteProduct } = useProducts();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
 
+  // New Filters
+  const [filterBrand, setFilterBrand] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterDiscount, setFilterDiscount] = useState(false);
+
+  // Lookups
+  const [brands, setBrands] = React.useState<{brandid: number, brandname: string}[]>([]);
+  const [categories, setCategories] = React.useState<{categoryid: number, categoryname: string}[]>([]);
+
+  React.useEffect(() => {
+    brandsApi.getAll().then(r => setBrands(r.data));
+    categoriesApi.getAll().then(r => setCategories(r.data));
+  }, []);
+
   // Filter & paginate
-  const filtered = products.filter(p =>
-    p.productname.toLowerCase().includes(search.toLowerCase()) ||
-    (p.brand?.brandname ?? '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products.filter(p => {
+    const matchSearch = p.productname.toLowerCase().includes(search.toLowerCase()) || (p.brand?.brandname ?? '').toLowerCase().includes(search.toLowerCase());
+    const matchBrand = filterBrand ? p.brandid?.toString() === filterBrand : true;
+    const matchCategory = filterCategory ? p.categoryid?.toString() === filterCategory : true;
+    const matchDiscount = filterDiscount ? p.productvariants?.some(v => v.saleprice && v.saleprice < v.baseprice) : true;
+    return matchSearch && matchBrand && matchCategory && matchDiscount;
+  });
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const openCreate = () => { setEditing({ productname: '', description: '' }); setModalOpen(true); };
+  const openCreate = () => setWizardOpen(true);
   const openEdit = (p: Product) => { setEditing({ ...p }); setModalOpen(true); };
   const closeModal = () => { setModalOpen(false); setEditing(null); };
 
@@ -146,14 +167,26 @@ const AdminProducts: React.FC = () => {
       )}
 
       {/* Toolbar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <div className="max-w-sm">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-wrap gap-3 items-center">
+        <div className="w-64">
           <Input
-            placeholder="Tìm kiếm tên sản phẩm, thương hiệu..."
+            placeholder="Tìm kiếm sản phẩm..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
+        <select className="border border-slate-300 rounded-lg px-3 py-2 text-sm" value={filterBrand} onChange={e => setFilterBrand(e.target.value)}>
+          <option value="">Tất cả Thương hiệu</option>
+          {brands.map(b => <option key={b.brandid} value={b.brandid}>{b.brandname}</option>)}
+        </select>
+        <select className="border border-slate-300 rounded-lg px-3 py-2 text-sm" value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
+          <option value="">Tất cả Danh mục</option>
+          {categories.map(c => <option key={c.categoryid} value={c.categoryid}>{c.categoryname}</option>)}
+        </select>
+        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
+          <input type="checkbox" checked={filterDiscount} onChange={e => setFilterDiscount(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500" />
+          Đang giảm giá
+        </label>
       </div>
 
       {/* Table */}
@@ -198,24 +231,26 @@ const AdminProducts: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1.5">Danh mục (ID)</label>
-              <input
-                type="number"
+              <label className="text-sm font-medium text-slate-700 block mb-1.5">Danh mục</label>
+              <select
                 className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500"
                 value={editing?.categoryid ?? ''}
                 onChange={e => setEditing(prev => ({ ...prev, categoryid: parseInt(e.target.value) || undefined }))}
-                placeholder="1"
-              />
+              >
+                <option value="">Chọn danh mục</option>
+                {categories.map(c => <option key={c.categoryid} value={c.categoryid}>{c.categoryname}</option>)}
+              </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1.5">Thương hiệu (ID)</label>
-              <input
-                type="number"
+              <label className="text-sm font-medium text-slate-700 block mb-1.5">Thương hiệu</label>
+              <select
                 className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500"
                 value={editing?.brandid ?? ''}
                 onChange={e => setEditing(prev => ({ ...prev, brandid: parseInt(e.target.value) || undefined }))}
-                placeholder="1"
-              />
+              >
+                <option value="">Chọn thương hiệu</option>
+                {brands.map(b => <option key={b.brandid} value={b.brandid}>{b.brandname}</option>)}
+              </select>
             </div>
           </div>
 
@@ -265,6 +300,15 @@ const AdminProducts: React.FC = () => {
           onClose={() => setActiveVariantId(null)} 
         />
       )}
+
+      <ProductFormWizard 
+        isOpen={wizardOpen} 
+        onClose={() => setWizardOpen(false)} 
+        onSubmit={async (data) => {
+          await productsApi.createFull(data);
+          await refetch();
+        }}
+      />
     </div>
   );
 };

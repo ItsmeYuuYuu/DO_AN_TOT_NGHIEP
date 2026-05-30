@@ -27,5 +27,10 @@ export const useProducts = () => {
     setProducts((prev) => prev.filter((p) => p.productid !== id));
   };
 
-  return { products, loading, error, refetch: fetchProducts, deleteProduct };
+  const createFullProduct = async (data: any) => {
+    await productsApi.createFull(data);
+    await fetchProducts();
+  };
+
+  return { products, loading, error, refetch: fetchProducts, deleteProduct, createFullProduct };
 };

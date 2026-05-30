@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Users, Layers, Tag, Users2, LogOut, Activity } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Users, Layers, Tag, Users2, LogOut, Activity, Truck } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 
 const navGroups: { group: string; items: { label: string; to: string; icon: React.ReactNode; end?: boolean }[] }[] = [
@@ -24,6 +24,7 @@ const navGroups: { group: string; items: { label: string; to: string; icon: Reac
       { label: 'Danh mục', to: '/admin/categories', icon: <Layers size={18} /> },
       { label: 'Thương hiệu', to: '/admin/brands', icon: <Tag size={18} /> },
       { label: 'Thuộc tính', to: '/admin/attributes', icon: <Tag size={18} /> },
+      { label: 'Nhà cung cấp', to: '/admin/suppliers', icon: <Truck size={18} /> },
     ],
   },
   {

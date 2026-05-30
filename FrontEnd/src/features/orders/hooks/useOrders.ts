@@ -29,5 +29,14 @@ export const useOrders = () => {
     );
   };
 
-  return { orders, loading, error, refetch: fetchOrders, updateStatus };
+  const bulkUpdateStatus = async (orderIds: number[], status: string) => {
+    const res = await ordersApi.bulkUpdateStatus(orderIds, status);
+    const { updatedOrderIds } = res.data;
+    setOrders((prev) =>
+      prev.map((o) => updatedOrderIds.includes(o.orderid) ? { ...o, orderstatus: status } : o)
+    );
+    return res.data;
+  };
+
+  return { orders, loading, error, refetch: fetchOrders, updateStatus, bulkUpdateStatus };
 };

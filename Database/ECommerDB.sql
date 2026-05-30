@@ -6,8 +6,8 @@ CREATE TABLE Customers (CustomerId SERIAL PRIMARY KEY, FullName VARCHAR(100) NOT
 -- 2. Nhóm Danh mục & Thuộc tính
 CREATE TABLE Categories (CategoryId SERIAL PRIMARY KEY, CategoryName VARCHAR(100) NOT NULL, Description TEXT);
 CREATE TABLE Brands (BrandId SERIAL PRIMARY KEY, BrandName VARCHAR(100) NOT NULL);
-CREATE TABLE Attributes (AttributeId SERIAL PRIMARY KEY, AttributeName VARCHAR(50) NOT NULL);
-CREATE TABLE AttributeValues (ValueId SERIAL PRIMARY KEY, AttributeId INT, ValueName VARCHAR(50) NOT NULL);
+CREATE TABLE Attributes (AttributeId SERIAL PRIMARY KEY, AttributeName VARCHAR(255) NOT NULL);
+CREATE TABLE AttributeValues (ValueId SERIAL PRIMARY KEY, AttributeId INT, ValueName VARCHAR(1000) NOT NULL);
 CREATE TABLE ProductConditions (ConditionId SERIAL PRIMARY KEY, ConditionName VARCHAR(50) NOT NULL, Description VARCHAR(255));
 
 -- 3. Nhóm Sản phẩm & Biến thể

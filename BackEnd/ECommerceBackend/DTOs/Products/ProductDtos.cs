@@ -16,7 +16,8 @@ namespace ECommerceBackend.DTOs.Products
         decimal Baseprice,
         decimal? Saleprice,
         ConditionDto? Condition,
-        List<ProductImageDto>? Productimages
+        List<ProductImageDto>? Productimages,
+        List<VariantAttributeValueDto>? Attributes = null
     );
 
     public record ProductListItemDto(
@@ -40,6 +41,32 @@ namespace ECommerceBackend.DTOs.Products
             LookupDto? Category,
             List<ProductVariantDto>? Productvariants
         ) : base(Productid, Productname, Description, Createdat, Brand, Category, Productvariants) { }
+    }
+
+    public record ReviewSummaryDto(double AvgRating, int TotalReviews, int Star5, int Star4, int Star3, int Star2, int Star1);
+    
+    public record VariantAttributeValueDto(int Valueid, string Valuename, string Attributename);
+
+    public record FullProductDetailDto : ProductListItemDto
+    {
+        public ReviewSummaryDto? ReviewSummary { get; init; }
+        public List<ProductListItemDto>? RelatedProducts { get; init; }
+
+        public FullProductDetailDto(
+            int Productid,
+            string Productname,
+            string? Description,
+            DateTime? Createdat,
+            LookupDto? Brand,
+            LookupDto? Category,
+            List<ProductVariantDto>? Productvariants,
+            ReviewSummaryDto? ReviewSummary = null,
+            List<ProductListItemDto>? RelatedProducts = null
+        ) : base(Productid, Productname, Description, Createdat, Brand, Category, Productvariants)
+        {
+            this.ReviewSummary = ReviewSummary;
+            this.RelatedProducts = RelatedProducts;
+        }
     }
 
     public record CreateProductRequestDto(
@@ -69,5 +96,26 @@ namespace ECommerceBackend.DTOs.Products
         [Required] string Sku,
         [Range(0, double.MaxValue, ErrorMessage = "Giá cơ bản không hợp lệ")] decimal Baseprice,
         [Range(0, double.MaxValue, ErrorMessage = "Giá khuyến mãi không hợp lệ")] decimal? Saleprice
+    );
+
+    public record VariantSpecDto(
+        [Required] string Key,
+        [Required] string Value
+    );
+
+    public record CreateFullProductVariantDto(
+        int? Conditionid,
+        [Required] string Sku,
+        [Range(0, double.MaxValue, ErrorMessage = "Giá cơ bản không hợp lệ")] decimal Baseprice,
+        [Range(0, double.MaxValue, ErrorMessage = "Giá khuyến mãi không hợp lệ")] decimal? Saleprice,
+        List<VariantSpecDto>? Specs
+    );
+
+    public record CreateFullProductDto(
+        [Required(ErrorMessage = "Tên sản phẩm là bắt buộc")] string Productname,
+        string? Description,
+        int? Categoryid,
+        int? Brandid,
+        List<CreateFullProductVariantDto>? Variants
     );
 }

@@ -52,6 +52,7 @@ const AdminNews          = lazy(() => import('@/portals/admin/AdminNews'));
 const AdminBanners       = lazy(() => import('@/portals/admin/AdminBanners'));
 const AdminSliders       = lazy(() => import('@/portals/admin/AdminSliders'));
 const AdminAuditLogs     = lazy(() => import('@/portals/admin/AdminAuditLogs'));
+const AdminSuppliers     = lazy(() => import('@/portals/admin/AdminSuppliers'));
 
 // ── Staff pages ───────────────────────────────────────────────────────────────
 const StaffOrders         = lazy(() => import('@/portals/staff/StaffOrders'));
@@ -103,6 +104,7 @@ const App: React.FC = () => {
             <Route path="banners"         element={<AdminBanners />} />
             <Route path="sliders"         element={<AdminSliders />} />
             <Route path="auditlogs"       element={<AdminAuditLogs />} />
+            <Route path="suppliers"       element={<AdminSuppliers />} />
           </Route>
         </Route>
 

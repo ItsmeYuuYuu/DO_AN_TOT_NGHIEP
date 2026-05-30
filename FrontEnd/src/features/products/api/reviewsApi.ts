@@ -33,6 +33,11 @@ export const reviewsApi = {
     return data;
   },
 
+  getByProduct: async (productId: number): Promise<Review[]> => {
+    const { data } = await apiClient.get(`/api/reviews/product/${productId}`);
+    return data;
+  },
+
   getMyReviews: async (): Promise<Review[]> => {
     const { data } = await apiClient.get('/api/reviews/me');
     return data;

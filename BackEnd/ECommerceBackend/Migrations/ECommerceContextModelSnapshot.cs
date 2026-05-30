@@ -33,8 +33,8 @@ namespace ECommerceBackend.Migrations
 
                     b.Property<string>("Attributename")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("attributename");
 
                     b.HasKey("Attributeid")
@@ -58,8 +58,8 @@ namespace ECommerceBackend.Migrations
 
                     b.Property<string>("Valuename")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
                         .HasColumnName("valuename");
 
                     b.HasKey("Valueid")
@@ -276,7 +276,7 @@ namespace ECommerceBackend.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("status")
-                        .HasDefaultValueSql("'Active'::character varying");
+                        .HasDefaultValueSql("'Active'");
 
                     b.HasKey("Sessionid")
                         .HasName("chatsessions_pkey");
@@ -362,7 +362,7 @@ namespace ECommerceBackend.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("status")
-                        .HasDefaultValueSql("'InStock'::character varying");
+                        .HasDefaultValueSql("'InStock'");
 
                     b.Property<int?>("Variantid")
                         .HasColumnType("integer")

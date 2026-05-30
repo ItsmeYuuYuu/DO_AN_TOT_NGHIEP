@@ -24,6 +24,17 @@ export interface OrderItem {
   packageid?: number;
 }
 
+export interface BulkUpdateFailedItem {
+  orderId: number;
+  reason: string;
+}
+
+export interface BulkUpdateStatusResponse {
+  updatedOrderIds: number[];
+  failed: BulkUpdateFailedItem[];
+  message: string;
+}
+
 export const ordersApi = {
   getAll: () => apiClient.get<Order[]>('/Orders'),
   getById: (id: number) => apiClient.get<Order>(`/Orders/${id}`),
@@ -31,5 +42,6 @@ export const ordersApi = {
   create: (data: Partial<Order>) => apiClient.post<Order>('/Orders', data),
   update: (id: number, data: Partial<Order>) => apiClient.put(`/Orders/${id}`, data),
   updateStatus: (id: number, status: string) => apiClient.patch(`/Orders/${id}/status`, { status }),
+  bulkUpdateStatus: (orderIds: number[], status: string) => apiClient.post<BulkUpdateStatusResponse>(`/Orders/bulk-status`, { orderIds, status }),
   delete: (id: number) => apiClient.delete(`/Orders/${id}`),
 };

@@ -81,4 +81,17 @@ namespace ECommerceBackend.DTOs.Orders
         string? Vouchercode,
         int ItemCount
     );
+
+    public record BulkUpdateStatusRequestDto(
+        [Required, MinLength(1, ErrorMessage = "Cần chọn ít nhất 1 đơn hàng")] List<int> OrderIds,
+        [Required(ErrorMessage = "Trạng thái là bắt buộc")] string Status
+    );
+
+    public record BulkUpdateFailedItemDto(int OrderId, string Reason);
+
+    public record BulkUpdateStatusResponseDto(
+        List<int> UpdatedOrderIds,
+        List<BulkUpdateFailedItemDto> Failed,
+        string Message
+    );
 }

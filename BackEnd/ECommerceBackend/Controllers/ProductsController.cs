@@ -129,8 +129,81 @@ namespace ECommerceBackend.Controllers
                     .ThenInclude(v => v.Productimages)
                 .FirstOrDefaultAsync(p => p.Productid == id);
 
-            if (product == null) return NotFound();
+            if (product == null) return NotFound(new ApiErrorDto("Không tìm thấy sản phẩm", null));
             return Ok(MapToDetailDto(product));
+        }
+
+        // GET: api/Products/5/full-detail
+        [HttpGet("{id}/full-detail")]
+        public async Task<ActionResult<FullProductDetailDto>> GetFullProductDetail(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Condition)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Productimages)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Values)
+                        .ThenInclude(val => val.Attribute)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Reviews)
+                .FirstOrDefaultAsync(p => p.Productid == id);
+
+            if (product == null) return NotFound(new ApiErrorDto("Không tìm thấy sản phẩm", null));
+
+            var allReviews = product.Productvariants.SelectMany(v => v.Reviews).ToList();
+            var totalReviews = allReviews.Count;
+            var avgRating = totalReviews > 0 ? allReviews.Average(r => (double)r.Rating) : 0;
+            var star5 = allReviews.Count(r => r.Rating == 5);
+            var star4 = allReviews.Count(r => r.Rating == 4);
+            var star3 = allReviews.Count(r => r.Rating == 3);
+            var star2 = allReviews.Count(r => r.Rating == 2);
+            var star1 = allReviews.Count(r => r.Rating == 1);
+
+            var reviewSummary = new ReviewSummaryDto(avgRating, totalReviews, star5, star4, star3, star2, star1);
+
+            List<ProductListItemDto> relatedProducts = new List<ProductListItemDto>();
+            if (product.Brandid.HasValue)
+            {
+                var related = await _context.Products
+                    .Include(p => p.Brand)
+                    .Include(p => p.Category)
+                    .Include(p => p.Productvariants)
+                        .ThenInclude(v => v.Condition)
+                    .Include(p => p.Productvariants)
+                        .ThenInclude(v => v.Productimages)
+                    .Where(p => p.Brandid == product.Brandid && p.Productid != id)
+                    .Take(5)
+                    .ToListAsync();
+                relatedProducts = related.Select(MapToDto).ToList();
+            }
+
+            var variants = product.Productvariants.Select(v => new ProductVariantDto(
+                v.Variantid,
+                v.Productid,
+                v.Sku,
+                v.Baseprice,
+                v.Saleprice,
+                v.Condition != null ? new ConditionDto(v.Condition.Conditionid, v.Condition.Conditionname) : null,
+                v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList(),
+                v.Values.Where(val => val.Attribute != null).Select(val => new VariantAttributeValueDto(val.Valueid, val.Valuename, val.Attribute!.Attributename)).ToList()
+            )).ToList();
+
+            var result = new FullProductDetailDto(
+                product.Productid,
+                product.Productname,
+                product.Description,
+                product.Createdat,
+                product.Brand != null ? new LookupDto(product.Brand.Brandid, product.Brand.Brandname) : null,
+                product.Category != null ? new LookupDto(product.Category.Categoryid, product.Category.Categoryname) : null,
+                variants,
+                reviewSummary,
+                relatedProducts
+            );
+
+            return Ok(result);
         }
 
         // POST: api/Products
@@ -161,6 +234,92 @@ namespace ECommerceBackend.Controllers
                 .FirstAsync(p => p.Productid == product.Productid);
 
             return CreatedAtAction(nameof(GetProduct), new { id = product.Productid }, MapToDetailDto(createdProduct));
+        }
+
+        // POST: api/Products/full
+        [HttpPost("full")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ProductDetailDto>> PostFullProduct([FromBody] CreateFullProductDto dto, [FromServices] ILogger<ProductsController> logger)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var product = new Product
+                {
+                    Productname = dto.Productname,
+                    Description = dto.Description,
+                    Categoryid = dto.Categoryid,
+                    Brandid = dto.Brandid,
+                    Createdat = DateTime.UtcNow
+                };
+
+                _context.Products.Add(product);
+                await _context.SaveChangesAsync();
+
+                if (dto.Variants != null && dto.Variants.Any())
+                {
+                    foreach (var vDto in dto.Variants)
+                    {
+                        var variant = new Productvariant
+                        {
+                            Productid = product.Productid,
+                            Sku = vDto.Sku,
+                            Baseprice = vDto.Baseprice,
+                            Saleprice = vDto.Saleprice,
+                            Conditionid = vDto.Conditionid
+                        };
+                        _context.Productvariants.Add(variant);
+                        await _context.SaveChangesAsync();
+
+                        if (vDto.Specs != null && vDto.Specs.Any())
+                        {
+                            foreach (var spec in vDto.Specs)
+                            {
+                                // Check/Create Attribute
+                                var attr = await _context.Attributes.FirstOrDefaultAsync(a => EF.Functions.ILike(a.Attributename, spec.Key));
+                                if (attr == null)
+                                {
+                                    attr = new ECommerceBackend.Models.Attribute { Attributename = spec.Key };
+                                    _context.Attributes.Add(attr);
+                                    await _context.SaveChangesAsync();
+                                }
+
+                                // Check/Create AttributeValue
+                                var attrVal = await _context.Attributevalues.FirstOrDefaultAsync(av => av.Attributeid == attr.Attributeid && EF.Functions.ILike(av.Valuename, spec.Value));
+                                if (attrVal == null)
+                                {
+                                    attrVal = new Attributevalue { Attributeid = attr.Attributeid, Valuename = spec.Value };
+                                    _context.Attributevalues.Add(attrVal);
+                                    await _context.SaveChangesAsync();
+                                }
+
+                                // Link AttributeValue to Variant
+                                variant.Values.Add(attrVal);
+                            }
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+
+                await transaction.CommitAsync();
+
+                var createdProduct = await _context.Products
+                    .Include(p => p.Brand)
+                    .Include(p => p.Category)
+                    .Include(p => p.Productvariants)
+                        .ThenInclude(v => v.Condition)
+                    .Include(p => p.Productvariants)
+                        .ThenInclude(v => v.Productimages)
+                    .FirstAsync(p => p.Productid == product.Productid);
+
+                return CreatedAtAction(nameof(GetProduct), new { id = product.Productid }, MapToDetailDto(createdProduct));
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Lỗi hệ thống khi tạo sản phẩm.");
+                await transaction.RollbackAsync();
+                return StatusCode(500, new ApiErrorDto("Lỗi hệ thống khi tạo sản phẩm.", null));
+            }
         }
 
         // PUT: api/Products/5

@@ -84,7 +84,7 @@ public partial class ECommerceContext : DbContext
 
             entity.Property(e => e.Attributeid).HasColumnName("attributeid");
             entity.Property(e => e.Attributename)
-                .HasMaxLength(50)
+                .HasMaxLength(255)
                 .HasColumnName("attributename");
         });
 
@@ -97,7 +97,7 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Valueid).HasColumnName("valueid");
             entity.Property(e => e.Attributeid).HasColumnName("attributeid");
             entity.Property(e => e.Valuename)
-                .HasMaxLength(50)
+                .HasMaxLength(1000)
                 .HasColumnName("valuename");
 
             entity.HasOne(d => d.Attribute).WithMany(p => p.Attributevalues)

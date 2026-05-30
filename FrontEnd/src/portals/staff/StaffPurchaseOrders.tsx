@@ -29,7 +29,12 @@ interface Supplier {
   suppliername: string;
 }
 
+import { useSearchParams } from 'react-router-dom';
+
 const StaffPurchaseOrders: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const querySupplierId = searchParams.get('supplierId');
+
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +44,7 @@ const StaffPurchaseOrders: React.FC = () => {
   const [saving, setSaving] = useState(false);
   
   const [formData, setFormData] = useState({
-    supplierid: '',
+    supplierid: querySupplierId || '',
     userid: '', 
     status: 'Pending',
     variantid: '',
@@ -47,9 +52,28 @@ const StaffPurchaseOrders: React.FC = () => {
     importprice: 0
   });
 
+  const [formError, setFormError] = useState<string | null>(null);
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (querySupplierId) {
+      setEditingPo(null);
+      setFormData(prev => ({
+        ...prev,
+        supplierid: querySupplierId,
+        userid: '',
+        status: 'Pending',
+        variantid: '',
+        quantity: 1,
+        importprice: 0
+      }));
+      setFormError(null);
+      setIsModalOpen(true);
+    }
+  }, [querySupplierId]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -70,6 +94,7 @@ const StaffPurchaseOrders: React.FC = () => {
   const openAddModal = () => {
     setEditingPo(null);
     setFormData({ supplierid: '', userid: '', status: 'Pending', variantid: '', quantity: 1, importprice: 0 });
+    setFormError(null);
     setIsModalOpen(true);
   };
 
@@ -83,17 +108,20 @@ const StaffPurchaseOrders: React.FC = () => {
       quantity: po.details[0]?.quantity || 1,
       importprice: po.details[0]?.importprice || 0
     });
+    setFormError(null);
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingPo(null);
+    setFormError(null);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setFormError(null);
     try {
       if (editingPo) {
         await apiClient.put(`/PurchaseOrders/${editingPo.poid}`, {
@@ -117,8 +145,8 @@ const StaffPurchaseOrders: React.FC = () => {
       }
       fetchData();
       closeModal();
-    } catch (err) {
-      alert(editingPo ? 'Không thể cập nhật đơn nhập hàng.' : 'Không thể lưu đơn nhập hàng. Hãy kiểm tra lại dữ liệu.');
+    } catch (err: any) {
+      setFormError(err.response?.data?.message || (editingPo ? 'Không thể cập nhật đơn nhập hàng.' : 'Không thể lưu đơn nhập hàng. Hãy kiểm tra lại dữ liệu.'));
     } finally {
       setSaving(false);
     }
@@ -191,6 +219,7 @@ const StaffPurchaseOrders: React.FC = () => {
               <button onClick={closeModal} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              {formError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">{formError}</div>}
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Nhà cung cấp *</label>
                 <select required value={formData.supplierid} onChange={e => setFormData({ ...formData, supplierid: e.target.value })}

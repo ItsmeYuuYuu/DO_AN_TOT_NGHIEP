@@ -105,6 +105,18 @@ namespace ECommerceBackend.Controllers
             return Ok(reviews.Select(MapToDto));
         }
 
+        [HttpGet("product/{productId}")]
+        public async Task<ActionResult<IEnumerable<ReviewDto>>> GetReviewsByProduct(int productId)
+        {
+            var reviews = await _context.Reviews
+                .Include(r => r.Customer)
+                .Include(r => r.Variant)
+                .Where(r => r.Variant != null && r.Variant.Productid == productId)
+                .OrderByDescending(r => r.Createdat)
+                .ToListAsync();
+            return Ok(reviews.Select(MapToDto));
+        }
+
         [HttpGet("me")]
         [Authorize]
         public async Task<ActionResult<IEnumerable<ReviewDto>>> GetMyReviews()

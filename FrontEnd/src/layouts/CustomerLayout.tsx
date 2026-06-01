@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/features/orders/context/CartContext';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import Logo from '@/assets/Logo.png';
 
 export const CustomerLayout: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,15 +45,9 @@ export const CustomerLayout: React.FC = () => {
       {/* Main Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm overflow-visible">
         <div className="max-w-7xl mx-auto px-4 overflow-visible">
-          <div className="flex items-center gap-6 h-16 md:h-20">
-            {/* Logo */}
-            <Link to="/" className="shrink-0 group">
-              <span className="text-2xl font-black text-blue-600 flex items-center gap-2">
-                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white group-hover:scale-105 transition-transform">
-                  <ShoppingBag size={24} />
-                </div>
-                <span className="tracking-tighter">ECO<span className="text-slate-900">MMERCE</span></span>
-              </span>
+          <div className="flex items-center gap-6 h-20 md:h-24">
+            <Link to="/" className="shrink-0 group flex items-center h-full py-2">
+              <img src={Logo} alt="ECOMMERCE" className="h-full w-auto object-contain group-hover:scale-105 transition-transform" />
             </Link>
 
             {/* Large Search Bar */}
@@ -276,7 +271,7 @@ export const CustomerLayout: React.FC = () => {
       <footer className="bg-white border-t border-slate-200 mt-12">
         <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-1">
-            <span className="text-xl font-black text-blue-600">ECOMMERCE</span>
+            <img src={Logo} alt="ECOMMERCE" className="h-16 w-auto object-contain mb-4" />
             <p className="mt-4 text-sm text-slate-500 leading-relaxed">
               Hệ thống bán lẻ thiết bị công nghệ chính hãng hàng đầu Việt Nam. Cam kết chất lượng và dịch vụ tốt nhất.
             </p>

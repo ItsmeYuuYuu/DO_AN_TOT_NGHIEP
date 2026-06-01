@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { LayoutDashboard, Package, ShoppingCart, Users, Layers, Tag, Users2, LogOut, Activity, Truck } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import Logo from '@/assets/Logo.png';
 
 const navGroups: { group: string; items: { label: string; to: string; icon: React.ReactNode; end?: boolean }[] }[] = [
   {
@@ -59,10 +60,8 @@ export const AdminLayout: React.FC = () => {
         }`}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-slate-100">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-black text-sm shrink-0">
-            EC
-          </div>
+        <div className="flex items-center gap-3 px-4 h-20 border-b border-slate-100 shrink-0">
+          <img src={Logo} alt="Admin Logo" className="h-14 w-auto object-contain shrink-0" />
           {!collapsed && (
             <span className="font-bold text-slate-800 text-sm">Admin Panel</span>
           )}

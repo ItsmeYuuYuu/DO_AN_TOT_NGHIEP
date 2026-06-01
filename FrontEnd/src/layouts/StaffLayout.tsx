@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ClipboardList, Box, ShoppingBag, ShieldCheck, Home, LogOut } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import Logo from '@/assets/Logo.png';
 
 const staffNav = [
   { label: 'Đơn hàng', to: '/staff', icon: <ClipboardList size={18} />, end: true },
@@ -16,9 +17,9 @@ export const StaffLayout: React.FC = () => {
     <div className="flex h-screen bg-slate-100 overflow-hidden">
       {/* Sidebar */}
       <aside className="w-56 flex flex-col bg-white border-r border-slate-200 shrink-0">
-        <div className="px-6 h-16 flex items-center border-b border-slate-100">
+        <div className="px-6 h-20 flex items-center border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-emerald-600 rounded flex items-center justify-center text-white font-bold text-xs">S</div>
+            <img src={Logo} alt="Staff Portal" className="h-14 w-auto object-contain shrink-0" />
             <span className="font-bold text-slate-800 text-sm tracking-tight">Staff Portal</span>
           </div>
         </div>

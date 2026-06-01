@@ -5,6 +5,7 @@ import { ShoppingBag, ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react
 import apiClient from '@/api/apiClient';
 import { saveSession } from '@/features/auth/utils/authUtils';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import Logo from '@/assets/Logo.png';
 
 // ─── Validation helpers ────────────────────────────────────────────────────────
 const validateEmail = (email: string): string | null => {
@@ -109,11 +110,8 @@ const LoginPage: React.FC = () => {
         {/* ── Left Brand Panel ── */}
         <div className="hidden lg:flex lg:w-[45%] bg-blue-600 p-12 flex-col justify-between relative overflow-hidden">
           <div className="relative z-10">
-            <Link to="/" className="text-2xl font-black text-white flex items-center gap-2 group">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <ShoppingBag size={24} />
-              </div>
-              ECOMMERCE
+            <Link to="/" className="inline-block group">
+              <img src={Logo} alt="ECOMMERCE" className="h-20 w-auto object-contain group-hover:scale-105 transition-transform" />
             </Link>
             <h2 className="mt-20 text-4xl font-black text-white leading-tight">
               ĐĂNG NHẬP ĐỂ <br /> NHẬN ƯU ĐÃI <br /> ĐỘC QUYỀN.

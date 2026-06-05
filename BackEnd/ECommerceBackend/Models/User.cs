@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace ECommerceBackend.Models;
@@ -29,7 +29,6 @@ public partial class User
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 
-    public virtual ICollection<Purchaseorder> Purchaseorders { get; set; } = new List<Purchaseorder>();
 
     public virtual Role? Role { get; set; }
 }

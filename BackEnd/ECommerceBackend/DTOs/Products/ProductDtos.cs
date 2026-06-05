@@ -85,17 +85,19 @@ namespace ECommerceBackend.DTOs.Products
 
     public record CreateProductVariantRequestDto(
         [Required] int? Productid,
-        int? Conditionid,
+        string? Condition,
         [Required] string Sku,
         [Range(0, double.MaxValue, ErrorMessage = "Giá cơ bản không hợp lệ")] decimal Baseprice,
-        [Range(0, double.MaxValue, ErrorMessage = "Giá khuyến mãi không hợp lệ")] decimal? Saleprice
+        [Range(0, double.MaxValue, ErrorMessage = "Giá khuyến mãi không hợp lệ")] decimal? Saleprice,
+        string? Specifications = null
     );
 
     public record UpdateProductVariantRequestDto(
-        int? Conditionid,
+        string? Condition,
         [Required] string Sku,
         [Range(0, double.MaxValue, ErrorMessage = "Giá cơ bản không hợp lệ")] decimal Baseprice,
-        [Range(0, double.MaxValue, ErrorMessage = "Giá khuyến mãi không hợp lệ")] decimal? Saleprice
+        [Range(0, double.MaxValue, ErrorMessage = "Giá khuyến mãi không hợp lệ")] decimal? Saleprice,
+        string? Specifications = null
     );
 
     public record VariantSpecDto(
@@ -104,7 +106,7 @@ namespace ECommerceBackend.DTOs.Products
     );
 
     public record CreateFullProductVariantDto(
-        int? Conditionid,
+        string? Condition,
         [Required] string Sku,
         [Range(0, double.MaxValue, ErrorMessage = "Giá cơ bản không hợp lệ")] decimal Baseprice,
         [Range(0, double.MaxValue, ErrorMessage = "Giá khuyến mãi không hợp lệ")] decimal? Saleprice,

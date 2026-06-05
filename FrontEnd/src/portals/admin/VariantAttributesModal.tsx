@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/Button';
-import type { Attribute } from '@/features/products/api/attributesApi';
 import { attributesApi } from '@/features/products/api/attributesApi';
+import { Plus, Trash2 } from 'lucide-react';
 
 interface VariantAttributesModalProps {
   isOpen: boolean;
@@ -11,8 +11,7 @@ interface VariantAttributesModalProps {
 }
 
 export const VariantAttributesModal: React.FC<VariantAttributesModalProps> = ({ isOpen, onClose, variantId }) => {
-  const [allAttributes, setAllAttributes] = useState<Attribute[]>([]);
-  const [selectedValues, setSelectedValues] = useState<number[]>([]);
+  const [specs, setSpecs] = useState<{ key: string; value: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -25,12 +24,8 @@ export const VariantAttributesModal: React.FC<VariantAttributesModalProps> = ({ 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [attrs, variantAttrs] = await Promise.all([
-        attributesApi.getAttributes(),
-        attributesApi.getVariantAttributes(variantId)
-      ]);
-      setAllAttributes(attrs);
-      setSelectedValues(variantAttrs.map(v => v.valueid));
+      const variantAttrs = await attributesApi.getVariantAttributes(variantId);
+      setSpecs(variantAttrs.map(v => ({ key: v.attributename || '', value: v.valuename || '' })));
     } catch (err) {
       console.error(err);
     } finally {
@@ -38,61 +33,81 @@ export const VariantAttributesModal: React.FC<VariantAttributesModalProps> = ({ 
     }
   };
 
-  const toggleValue = (valId: number) => {
-    setSelectedValues(prev => 
-      prev.includes(valId) ? prev.filter(id => id !== valId) : [...prev, valId]
-    );
+  const addSpec = () => {
+    setSpecs(prev => [...prev, { key: '', value: '' }]);
+  };
+
+  const removeSpec = (index: number) => {
+    setSpecs(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateSpecKey = (index: number, keyVal: string) => {
+    setSpecs(prev => prev.map((item, i) => i === index ? { ...item, key: keyVal } : item));
+  };
+
+  const updateSpecValue = (index: number, valueVal: string) => {
+    setSpecs(prev => prev.map((item, i) => i === index ? { ...item, value: valueVal } : item));
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await attributesApi.assignVariantAttributes(variantId, selectedValues);
-      alert('Đã cập nhật thuộc tính thành công.');
+      // Filter out empty keys
+      const filtered = specs.filter(s => s.key.trim() !== '');
+      await attributesApi.assignVariantAttributes(variantId, filtered);
+      alert('Đã cập nhật thông số kỹ thuật thành công.');
       onClose();
     } catch (err) {
-      alert('Không thể cập nhật thuộc tính. Vui lòng kiểm tra lại.');
+      alert('Không thể cập nhật thông số kỹ thuật. Vui lòng kiểm tra lại.');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Thuộc tính của Variant #${variantId}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={`Thông số kỹ thuật - Variant #${variantId}`}>
       {loading ? (
         <div className="p-8 text-center text-slate-400">Đang tải...</div>
       ) : (
         <div className="space-y-6">
-          {allAttributes.length === 0 ? (
-            <p className="text-sm text-slate-500">Chưa có thuộc tính nào trong hệ thống. Hãy thêm thuộc tính trước.</p>
-          ) : (
-            allAttributes.map(attr => (
-              <div key={attr.attributeid} className="space-y-2">
-                <p className="font-bold text-sm text-slate-800">{attr.attributename}</p>
-                <div className="flex flex-wrap gap-2">
-                  {attr.values?.map(val => {
-                    const isSelected = selectedValues.includes(val.valueid);
-                    return (
-                      <button
-                        key={val.valueid}
-                        onClick={() => toggleValue(val.valueid)}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${
-                          isSelected 
-                            ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20' 
-                            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                        }`}
-                      >
-                        {val.valuename}
-                      </button>
-                    );
-                  })}
-                  {(!attr.values || attr.values.length === 0) && (
-                    <span className="text-xs text-slate-400 italic">Chưa có giá trị</span>
-                  )}
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-500 font-medium">Danh sách các thông số (ví dụ: RAM, Bộ nhớ, Chipset...)</span>
+            <Button size="sm" variant="secondary" onClick={addSpec} className="flex items-center gap-1">
+              <Plus size={14} /> Thêm dòng
+            </Button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto space-y-3 pr-1">
+            {specs.length === 0 ? (
+              <p className="text-sm text-slate-400 italic text-center py-6">Chưa có thông số kỹ thuật nào. Click "Thêm dòng" để bắt đầu.</p>
+            ) : (
+              specs.map((spec, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder="Tên thông số (e.g. RAM)"
+                    value={spec.key}
+                    onChange={(e) => updateSpecKey(index, e.target.value)}
+                    className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Giá trị (e.g. 12GB)"
+                    value={spec.value}
+                    onChange={(e) => updateSpecValue(index, e.target.value)}
+                    className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeSpec(index)}
+                    className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
 
           <div className="flex gap-3 pt-4 border-t border-slate-100">
             <Button onClick={handleSave} isLoading={saving} className="flex-1">

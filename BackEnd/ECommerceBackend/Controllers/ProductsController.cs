@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Products;
 using ECommerceBackend.DTOs.Common;
+using System.Text.Json;
 
 namespace ECommerceBackend.Controllers
 {
@@ -17,15 +18,41 @@ namespace ECommerceBackend.Controllers
             _context = context;
         }
 
+        private static List<VariantAttributeValueDto> ParseSpecifications(string? specsJson)
+        {
+            var list = new List<VariantAttributeValueDto>();
+            if (string.IsNullOrEmpty(specsJson))
+            {
+                return list;
+            }
+            try
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(specsJson);
+                if (dict != null)
+                {
+                    int index = 1;
+                    foreach (var kvp in dict)
+                    {
+                        list.Add(new VariantAttributeValueDto(index++, kvp.Value ?? "", kvp.Key ?? ""));
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Null safety / fallback if JSON is invalid or null
+            }
+            return list;
+        }
+
         private static ProductListItemDto MapToDto(Product p)
         {
             var variants = p.Productvariants.Select(v => new ProductVariantDto(
                 v.Variantid,
                 v.Productid,
-                v.Sku,
+                v.Sku ?? "",
                 v.Baseprice,
                 v.Saleprice,
-                v.Condition != null ? new ConditionDto(v.Condition.Conditionid, v.Condition.Conditionname) : null,
+                !string.IsNullOrEmpty(v.Condition) ? new ConditionDto(Math.Abs(v.Condition.GetHashCode()), v.Condition) : null,
                 v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList()
             )).ToList();
 
@@ -45,10 +72,10 @@ namespace ECommerceBackend.Controllers
             var variants = p.Productvariants.Select(v => new ProductVariantDto(
                 v.Variantid,
                 v.Productid,
-                v.Sku,
+                v.Sku ?? "",
                 v.Baseprice,
                 v.Saleprice,
-                v.Condition != null ? new ConditionDto(v.Condition.Conditionid, v.Condition.Conditionname) : null,
+                !string.IsNullOrEmpty(v.Condition) ? new ConditionDto(Math.Abs(v.Condition.GetHashCode()), v.Condition) : null,
                 v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList()
             )).ToList();
 
@@ -71,8 +98,6 @@ namespace ECommerceBackend.Controllers
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Condition)
-                .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
                 .ToListAsync();
 
@@ -91,8 +116,6 @@ namespace ECommerceBackend.Controllers
             var query = _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
-                .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Condition)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
                 .AsQueryable();
@@ -124,8 +147,6 @@ namespace ECommerceBackend.Controllers
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Condition)
-                .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
                 .FirstOrDefaultAsync(p => p.Productid == id);
 
@@ -141,12 +162,7 @@ namespace ECommerceBackend.Controllers
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Condition)
-                .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
-                .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Values)
-                        .ThenInclude(val => val.Attribute)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Reviews)
                 .FirstOrDefaultAsync(p => p.Productid == id);
@@ -171,8 +187,6 @@ namespace ECommerceBackend.Controllers
                     .Include(p => p.Brand)
                     .Include(p => p.Category)
                     .Include(p => p.Productvariants)
-                        .ThenInclude(v => v.Condition)
-                    .Include(p => p.Productvariants)
                         .ThenInclude(v => v.Productimages)
                     .Where(p => p.Brandid == product.Brandid && p.Productid != id)
                     .Take(5)
@@ -183,12 +197,12 @@ namespace ECommerceBackend.Controllers
             var variants = product.Productvariants.Select(v => new ProductVariantDto(
                 v.Variantid,
                 v.Productid,
-                v.Sku,
+                v.Sku ?? "",
                 v.Baseprice,
                 v.Saleprice,
-                v.Condition != null ? new ConditionDto(v.Condition.Conditionid, v.Condition.Conditionname) : null,
+                !string.IsNullOrEmpty(v.Condition) ? new ConditionDto(Math.Abs(v.Condition.GetHashCode()), v.Condition) : null,
                 v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList(),
-                v.Values.Where(val => val.Attribute != null).Select(val => new VariantAttributeValueDto(val.Valueid, val.Valuename, val.Attribute!.Attributename)).ToList()
+                ParseSpecifications(v.Specifications)
             )).ToList();
 
             var result = new FullProductDetailDto(
@@ -228,8 +242,6 @@ namespace ECommerceBackend.Controllers
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Condition)
-                .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
                 .FirstAsync(p => p.Productid == product.Productid);
 
@@ -266,38 +278,24 @@ namespace ECommerceBackend.Controllers
                             Sku = vDto.Sku,
                             Baseprice = vDto.Baseprice,
                             Saleprice = vDto.Saleprice,
-                            Conditionid = vDto.Conditionid
+                            Condition = vDto.Condition ?? "Mới 100%"
                         };
-                        _context.Productvariants.Add(variant);
-                        await _context.SaveChangesAsync();
 
                         if (vDto.Specs != null && vDto.Specs.Any())
                         {
+                            var dict = new Dictionary<string, string>();
                             foreach (var spec in vDto.Specs)
                             {
-                                // Check/Create Attribute
-                                var attr = await _context.Attributes.FirstOrDefaultAsync(a => EF.Functions.ILike(a.Attributename, spec.Key));
-                                if (attr == null)
+                                if (!string.IsNullOrWhiteSpace(spec.Key))
                                 {
-                                    attr = new ECommerceBackend.Models.Attribute { Attributename = spec.Key };
-                                    _context.Attributes.Add(attr);
-                                    await _context.SaveChangesAsync();
+                                    dict[spec.Key] = spec.Value ?? "";
                                 }
-
-                                // Check/Create AttributeValue
-                                var attrVal = await _context.Attributevalues.FirstOrDefaultAsync(av => av.Attributeid == attr.Attributeid && EF.Functions.ILike(av.Valuename, spec.Value));
-                                if (attrVal == null)
-                                {
-                                    attrVal = new Attributevalue { Attributeid = attr.Attributeid, Valuename = spec.Value };
-                                    _context.Attributevalues.Add(attrVal);
-                                    await _context.SaveChangesAsync();
-                                }
-
-                                // Link AttributeValue to Variant
-                                variant.Values.Add(attrVal);
                             }
-                            await _context.SaveChangesAsync();
+                            variant.Specifications = JsonSerializer.Serialize(dict);
                         }
+
+                        _context.Productvariants.Add(variant);
+                        await _context.SaveChangesAsync();
                     }
                 }
 
@@ -306,8 +304,6 @@ namespace ECommerceBackend.Controllers
                 var createdProduct = await _context.Products
                     .Include(p => p.Brand)
                     .Include(p => p.Category)
-                    .Include(p => p.Productvariants)
-                        .ThenInclude(v => v.Condition)
                     .Include(p => p.Productvariants)
                         .ThenInclude(v => v.Productimages)
                     .FirstAsync(p => p.Productid == product.Productid);
@@ -346,8 +342,6 @@ namespace ECommerceBackend.Controllers
             var updatedProduct = await _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
-                .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Condition)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
                 .FirstAsync(p => p.Productid == product.Productid);

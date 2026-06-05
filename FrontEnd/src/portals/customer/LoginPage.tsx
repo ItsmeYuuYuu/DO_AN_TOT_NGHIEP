@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/Button';
 import { useNavigate, Link } from 'react-router-dom';
-import { ShoppingBag, ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 import { saveSession } from '@/features/auth/utils/authUtils';
 import { useAuth } from '@/features/auth/context/AuthContext';

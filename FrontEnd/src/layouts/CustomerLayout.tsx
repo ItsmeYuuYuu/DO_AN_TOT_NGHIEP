@@ -8,7 +8,6 @@ import {
   MapPin, 
   Newspaper, 
   ClipboardList,
-  ShoppingBag,
   LogOut
 } from 'lucide-react';
 import { useCart } from '@/features/orders/context/CartContext';

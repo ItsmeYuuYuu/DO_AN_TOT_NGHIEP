@@ -1,13 +1,12 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { ClipboardList, Box, ShoppingBag, ShieldCheck, Home, LogOut } from 'lucide-react';
+import { ClipboardList, Box, ShieldCheck, Home, LogOut } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import Logo from '@/assets/Logo.png';
 
 const staffNav = [
   { label: 'Đơn hàng', to: '/staff', icon: <ClipboardList size={18} />, end: true },
   { label: 'Kho hàng', to: '/staff/inventory', icon: <Box size={18} /> },
-  { label: 'Nhập hàng', to: '/staff/purchase-orders', icon: <ShoppingBag size={18} /> },
   { label: 'Bảo hành', to: '/staff/warranties', icon: <ShieldCheck size={18} /> },
 ];
 

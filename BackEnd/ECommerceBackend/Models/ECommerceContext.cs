@@ -15,13 +15,7 @@ public partial class ECommerceContext : DbContext
     {
     }
 
-    public virtual DbSet<Attribute> Attributes { get; set; }
-
-    public virtual DbSet<Attributevalue> Attributevalues { get; set; }
-
     public virtual DbSet<Auditlog> Auditlogs { get; set; }
-
-    public virtual DbSet<Banner> Banners { get; set; }
 
     public virtual DbSet<Brand> Brands { get; set; }
 
@@ -43,29 +37,19 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Product> Products { get; set; }
 
-    public virtual DbSet<Productcondition> Productconditions { get; set; }
-
     public virtual DbSet<Productimage> Productimages { get; set; }
 
     public virtual DbSet<Productvariant> Productvariants { get; set; }
 
-    public virtual DbSet<Purchaseorder> Purchaseorders { get; set; }
-
-    public virtual DbSet<Purchaseorderdetail> Purchaseorderdetails { get; set; }
+    public virtual DbSet<Promotionalcontent> Promotionalcontents { get; set; }
 
     public virtual DbSet<Review> Reviews { get; set; }
 
     public virtual DbSet<Role> Roles { get; set; }
 
-    public virtual DbSet<Slider> Sliders { get; set; }
-
-    public virtual DbSet<Supplier> Suppliers { get; set; }
-
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
-
-    public virtual DbSet<Warranty> Warranties { get; set; }
 
     public virtual DbSet<Warrantypackage> Warrantypackages { get; set; }
 
@@ -76,34 +60,7 @@ public partial class ECommerceContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Attribute>(entity =>
-        {
-            entity.HasKey(e => e.Attributeid).HasName("attributes_pkey");
 
-            entity.ToTable("attributes");
-
-            entity.Property(e => e.Attributeid).HasColumnName("attributeid");
-            entity.Property(e => e.Attributename)
-                .HasMaxLength(255)
-                .HasColumnName("attributename");
-        });
-
-        modelBuilder.Entity<Attributevalue>(entity =>
-        {
-            entity.HasKey(e => e.Valueid).HasName("attributevalues_pkey");
-
-            entity.ToTable("attributevalues");
-
-            entity.Property(e => e.Valueid).HasColumnName("valueid");
-            entity.Property(e => e.Attributeid).HasColumnName("attributeid");
-            entity.Property(e => e.Valuename)
-                .HasMaxLength(1000)
-                .HasColumnName("valuename");
-
-            entity.HasOne(d => d.Attribute).WithMany(p => p.Attributevalues)
-                .HasForeignKey(d => d.Attributeid)
-                .HasConstraintName("fk_attrvalues_attributes");
-        });
 
         modelBuilder.Entity<Auditlog>(entity =>
         {
@@ -132,26 +89,7 @@ public partial class ECommerceContext : DbContext
                 .HasConstraintName("fk_auditlogs_users");
         });
 
-        modelBuilder.Entity<Banner>(entity =>
-        {
-            entity.HasKey(e => e.Bannerid).HasName("banners_pkey");
 
-            entity.ToTable("banners");
-
-            entity.Property(e => e.Bannerid).HasColumnName("bannerid");
-            entity.Property(e => e.Imageurl)
-                .HasMaxLength(500)
-                .HasColumnName("imageurl");
-            entity.Property(e => e.Isactive)
-                .HasDefaultValue(true)
-                .HasColumnName("isactive");
-            entity.Property(e => e.Linkurl)
-                .HasMaxLength(500)
-                .HasColumnName("linkurl");
-            entity.Property(e => e.Position)
-                .HasMaxLength(50)
-                .HasColumnName("position");
-        });
 
         modelBuilder.Entity<Brand>(entity =>
         {
@@ -268,16 +206,20 @@ public partial class ECommerceContext : DbContext
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("importedat");
-            entity.Property(e => e.Podetailid).HasColumnName("podetailid");
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
                 .HasDefaultValueSql("'InStock'")
                 .HasColumnName("status");
             entity.Property(e => e.Variantid).HasColumnName("variantid");
-
-            entity.HasOne(d => d.Podetail).WithMany(p => p.Inventoryitems)
-                .HasForeignKey(d => d.Podetailid)
-                .HasConstraintName("fk_inventory_podetails");
+            entity.Property(e => e.Warrantystartdate)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("warrantystartdate");
+            entity.Property(e => e.Warrantyenddate)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("warrantyenddate");
+            entity.Property(e => e.Warrantystatus)
+                .HasMaxLength(50)
+                .HasColumnName("warrantystatus");
 
             entity.HasOne(d => d.Variant).WithMany(p => p.Inventoryitems)
                 .HasForeignKey(d => d.Variantid)
@@ -421,20 +363,7 @@ public partial class ECommerceContext : DbContext
                 .HasConstraintName("fk_products_categories");
         });
 
-        modelBuilder.Entity<Productcondition>(entity =>
-        {
-            entity.HasKey(e => e.Conditionid).HasName("productconditions_pkey");
 
-            entity.ToTable("productconditions");
-
-            entity.Property(e => e.Conditionid).HasColumnName("conditionid");
-            entity.Property(e => e.Conditionname)
-                .HasMaxLength(50)
-                .HasColumnName("conditionname");
-            entity.Property(e => e.Description)
-                .HasMaxLength(255)
-                .HasColumnName("description");
-        });
 
         modelBuilder.Entity<Productimage>(entity =>
         {
@@ -468,7 +397,6 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Baseprice)
                 .HasPrecision(18, 2)
                 .HasColumnName("baseprice");
-            entity.Property(e => e.Conditionid).HasColumnName("conditionid");
             entity.Property(e => e.Productid).HasColumnName("productid");
             entity.Property(e => e.Saleprice)
                 .HasPrecision(18, 2)
@@ -476,94 +404,19 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Sku)
                 .HasMaxLength(50)
                 .HasColumnName("sku");
-
-            entity.HasOne(d => d.Condition).WithMany(p => p.Productvariants)
-                .HasForeignKey(d => d.Conditionid)
-                .HasConstraintName("fk_variants_conditions");
+            entity.Property(e => e.Condition)
+                .HasMaxLength(50)
+                .HasColumnName("condition");
+            entity.Property(e => e.Specifications)
+                .HasColumnType("text")
+                .HasColumnName("specifications");
 
             entity.HasOne(d => d.Product).WithMany(p => p.Productvariants)
                 .HasForeignKey(d => d.Productid)
                 .HasConstraintName("fk_variants_products");
-
-            entity.HasMany(d => d.Values).WithMany(p => p.Variants)
-                .UsingEntity<Dictionary<string, object>>(
-                    "Variantattributevalue",
-                    r => r.HasOne<Attributevalue>().WithMany()
-                        .HasForeignKey("Valueid")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("fk_varattr_attrvalues"),
-                    l => l.HasOne<Productvariant>().WithMany()
-                        .HasForeignKey("Variantid")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("fk_varattr_variants"),
-                    j =>
-                    {
-                        j.HasKey("Variantid", "Valueid").HasName("variantattributevalues_pkey");
-                        j.ToTable("variantattributevalues");
-                        j.IndexerProperty<int>("Variantid").HasColumnName("variantid");
-                        j.IndexerProperty<int>("Valueid").HasColumnName("valueid");
-                    });
         });
 
-        modelBuilder.Entity<Purchaseorder>(entity =>
-        {
-            entity.HasKey(e => e.Poid).HasName("purchaseorders_pkey");
 
-            entity.ToTable("purchaseorders");
-
-            entity.Property(e => e.Poid).HasColumnName("poid");
-            entity.Property(e => e.Importdate)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("importdate");
-            entity.Property(e => e.Shippingfee)
-                .HasPrecision(18, 2)
-                .HasDefaultValueSql("0")
-                .HasColumnName("shippingfee");
-            entity.Property(e => e.Status)
-                .HasMaxLength(50)
-                .HasColumnName("status");
-            entity.Property(e => e.Supplierid).HasColumnName("supplierid");
-            entity.Property(e => e.Taxfee)
-                .HasPrecision(18, 2)
-                .HasDefaultValueSql("0")
-                .HasColumnName("taxfee");
-            entity.Property(e => e.Totalamount)
-                .HasPrecision(18, 2)
-                .HasColumnName("totalamount");
-            entity.Property(e => e.Userid).HasColumnName("userid");
-
-            entity.HasOne(d => d.Supplier).WithMany(p => p.Purchaseorders)
-                .HasForeignKey(d => d.Supplierid)
-                .HasConstraintName("fk_po_suppliers");
-
-            entity.HasOne(d => d.User).WithMany(p => p.Purchaseorders)
-                .HasForeignKey(d => d.Userid)
-                .HasConstraintName("fk_po_users");
-        });
-
-        modelBuilder.Entity<Purchaseorderdetail>(entity =>
-        {
-            entity.HasKey(e => e.Podetailid).HasName("purchaseorderdetails_pkey");
-
-            entity.ToTable("purchaseorderdetails");
-
-            entity.Property(e => e.Podetailid).HasColumnName("podetailid");
-            entity.Property(e => e.Importprice)
-                .HasPrecision(18, 2)
-                .HasColumnName("importprice");
-            entity.Property(e => e.Poid).HasColumnName("poid");
-            entity.Property(e => e.Quantity).HasColumnName("quantity");
-            entity.Property(e => e.Variantid).HasColumnName("variantid");
-
-            entity.HasOne(d => d.Po).WithMany(p => p.Purchaseorderdetails)
-                .HasForeignKey(d => d.Poid)
-                .HasConstraintName("fk_podetails_po");
-
-            entity.HasOne(d => d.Variant).WithMany(p => p.Purchaseorderdetails)
-                .HasForeignKey(d => d.Variantid)
-                .HasConstraintName("fk_podetails_variants");
-        });
 
         modelBuilder.Entity<Review>(entity =>
         {
@@ -602,51 +455,7 @@ public partial class ECommerceContext : DbContext
                 .HasColumnName("rolename");
         });
 
-        modelBuilder.Entity<Slider>(entity =>
-        {
-            entity.HasKey(e => e.Sliderid).HasName("sliders_pkey");
 
-            entity.ToTable("sliders");
-
-            entity.Property(e => e.Sliderid).HasColumnName("sliderid");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
-            entity.Property(e => e.Displayorder)
-                .HasDefaultValue(0)
-                .HasColumnName("displayorder");
-            entity.Property(e => e.Imageurl)
-                .HasMaxLength(500)
-                .HasColumnName("imageurl");
-            entity.Property(e => e.Isactive)
-                .HasDefaultValue(true)
-                .HasColumnName("isactive");
-            entity.Property(e => e.Linkurl)
-                .HasMaxLength(500)
-                .HasColumnName("linkurl");
-            entity.Property(e => e.Title)
-                .HasMaxLength(200)
-                .HasColumnName("title");
-        });
-
-        modelBuilder.Entity<Supplier>(entity =>
-        {
-            entity.HasKey(e => e.Supplierid).HasName("suppliers_pkey");
-
-            entity.ToTable("suppliers");
-
-            entity.Property(e => e.Supplierid).HasColumnName("supplierid");
-            entity.Property(e => e.Address)
-                .HasMaxLength(255)
-                .HasColumnName("address");
-            entity.Property(e => e.Contactphone)
-                .HasMaxLength(20)
-                .HasColumnName("contactphone");
-            entity.Property(e => e.Suppliername)
-                .HasMaxLength(150)
-                .HasColumnName("suppliername");
-        });
 
         modelBuilder.Entity<User>(entity =>
         {
@@ -710,34 +519,35 @@ public partial class ECommerceContext : DbContext
                 .HasColumnName("validto");
         });
 
-        modelBuilder.Entity<Warranty>(entity =>
+        modelBuilder.Entity<Promotionalcontent>(entity =>
         {
-            entity.HasKey(e => e.Warrantyid).HasName("warranties_pkey");
+            entity.HasKey(e => e.Contentid).HasName("promotionalcontents_pkey");
 
-            entity.ToTable("warranties");
+            entity.ToTable("promotionalcontents");
 
-            entity.Property(e => e.Warrantyid).HasColumnName("warrantyid");
-            entity.Property(e => e.Customerid).HasColumnName("customerid");
-            entity.Property(e => e.Enddate)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("enddate");
-            entity.Property(e => e.Imei)
+            entity.Property(e => e.Contentid).HasColumnName("contentid");
+            entity.Property(e => e.Contenttype)
                 .HasMaxLength(50)
-                .HasColumnName("imei");
-            entity.Property(e => e.Startdate)
+                .HasColumnName("contenttype");
+            entity.Property(e => e.Title)
+                .HasMaxLength(200)
+                .HasColumnName("title");
+            entity.Property(e => e.Imageurl)
+                .HasMaxLength(500)
+                .HasColumnName("imageurl");
+            entity.Property(e => e.Linkurl)
+                .HasMaxLength(500)
+                .HasColumnName("linkurl");
+            entity.Property(e => e.Displayorder)
+                .HasDefaultValue(0)
+                .HasColumnName("displayorder");
+            entity.Property(e => e.Isactive)
+                .HasDefaultValue(true)
+                .HasColumnName("isactive");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
-                .HasColumnName("startdate");
-            entity.Property(e => e.Status)
-                .HasMaxLength(50)
-                .HasColumnName("status");
-
-            entity.HasOne(d => d.Customer).WithMany(p => p.Warranties)
-                .HasForeignKey(d => d.Customerid)
-                .HasConstraintName("fk_warranties_customers");
-
-            entity.HasOne(d => d.ImeiNavigation).WithMany(p => p.Warranties)
-                .HasForeignKey(d => d.Imei)
-                .HasConstraintName("fk_warranties_inventory");
+                .HasColumnName("createdat");
         });
 
         modelBuilder.Entity<Warrantypackage>(entity =>

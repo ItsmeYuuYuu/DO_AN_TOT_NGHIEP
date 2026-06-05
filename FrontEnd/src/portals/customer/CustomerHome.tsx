@@ -3,20 +3,17 @@ import { Link } from 'react-router-dom';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { Skeleton } from '@/components/Skeleton';
-import { bannersApi } from '@/features/content/api/bannersApi';
-import type { Banner } from '@/features/content/api/bannersApi';
-import { slidersApi } from '@/features/content/api/slidersApi';
-import type { Slider } from '@/features/content/api/slidersApi';
+import { promotionsApi, type PromotionalContent } from '@/features/content/api/promotionsApi';
 
 const CustomerHome: React.FC = () => {
   const { products, loading } = useProducts();
-  const [banners, setBanners] = useState<Banner[]>([]);
-  const [sliders, setSliders] = useState<Slider[]>([]);
+  const [banners, setBanners] = useState<PromotionalContent[]>([]);
+  const [sliders, setSliders] = useState<PromotionalContent[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
 
   useEffect(() => {
-    bannersApi.getActive().then(setBanners).catch(() => {});
-    slidersApi.getActive().then(setSliders).catch(() => {});
+    promotionsApi.getActive('Banner').then(setBanners).catch(() => {});
+    promotionsApi.getActive('Slider').then(setSliders).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -40,7 +37,7 @@ const CustomerHome: React.FC = () => {
                 <>
                   {sliders.map((s, idx) => (
                     <div 
-                      key={s.sliderid} 
+                      key={s.contentid} 
                       className={`absolute inset-0 transition-opacity duration-700 ${idx === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                     >
                       <img src={s.imageurl} alt={s.title} className="w-full h-full object-cover" />
@@ -70,7 +67,7 @@ const CustomerHome: React.FC = () => {
             {/* Side Banners */}
             <div className="hidden lg:flex flex-col gap-4">
               {banners.slice(0, 2).map((b) => (
-                <div key={b.bannerid} className="flex-1 rounded-xl relative overflow-hidden shadow-sm bg-slate-100">
+                <div key={b.contentid} className="flex-1 rounded-xl relative overflow-hidden shadow-sm bg-slate-100">
                   <img src={b.imageurl} alt="banner" className="w-full h-full object-cover" />
                   {b.linkurl && (
                     <Link to={b.linkurl} className="absolute inset-0" aria-label="banner link" />

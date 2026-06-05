@@ -87,7 +87,7 @@ const StaffWarranties: React.FC = () => {
       };
 
       if (editingWarranty) {
-        await apiClient.put(`/Warranties/${editingWarranty.warrantyid}`, payload);
+        await apiClient.put(`/Warranties/${formData.imei}`, payload);
       } else {
         await apiClient.post('/Warranties', payload);
       }

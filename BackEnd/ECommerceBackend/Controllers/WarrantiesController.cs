@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Warranties;
+using ECommerceBackend.DTOs.Common;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System;
 
 namespace ECommerceBackend.Controllers
 {
@@ -17,92 +19,133 @@ namespace ECommerceBackend.Controllers
 
         public WarrantiesController(ECommerceContext context) => _context = context;
 
-        private static WarrantyDto MapToDto(Warranty w) => new WarrantyDto(
-            w.Warrantyid,
-            w.Imei,
-            w.Customerid,
-            w.Startdate,
-            w.Enddate,
-            w.Status,
-            w.Customer?.Fullname
-        );
+        private static WarrantyDto MapToDto(Inventoryitem i)
+        {
+            var orderItem = i.Orderitems?.FirstOrDefault();
+            var order = orderItem?.Order;
+            var customer = order?.Customer;
+            return new WarrantyDto(
+                Math.Abs(i.Imei.GetHashCode()), // Dummy numeric ID for backward compatibility
+                i.Imei,
+                customer?.Customerid,
+                i.Warrantystartdate ?? DateTime.MinValue,
+                i.Warrantyenddate ?? DateTime.MinValue,
+                i.Warrantystatus,
+                customer?.Fullname
+            );
+        }
 
         [HttpGet]
         [Authorize(Roles = "Admin,Staff")]
         public async Task<ActionResult<IEnumerable<WarrantyDto>>> GetWarranties()
         {
-            var warranties = await _context.Warranties.Include(w => w.Customer).ToListAsync();
-            return Ok(warranties.Select(MapToDto));
+            var items = await _context.Inventoryitems
+                .Include(i => i.Orderitems)
+                    .ThenInclude(oi => oi.Order)
+                        .ThenInclude(o => o.Customer)
+                .Where(i => i.Warrantystartdate != null)
+                .ToListAsync();
+            return Ok(items.Select(MapToDto));
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{imei}")]
         [Authorize(Roles = "Admin,Staff")]
-        public async Task<ActionResult<WarrantyDto>> GetWarranty(int id)
+        public async Task<ActionResult<WarrantyDto>> GetWarranty(string imei)
         {
-            var w = await _context.Warranties.Include(w => w.Customer).FirstOrDefaultAsync(w => w.Warrantyid == id);
-            if (w == null) return NotFound();
-            return Ok(MapToDto(w));
+            var item = await _context.Inventoryitems
+                .Include(i => i.Orderitems)
+                    .ThenInclude(oi => oi.Order)
+                        .ThenInclude(o => o.Customer)
+                .FirstOrDefaultAsync(i => i.Imei == imei);
+            
+            if (item == null) return NotFound();
+            return Ok(MapToDto(item));
         }
 
         [HttpGet("customer/{customerId}")]
         [Authorize(Roles = "Admin,Staff")]
         public async Task<ActionResult<IEnumerable<WarrantyDto>>> GetWarrantiesByCustomer(int customerId)
         {
-            var warranties = await _context.Warranties.Include(w => w.Customer).Where(w => w.Customerid == customerId).ToListAsync();
-            return Ok(warranties.Select(MapToDto));
+            var items = await _context.Inventoryitems
+                .Include(i => i.Orderitems)
+                    .ThenInclude(oi => oi.Order)
+                        .ThenInclude(o => o.Customer)
+                .Where(i => i.Warrantystartdate != null && i.Orderitems.Any(oi => oi.Order != null && oi.Order.Customerid == customerId))
+                .ToListAsync();
+            return Ok(items.Select(MapToDto));
         }
 
         [HttpPost]
         [Authorize(Roles = "Admin,Staff")]
         public async Task<ActionResult<WarrantyDto>> PostWarranty([FromBody] CreateWarrantyRequestDto dto)
         {
-            var warranty = new Warranty
+            if (string.IsNullOrEmpty(dto.Imei))
             {
-                Imei = dto.Imei,
-                Customerid = dto.Customerid,
-                Startdate = dto.Startdate,
-                Enddate = dto.Enddate,
-                Status = dto.Status ?? "Active"
-            };
+                return BadRequest(new ApiErrorDto("Mã IMEI là bắt buộc.", null));
+            }
 
-            _context.Warranties.Add(warranty);
+            var item = await _context.Inventoryitems.FindAsync(dto.Imei);
+            if (item == null)
+            {
+                return BadRequest(new ApiErrorDto("Không tìm thấy thiết bị với IMEI đã cho trong kho.", null));
+            }
+
+            item.Warrantystartdate = dto.Startdate;
+            item.Warrantyenddate = dto.Enddate;
+            item.Warrantystatus = dto.Status ?? "Active";
+
             await _context.SaveChangesAsync();
 
-            var createdWarranty = await _context.Warranties.Include(w => w.Customer).FirstOrDefaultAsync(w => w.Warrantyid == warranty.Warrantyid);
-            return CreatedAtAction(nameof(GetWarranty), new { id = warranty.Warrantyid }, MapToDto(createdWarranty!));
+            var updated = await _context.Inventoryitems
+                .Include(i => i.Orderitems)
+                    .ThenInclude(oi => oi.Order)
+                        .ThenInclude(o => o.Customer)
+                .FirstAsync(i => i.Imei == item.Imei);
+
+            return CreatedAtAction(nameof(GetWarranty), new { imei = item.Imei }, MapToDto(updated));
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("{imei}")]
         [Authorize(Roles = "Admin,Staff")]
-        public async Task<IActionResult> PutWarranty(int id, [FromBody] UpdateWarrantyRequestDto dto)
+        public async Task<IActionResult> PutWarranty(string imei, [FromBody] UpdateWarrantyRequestDto dto)
         {
-            var warranty = await _context.Warranties.FindAsync(id);
-            if (warranty == null) return NotFound();
+            var item = await _context.Inventoryitems.FindAsync(imei);
+            if (item == null) return NotFound();
 
-            warranty.Imei = dto.Imei;
-            warranty.Customerid = dto.Customerid;
-            warranty.Startdate = dto.Startdate;
-            warranty.Enddate = dto.Enddate;
-            warranty.Status = dto.Status;
+            item.Warrantystartdate = dto.Startdate;
+            item.Warrantyenddate = dto.Enddate;
+            item.Warrantystatus = dto.Status;
 
-            try { await _context.SaveChangesAsync(); }
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.Warranties.Any(e => e.Warrantyid == id)) return NotFound();
+                if (!_context.Inventoryitems.Any(e => e.Imei == imei)) return NotFound();
                 throw;
             }
 
-            var updatedWarranty = await _context.Warranties.Include(w => w.Customer).FirstOrDefaultAsync(w => w.Warrantyid == id);
-            return Ok(MapToDto(updatedWarranty!));
+            var updated = await _context.Inventoryitems
+                .Include(i => i.Orderitems)
+                    .ThenInclude(oi => oi.Order)
+                        .ThenInclude(o => o.Customer)
+                .FirstAsync(i => i.Imei == imei);
+
+            return Ok(MapToDto(updated));
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{imei}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteWarranty(int id)
+        public async Task<IActionResult> DeleteWarranty(string imei)
         {
-            var warranty = await _context.Warranties.FindAsync(id);
-            if (warranty == null) return NotFound();
-            _context.Warranties.Remove(warranty);
+            var item = await _context.Inventoryitems.FindAsync(imei);
+            if (item == null) return NotFound();
+
+            item.Warrantystartdate = null;
+            item.Warrantyenddate = null;
+            item.Warrantystatus = null;
+
             await _context.SaveChangesAsync();
             return NoContent();
         }

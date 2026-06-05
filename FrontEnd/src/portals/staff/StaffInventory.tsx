@@ -6,7 +6,6 @@ import { Skeleton } from '@/components/Skeleton';
 interface InventoryItem {
   imei: string;
   variantid?: number;
-  podetailid?: number;
   status?: string;
   importedat?: string;
   variantSku?: string;

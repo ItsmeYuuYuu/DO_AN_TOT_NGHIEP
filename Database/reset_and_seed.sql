@@ -1,151 +1,110 @@
 BEGIN;
 
--- 1. DELETE existing catalog data in FK-safe order
-DELETE FROM variantattributevalues;
-DELETE FROM attributevalues;
-DELETE FROM attributes;
-DELETE FROM inventoryitems;
-DELETE FROM productimages;
-DELETE FROM productvariants;
-DELETE FROM products;
-DELETE FROM brands;
+-- 1. Xóa dữ liệu cũ theo thứ tự an toàn khóa ngoại
+DELETE FROM ChatMessages;
+DELETE FROM ChatSessions;
+DELETE FROM News;
+DELETE FROM PromotionalContents;
+DELETE FROM AuditLogs;
+DELETE FROM Reviews;
+DELETE FROM OrderItems;
+DELETE FROM Orders;
+DELETE FROM InventoryItems;
+DELETE FROM ProductImages;
+DELETE FROM ProductVariants;
+DELETE FROM Products;
+DELETE FROM Brands;
+DELETE FROM Categories;
+DELETE FROM Vouchers;
+DELETE FROM WarrantyPackages;
+DELETE FROM Users;
+DELETE FROM Roles;
 
--- 2. RESET sequences if any (PostgreSQL uses serial/identity, but since we specify IDs manually in seed, we don't necessarily need to reset. We will use explicit IDs).
+-- 2. Thêm Roles
+INSERT INTO Roles (RoleId, RoleName) VALUES
+(1, 'Admin'),
+(2, 'Staff'),
+(3, 'Customer');
 
--- 3. INSERT BRANDS
-INSERT INTO brands (brandid, brandname) VALUES
+-- 3. Thêm Users mẫu (mật khẩu đã băm bằng BCrypt tương ứng trong DbInitializer)
+-- Admin: admin300475@gmail.com / Admin@300475!
+-- Staff: staff01@gmail.com / Staff@123456!
+INSERT INTO Users (UserId, RoleId, Username, PasswordHash, FullName, Email, Phone, IsActive) VALUES
+(1, 1, 'admin300475@gmail.com', '$2a$11$Z6n8/D8L1t31L2.d.g.k5.x5m6D5.z5m6D5.z5m6D5.z5m6D5.z5m', 'Quản trị viên hệ thống', 'admin300475@gmail.com', '0900000000', TRUE),
+(2, 2, 'staff01@gmail.com', '$2a$11$Z6n8/D8L1t31L2.d.g.k5.x5m6D5.z5m6D5.z5m6D5.z5m6D5.z5m', 'Nhân viên kho', 'staff01@gmail.com', '0911111111', TRUE);
+
+-- 4. Thêm Khách hàng mẫu
+INSERT INTO Customers (CustomerId, FullName, Phone, Email, Address) VALUES
+(1, 'Nguyễn Văn An', '0901234567', 'an.nguyen@gmail.com', '12 Nguyễn Huệ, Q1, TP.HCM'),
+(2, 'Trần Thị Bích', '0912345678', 'bich.tran@gmail.com', '45 Lê Lợi, Q3, TP.HCM'),
+(3, 'Lê Minh Cường', '0923456789', 'cuong.le@gmail.com', '78 Trần Hưng Đạo, Hoàn Kiếm, Hà Nội');
+
+-- 5. Thêm Danh mục
+INSERT INTO Categories (CategoryId, CategoryName, Description) VALUES
+(1, 'Điện thoại', 'Điện thoại thông minh các loại'),
+(2, 'Laptop', 'Máy tính xách tay'),
+(3, 'Phụ kiện', 'Cáp, sạc, tai nghe, ốp lưng...');
+
+-- 6. Thêm Thương hiệu
+INSERT INTO Brands (BrandId, BrandName) VALUES
 (1, 'Google Pixel'),
-(2, 'vivo'),
-(3, 'iQOO'),
-(4, 'Honor'),
-(5, 'OnePlus'),
-(6, 'OPPO'),
-(7, 'Realme'),
-(8, 'Xiaomi'),
-(9, 'Huawei'),
-(10, 'Meizu'),
-(11, 'iPhone'),
-(12, 'Samsung'),
-(13, 'Sony'),
-(14, 'Nothing Phone');
+(2, 'iPhone'),
+(3, 'Samsung'),
+(4, 'Xiaomi');
 
--- 4. INSERT PRODUCTS
--- Assumes categoryid = 1 for Phones (based on DbInitializer)
-INSERT INTO products (productid, categoryid, brandid, productname, description, createdat) VALUES
--- Google Pixel
-(101, 1, 1, 'Google Pixel 8 Pro', 'Điện thoại Google Pixel cao cấp nhất với chip Tensor G3 và camera AI.', NOW()),
-(102, 1, 1, 'Google Pixel 8', 'Google Pixel 8 nhỏ gọn, chip Tensor G3 mạnh mẽ.', NOW()),
-(103, 1, 1, 'Google Pixel 7a', 'Điện thoại Pixel tầm trung với camera xuất sắc.', NOW()),
--- vivo
-(201, 1, 2, 'vivo X100 Pro', 'Flagship camera kết hợp Zeiss.', NOW()),
-(202, 1, 2, 'vivo V29 5G', 'Chuyên gia chân dung với vòng sáng Aura.', NOW()),
-(203, 1, 2, 'vivo Y36', 'Thiết kế trẻ trung, sạc nhanh 44W.', NOW()),
--- iQOO
-(301, 1, 3, 'iQOO 12 Pro', 'Siêu phẩm gaming với chip Snapdragon 8 Gen 3.', NOW()),
-(302, 1, 3, 'iQOO Neo 9', 'Hiệu năng đỉnh cao trong tầm giá.', NOW()),
-(303, 1, 3, 'iQOO Z8', 'Pin khủng, sạc siêu tốc 120W.', NOW()),
--- Honor
-(401, 1, 4, 'Honor Magic6 Pro', 'Flagship Honor với camera Falcon, pin silicon-carbon.', NOW()),
-(402, 1, 4, 'Honor 90', 'Màn hình bảo vệ mắt đỉnh cao, camera 200MP.', NOW()),
-(403, 1, 4, 'Honor X9b', 'Thiết kế siêu bền chống va đập.', NOW()),
--- OnePlus
-(501, 1, 5, 'OnePlus 12', 'Flagship Killer 2024, Snapdragon 8 Gen 3, Hasselblad.', NOW()),
-(502, 1, 5, 'OnePlus 12R', 'Hiệu năng mạnh mẽ với pin lớn.', NOW()),
-(503, 1, 5, 'OnePlus Nord 3', 'Tầm trung cực mạnh, sạc 80W.', NOW()),
--- OPPO
-(601, 1, 6, 'OPPO Find N3', 'Điện thoại gập siêu mỏng nhẹ, camera Hasselblad.', NOW()),
-(602, 1, 6, 'OPPO Reno11 Pro', 'Thiết kế đẹp mắt, camera chân dung tele.', NOW()),
-(603, 1, 6, 'OPPO A98 5G', 'Màn hình 120Hz, pin bền bỉ.', NOW()),
--- Realme
-(701, 1, 7, 'Realme GT5 Pro', 'Flagship Realme Snapdragon 8 Gen 3, camera tele xịn.', NOW()),
-(702, 1, 7, 'Realme 11 Pro+', 'Màn hình cong đẹp, camera 200MP.', NOW()),
-(703, 1, 7, 'Realme C67', 'Smartphone quốc dân giá cực rẻ.', NOW()),
--- Xiaomi
-(801, 1, 8, 'Xiaomi 14 Ultra', 'Quái thú nhiếp ảnh với cụm camera Leica.', NOW()),
-(802, 1, 8, 'Xiaomi 14', 'Flagship nhỏ gọn mạnh mẽ.', NOW()),
-(803, 1, 8, 'Redmi Note 13 Pro+', 'Siêu phẩm tầm trung có chống nước IP68.', NOW()),
--- Huawei
-(901, 1, 9, 'Huawei Mate 60 Pro', 'Flagship Huawei có kết nối vệ tinh, thiết kế đẳng cấp.', NOW()),
-(902, 1, 9, 'Huawei P60 Pro', 'Ông vua nhiếp ảnh thiếu sáng.', NOW()),
-(903, 1, 9, 'Huawei Nova 11', 'Smartphone thời trang mỏng nhẹ.', NOW()),
--- Meizu
-(1001, 1, 10, 'Meizu 21 Pro', 'Flagship Meizu cuối cùng, thiết kế vuông vức tinh tế.', NOW()),
-(1002, 1, 10, 'Meizu 21', 'Viền màn hình trắng siêu mỏng.', NOW()),
-(1003, 1, 10, 'Meizu 20 Infinity', 'Điện thoại viền siêu mỏng, mặt lưng kính đặc biệt.', NOW()),
--- iPhone
-(1101, 1, 11, 'iPhone 15 Pro Max', 'Khung Titan, chip A17 Pro, cổng USB-C.', NOW()),
-(1102, 1, 11, 'iPhone 15', 'Dynamic Island cho dòng tiêu chuẩn.', NOW()),
-(1103, 1, 11, 'iPhone 13', 'Chiếc iPhone quốc dân với giá cực tốt.', NOW()),
--- Samsung
-(1201, 1, 12, 'Samsung Galaxy S24 Ultra', 'Thiết kế phẳng, khung Titan, Galaxy AI.', NOW()),
-(1202, 1, 12, 'Samsung Galaxy Z Fold5', 'Điện thoại gập cỡ lớn tối ưu đa nhiệm.', NOW()),
-(1203, 1, 12, 'Samsung Galaxy A54 5G', 'Điện thoại tầm trung bán chạy nhất.', NOW()),
--- Sony
-(1301, 1, 13, 'Sony Xperia 1 V', 'Cảm biến Exmor T mới, màn hình 4K HDR.', NOW()),
-(1302, 1, 13, 'Sony Xperia 5 V', 'Điện thoại gọn nhẹ, hiệu năng cao.', NOW()),
-(1303, 1, 13, 'Sony Xperia 10 V', 'Pin khủng nhất trong phân khúc mỏng nhẹ.', NOW()),
--- Nothing Phone
-(1401, 1, 14, 'Nothing Phone (2)', 'Mặt lưng LED Glyph độc đáo, chip Snapdragon 8+ Gen 1.', NOW()),
-(1402, 1, 14, 'Nothing Phone (2a)', 'Thiết kế khác biệt cho phân khúc tầm trung.', NOW()),
-(1403, 1, 14, 'Nothing Phone (1)', 'Phiên bản tiên phong với mặt lưng trong suốt.', NOW());
+-- 7. Thêm Sản phẩm
+INSERT INTO Products (ProductId, CategoryId, BrandId, ProductName, Description) VALUES
+(101, 1, 1, 'Google Pixel 8 Pro', 'Điện thoại Google Pixel cao cấp nhất với chip Tensor G3 và camera AI.'),
+(102, 1, 2, 'iPhone 15 Pro Max', 'Khung Titan, chip A17 Pro, cổng USB-C tiện lợi.'),
+(103, 1, 3, 'Samsung Galaxy S24 Ultra', 'Thiết kế phẳng, khung Titan chắc chắn, tích hợp các tính năng Galaxy AI.');
 
--- 5. INSERT PRODUCT VARIANTS
--- (conditionid = 1 for New 100%)
-INSERT INTO productvariants (variantid, productid, conditionid, sku, baseprice, saleprice) VALUES
-(1011, 101, 1, 'PIX8P-128', 24990000, 23990000), (1012, 101, 1, 'PIX8P-256', 26990000, NULL),
-(1021, 102, 1, 'PIX8-128', 18990000, 17990000),
-(1031, 103, 1, 'PIX7A-128', 10990000, 9990000),
+-- 8. Thêm Biến thể sản phẩm (Variant kèm Condition và Specifications JSON trực tiếp)
+INSERT INTO ProductVariants (VariantId, ProductId, SKU, BasePrice, SalePrice, Condition, Specifications) VALUES
+(1011, 101, 'PIX8P-128-NEW', 24990000, 23990000, 'Mới 100%', '{"Màn hình": "6.7 inch OLED", "Chipset": "Google Tensor G3", "RAM": "12GB", "Bộ nhớ": "128GB", "Pin": "5050 mAh"}'),
+(1012, 101, 'PIX8P-256-99', 21990000, NULL, 'Like New (99%)', '{"Màn hình": "6.7 inch OLED", "Chipset": "Google Tensor G3", "RAM": "12GB", "Bộ nhớ": "256GB", "Pin": "5050 mAh"}'),
+(1021, 102, 'IPH-15PM-256-NEW', 34990000, 32990000, 'Mới 100%', '{"Màn hình": "6.7 inch Super Retina XDR", "Chipset": "Apple A17 Pro", "RAM": "8GB", "Bộ nhớ": "256GB", "Pin": "4441 mAh"}'),
+(1022, 102, 'IPH-15PM-256-95', 27990000, NULL, 'Cũ đẹp (95%)', '{"Màn hình": "6.7 inch Super Retina XDR", "Chipset": "Apple A17 Pro", "RAM": "8GB", "Bộ nhớ": "256GB", "Pin": "4441 mAh"}'),
+(1031, 103, 'SAM-S24U-256-NEW', 33990000, 31990000, 'Mới 100%', '{"Màn hình": "6.8 inch Dynamic AMOLED 2X", "Chipset": "Snapdragon 8 Gen 3 for Galaxy", "RAM": "12GB", "Bộ nhớ": "256GB", "Pin": "5000 mAh"}');
 
-(2011, 201, 1, 'VIV-X100P-256', 29990000, 28990000),
-(2021, 202, 1, 'VIV-V29-128', 11990000, 10990000),
-(2031, 203, 1, 'VIV-Y36-128', 6990000, 6490000),
+-- 9. Thêm bộ sưu tập Hình ảnh sản phẩm
+INSERT INTO ProductImages (ImageId, VariantId, ImageUrl, IsMain) VALUES
+(1, 1011, 'https://placehold.co/400x400/2563eb/white?text=Pixel+8+Pro+New', TRUE),
+(2, 1012, 'https://placehold.co/400x400/2563eb/white?text=Pixel+8+Pro+Used', TRUE),
+(3, 1021, 'https://placehold.co/400x400/0f172a/white?text=iPhone+15+PM+New', TRUE),
+(4, 1031, 'https://placehold.co/400x400/1e3a5f/white?text=S24+Ultra+New', TRUE);
 
-(3011, 301, 1, 'IQO-12P-256', 19990000, 18990000),
-(3021, 302, 1, 'IQO-N9-256', 12990000, 11990000),
-(3031, 303, 1, 'IQO-Z8-128', 7990000, NULL),
+-- 10. Thêm Thiết bị trong kho (InventoryItems gồm IMEI, gộp kèm bảo hành mẫu nếu đã bán)
+INSERT INTO InventoryItems (IMEI, VariantId, Status, WarrantyStartDate, WarrantyEndDate, WarrantyStatus) VALUES
+('IMEI-PIX8P-001', 1011, 'InStock', NULL, NULL, NULL),
+('IMEI-PIX8P-002', 1011, 'InStock', NULL, NULL, NULL),
+('IMEI-PIX8P-003', 1012, 'InStock', NULL, NULL, NULL),
+('IMEI-IPH15-001', 1021, 'Sold', '2026-06-01 00:00:00', '2027-06-01 00:00:00', 'Active'),
+('IMEI-IPH15-002', 1021, 'InStock', NULL, NULL, NULL),
+('IMEI-S24U-001', 1031, 'InStock', NULL, NULL, NULL);
 
-(4011, 401, 1, 'HON-M6P-256', 25990000, 24990000),
-(4021, 402, 1, 'HON-90-256', 10990000, 9990000),
-(4031, 403, 1, 'HON-X9B-256', 8990000, NULL),
+-- 11. Thêm Gói bảo hành mở rộng
+INSERT INTO WarrantyPackages (PackageId, PackageName, DurationMonths, Price) VALUES
+(1, 'Mặc định (Không phụ thu)', 12, 0),
+(2, 'Bảo Hành Vàng (Nguồn, Màn hình, Vân tay)', 12, 1000000),
+(3, 'Bảo Hành Kim Cương (Bao gồm rơi vỡ, vào nước)', 12, 2000000);
 
-(5011, 501, 1, 'ONE-12-256', 22990000, 21990000),
-(5021, 502, 1, 'ONE-12R-256', 15990000, 14990000),
-(5031, 503, 1, 'ONE-N3-128', 10990000, 9990000),
+-- 12. Thêm Vouchers giảm giá
+INSERT INTO Vouchers (VoucherCode, DiscountAmount, DiscountPercentage, ValidFrom, ValidTo, IsActive) VALUES
+('GIAM2TR', 2000000, NULL, '2026-01-01 00:00:00', '2027-12-31 23:59:59', TRUE),
+('SALE10PT', NULL, 10.0, '2026-01-01 00:00:00', '2027-12-31 23:59:59', TRUE);
 
-(6011, 601, 1, 'OPP-FN3-512', 44990000, 42990000),
-(6021, 602, 1, 'OPP-R11P-256', 16990000, 15990000),
-(6031, 603, 1, 'OPP-A98-256', 8990000, 8490000),
+-- 13. Thêm Đơn hàng mẫu
+INSERT INTO Orders (OrderId, CustomerId, UserId, VoucherCode, TotalAmount, DiscountAmount, FinalAmount, PaymentMethod, OrderStatus) VALUES
+(1, 1, 1, 'GIAM2TR', 34990000, 2000000, 32990000, 'VNPay', 'Completed');
 
-(7011, 701, 1, 'RME-GT5P-256', 16990000, 15990000),
-(7021, 702, 1, 'RME-11PP-256', 11990000, 10990000),
-(7031, 703, 1, 'RME-C67-128', 5990000, NULL),
+-- 14. Thêm Chi tiết đơn hàng mẫu
+INSERT INTO OrderItems (OrderItemId, OrderId, IMEI, PackageId, SellingPrice, WarrantyPrice) VALUES
+(1, 1, 'IMEI-IPH15-001', 1, 34990000, 0);
 
-(8011, 801, 1, 'XIA-14U-512', 32990000, 31990000),
-(8021, 802, 1, 'XIA-14-256', 22990000, 21990000),
-(8031, 803, 1, 'XIA-RN13PP-256', 10990000, 10490000),
-
-(9011, 901, 1, 'HUA-M60P-512', 39990000, 38990000),
-(9021, 902, 1, 'HUA-P60P-256', 29990000, NULL),
-(9031, 903, 1, 'HUA-N11-256', 11990000, 10990000),
-
-(10011, 1001, 1, 'MEI-21P-256', 19990000, 18990000),
-(10021, 1002, 1, 'MEI-21-256', 15990000, 14990000),
-(10031, 1003, 1, 'MEI-20I-256', 22990000, NULL),
-
-(11011, 1101, 1, 'IPH-15PM-256', 34990000, 32990000), (11012, 1101, 1, 'IPH-15PM-512', 40990000, 38990000),
-(11021, 1102, 1, 'IPH-15-128', 22990000, 21490000),
-(11031, 1103, 1, 'IPH-13-128', 15990000, 14990000),
-
-(12011, 1201, 1, 'SAM-S24U-256', 33990000, 31990000), (12012, 1201, 1, 'SAM-S24U-512', 37990000, 35990000),
-(12021, 1202, 1, 'SAM-ZF5-256', 40990000, 38990000),
-(12031, 1203, 1, 'SAM-A54-128', 10490000, 9490000),
-
-(13011, 1301, 1, 'SON-1V-256', 35990000, 34990000),
-(13021, 1302, 1, 'SON-5V-128', 27990000, 26990000),
-(13031, 1303, 1, 'SON-10V-128', 11990000, NULL),
-
-(14011, 1401, 1, 'NOT-P2-256', 17990000, 16990000),
-(14021, 1402, 1, 'NOT-P2A-128', 9990000, 8990000),
-(14031, 1403, 1, 'NOT-P1-128', 11990000, 10990000);
+-- 15. Thêm Nội dung quảng cáo (PromotionalContents)
+INSERT INTO PromotionalContents (ContentId, ContentType, Title, ImageUrl, LinkUrl, DisplayOrder, IsActive) VALUES
+(1, 'Slider', 'iPhone 15 Pro Max - Khung Titan', 'https://placehold.co/1400x500/0f172a/00e5ff?text=iPhone+15+Pro+Max', '/products/102', 1, TRUE),
+(2, 'Slider', 'Samsung Galaxy S24 Ultra - AI Phone', 'https://placehold.co/1400x500/1e3a5f/ffffff?text=Samsung+Galaxy+S24+Ultra', '/products/103', 2, TRUE),
+(3, 'Banner', 'Flash Sale Google Pixel 8 Pro', 'https://placehold.co/1200x400/2563eb/white?text=Google+Pixel+8+Pro+Sale', '/products/101', 1, TRUE);
 
 COMMIT;

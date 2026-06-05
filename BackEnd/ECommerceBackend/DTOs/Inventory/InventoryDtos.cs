@@ -6,11 +6,13 @@ namespace ECommerceBackend.DTOs.Inventory
     public record InventoryItemDto(
         string Imei,
         int? Variantid,
-        int? Podetailid,
         string? Status,
         DateTime? Importedat,
         string? VariantSku,
-        string? ProductName
+        string? ProductName,
+        DateTime? Warrantystartdate = null,
+        DateTime? Warrantyenddate = null,
+        string? Warrantystatus = null
     );
 
     public record CreateInventoryItemRequestDto(
@@ -21,23 +23,27 @@ namespace ECommerceBackend.DTOs.Inventory
         [Required(ErrorMessage = "Variant ID là bắt buộc")]
         int? Variantid,
 
-        int? Podetailid,
-
         [StringLength(50, ErrorMessage = "Trạng thái không quá 50 ký tự")]
         string? Status,
 
-        DateTime? Importedat
+        DateTime? Importedat,
+
+        DateTime? Warrantystartdate = null,
+        DateTime? Warrantyenddate = null,
+        string? Warrantystatus = null
     );
 
     public record UpdateInventoryItemRequestDto(
         [Required(ErrorMessage = "Variant ID là bắt buộc")]
         int? Variantid,
 
-        int? Podetailid,
-
         [StringLength(50, ErrorMessage = "Trạng thái không quá 50 ký tự")]
         string? Status,
 
-        DateTime? Importedat
+        DateTime? Importedat,
+
+        DateTime? Warrantystartdate = null,
+        DateTime? Warrantyenddate = null,
+        string? Warrantystatus = null
     );
 }

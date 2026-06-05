@@ -21,11 +21,13 @@ namespace ECommerceBackend.Controllers
         private static InventoryItemDto MapToDto(Inventoryitem i) => new InventoryItemDto(
             i.Imei,
             i.Variantid,
-            i.Podetailid,
             i.Status,
             i.Importedat,
             i.Variant?.Sku,
-            i.Variant?.Product?.Productname
+            i.Variant?.Product?.Productname,
+            i.Warrantystartdate,
+            i.Warrantyenddate,
+            i.Warrantystatus
         );
 
         [HttpGet]
@@ -83,9 +85,11 @@ namespace ECommerceBackend.Controllers
             {
                 Imei = dto.Imei,
                 Variantid = dto.Variantid,
-                Podetailid = dto.Podetailid,
                 Status = dto.Status ?? "InStock",
-                Importedat = dto.Importedat ?? DateTime.UtcNow
+                Importedat = dto.Importedat ?? DateTime.UtcNow,
+                Warrantystartdate = dto.Warrantystartdate,
+                Warrantyenddate = dto.Warrantyenddate,
+                Warrantystatus = dto.Warrantystatus
             };
 
             _context.Inventoryitems.Add(item);
@@ -107,12 +111,14 @@ namespace ECommerceBackend.Controllers
             if (item == null) return NotFound();
 
             item.Variantid = dto.Variantid;
-            item.Podetailid = dto.Podetailid;
             item.Status = dto.Status;
             if (dto.Importedat.HasValue)
             {
                 item.Importedat = dto.Importedat.Value;
             }
+            item.Warrantystartdate = dto.Warrantystartdate;
+            item.Warrantyenddate = dto.Warrantyenddate;
+            item.Warrantystatus = dto.Warrantystatus;
 
             try { await _context.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException)

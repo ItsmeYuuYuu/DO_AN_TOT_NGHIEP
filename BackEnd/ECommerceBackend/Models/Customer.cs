@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace ECommerceBackend.Models;
@@ -22,6 +22,4 @@ public partial class Customer
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
-
-    public virtual ICollection<Warranty> Warranties { get; set; } = new List<Warranty>();
 }

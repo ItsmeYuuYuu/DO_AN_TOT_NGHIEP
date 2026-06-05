@@ -26,22 +26,20 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
     private static readonly Dictionary<string, string> ControllerToTable =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["Products"]         = "products",
-            ["ProductVariants"]  = "productvariants",
-            ["Categories"]       = "categories",
-            ["Brands"]           = "brands",
-            ["Orders"]           = "orders",
-            ["Users"]            = "users",
-            ["Customers"]        = "customers",
-            ["Inventory"]        = "inventoryitems",
-            ["PurchaseOrders"]   = "purchaseorders",
-            ["Warranties"]       = "warranties",
-            ["Vouchers"]         = "vouchers",
-            ["Banners"]          = "banners",
-            ["Sliders"]          = "sliders",
-            ["News"]             = "news",
-            ["Reviews"]          = "reviews",
-            ["Auth"]             = "users",  // Login / change-password
+            ["Products"]            = "products",
+            ["ProductVariants"]     = "productvariants",
+            ["Categories"]          = "categories",
+            ["Brands"]              = "brands",
+            ["Orders"]              = "orders",
+            ["Users"]               = "users",
+            ["Customers"]           = "customers",
+            ["Inventory"]           = "inventoryitems",
+            ["Warranties"]          = "inventoryitems",
+            ["Vouchers"]            = "vouchers",
+            ["PromotionalContents"] = "promotionalcontents",
+            ["News"]                = "news",
+            ["Reviews"]             = "reviews",
+            ["Auth"]                = "users",  // Login / change-password
         };
 
     private readonly AuditLogService _auditLogService;

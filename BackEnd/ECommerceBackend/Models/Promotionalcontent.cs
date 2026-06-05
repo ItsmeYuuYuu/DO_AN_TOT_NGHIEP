@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 
 namespace ECommerceBackend.Models;
 
-public partial class Slider
+public partial class Promotionalcontent
 {
-    public int Sliderid { get; set; }
+    public int Contentid { get; set; }
+
+    public string Contenttype { get; set; } = null!;
 
     public string? Title { get; set; }
 

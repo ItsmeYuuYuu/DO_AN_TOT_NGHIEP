@@ -46,18 +46,14 @@ const AdminUsers         = lazy(() => import('@/portals/admin/AdminUsers'));
 const AdminCategoryBrand = lazy(() => import('@/portals/admin/AdminCategoryBrand'));
 const AdminCustomers     = lazy(() => import('@/portals/admin/AdminCustomers'));
 const AdminVouchers      = lazy(() => import('@/portals/admin/AdminVouchers'));
-const AdminAttributes    = lazy(() => import('@/portals/admin/AdminAttributes'));
 const AdminWarrantyPackages = lazy(() => import('@/portals/admin/AdminWarrantyPackages'));
 const AdminNews          = lazy(() => import('@/portals/admin/AdminNews'));
-const AdminBanners       = lazy(() => import('@/portals/admin/AdminBanners'));
-const AdminSliders       = lazy(() => import('@/portals/admin/AdminSliders'));
+const AdminPromotionalContents = lazy(() => import('@/portals/admin/AdminPromotionalContents').then(m => ({ default: m.AdminPromotionalContents })));
 const AdminAuditLogs     = lazy(() => import('@/portals/admin/AdminAuditLogs'));
-const AdminSuppliers     = lazy(() => import('@/portals/admin/AdminSuppliers'));
 
 // ── Staff pages ───────────────────────────────────────────────────────────────
 const StaffOrders         = lazy(() => import('@/portals/staff/StaffOrders'));
 const StaffInventory      = lazy(() => import('@/portals/staff/StaffInventory'));
-const StaffPurchaseOrders = lazy(() => import('@/portals/staff/StaffPurchaseOrders'));
 const StaffWarranties     = lazy(() => import('@/portals/staff/StaffWarranties'));
 
 // ── Misc ─────────────────────────────────────────────────────────────────────
@@ -97,14 +93,11 @@ const App: React.FC = () => {
             <Route path="customers"       element={<AdminCustomers />} />
             <Route path="categories"      element={<AdminCategoryBrand />} />
             <Route path="brands"          element={<Navigate to="/admin/categories" replace />} />
-            <Route path="attributes"      element={<AdminAttributes />} />
             <Route path="vouchers"        element={<AdminVouchers />} />
             <Route path="warranty-packages" element={<AdminWarrantyPackages />} />
             <Route path="news"            element={<AdminNews />} />
-            <Route path="banners"         element={<AdminBanners />} />
-            <Route path="sliders"         element={<AdminSliders />} />
+            <Route path="promotional-contents" element={<AdminPromotionalContents />} />
             <Route path="auditlogs"       element={<AdminAuditLogs />} />
-            <Route path="suppliers"       element={<AdminSuppliers />} />
           </Route>
         </Route>
 
@@ -113,7 +106,6 @@ const App: React.FC = () => {
           <Route path="/staff" element={<StaffLayout />}>
             <Route index element={<StaffOrders />} />
             <Route path="inventory"       element={<StaffInventory />} />
-            <Route path="purchase-orders" element={<StaffPurchaseOrders />} />
             <Route path="warranties"      element={<StaffWarranties />} />
           </Route>
         </Route>

@@ -53,6 +53,11 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Warrantypackage> Warrantypackages { get; set; }
 
+    public virtual DbSet<Cart> Carts { get; set; }
+
+    public virtual DbSet<Cartitem> Cartitems { get; set; }
+
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // Connection string is configured in Program.cs via Dependency Injection.
@@ -564,6 +569,57 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Price)
                 .HasPrecision(18, 2)
                 .HasColumnName("price");
+        });
+
+        modelBuilder.Entity<Cart>(entity =>
+        {
+            entity.HasKey(e => e.Cartid).HasName("carts_pkey");
+
+            entity.ToTable("carts");
+
+            entity.HasIndex(e => e.Userid, "carts_userid_key").IsUnique();
+
+            entity.Property(e => e.Cartid).HasColumnName("cartid");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+            entity.Property(e => e.Updatedat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("updatedat");
+
+            entity.HasOne(d => d.User).WithOne(p => p.Cart)
+                .HasForeignKey<Cart>(d => d.Userid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_carts_users");
+        });
+
+        modelBuilder.Entity<Cartitem>(entity =>
+        {
+            entity.HasKey(e => e.Cartitemid).HasName("cartitems_pkey");
+
+            entity.ToTable("cartitems");
+
+            entity.Property(e => e.Cartitemid).HasColumnName("cartitemid");
+            entity.Property(e => e.Cartid).HasColumnName("cartid");
+            entity.Property(e => e.Variantid).HasColumnName("variantid");
+            entity.Property(e => e.Quantity).HasColumnName("quantity");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+
+            entity.HasOne(d => d.Cart).WithMany(p => p.Cartitems)
+                .HasForeignKey(d => d.Cartid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_cartitems_carts");
+
+            entity.HasOne(d => d.Variant).WithMany(p => p.Cartitems)
+                .HasForeignKey(d => d.Variantid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_cartitems_productvariants");
         });
 
         OnModelCreatingPartial(modelBuilder);

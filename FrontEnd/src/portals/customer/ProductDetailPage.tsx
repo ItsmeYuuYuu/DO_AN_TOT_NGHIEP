@@ -60,7 +60,7 @@ const ProductDetailPage: React.FC = () => {
         <span>/</span>
         {product.category && (
            <>
-             <Link to={`/search?categoryId=${product.category.categoryid}`} className="hover:text-blue-600 transition-colors">{product.category.categoryname}</Link>
+             <Link to={`/search?categoryId=${product.category.id}`} className="hover:text-blue-600 transition-colors">{product.category.name}</Link>
              <span>/</span>
            </>
         )}

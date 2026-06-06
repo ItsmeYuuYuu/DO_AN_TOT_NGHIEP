@@ -14,6 +14,16 @@ public static class DbInitializer
         try
         {
             await context.Database.EnsureCreatedAsync();
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS \"__EFMigrationsHistory\" (\"MigrationId\" character varying(150) NOT NULL, \"ProductVersion\" character varying(32) NOT NULL, CONSTRAINT \"PK___EFMigrationsHistory\" PRIMARY KEY (\"MigrationId\"));");
+                await context.Database.ExecuteSqlRawAsync("INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") VALUES ('20260520143752_InitialCreate', '8.0.0') ON CONFLICT DO NOTHING;");
+                await context.Database.ExecuteSqlRawAsync("INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") VALUES ('20260529170615_IncreaseSpecLength', '8.0.0') ON CONFLICT DO NOTHING;");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to prepopulate migration history. This is expected if database doesn't support the raw SQL.");
+            }
         }
         catch (Exception ex)
         {
@@ -165,12 +175,56 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
-        // ── 8. ORDERS ────────────────────────────────────────────────────────
-        if (!context.Orders.Any())
+        // ── 8. ORDERS & ORDER ITEMS ──────────────────────────────────────────
+        if (context.Orders.Count() < 5)
         {
-            context.Orders.AddRange(
-                new Order { Orderid = 1, Customerid = 1, Orderdate = DateTime.UtcNow.AddDays(-5), Totalamount = 32490000, Discountamount = 0, Finalamount = 32490000, Paymentmethod = "VNPay", Orderstatus = "Completed" }
+            // Clear existing order items and orders to avoid conflict
+            context.Orderitems.RemoveRange(context.Orderitems);
+            context.Orders.RemoveRange(context.Orders);
+            await context.SaveChangesAsync();
+
+            var today = DateTime.Today;
+
+            // Seed Orders
+            var order1 = new Order { Customerid = 1, Userid = 1, Orderdate = today.AddHours(7).AddMinutes(15), Totalamount = 24990000, Discountamount = 0, Finalamount = 24990000, Paymentmethod = "Momo", Orderstatus = "Completed" }; // today 07h
+            var order2 = new Order { Customerid = 2, Userid = 1, Orderdate = today.AddHours(13).AddMinutes(30), Totalamount = 34990000, Discountamount = 2000000, Finalamount = 32990000, Paymentmethod = "VNPay", Orderstatus = "Completed", Vouchercode = "GIAM2TR" }; // today 13h
+            var order3 = new Order { Customerid = 3, Userid = 1, Orderdate = today.AddHours(15).AddMinutes(45), Totalamount = 33990000, Discountamount = 0, Finalamount = 33990000, Paymentmethod = "Tiền mặt", Orderstatus = "Processing" }; // today 15h
+            var order4 = new Order { Customerid = 1, Userid = 1, Orderdate = today.AddHours(16).AddMinutes(10), Totalamount = 21990000, Discountamount = 0, Finalamount = 21990000, Paymentmethod = "Chuyển khoản", Orderstatus = "Pending" }; // today 16h
+            var order5 = new Order { Customerid = 2, Userid = 1, Orderdate = today.AddDays(-1).AddHours(10).AddMinutes(20), Totalamount = 34990000, Discountamount = 0, Finalamount = 34990000, Paymentmethod = "VNPay", Orderstatus = "Completed" }; // yesterday 10h
+            var order6 = new Order { Customerid = 3, Userid = 1, Orderdate = today.AddDays(-1).AddHours(14).AddMinutes(50), Totalamount = 24990000, Discountamount = 0, Finalamount = 24990000, Paymentmethod = "Momo", Orderstatus = "Cancelled" }; // yesterday 14h (Cancelled)
+            var order7 = new Order { Customerid = 1, Userid = 1, Orderdate = today.AddDays(-5).AddHours(11).AddMinutes(0), Totalamount = 21990000, Discountamount = 0, Finalamount = 21990000, Paymentmethod = "VNPay", Orderstatus = "Completed" }; // 5 days ago
+            var order8 = new Order { Customerid = 2, Userid = 1, Orderdate = today.AddMonths(-1).AddHours(16).AddMinutes(30), Totalamount = 34990000, Discountamount = 0, Finalamount = 34990000, Paymentmethod = "Tiền mặt", Orderstatus = "Completed" }; // same day last month
+
+            context.Orders.AddRange(order1, order2, order3, order4, order5, order6, order7, order8);
+            await context.SaveChangesAsync();
+
+            // Seed OrderItems
+            context.Orderitems.AddRange(
+                new Orderitem { Orderid = order1.Orderid, Imei = "IMEI-PIX8P-001", Packageid = 1, Sellingprice = 24990000, Warrantyprice = 0 },
+                new Orderitem { Orderid = order2.Orderid, Imei = "IMEI-IPH15-001", Packageid = 1, Sellingprice = 34990000, Warrantyprice = 0 },
+                new Orderitem { Orderid = order3.Orderid, Imei = "IMEI-S24U-001", Packageid = 2, Sellingprice = 33990000, Warrantyprice = 1000000 },
+                new Orderitem { Orderid = order4.Orderid, Imei = "IMEI-PIX8P-003", Packageid = 1, Sellingprice = 21990000, Warrantyprice = 0 },
+                new Orderitem { Orderid = order5.Orderid, Imei = "IMEI-IPH15-002", Packageid = 1, Sellingprice = 34990000, Warrantyprice = 0 },
+                new Orderitem { Orderid = order7.Orderid, Imei = "IMEI-PIX8P-002", Packageid = 1, Sellingprice = 21990000, Warrantyprice = 0 }
             );
+
+            // Set InventoryItems status as Sold for completed or processing orders
+            var soldImeis = new[] { "IMEI-PIX8P-001", "IMEI-IPH15-001", "IMEI-S24U-001", "IMEI-IPH15-002", "IMEI-PIX8P-002" };
+            foreach (var imei in soldImeis)
+            {
+                var item = await context.Inventoryitems.FindAsync(imei);
+                if (item != null)
+                {
+                    item.Status = "Sold";
+                    if (imei == "IMEI-IPH15-001")
+                    {
+                        item.Warrantystartdate = order2.Orderdate;
+                        item.Warrantyenddate = order2.Orderdate.Value.AddYears(1);
+                        item.Warrantystatus = "Active";
+                    }
+                }
+            }
+
             await context.SaveChangesAsync();
         }
 

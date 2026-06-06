@@ -12,6 +12,7 @@ import { VariantAttributesModal } from './VariantAttributesModal';
 import { ProductFormWizard } from './ProductFormWizard';
 import { brandsApi } from '@/features/brands/api/brandsApi';
 import { categoriesApi } from '@/features/categories/api/categoriesApi';
+import axios from 'axios';
 
 const PAGE_SIZE = 10;
 
@@ -41,9 +42,9 @@ const AdminProducts: React.FC = () => {
 
   // Filter & paginate
   const filtered = products.filter(p => {
-    const matchSearch = p.productname.toLowerCase().includes(search.toLowerCase()) || (p.brand?.brandname ?? '').toLowerCase().includes(search.toLowerCase());
-    const matchBrand = filterBrand ? p.brandid?.toString() === filterBrand : true;
-    const matchCategory = filterCategory ? p.categoryid?.toString() === filterCategory : true;
+    const matchSearch = p.productname.toLowerCase().includes(search.toLowerCase()) || (p.brand?.name ?? '').toLowerCase().includes(search.toLowerCase());
+    const matchBrand = filterBrand ? p.brand?.id.toString() === filterBrand : true;
+    const matchCategory = filterCategory ? p.category?.id.toString() === filterCategory : true;
     const matchDiscount = filterDiscount ? p.productvariants?.some(v => v.saleprice && v.saleprice < v.baseprice) : true;
     return matchSearch && matchBrand && matchCategory && matchDiscount;
   });
@@ -51,7 +52,14 @@ const AdminProducts: React.FC = () => {
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const openCreate = () => setWizardOpen(true);
-  const openEdit = (p: Product) => { setEditing({ ...p }); setModalOpen(true); };
+  const openEdit = (p: Product) => {
+    setEditing({
+      ...p,
+      brandid: p.brand?.id,
+      categoryid: p.category?.id,
+    });
+    setModalOpen(true);
+  };
   const closeModal = () => { setModalOpen(false); setEditing(null); };
 
   const handleSave = async () => {
@@ -65,8 +73,11 @@ const AdminProducts: React.FC = () => {
       }
       await refetch();
       closeModal();
-    } catch {
-      alert('Lỗi khi lưu sản phẩm. Vui lòng thử lại.');
+    } catch (err) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.message
+        : null;
+      alert(message || 'Lỗi khi lưu sản phẩm. Vui lòng thử lại.');
     } finally {
       setSaving(false);
     }
@@ -76,8 +87,11 @@ const AdminProducts: React.FC = () => {
     if (!window.confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
     try {
       await deleteProduct(id);
-    } catch {
-      alert('Không thể xóa sản phẩm này.');
+    } catch (err) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.message
+        : null;
+      alert(message || 'Không thể xóa sản phẩm này.');
     }
   };
 
@@ -94,7 +108,7 @@ const AdminProducts: React.FC = () => {
       render: (p: Product) => (
         <div>
           <p className="font-semibold text-slate-800 text-sm leading-snug line-clamp-1">{p.productname}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{p.category?.categoryname ?? '—'}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{p.category?.name ?? '—'}</p>
         </div>
       ),
     },
@@ -103,7 +117,7 @@ const AdminProducts: React.FC = () => {
       header: 'Thương hiệu',
       render: (p: Product) => (
         <span className="inline-flex px-2 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-md">
-          {p.brand?.brandname ?? '—'}
+          {p.brand?.name ?? '—'}
         </span>
       ),
     },

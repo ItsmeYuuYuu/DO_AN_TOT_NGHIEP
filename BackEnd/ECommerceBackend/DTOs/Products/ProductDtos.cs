@@ -106,15 +106,16 @@ namespace ECommerceBackend.DTOs.Products
     );
 
     public record CreateFullProductVariantDto(
-        string? Condition,
-        [Required] string Sku,
+        [StringLength(50, ErrorMessage = "Tình trạng không được vượt quá 50 ký tự")] string? Condition,
+        [Required, StringLength(50, ErrorMessage = "SKU không được vượt quá 50 ký tự")] string Sku,
         [Range(0, double.MaxValue, ErrorMessage = "Giá cơ bản không hợp lệ")] decimal Baseprice,
         [Range(0, double.MaxValue, ErrorMessage = "Giá khuyến mãi không hợp lệ")] decimal? Saleprice,
-        List<VariantSpecDto>? Specs
+        List<VariantSpecDto>? Specs,
+        [Range(0, 10000, ErrorMessage = "Số lượng tồn kho phải từ 0 đến 10000")] int? Quantity = null
     );
 
     public record CreateFullProductDto(
-        [Required(ErrorMessage = "Tên sản phẩm là bắt buộc")] string Productname,
+        [Required(ErrorMessage = "Tên sản phẩm là bắt buộc"), StringLength(200, ErrorMessage = "Tên sản phẩm không được vượt quá 200 ký tự")] string Productname,
         string? Description,
         int? Categoryid,
         int? Brandid,

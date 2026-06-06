@@ -1,170 +1,329 @@
-import React, { useState } from 'react';
-import { NavLink, Outlet, Link } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Users, Layers, Tag, Users2, LogOut, Activity } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import {
+  Activity,
+  BarChart3,
+  Boxes,
+  ChevronDown,
+  FileText,
+  Gift,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Newspaper,
+  Package,
+  ShieldCheck,
+  ShoppingCart,
+  Tags,
+  Users,
+  Users2,
+  X,
+} from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import Logo from '@/assets/Logo.png';
 
-const navGroups: { group: string; items: { label: string; to: string; icon: React.ReactNode; end?: boolean }[] }[] = [
+interface NavItem {
+  label: string;
+  to: string;
+  icon: React.ReactNode;
+  end?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  icon: React.ReactNode;
+  to?: string;
+  end?: boolean;
+  items?: NavItem[];
+}
+
+const adminNav: NavGroup[] = [
   {
-    group: 'Tổng quan',
+    label: 'Tổng quan',
+    to: '/admin',
+    end: true,
+    icon: <LayoutDashboard size={17} />,
+  },
+  {
+    label: 'Hàng hóa',
+    icon: <Package size={17} />,
     items: [
-      { label: 'Dashboard', to: '/admin', end: true, icon: <LayoutDashboard size={18} /> },
+      { label: 'Sản phẩm', to: '/admin/products', icon: <Package size={16} /> },
+      { label: 'Danh mục & thương hiệu', to: '/admin/categories', icon: <Tags size={16} /> },
+      { label: 'Tồn kho', to: '/admin/inventory', icon: <Boxes size={16} /> },
     ],
   },
   {
-    group: 'Kinh doanh',
+    label: 'Đơn hàng',
+    icon: <ShoppingCart size={17} />,
     items: [
-      { label: 'Đơn hàng', to: '/admin/orders', icon: <ShoppingCart size={18} /> },
-      { label: 'Khách hàng', to: '/admin/customers', icon: <Users2 size={18} /> },
+      { label: 'Danh sách đơn hàng', to: '/admin/orders', icon: <ShoppingCart size={16} /> },
+      { label: 'Quản lý bảo hành', to: '/admin/warranties', icon: <ShieldCheck size={16} /> },
     ],
   },
   {
-    group: 'Danh mục',
+    label: 'Khách hàng',
+    to: '/admin/customers',
+    icon: <Users2 size={17} />,
+  },
+  {
+    label: 'Nhân viên',
+    to: '/admin/users',
+    icon: <Users size={17} />,
+  },
+  {
+    label: 'Khuyến mãi',
+    icon: <Gift size={17} />,
     items: [
-      { label: 'Sản phẩm', to: '/admin/products', icon: <Package size={18} /> },
-      { label: 'Danh mục', to: '/admin/categories', icon: <Layers size={18} /> },
-      { label: 'Thương hiệu', to: '/admin/brands', icon: <Tag size={18} /> },
+      { label: 'Voucher', to: '/admin/vouchers', icon: <Gift size={16} /> },
+      { label: 'Gói bảo hành', to: '/admin/warranty-packages', icon: <ShieldCheck size={16} /> },
     ],
   },
   {
-    group: 'Nội dung',
+    label: 'Nội dung',
+    icon: <Newspaper size={17} />,
     items: [
-      { label: 'Tin tức', to: '/admin/news', icon: <Tag size={18} /> },
-      { label: 'Quảng cáo', to: '/admin/promotional-contents', icon: <Tag size={18} /> },
+      { label: 'Tin tức', to: '/admin/news', icon: <FileText size={16} /> },
+      { label: 'Banner & slider', to: '/admin/promotional-contents', icon: <Newspaper size={16} /> },
     ],
   },
   {
-    group: 'Hệ thống',
-    items: [
-      { label: 'Tài khoản', to: '/admin/users', icon: <Users size={18} /> },
-      { label: 'Nhật ký hệ thống', to: '/admin/auditlogs', icon: <Activity size={18} /> },
-      { label: 'Voucher', to: '/admin/vouchers', icon: <Tag size={18} /> },
-      { label: 'Gói bảo hành', to: '/admin/warranty-packages', icon: <Tag size={18} /> },
-    ],
+    label: 'Nhật ký',
+    to: '/admin/auditlogs',
+    icon: <Activity size={17} />,
+  },
+  {
+    label: 'Phân tích',
+    to: '/admin#phan-tich',
+    icon: <BarChart3 size={17} />,
   },
 ];
 
+const isPathActive = (pathname: string, hash: string, item: NavGroup) => {
+  if (item.to === '/admin#phan-tich') {
+    return pathname === '/admin' && hash === '#phan-tich';
+  }
+  if (item.end) return pathname === item.to && hash !== '#phan-tich';
+  if (item.to && item.to !== '/admin#phan-tich') return pathname.startsWith(item.to);
+  return item.items?.some((child) => pathname.startsWith(child.to)) ?? false;
+};
+
 export const AdminLayout: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setOpenGroup(null);
+    setMobileOpen(false);
+  }, [location.pathname, location.hash]);
+
+  useEffect(() => {
+    if (!location.hash) return;
+
+    const target = document.getElementById(location.hash.slice(1));
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [location.hash]);
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden">
-      {/* ─── Sidebar ─── */}
-      <aside
-        className={`flex flex-col bg-white border-r border-slate-200 shrink-0 transition-all duration-300 ${
-          collapsed ? 'w-[60px]' : 'w-60'
-        }`}
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 h-20 border-b border-slate-100 shrink-0">
-          <img src={Logo} alt="Admin Logo" className="h-14 w-auto object-contain shrink-0" />
-          {!collapsed && (
-            <span className="font-bold text-slate-800 text-sm">Admin Panel</span>
-          )}
-        </div>
-
-        {/* Nav groups */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
-          {navGroups.map((group) => (
-            <div key={group.group}>
-              {!collapsed && (
-                <p className="px-2 mb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {group.group}
-                </p>
-              )}
-              <div className="space-y-0.5">
-                {group.items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end ?? false}
-                    title={item.label}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
-                       ${isActive
-                         ? 'bg-blue-50 text-blue-700'
-                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                       }`
-                    }
-                  >
-                    <span className="shrink-0">{item.icon}</span>
-                    {!collapsed && <span>{item.label}</span>}
-                  </NavLink>
-                ))}
-              </div>
+    <div className="min-h-screen bg-slate-100">
+      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+        <div className="h-16 px-4 lg:px-6 flex items-center justify-between gap-4">
+          <Link to="/admin" className="flex items-center gap-3 min-w-0">
+            <img src={Logo} alt="Admin Logo" className="h-12 w-auto object-contain shrink-0" />
+            <div className="hidden sm:block min-w-0">
+              <p className="font-black text-slate-800 text-sm leading-tight">ECommerce Admin</p>
+              <p className="text-[11px] text-slate-400 truncate">Hệ thống quản trị bán hàng</p>
             </div>
-          ))}
-        </nav>
+          </Link>
 
-        {/* Collapse toggle & back to site */}
-        <div className="border-t border-slate-100 p-3 space-y-1">
-          {!collapsed && (
-            <Link
-              to="/"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              Về trang chủ
-            </Link>
-          )}
-          {!collapsed && (
-            <div className="px-3 py-2 rounded-lg bg-slate-50 flex items-center gap-2">
-              <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-[10px] font-black shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden md:flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Hệ thống hoạt động
+            </div>
+
+            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-200">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-black">
                 {user?.fullname?.charAt(0).toUpperCase() ?? 'A'}
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="hidden lg:block max-w-36">
                 <p className="text-xs font-bold text-slate-800 truncate">{user?.fullname ?? 'Admin'}</p>
                 <p className="text-[10px] text-slate-400 truncate">{user?.email ?? ''}</p>
               </div>
             </div>
-          )}
-          <button
-            onClick={logout}
-            title="Đăng xuất"
-            className="flex items-center justify-center w-full px-3 py-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors gap-2 text-xs font-semibold"
-          >
-            <LogOut size={14} />
-            {!collapsed && 'Đăng xuất'}
-          </button>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="flex items-center justify-center w-full px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-            title={collapsed ? 'Mở rộng' : 'Thu gọn'}
-          >
-            <svg className={`w-4 h-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-          </button>
+
+            <Link
+              to="/"
+              title="Về trang chủ"
+              className="p-2 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            >
+              <Home size={17} />
+            </Link>
+            <button
+              type="button"
+              onClick={logout}
+              title="Đăng xuất"
+              className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+            >
+              <LogOut size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileOpen((value) => !value)}
+              className="min-[960px]:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+              aria-label={mobileOpen ? 'Đóng menu' : 'Mở menu'}
+            >
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
-      </aside>
 
-      {/* ─── Main Area ─── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Topbar */}
-        <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0">
-          <div>
-            <h1 className="text-sm font-semibold text-slate-800">Hệ thống quản trị</h1>
-            <p className="text-xs text-slate-400">ECommerce Admin — {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Status badge */}
-            <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1.5 rounded-full">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Hệ thống hoạt động
-            </div>
-            {/* Admin avatar */}
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer">
-              AD
-            </div>
-          </div>
-        </header>
+        <nav className="hidden min-[960px]:flex h-12 px-4 lg:px-6 items-stretch gap-1 border-t border-slate-100">
+          {adminNav.map((item) => {
+            const active = isPathActive(location.pathname, location.hash, item);
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
-        </main>
-      </div>
+            if (item.items) {
+              return (
+                <div
+                  key={item.label}
+                  className="relative"
+                  onMouseEnter={() => setOpenGroup(item.label)}
+                  onMouseLeave={() => setOpenGroup(null)}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenGroup(openGroup === item.label ? null : item.label)}
+                    className={`h-full px-2.5 flex items-center gap-1.5 text-sm font-bold border-b-2 transition-colors ${
+                      active
+                        ? 'text-blue-600 border-blue-600'
+                        : 'text-slate-700 border-transparent hover:text-blue-600 hover:border-blue-200'
+                    }`}
+                  >
+                    {item.label}
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform ${openGroup === item.label ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {openGroup === item.label && (
+                    <div className="absolute top-full left-0 pt-2 min-w-60">
+                      <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-2">
+                        {item.items.map((child) => (
+                          <NavLink
+                            key={child.to}
+                            to={child.to}
+                            className={({ isActive }) =>
+                              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                                isActive
+                                  ? 'bg-blue-50 text-blue-700'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                              }`
+                            }
+                          >
+                            <span className="text-slate-400">{child.icon}</span>
+                            {child.label}
+                          </NavLink>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.label}
+                to={item.to!}
+                end={item.end}
+                className={() =>
+                  `h-full px-2.5 flex items-center gap-1.5 text-sm font-bold border-b-2 transition-colors ${
+                    active
+                      ? 'text-blue-600 border-blue-600'
+                      : 'text-slate-700 border-transparent hover:text-blue-600 hover:border-blue-200'
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {mobileOpen && (
+          <nav className="min-[960px]:hidden border-t border-slate-200 px-4 py-3 max-h-[calc(100vh-4rem)] overflow-y-auto">
+            <div className="grid gap-1">
+              {adminNav.map((item) => {
+                const active = isPathActive(location.pathname, location.hash, item);
+
+                if (item.items) {
+                  const expanded = openGroup === item.label;
+                  return (
+                    <div key={item.label}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenGroup(expanded ? null : item.label)}
+                        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-bold ${
+                          active ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          {item.icon}
+                          {item.label}
+                        </span>
+                        <ChevronDown size={15} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {expanded && (
+                        <div className="ml-5 pl-3 border-l border-slate-200 py-1 space-y-1">
+                          {item.items.map((child) => (
+                            <NavLink
+                              key={child.to}
+                              to={child.to}
+                              className={({ isActive }) =>
+                                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${
+                                  isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
+                                }`
+                              }
+                            >
+                              {child.icon}
+                              {child.label}
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <NavLink
+                    key={item.label}
+                    to={item.to!}
+                    end={item.end}
+                    className={() =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold ${
+                        active ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
+                      }`
+                    }
+                  >
+                    {item.icon}
+                    {item.label}
+                  </NavLink>
+                );
+              })}
+            </div>
+          </nav>
+        )}
+      </header>
+
+      <main className="p-4 lg:p-6">
+        <Outlet />
+      </main>
     </div>
   );
 };

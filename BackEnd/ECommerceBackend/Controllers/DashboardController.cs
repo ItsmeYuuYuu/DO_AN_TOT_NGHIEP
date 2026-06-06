@@ -23,86 +23,265 @@ namespace ECommerceBackend.Controllers
             _context = context;
         }
 
-        private (DateTime currentStart, DateTime previousStart) GetDateRanges(string period)
+        private (DateTime start, DateTime end) GetPeriodRanges(string period)
         {
-            int days = period == "30d" ? 30 : 7;
-            var now = DateTime.Now;
-            var currentStart = now.AddDays(-days);
-            var previousStart = now.AddDays(-days * 2);
-            return (currentStart, previousStart);
-        }
+            var today = DateTime.Today;
+            DateTime start = today;
+            DateTime end = today.AddDays(1);
 
-        [HttpGet("kpi")]
-        public async Task<ActionResult<KpiResponseDto>> GetKpi([FromQuery] string period = "7d")
-        {
-            if (period != "7d" && period != "30d")
+            switch (period.ToLower())
             {
-                return BadRequest(new ApiErrorDto("Period không hợp lệ, chỉ hỗ trợ '7d' hoặc '30d'", null));
+                case "today":
+                    start = today;
+                    end = today.AddDays(1);
+                    break;
+                case "yesterday":
+                    start = today.AddDays(-1);
+                    end = today;
+                    break;
+                case "7d":
+                    start = today.AddDays(-6);
+                    end = today.AddDays(1);
+                    break;
+                case "30d":
+                    start = today.AddDays(-29);
+                    end = today.AddDays(1);
+                    break;
+                case "this_month":
+                default:
+                    start = new DateTime(today.Year, today.Month, 1);
+                    end = today.AddDays(1);
+                    break;
             }
 
-            var (currentStart, previousStart) = GetDateRanges(period);
-            var now = DateTime.Now;
+            return (start, end);
+        }
+
+        [HttpGet("today-results")]
+        public async Task<ActionResult<TodaySalesResultsDto>> GetTodayResults()
+        {
+            var today = DateTime.Today;
+            var tomorrow = today.AddDays(1);
+            var yesterday = today.AddDays(-1);
+            var sameDayLastMonth = today.AddMonths(-1);
+            var sameDayLastMonthNext = sameDayLastMonth.AddDays(1);
 
             var orders = await _context.Orders
-                .Where(o => o.Orderdate != null && o.Orderdate >= previousStart && o.Orderdate <= now)
-                .Select(o => new { o.Orderid, o.Orderdate, o.Orderstatus, o.Finalamount })
+                .Where(o => o.Orderdate != null && o.Orderdate >= sameDayLastMonth && o.Orderdate < tomorrow)
+                .Select(o => new { o.Orderdate, o.Orderstatus, o.Finalamount })
                 .ToListAsync();
 
-            var currentOrders = orders.Where(o => o.Orderdate >= currentStart).ToList();
-            var previousOrders = orders.Where(o => o.Orderdate < currentStart).ToList();
+            var todayOrders = orders.Where(o => o.Orderdate >= today && o.Orderdate < tomorrow).ToList();
+            var yesterdayOrders = orders.Where(o => o.Orderdate >= yesterday && o.Orderdate < today).ToList();
+            var lastMonthOrders = orders.Where(o => o.Orderdate >= sameDayLastMonth && o.Orderdate < sameDayLastMonthNext).ToList();
 
-            var completedCurrent = currentOrders.Where(o => o.Orderstatus == "Completed").ToList();
-            var completedPrevious = previousOrders.Where(o => o.Orderstatus == "Completed").ToList();
+            var completedToday = todayOrders.Where(o => o.Orderstatus == "Completed").ToList();
+            var completedYesterday = yesterdayOrders.Where(o => o.Orderstatus == "Completed").ToList();
+            var completedLastMonth = lastMonthOrders.Where(o => o.Orderstatus == "Completed").ToList();
 
-            decimal totalRevenueCurrent = completedCurrent.Sum(o => o.Finalamount);
-            decimal totalRevenuePrevious = completedPrevious.Sum(o => o.Finalamount);
+            decimal revenueToday = completedToday.Sum(o => o.Finalamount);
+            decimal revenueYesterday = completedYesterday.Sum(o => o.Finalamount);
+            decimal revenueLastMonth = completedLastMonth.Sum(o => o.Finalamount);
 
-            int completedOrdersCurrent = completedCurrent.Count;
-            int completedOrdersPrevious = completedPrevious.Count;
+            int invoicesToday = completedToday.Count;
+            int returnsToday = todayOrders.Count(o => o.Orderstatus == "Cancelled");
 
-            int totalCurrent = currentOrders.Count;
-            int totalPrevious = previousOrders.Count;
+            decimal changeVsYesterday = 0;
+            if (revenueYesterday > 0)
+            {
+                changeVsYesterday = Math.Round((revenueToday - revenueYesterday) / revenueYesterday * 100, 2);
+            }
+            else if (revenueToday > 0)
+            {
+                changeVsYesterday = 100;
+            }
 
-            int cancelledCurrent = currentOrders.Count(o => o.Orderstatus == "Cancelled");
-            int cancelledPrevious = previousOrders.Count(o => o.Orderstatus == "Cancelled");
+            decimal changeVsLastMonth = 0;
+            if (revenueLastMonth > 0)
+            {
+                changeVsLastMonth = Math.Round((revenueToday - revenueLastMonth) / revenueLastMonth * 100, 2);
+            }
+            else if (revenueToday > 0)
+            {
+                changeVsLastMonth = 100;
+            }
 
-            decimal cancelledRateCurrent = totalCurrent > 0 ? (decimal)cancelledCurrent / totalCurrent * 100 : 0;
-            decimal cancelledRatePrevious = totalPrevious > 0 ? (decimal)cancelledPrevious / totalPrevious * 100 : 0;
-
-            decimal aovCurrent = completedOrdersCurrent > 0 ? totalRevenueCurrent / completedOrdersCurrent : 0;
-            decimal aovPrevious = completedOrdersPrevious > 0 ? totalRevenuePrevious / completedOrdersPrevious : 0;
-
-            var slaThreshold = now.AddHours(-24);
-            int pendingOverSlaCount = await _context.Orders
-                .Where(o => o.Orderstatus == "Pending" && o.Orderdate != null && o.Orderdate < slaThreshold)
-                .CountAsync();
-
-            return Ok(new KpiResponseDto(
-                totalRevenueCurrent,
-                totalRevenuePrevious,
-                completedOrdersCurrent,
-                completedOrdersPrevious,
-                Math.Round(cancelledRateCurrent, 2),
-                Math.Round(cancelledRatePrevious, 2),
-                Math.Round(aovCurrent, 2),
-                Math.Round(aovPrevious, 2),
-                pendingOverSlaCount
+            return Ok(new TodaySalesResultsDto(
+                revenueToday,
+                invoicesToday,
+                returnsToday,
+                revenueYesterday,
+                revenueLastMonth,
+                changeVsYesterday,
+                changeVsLastMonth
             ));
         }
 
-        [HttpGet("top-products")]
-        public async Task<ActionResult<IEnumerable<TopProductDto>>> GetTopProducts([FromQuery] string period = "7d", [FromQuery] int limit = 5)
+        [HttpGet("revenue-breakdown")]
+        public async Task<ActionResult<IEnumerable<RevenueBreakdownItemDto>>> GetRevenueBreakdown(
+            [FromQuery] string period = "this_month",
+            [FromQuery] string groupBy = "day")
         {
-            if (period != "7d" && period != "30d")
+            var (start, end) = GetPeriodRanges(period);
+
+            var orders = await _context.Orders
+                .Where(o => o.Orderstatus == "Completed" && o.Orderdate != null && o.Orderdate >= start && o.Orderdate < end)
+                .Select(o => new { o.Orderdate, o.Finalamount })
+                .ToListAsync();
+
+            var result = new List<RevenueBreakdownItemDto>();
+
+            if (groupBy.ToLower() == "hour")
             {
-                return BadRequest(new ApiErrorDto("Period không hợp lệ", null));
+                // Group by hour of the day (00h to 23h)
+                for (int h = 0; h < 24; h++)
+                {
+                    decimal hourlyRev = orders.Where(o => o.Orderdate.Value.Hour == h).Sum(o => o.Finalamount);
+                    result.Add(new RevenueBreakdownItemDto($"{h:D2}h", hourlyRev));
+                }
+            }
+            else if (groupBy.ToLower() == "dayofweek")
+            {
+                // Group by DayOfWeek in Vietnamese
+                var daysOfWeek = new[]
+                {
+                    (DayOfWeek.Monday, "Thứ 2"),
+                    (DayOfWeek.Tuesday, "Thứ 3"),
+                    (DayOfWeek.Wednesday, "Thứ 4"),
+                    (DayOfWeek.Thursday, "Thứ 5"),
+                    (DayOfWeek.Friday, "Thứ 6"),
+                    (DayOfWeek.Saturday, "Thứ 7"),
+                    (DayOfWeek.Sunday, "Chủ nhật")
+                };
+
+                foreach (var (d, label) in daysOfWeek)
+                {
+                    decimal dayRev = orders.Where(o => o.Orderdate.Value.DayOfWeek == d).Sum(o => o.Finalamount);
+                    result.Add(new RevenueBreakdownItemDto(label, dayRev));
+                }
+            }
+            else
+            {
+                // Group by date (day)
+                int totalDays = (int)(end - start).TotalDays;
+                for (int i = 0; i < totalDays; i++)
+                {
+                    var date = start.AddDays(i);
+                    decimal dateRev = orders.Where(o => o.Orderdate.Value.Date == date.Date).Sum(o => o.Finalamount);
+                    result.Add(new RevenueBreakdownItemDto(date.ToString("dd/MM"), dateRev));
+                }
             }
 
-            var (currentStart, _) = GetDateRanges(period);
-            var now = DateTime.Now;
+            return Ok(result);
+        }
+
+        [HttpGet("recent-activities")]
+        public async Task<ActionResult<IEnumerable<RecentActivityDto>>> GetRecentActivities(
+            [FromQuery] string type = "all",
+            [FromQuery] string q = "",
+            [FromQuery] int limit = 10)
+        {
+            var activities = new List<RecentActivityDto>();
+            string query = q.Trim().ToLower();
+
+            // 1. Fetch orders/invoices
+            if (type.ToLower() == "all" || type.ToLower() == "invoice" || type.ToLower() == "order")
+            {
+                var ordersQuery = _context.Orders
+                    .Include(o => o.Customer)
+                    .Include(o => o.User)
+                    .AsQueryable();
+
+                if (type.ToLower() == "invoice")
+                {
+                    ordersQuery = ordersQuery.Where(o => o.Orderstatus == "Completed");
+                }
+                else if (type.ToLower() == "order")
+                {
+                    ordersQuery = ordersQuery.Where(o => o.Orderstatus != "Completed");
+                }
+
+                var ordersList = await ordersQuery.ToListAsync();
+
+                foreach (var o in ordersList)
+                {
+                    string orderCode = $"HD{o.Orderid:D6}";
+                    string staffName = o.User?.Fullname ?? "Hệ thống";
+                    string customerName = o.Customer?.Fullname ?? "Khách lẻ";
+
+                    // Search filter
+                    if (!string.IsNullOrEmpty(query))
+                    {
+                        bool matches = orderCode.ToLower().Contains(query) ||
+                                       customerName.ToLower().Contains(query) ||
+                                       staffName.ToLower().Contains(query);
+                        if (!matches) continue;
+                    }
+
+                    activities.Add(new RecentActivityDto(
+                        $"order_{o.Orderid}",
+                        $"{staffName} vừa tạo {orderCode}",
+                        customerName,
+                        o.Orderdate ?? DateTime.Now,
+                        o.Orderstatus,
+                        o.Finalamount,
+                        o.Orderstatus == "Completed" ? "invoice" : "order"
+                    ));
+                }
+            }
+
+            // 2. Fetch inventory audit logs
+            if (type.ToLower() == "all" || type.ToLower() == "audit")
+            {
+                var logsQuery = _context.Auditlogs
+                    .Include(l => l.User)
+                    .Where(l => l.Tablename == "inventoryitems")
+                    .AsQueryable();
+
+                var logsList = await logsQuery.ToListAsync();
+
+                foreach (var l in logsList)
+                {
+                    string staffName = l.User?.Fullname ?? "Hệ thống";
+                    string actionDesc = l.Action ?? "Thao tác kho";
+
+                    if (!string.IsNullOrEmpty(query))
+                    {
+                        bool matches = actionDesc.ToLower().Contains(query) ||
+                                       staffName.ToLower().Contains(query);
+                        if (!matches) continue;
+                    }
+
+                    activities.Add(new RecentActivityDto(
+                        $"audit_{l.Logid}",
+                        actionDesc,
+                        staffName,
+                        l.Createdat ?? DateTime.Now,
+                        null,
+                        null,
+                        "audit"
+                    ));
+                }
+            }
+
+            // Combine and sort
+            var sortedList = activities
+                .OrderByDescending(a => a.Timestamp)
+                .Take(limit)
+                .ToList();
+
+            return Ok(sortedList);
+        }
+
+        [HttpGet("top-products-v2")]
+        public async Task<ActionResult<IEnumerable<TopProductDto>>> GetTopProductsV2(
+            [FromQuery] string period = "this_month",
+            [FromQuery] int limit = 10)
+        {
+            var (start, end) = GetPeriodRanges(period);
 
             var rawData = await _context.Orderitems
-                .Where(oi => oi.Order != null && oi.Order.Orderstatus == "Completed" && oi.Order.Orderdate != null && oi.Order.Orderdate >= currentStart && oi.Order.Orderdate <= now)
+                .Where(oi => oi.Order != null && oi.Order.Orderstatus == "Completed" && oi.Order.Orderdate != null && oi.Order.Orderdate >= start && oi.Order.Orderdate < end)
                 .Where(oi => oi.ImeiNavigation != null && oi.ImeiNavigation.Variant != null && oi.ImeiNavigation.Variant.Product != null)
                 .Select(oi => new {
                     oi.ImeiNavigation.Variant.Product.Productid,
@@ -126,24 +305,32 @@ namespace ECommerceBackend.Controllers
             return Ok(topProducts);
         }
 
-        [HttpGet("order-status-distribution")]
-        public async Task<ActionResult<IEnumerable<OrderStatusDistributionDto>>> GetOrderStatusDistribution([FromQuery] string period = "7d")
+        [HttpGet("top-customers")]
+        public async Task<ActionResult<IEnumerable<TopCustomerDto>>> GetTopCustomers(
+            [FromQuery] string period = "this_month",
+            [FromQuery] int limit = 10)
         {
-            if (period != "7d" && period != "30d")
-            {
-                return BadRequest(new ApiErrorDto("Period không hợp lệ", null));
-            }
+            var (start, end) = GetPeriodRanges(period);
 
-            var (currentStart, _) = GetDateRanges(period);
-            var now = DateTime.Now;
-
-            var distribution = await _context.Orders
-                .Where(o => o.Orderdate != null && o.Orderdate >= currentStart && o.Orderdate <= now)
-                .GroupBy(o => o.Orderstatus)
-                .Select(g => new OrderStatusDistributionDto(g.Key ?? "Unknown", g.Count()))
+            var rawData = await _context.Orders
+                .Include(o => o.Customer)
+                .Where(o => o.Orderstatus == "Completed" && o.Orderdate != null && o.Orderdate >= start && o.Orderdate < end && o.Customer != null)
                 .ToListAsync();
 
-            return Ok(distribution);
+            var topCustomers = rawData
+                .GroupBy(o => o.Customer)
+                .Select(g => new TopCustomerDto(
+                    g.Key!.Customerid,
+                    g.Key.Fullname,
+                    g.Key.Phone,
+                    g.Sum(o => o.Finalamount),
+                    g.Count()
+                ))
+                .OrderByDescending(c => c.TotalSpent)
+                .Take(limit)
+                .ToList();
+
+            return Ok(topCustomers);
         }
     }
 }

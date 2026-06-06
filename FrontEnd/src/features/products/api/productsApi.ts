@@ -7,8 +7,8 @@ export interface Product {
   brandid?: number;
   categoryid?: number;
   createdat?: string;
-  brand?: { brandid: number; brandname: string };
-  category?: { categoryid: number; categoryname: string };
+  brand?: { id: number; name: string };
+  category?: { id: number; name: string };
   productvariants?: ProductVariant[];
 }
 
@@ -55,11 +55,12 @@ export interface CreateVariantSpec {
 }
 
 export interface CreateFullProductVariant {
-  conditionid?: number;
+  condition?: string;
   sku: string;
   baseprice: number;
   saleprice?: number;
   specs?: CreateVariantSpec[];
+  quantity?: number;
 }
 
 export interface CreateFullProduct {

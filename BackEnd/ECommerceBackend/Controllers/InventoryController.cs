@@ -86,7 +86,7 @@ namespace ECommerceBackend.Controllers
                 Imei = dto.Imei,
                 Variantid = dto.Variantid,
                 Status = dto.Status ?? "InStock",
-                Importedat = dto.Importedat ?? DateTime.UtcNow,
+                Importedat = dto.Importedat ?? DateTime.Now,
                 Warrantystartdate = dto.Warrantystartdate,
                 Warrantyenddate = dto.Warrantyenddate,
                 Warrantystatus = dto.Warrantystatus

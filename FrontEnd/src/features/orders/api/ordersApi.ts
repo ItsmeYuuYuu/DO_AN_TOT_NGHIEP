@@ -22,6 +22,9 @@ export interface OrderItem {
   sellingprice: number;
   warrantyprice?: number;
   packageid?: number;
+  packagename?: string;
+  productname?: string;
+  variantsku?: string;
 }
 
 export interface BulkUpdateFailedItem {

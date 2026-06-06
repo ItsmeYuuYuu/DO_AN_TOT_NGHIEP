@@ -1,6 +1,8 @@
 BEGIN;
 
 -- 1. Xóa dữ liệu cũ theo thứ tự an toàn khóa ngoại
+DELETE FROM CartItems;
+DELETE FROM Carts;
 DELETE FROM ChatMessages;
 DELETE FROM ChatSessions;
 DELETE FROM News;

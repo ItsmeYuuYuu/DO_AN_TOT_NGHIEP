@@ -26,4 +26,6 @@ public partial class Productvariant
     public virtual ICollection<Productimage> Productimages { get; set; } = new List<Productimage>();
 
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+
+    public virtual ICollection<Cartitem> Cartitems { get; set; } = new List<Cartitem>();
 }

@@ -22,7 +22,8 @@ namespace ECommerceBackend.Controllers
         {
             var customer = o.Customer != null ? new CustomerLiteDto(o.Customer.Customerid, o.Customer.Fullname, o.Customer.Phone, o.Customer.Email) : null;
             var items = o.Orderitems.Select(i => new OrderItemDto(
-                i.Orderitemid, i.Orderid, i.Imei, i.Sellingprice, i.Warrantyprice, i.Packageid, i.Package?.Packagename
+                i.Orderitemid, i.Orderid, i.Imei, i.Sellingprice, i.Warrantyprice, i.Packageid, i.Package?.Packagename,
+                i.ImeiNavigation?.Variant?.Product?.Productname, i.ImeiNavigation?.Variant?.Sku
             )).ToList();
 
             return new OrderListItemDto(
@@ -34,7 +35,8 @@ namespace ECommerceBackend.Controllers
         {
             var customer = o.Customer != null ? new CustomerLiteDto(o.Customer.Customerid, o.Customer.Fullname, o.Customer.Phone, o.Customer.Email) : null;
             var items = o.Orderitems.Select(i => new OrderItemDto(
-                i.Orderitemid, i.Orderid, i.Imei, i.Sellingprice, i.Warrantyprice, i.Packageid, i.Package?.Packagename
+                i.Orderitemid, i.Orderid, i.Imei, i.Sellingprice, i.Warrantyprice, i.Packageid, i.Package?.Packagename,
+                i.ImeiNavigation?.Variant?.Product?.Productname, i.ImeiNavigation?.Variant?.Sku
             )).ToList();
 
             return new OrderDetailDto(
@@ -51,6 +53,10 @@ namespace ECommerceBackend.Controllers
                 .Include(o => o.Customer)
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Package)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.ImeiNavigation)
+                        .ThenInclude(inv => inv!.Variant)
+                            .ThenInclude(v => v!.Product)
                 .ToListAsync();
             
             return Ok(orders.Select(MapToDto));
@@ -83,6 +89,10 @@ namespace ECommerceBackend.Controllers
             var orders = await _context.Orders
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Package)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.ImeiNavigation)
+                        .ThenInclude(inv => inv!.Variant)
+                            .ThenInclude(v => v!.Product)
                 .Where(o => o.Customerid == customerId)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
@@ -106,6 +116,10 @@ namespace ECommerceBackend.Controllers
             var orders = await _context.Orders
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Package)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.ImeiNavigation)
+                        .ThenInclude(inv => inv!.Variant)
+                            .ThenInclude(v => v!.Product)
                 .Where(o => o.Userid == userId)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();

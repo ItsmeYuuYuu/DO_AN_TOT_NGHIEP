@@ -38,8 +38,8 @@ const ProductsListPage: React.FC = () => {
       try {
         const res = await productsApi.getAll();
         let filtered = res.data;
-        if (categoryId) filtered = filtered.filter(p => p.category?.categoryid === categoryId);
-        if (brandId) filtered = filtered.filter(p => p.brand?.brandid === brandId);
+        if (categoryId) filtered = filtered.filter(p => p.category?.id === categoryId);
+        if (brandId) filtered = filtered.filter(p => p.brand?.id === brandId);
         setProducts(filtered);
       } catch {
         setProducts([]);

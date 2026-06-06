@@ -45,7 +45,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="p-4 flex flex-col flex-1">
         <div className="mb-1">
           <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
-            {product.brand?.brandname || 'CHÍNH HÃNG'}
+            {product.brand?.name || 'CHÍNH HÃNG'}
           </span>
         </div>
 

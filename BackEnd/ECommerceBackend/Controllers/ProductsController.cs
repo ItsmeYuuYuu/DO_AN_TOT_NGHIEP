@@ -90,6 +90,13 @@ namespace ECommerceBackend.Controllers
             );
         }
 
+        private static string GenerateTemporaryInventoryCode(int variantId)
+        {
+            // Product creation only knows a quantity, not each device's real IMEI.
+            // Use a compact, explicit placeholder for quantity-only stock records.
+            return $"TMP-{variantId}-{Guid.NewGuid():N}";
+        }
+
         // GET: api/Products
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProductListItemDto>>> GetProducts()
@@ -231,7 +238,7 @@ namespace ECommerceBackend.Controllers
                 Description = dto.Description,
                 Categoryid = dto.Categoryid,
                 Brandid = dto.Brandid,
-                Createdat = DateTime.UtcNow
+                Createdat = DateTime.Now
             };
 
             _context.Products.Add(product);
@@ -253,6 +260,30 @@ namespace ECommerceBackend.Controllers
         [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<ActionResult<ProductDetailDto>> PostFullProduct([FromBody] CreateFullProductDto dto, [FromServices] ILogger<ProductsController> logger)
         {
+            if (dto.Categoryid.HasValue && !await _context.Categories.AnyAsync(c => c.Categoryid == dto.Categoryid.Value))
+                return BadRequest(new ApiErrorDto("Danh mục đã chọn không tồn tại.", null));
+
+            if (dto.Brandid.HasValue && !await _context.Brands.AnyAsync(b => b.Brandid == dto.Brandid.Value))
+                return BadRequest(new ApiErrorDto("Thương hiệu đã chọn không tồn tại.", null));
+
+            var requestedSkus = dto.Variants?
+                .Select(v => v.Sku.Trim())
+                .ToList() ?? new List<string>();
+
+            if (requestedSkus.Count != requestedSkus.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+                return BadRequest(new ApiErrorDto("Các biến thể không được trùng mã SKU.", null));
+
+            if (requestedSkus.Count > 0)
+            {
+                var existingSku = await _context.Productvariants
+                    .Where(v => v.Sku != null && requestedSkus.Contains(v.Sku))
+                    .Select(v => v.Sku)
+                    .FirstOrDefaultAsync();
+
+                if (existingSku != null)
+                    return Conflict(new ApiErrorDto($"Mã SKU '{existingSku}' đã tồn tại.", null));
+            }
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -262,7 +293,7 @@ namespace ECommerceBackend.Controllers
                     Description = dto.Description,
                     Categoryid = dto.Categoryid,
                     Brandid = dto.Brandid,
-                    Createdat = DateTime.UtcNow
+                    Createdat = DateTime.Now
                 };
 
                 _context.Products.Add(product);
@@ -296,6 +327,23 @@ namespace ECommerceBackend.Controllers
 
                         _context.Productvariants.Add(variant);
                         await _context.SaveChangesAsync();
+
+                        // Auto-generate inventory items (stock) if Quantity is provided
+                        if (vDto.Quantity.HasValue && vDto.Quantity.Value > 0)
+                        {
+                            for (int idx = 1; idx <= vDto.Quantity.Value; idx++)
+                            {
+                                var item = new Inventoryitem
+                                {
+                                    Imei = GenerateTemporaryInventoryCode(variant.Variantid),
+                                    Variantid = variant.Variantid,
+                                    Status = "InStock",
+                                    Importedat = DateTime.Now
+                                };
+                                _context.Inventoryitems.Add(item);
+                            }
+                            await _context.SaveChangesAsync();
+                        }
                     }
                 }
 
@@ -326,6 +374,12 @@ namespace ECommerceBackend.Controllers
             var product = await _context.Products.FindAsync(id);
             if (product == null) return NotFound();
 
+            if (dto.Categoryid.HasValue && !await _context.Categories.AnyAsync(c => c.Categoryid == dto.Categoryid.Value))
+                return BadRequest(new ApiErrorDto("Danh mục đã chọn không tồn tại.", null));
+
+            if (dto.Brandid.HasValue && !await _context.Brands.AnyAsync(b => b.Brandid == dto.Brandid.Value))
+                return BadRequest(new ApiErrorDto("Thương hiệu đã chọn không tồn tại.", null));
+
             product.Productname = dto.Productname;
             product.Description = dto.Description;
             product.Categoryid = dto.Categoryid;
@@ -352,14 +406,69 @@ namespace ECommerceBackend.Controllers
         // DELETE: api/Products/5
         [HttpDelete("{id}")]
         [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProduct(int id, [FromServices] ILogger<ProductsController> logger)
         {
-            var product = await _context.Products.FindAsync(id);
+            var product = await _context.Products
+                .Include(p => p.Productvariants)
+                .FirstOrDefaultAsync(p => p.Productid == id);
+
             if (product == null) return NotFound();
 
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
-            return NoContent();
+            var variantIds = product.Productvariants.Select(v => v.Variantid).ToList();
+            var inventoryItems = await _context.Inventoryitems
+                .Where(i => i.Variantid.HasValue && variantIds.Contains(i.Variantid.Value))
+                .ToListAsync();
+            var inventoryCodes = inventoryItems.Select(i => i.Imei).ToList();
+
+            var hasOrderHistory = inventoryCodes.Count > 0 &&
+                await _context.Orderitems.AnyAsync(oi => oi.Imei != null && inventoryCodes.Contains(oi.Imei));
+
+            if (hasOrderHistory)
+            {
+                return Conflict(new ApiErrorDto(
+                    "Không thể xóa sản phẩm đã phát sinh đơn hàng. Hãy ngừng kinh doanh sản phẩm thay vì xóa lịch sử.",
+                    null));
+            }
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                if (variantIds.Count > 0)
+                {
+                    var cartItems = await _context.Cartitems
+                        .Where(ci => variantIds.Contains(ci.Variantid))
+                        .ToListAsync();
+                    var reviews = await _context.Reviews
+                        .Where(r => r.Variantid.HasValue && variantIds.Contains(r.Variantid.Value))
+                        .ToListAsync();
+                    var images = await _context.Productimages
+                        .Where(pi => pi.Variantid.HasValue && variantIds.Contains(pi.Variantid.Value))
+                        .ToListAsync();
+
+                    _context.Cartitems.RemoveRange(cartItems);
+                    _context.Reviews.RemoveRange(reviews);
+                    _context.Productimages.RemoveRange(images);
+                    _context.Inventoryitems.RemoveRange(inventoryItems);
+                    await _context.SaveChangesAsync();
+
+                    _context.Productvariants.RemoveRange(product.Productvariants);
+                    await _context.SaveChangesAsync();
+                }
+
+                _context.Products.Remove(product);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return NoContent();
+            }
+            catch (DbUpdateException ex)
+            {
+                await transaction.RollbackAsync();
+                logger.LogError(ex, "Không thể xóa sản phẩm {ProductId}.", id);
+                return Conflict(new ApiErrorDto(
+                    "Không thể xóa sản phẩm vì vẫn còn dữ liệu nghiệp vụ liên quan.",
+                    null));
+            }
         }
     }
 }

@@ -89,6 +89,8 @@ const App: React.FC = () => {
             <Route index                  element={<AdminDashboard />} />
             <Route path="products"        element={<AdminProducts />} />
             <Route path="orders"          element={<AdminOrders />} />
+            <Route path="inventory"       element={<StaffInventory />} />
+            <Route path="warranties"      element={<StaffWarranties />} />
             <Route path="users"           element={<AdminUsers />} />
             <Route path="customers"       element={<AdminCustomers />} />
             <Route path="categories"      element={<AdminCategoryBrand />} />

@@ -14,7 +14,9 @@ namespace ECommerceBackend.DTOs.Orders
         decimal Sellingprice,
         decimal? Warrantyprice,
         int? Packageid,
-        string? Packagename
+        string? Packagename,
+        string? Productname,
+        string? Variantsku
     );
 
     public record OrderListItemDto(

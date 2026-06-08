@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ECommerceBackend.DTOs.Brands
 {
-    public record BrandDto(int Brandid, string Brandname);
+    public record BrandDto(int Brandid, string Brandname, int Productcount);
     
     public record CreateBrandRequestDto(
         [Required(ErrorMessage = "Tên thương hiệu là bắt buộc")] 

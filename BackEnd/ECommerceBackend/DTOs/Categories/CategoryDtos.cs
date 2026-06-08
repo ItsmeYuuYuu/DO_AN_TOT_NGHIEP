@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ECommerceBackend.DTOs.Categories
 {
-    public record CategoryDto(int Categoryid, string Categoryname, string? Description);
+    public record CategoryDto(int Categoryid, string Categoryname, string? Description, int Productcount);
     
     public record CreateCategoryRequestDto(
         [Required(ErrorMessage = "Tên danh mục là bắt buộc")] 

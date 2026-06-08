@@ -17,22 +17,35 @@ namespace ECommerceBackend.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories()
         {
-            var categories = await _context.Categories.ToListAsync();
-            return Ok(categories.Select(c => new CategoryDto(c.Categoryid, c.Categoryname, c.Description)));
+            var categories = await _context.Categories
+                .Select(c => new CategoryDto(
+                    c.Categoryid,
+                    c.Categoryname,
+                    c.Description,
+                    c.Products.Count))
+                .ToListAsync();
+            return Ok(categories);
         }
 
         // GET: api/Categories/5
         [HttpGet("{id}")]
         public async Task<ActionResult<CategoryDto>> GetCategory(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _context.Categories
+                .Where(c => c.Categoryid == id)
+                .Select(c => new CategoryDto(
+                    c.Categoryid,
+                    c.Categoryname,
+                    c.Description,
+                    c.Products.Count))
+                .FirstOrDefaultAsync();
             if (category == null) return NotFound();
-            return Ok(new CategoryDto(category.Categoryid, category.Categoryname, category.Description));
+            return Ok(category);
         }
 
         // POST: api/Categories
         [HttpPost]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
         public async Task<ActionResult<CategoryDto>> PostCategory([FromBody] CreateCategoryRequestDto dto)
         {
             var category = new Category
@@ -43,13 +56,13 @@ namespace ECommerceBackend.Controllers
             _context.Categories.Add(category);
             await _context.SaveChangesAsync();
             
-            var responseDto = new CategoryDto(category.Categoryid, category.Categoryname, category.Description);
+            var responseDto = new CategoryDto(category.Categoryid, category.Categoryname, category.Description, 0);
             return CreatedAtAction(nameof(GetCategory), new { id = category.Categoryid }, responseDto);
         }
 
         // PUT: api/Categories/5
         [HttpPut("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
         public async Task<IActionResult> PutCategory(int id, [FromBody] UpdateCategoryRequestDto dto)
         {
             var category = await _context.Categories.FindAsync(id);
@@ -65,7 +78,12 @@ namespace ECommerceBackend.Controllers
                 throw;
             }
             
-            var responseDto = new CategoryDto(category.Categoryid, category.Categoryname, category.Description);
+            var productCount = await _context.Products.CountAsync(p => p.Categoryid == id);
+            var responseDto = new CategoryDto(
+                category.Categoryid,
+                category.Categoryname,
+                category.Description,
+                productCount);
             return Ok(responseDto);
         }
 

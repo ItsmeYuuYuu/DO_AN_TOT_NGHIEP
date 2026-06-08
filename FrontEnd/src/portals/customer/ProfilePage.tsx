@@ -108,14 +108,14 @@ const ProfilePage: React.FC = () => {
                 <ChevronRight size={14} />
               </Link>
             )}
-            {user.rolename === 'Staff' && (
+            {user.rolename !== 'Admin' && user.rolename !== 'Customer' && (
               <Link
                 to="/staff"
                 className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors mt-1"
               >
                 <span className="flex items-center gap-2">
                   <ClipboardList size={16} />
-                  Vào trang Nhân viên
+                  Vào trang vận hành
                 </span>
                 <ChevronRight size={14} />
               </Link>

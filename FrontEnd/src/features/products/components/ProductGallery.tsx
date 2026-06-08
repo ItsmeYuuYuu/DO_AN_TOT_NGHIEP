@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Expand } from 'lucide-react';
 
 interface ProductGalleryProps {
   productName: string;
@@ -8,28 +8,33 @@ interface ProductGalleryProps {
 
 export const ProductGallery: React.FC<ProductGalleryProps> = ({ productName, images }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const orderedImages = [...images].sort((a, b) => Number(b.ismain) - Number(a.ismain));
 
   // Reset to first image when variant changes (images array changes)
   useEffect(() => {
     setActiveIndex(0);
   }, [images]);
 
-  const activeImage = images[activeIndex]?.imageurl || `https://placehold.co/600x600?text=${encodeURIComponent(productName)}`;
+  const activeImage = orderedImages[activeIndex]?.imageurl || `https://placehold.co/600x600?text=${encodeURIComponent(productName)}`;
 
-  const nextImage = () => setActiveIndex((prev) => (prev + 1) % Math.max(1, images.length));
-  const prevImage = () => setActiveIndex((prev) => (prev - 1 + images.length) % Math.max(1, images.length));
+  const nextImage = () => setActiveIndex((prev) => (prev + 1) % Math.max(1, orderedImages.length));
+  const prevImage = () => setActiveIndex((prev) => (prev - 1 + orderedImages.length) % Math.max(1, orderedImages.length));
 
   return (
     <div className="flex flex-col gap-4">
       {/* Main Image */}
-      <div className="relative aspect-square bg-white rounded-2xl border border-slate-200 overflow-hidden group flex items-center justify-center">
+      <div className="relative aspect-square bg-white rounded-2xl border border-slate-200 overflow-hidden group flex items-center justify-center shadow-sm">
         <img
           src={activeImage}
           alt={productName}
-          className="w-full h-full object-contain p-8 transition-transform duration-300 group-hover:scale-105"
+          className="w-full h-full object-contain p-6 md:p-8 transition-transform duration-300 group-hover:scale-[1.03]"
           onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/600x600?text=${encodeURIComponent(productName)}`; }}
         />
-        {images.length > 1 && (
+        <div className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm backdrop-blur">
+          <Expand size={14} />
+          {activeIndex + 1}/{Math.max(orderedImages.length, 1)}
+        </div>
+        {orderedImages.length > 1 && (
           <>
             <button
               onClick={prevImage}
@@ -48,13 +53,13 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ productName, ima
       </div>
 
       {/* Thumbnails */}
-      {images.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
-          {images.map((img, idx) => (
+      {orderedImages.length > 1 && (
+        <div className="grid grid-flow-col auto-cols-[76px] gap-3 overflow-x-auto pb-2 snap-x">
+          {orderedImages.map((img, idx) => (
             <button
-              key={idx}
+              key={img.imageid}
               onClick={() => setActiveIndex(idx)}
-              className={`shrink-0 w-20 h-20 rounded-xl border-2 overflow-hidden bg-white snap-start transition-all ${
+              className={`h-[76px] rounded-xl border-2 overflow-hidden bg-white snap-start transition-all ${
                 activeIndex === idx ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-200 hover:border-blue-300'
               }`}
             >

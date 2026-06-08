@@ -27,6 +27,7 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
         new(StringComparer.OrdinalIgnoreCase)
         {
             ["Products"]            = "products",
+            ["ProductSeries"]       = "productseries",
             ["ProductVariants"]     = "productvariants",
             ["Categories"]          = "categories",
             ["Brands"]              = "brands",

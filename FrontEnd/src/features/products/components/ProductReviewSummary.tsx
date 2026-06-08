@@ -28,7 +28,7 @@ export const ProductReviewSummary: React.FC<Props> = ({ productId, summary, vari
   };
 
   return (
-    <div className="mt-12 pt-8 border-t border-slate-200">
+    <div>
       <h2 className="text-xl font-black text-slate-800 mb-6 uppercase tracking-wide">Đánh giá sản phẩm</h2>
       
       <div className="flex flex-col md:flex-row gap-8 items-center bg-white border border-slate-200 rounded-2xl p-6 md:p-8 mb-8 shadow-sm">

@@ -4,12 +4,14 @@ import { useProducts } from '@/features/products/hooks/useProducts';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { Skeleton } from '@/components/Skeleton';
 import { promotionsApi, type PromotionalContent } from '@/features/content/api/promotionsApi';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CustomerHome: React.FC = () => {
   const { products, loading } = useProducts();
   const [banners, setBanners] = useState<PromotionalContent[]>([]);
   const [sliders, setSliders] = useState<PromotionalContent[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [isSliderPaused, setIsSliderPaused] = useState(false);
 
   useEffect(() => {
     promotionsApi.getActive('Banner').then(setBanners).catch(() => {});
@@ -17,13 +19,21 @@ const CustomerHome: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (sliders.length > 1) {
+    if (sliders.length > 1 && !isSliderPaused) {
       const interval = setInterval(() => {
         setActiveSlide(prev => (prev + 1) % sliders.length);
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [sliders]);
+  }, [sliders, isSliderPaused]);
+
+  const showPreviousSlide = () => {
+    setActiveSlide(current => (current - 1 + sliders.length) % sliders.length);
+  };
+
+  const showNextSlide = () => {
+    setActiveSlide(current => (current + 1) % sliders.length);
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen pb-12">
@@ -32,7 +42,17 @@ const CustomerHome: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             {/* Main Slider Placeholder / Dynamic */}
-            <div className="lg:col-span-3 aspect-[16/7] bg-slate-100 rounded-xl relative overflow-hidden shadow-md">
+            <div
+              className="group lg:col-span-3 aspect-[16/7] bg-slate-100 rounded-xl relative overflow-hidden shadow-md"
+              onMouseEnter={() => setIsSliderPaused(true)}
+              onMouseLeave={() => setIsSliderPaused(false)}
+              onFocusCapture={() => setIsSliderPaused(true)}
+              onBlurCapture={event => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setIsSliderPaused(false);
+                }
+              }}
+            >
               {sliders.length > 0 ? (
                 <>
                   {sliders.map((s, idx) => (
@@ -46,12 +66,35 @@ const CustomerHome: React.FC = () => {
                       )}
                     </div>
                   ))}
+                  {sliders.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={showPreviousSlide}
+                        aria-label="Xem banner trước"
+                        className="absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-slate-950/45 text-white opacity-0 shadow-lg backdrop-blur-sm transition hover:bg-slate-950/65 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white group-hover:opacity-100"
+                      >
+                        <ChevronLeft size={24} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={showNextSlide}
+                        aria-label="Xem banner tiếp theo"
+                        className="absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-slate-950/45 text-white opacity-0 shadow-lg backdrop-blur-sm transition hover:bg-slate-950/65 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white group-hover:opacity-100"
+                      >
+                        <ChevronRight size={24} />
+                      </button>
+                    </>
+                  )}
                   {/* Indicators */}
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-30">
                     {sliders.map((_, idx) => (
-                      <button 
-                        key={idx} 
+                      <button
+                        key={idx}
+                        type="button"
                         onClick={() => setActiveSlide(idx)}
+                        aria-label={`Xem banner ${idx + 1}`}
+                        aria-current={idx === activeSlide ? 'true' : undefined}
                         className={`h-2 rounded-full transition-all ${idx === activeSlide ? 'w-6 bg-blue-600' : 'w-2 bg-white/60 hover:bg-white'}`}
                       />
                     ))}

@@ -4,6 +4,7 @@ export interface Category {
   categoryid: number;
   categoryname: string;
   description?: string;
+  productcount?: number;
   products?: unknown[];
 }
 

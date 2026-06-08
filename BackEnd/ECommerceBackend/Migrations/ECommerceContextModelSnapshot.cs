@@ -238,6 +238,10 @@ namespace ECommerceBackend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Sessionid"));
 
+                    b.Property<int?>("Assigneduserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("assigneduserid");
+
                     b.Property<int?>("Customerid")
                         .HasColumnType("integer")
                         .HasColumnName("customerid");
@@ -250,6 +254,15 @@ namespace ECommerceBackend.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("guestsessiontoken");
+
+                    b.Property<DateTime?>("Handoffrequestedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("handoffrequestedat");
+
+                    b.Property<string>("Handoffstatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("handoffstatus");
 
                     b.Property<DateTime?>("Starttime")
                         .ValueGeneratedOnAdd()
@@ -581,6 +594,10 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("productname");
 
+                    b.Property<int?>("Seriesid")
+                        .HasColumnType("integer")
+                        .HasColumnName("seriesid");
+
                     b.HasKey("Productid")
                         .HasName("products_pkey");
 
@@ -592,6 +609,8 @@ namespace ECommerceBackend.Migrations
 
                     b.HasIndex("Productname")
                         .HasDatabaseName("ix_products_productname");
+
+                    b.HasIndex("Seriesid");
 
                     b.HasIndex("Categoryid", "Brandid")
                         .HasDatabaseName("ix_products_categoryid_brandid");
@@ -630,6 +649,52 @@ namespace ECommerceBackend.Migrations
                     b.HasIndex("Variantid");
 
                     b.ToTable("productimages", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Productseries", b =>
+                {
+                    b.Property<int>("Seriesid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("seriesid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Seriesid"));
+
+                    b.Property<int>("Brandid")
+                        .HasColumnType("integer")
+                        .HasColumnName("brandid");
+
+                    b.Property<DateTime?>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int?>("Displayorder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("displayorder");
+
+                    b.Property<bool?>("Isactive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("isactive");
+
+                    b.Property<string>("Seriesname")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("seriesname");
+
+                    b.HasKey("Seriesid")
+                        .HasName("productseries_pkey");
+
+                    b.HasIndex(new[] { "Brandid", "Seriesname" }, "ix_productseries_brandid_seriesname")
+                        .IsUnique();
+
+                    b.ToTable("productseries", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Productvariant", b =>
@@ -1098,9 +1163,17 @@ namespace ECommerceBackend.Migrations
                         .HasForeignKey("Categoryid")
                         .HasConstraintName("fk_products_categories");
 
+                    b.HasOne("ECommerceBackend.Models.Productseries", "Series")
+                        .WithMany("Products")
+                        .HasForeignKey("Seriesid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_products_productseries");
+
                     b.Navigation("Brand");
 
                     b.Navigation("Category");
+
+                    b.Navigation("Series");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Productimage", b =>
@@ -1111,6 +1184,18 @@ namespace ECommerceBackend.Migrations
                         .HasConstraintName("fk_images_variants");
 
                     b.Navigation("Variant");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Productseries", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Brand", "Brand")
+                        .WithMany("Productseries")
+                        .HasForeignKey("Brandid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_productseries_brands");
+
+                    b.Navigation("Brand");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Productvariant", b =>
@@ -1153,6 +1238,8 @@ namespace ECommerceBackend.Migrations
             modelBuilder.Entity("ECommerceBackend.Models.Brand", b =>
                 {
                     b.Navigation("Products");
+
+                    b.Navigation("Productseries");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Cart", b =>
@@ -1192,6 +1279,11 @@ namespace ECommerceBackend.Migrations
             modelBuilder.Entity("ECommerceBackend.Models.Product", b =>
                 {
                     b.Navigation("Productvariants");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Productseries", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Productvariant", b =>

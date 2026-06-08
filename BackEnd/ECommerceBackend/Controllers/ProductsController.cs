@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Products;
 using ECommerceBackend.DTOs.Common;
+using ECommerceBackend.Services;
 using System.Text.Json;
 
 namespace ECommerceBackend.Controllers
@@ -12,10 +13,12 @@ namespace ECommerceBackend.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly ECommerceContext _context;
+        private readonly ProductImageStorageService _imageStorage;
 
-        public ProductsController(ECommerceContext context)
+        public ProductsController(ECommerceContext context, ProductImageStorageService imageStorage)
         {
             _context = context;
+            _imageStorage = imageStorage;
         }
 
         private static List<VariantAttributeValueDto> ParseSpecifications(string? specsJson)
@@ -63,6 +66,7 @@ namespace ECommerceBackend.Controllers
                 p.Createdat,
                 p.Brand != null ? new LookupDto(p.Brand.Brandid, p.Brand.Brandname) : null,
                 p.Category != null ? new LookupDto(p.Category.Categoryid, p.Category.Categoryname) : null,
+                p.Series != null ? new LookupDto(p.Series.Seriesid, p.Series.Seriesname) : null,
                 variants
             );
         }
@@ -86,6 +90,7 @@ namespace ECommerceBackend.Controllers
                 p.Createdat,
                 p.Brand != null ? new LookupDto(p.Brand.Brandid, p.Brand.Brandname) : null,
                 p.Category != null ? new LookupDto(p.Category.Categoryid, p.Category.Categoryname) : null,
+                p.Series != null ? new LookupDto(p.Series.Seriesid, p.Series.Seriesname) : null,
                 variants
             );
         }
@@ -104,6 +109,7 @@ namespace ECommerceBackend.Controllers
             var products = await _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
+                .Include(p => p.Series)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
                 .ToListAsync();
@@ -117,12 +123,14 @@ namespace ECommerceBackend.Controllers
             [FromQuery] string? q,
             [FromQuery] int? categoryId,
             [FromQuery] int? brandId,
+            [FromQuery] int? seriesId,
             [FromQuery] decimal? minPrice,
             [FromQuery] decimal? maxPrice)
         {
             var query = _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
+                .Include(p => p.Series)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
                 .AsQueryable();
@@ -135,6 +143,9 @@ namespace ECommerceBackend.Controllers
 
             if (brandId.HasValue)
                 query = query.Where(p => p.Brandid == brandId);
+
+            if (seriesId.HasValue)
+                query = query.Where(p => p.Seriesid == seriesId);
 
             if (minPrice.HasValue)
                 query = query.Where(p => p.Productvariants.Any(v => (v.Saleprice ?? v.Baseprice) >= minPrice));
@@ -153,6 +164,7 @@ namespace ECommerceBackend.Controllers
             var product = await _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
+                .Include(p => p.Series)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
                 .FirstOrDefaultAsync(p => p.Productid == id);
@@ -168,10 +180,13 @@ namespace ECommerceBackend.Controllers
             var product = await _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
+                .Include(p => p.Series)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Reviews)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Inventoryitems)
                 .FirstOrDefaultAsync(p => p.Productid == id);
 
             if (product == null) return NotFound(new ApiErrorDto("Không tìm thấy sản phẩm", null));
@@ -193,6 +208,7 @@ namespace ECommerceBackend.Controllers
                 var related = await _context.Products
                     .Include(p => p.Brand)
                     .Include(p => p.Category)
+                    .Include(p => p.Series)
                     .Include(p => p.Productvariants)
                         .ThenInclude(v => v.Productimages)
                     .Where(p => p.Brandid == product.Brandid && p.Productid != id)
@@ -209,7 +225,8 @@ namespace ECommerceBackend.Controllers
                 v.Saleprice,
                 !string.IsNullOrEmpty(v.Condition) ? new ConditionDto(Math.Abs(v.Condition.GetHashCode()), v.Condition) : null,
                 v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList(),
-                ParseSpecifications(v.Specifications)
+                ParseSpecifications(v.Specifications),
+                v.Inventoryitems.Count(item => item.Status == "InStock")
             )).ToList();
 
             var result = new FullProductDetailDto(
@@ -219,6 +236,7 @@ namespace ECommerceBackend.Controllers
                 product.Createdat,
                 product.Brand != null ? new LookupDto(product.Brand.Brandid, product.Brand.Brandname) : null,
                 product.Category != null ? new LookupDto(product.Category.Categoryid, product.Category.Categoryname) : null,
+                product.Series != null ? new LookupDto(product.Series.Seriesid, product.Series.Seriesname) : null,
                 variants,
                 reviewSummary,
                 relatedProducts
@@ -229,15 +247,24 @@ namespace ECommerceBackend.Controllers
 
         // POST: api/Products
         [HttpPost]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse")]
         public async Task<ActionResult<ProductDetailDto>> PostProduct([FromBody] CreateProductRequestDto dto)
         {
+            if (dto.Seriesid.HasValue &&
+                !await _context.Productseries.AnyAsync(series =>
+                    series.Seriesid == dto.Seriesid.Value &&
+                    (!dto.Brandid.HasValue || series.Brandid == dto.Brandid.Value)))
+            {
+                return BadRequest(new ApiErrorDto("Dòng máy đã chọn không tồn tại hoặc không thuộc thương hiệu đã chọn.", null));
+            }
+
             var product = new Product
             {
                 Productname = dto.Productname,
                 Description = dto.Description,
                 Categoryid = dto.Categoryid,
                 Brandid = dto.Brandid,
+                Seriesid = dto.Seriesid,
                 Createdat = DateTime.Now
             };
 
@@ -248,6 +275,7 @@ namespace ECommerceBackend.Controllers
             var createdProduct = await _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
+                .Include(p => p.Series)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
                 .FirstAsync(p => p.Productid == product.Productid);
@@ -257,7 +285,7 @@ namespace ECommerceBackend.Controllers
 
         // POST: api/Products/full
         [HttpPost("full")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse")]
         public async Task<ActionResult<ProductDetailDto>> PostFullProduct([FromBody] CreateFullProductDto dto, [FromServices] ILogger<ProductsController> logger)
         {
             if (dto.Categoryid.HasValue && !await _context.Categories.AnyAsync(c => c.Categoryid == dto.Categoryid.Value))
@@ -265,6 +293,14 @@ namespace ECommerceBackend.Controllers
 
             if (dto.Brandid.HasValue && !await _context.Brands.AnyAsync(b => b.Brandid == dto.Brandid.Value))
                 return BadRequest(new ApiErrorDto("Thương hiệu đã chọn không tồn tại.", null));
+
+            if (dto.Seriesid.HasValue &&
+                !await _context.Productseries.AnyAsync(series =>
+                    series.Seriesid == dto.Seriesid.Value &&
+                    (!dto.Brandid.HasValue || series.Brandid == dto.Brandid.Value)))
+            {
+                return BadRequest(new ApiErrorDto("Dòng máy đã chọn không tồn tại hoặc không thuộc thương hiệu đã chọn.", null));
+            }
 
             var requestedSkus = dto.Variants?
                 .Select(v => v.Sku.Trim())
@@ -284,6 +320,21 @@ namespace ECommerceBackend.Controllers
                     return Conflict(new ApiErrorDto($"Mã SKU '{existingSku}' đã tồn tại.", null));
             }
 
+            if (dto.Variants?.Any(v => v.Images == null || v.Images.Count == 0) == true)
+                return BadRequest(new ApiErrorDto("Mỗi biến thể phải có ít nhất một hình ảnh.", null));
+
+            if (dto.Variants?.Any(v => v.Images!.Count > 8) == true)
+                return BadRequest(new ApiErrorDto("Mỗi biến thể chỉ được có tối đa 8 hình ảnh.", null));
+
+            var invalidImage = dto.Variants?
+                .SelectMany(v => v.Images ?? new List<CreateProductImageDto>())
+                .FirstOrDefault(image =>
+                    !Uri.TryCreate(image.Imageurl, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps));
+
+            if (invalidImage != null)
+                return BadRequest(new ApiErrorDto($"URL hình ảnh không hợp lệ: '{invalidImage.Imageurl}'.", null));
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -293,6 +344,7 @@ namespace ECommerceBackend.Controllers
                     Description = dto.Description,
                     Categoryid = dto.Categoryid,
                     Brandid = dto.Brandid,
+                    Seriesid = dto.Seriesid,
                     Createdat = DateTime.Now
                 };
 
@@ -328,6 +380,24 @@ namespace ECommerceBackend.Controllers
                         _context.Productvariants.Add(variant);
                         await _context.SaveChangesAsync();
 
+                        var images = vDto.Images ?? new List<CreateProductImageDto>();
+                        var mainImageIndex = images.FindIndex(image => image.Ismain);
+                        if (mainImageIndex < 0)
+                        {
+                            mainImageIndex = 0;
+                        }
+
+                        for (int imageIndex = 0; imageIndex < images.Count; imageIndex++)
+                        {
+                            _context.Productimages.Add(new Productimage
+                            {
+                                Variantid = variant.Variantid,
+                                Imageurl = images[imageIndex].Imageurl.Trim(),
+                                Ismain = imageIndex == mainImageIndex
+                            });
+                        }
+                        await _context.SaveChangesAsync();
+
                         // Auto-generate inventory items (stock) if Quantity is provided
                         if (vDto.Quantity.HasValue && vDto.Quantity.Value > 0)
                         {
@@ -352,6 +422,7 @@ namespace ECommerceBackend.Controllers
                 var createdProduct = await _context.Products
                     .Include(p => p.Brand)
                     .Include(p => p.Category)
+                    .Include(p => p.Series)
                     .Include(p => p.Productvariants)
                         .ThenInclude(v => v.Productimages)
                     .FirstAsync(p => p.Productid == product.Productid);
@@ -366,9 +437,304 @@ namespace ECommerceBackend.Controllers
             }
         }
 
+        // PUT: api/Products/5/full
+        [HttpPut("{id}/full")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
+        public async Task<IActionResult> PutFullProduct(
+            int id,
+            [FromBody] UpdateFullProductDto dto,
+            [FromServices] ILogger<ProductsController> logger)
+        {
+            if (dto.Categoryid.HasValue && !await _context.Categories.AnyAsync(c => c.Categoryid == dto.Categoryid.Value))
+                return BadRequest(new ApiErrorDto("Danh mục đã chọn không tồn tại.", null));
+
+            if (dto.Brandid.HasValue && !await _context.Brands.AnyAsync(b => b.Brandid == dto.Brandid.Value))
+                return BadRequest(new ApiErrorDto("Thương hiệu đã chọn không tồn tại.", null));
+
+            if (dto.Seriesid.HasValue &&
+                !await _context.Productseries.AnyAsync(series =>
+                    series.Seriesid == dto.Seriesid.Value &&
+                    (!dto.Brandid.HasValue || series.Brandid == dto.Brandid.Value)))
+            {
+                return BadRequest(new ApiErrorDto("Dòng máy đã chọn không tồn tại hoặc không thuộc thương hiệu đã chọn.", null));
+            }
+
+            var requestedSkus = dto.Variants.Select(variant => variant.Sku.Trim()).ToList();
+            if (requestedSkus.Any(string.IsNullOrWhiteSpace))
+                return BadRequest(new ApiErrorDto("SKU của biến thể không được để trống.", null));
+
+            if (requestedSkus.Count != requestedSkus.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+                return BadRequest(new ApiErrorDto("Các biến thể không được trùng mã SKU.", null));
+
+            if (dto.Variants.Any(variant => variant.Baseprice <= 0))
+                return BadRequest(new ApiErrorDto("Giá gốc của biến thể phải lớn hơn 0.", null));
+
+            if (dto.Variants.Any(variant => variant.Saleprice.HasValue && variant.Saleprice > variant.Baseprice))
+                return BadRequest(new ApiErrorDto("Giá giảm không được lớn hơn giá gốc.", null));
+
+            if (dto.Variants.Any(variant => variant.Images == null || variant.Images.Count == 0))
+                return BadRequest(new ApiErrorDto("Mỗi biến thể phải có ít nhất một hình ảnh.", null));
+
+            if (dto.Variants.Any(variant => variant.Images!.Count > 8))
+                return BadRequest(new ApiErrorDto("Mỗi biến thể chỉ được có tối đa 8 hình ảnh.", null));
+
+            var invalidImage = dto.Variants
+                .SelectMany(variant => variant.Images ?? new List<CreateProductImageDto>())
+                .FirstOrDefault(image =>
+                    !Uri.TryCreate(image.Imageurl, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps));
+            if (invalidImage != null)
+                return BadRequest(new ApiErrorDto($"URL hình ảnh không hợp lệ: '{invalidImage.Imageurl}'.", null));
+
+            var product = await _context.Products
+                .Include(p => p.Productvariants)
+                    .ThenInclude(variant => variant.Productimages)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(variant => variant.Inventoryitems)
+                        .ThenInclude(item => item.Orderitems)
+                .FirstOrDefaultAsync(p => p.Productid == id);
+            if (product == null)
+                return NotFound(new ApiErrorDto("Không tìm thấy sản phẩm.", null));
+
+            var requestedExistingIds = dto.Variants
+                .Where(variant => variant.Variantid.HasValue)
+                .Select(variant => variant.Variantid!.Value)
+                .ToHashSet();
+            var currentVariantIds = product.Productvariants.Select(variant => variant.Variantid).ToHashSet();
+            if (requestedExistingIds.Any(variantId => !currentVariantIds.Contains(variantId)))
+                return BadRequest(new ApiErrorDto("Có biến thể không thuộc sản phẩm đang chỉnh sửa.", null));
+
+            if (User.IsInRole("Content"))
+            {
+                if (dto.Variants.Any(variant => !variant.Variantid.HasValue) ||
+                    requestedExistingIds.Count != currentVariantIds.Count)
+                {
+                    return StatusCode(403, new ApiErrorDto(
+                        "Nhân viên nội dung không được thêm hoặc xóa biến thể sản phẩm.",
+                        null));
+                }
+
+                foreach (var variantDto in dto.Variants)
+                {
+                    var current = product.Productvariants.First(variant =>
+                        variant.Variantid == variantDto.Variantid);
+                    var currentQuantity = current.Inventoryitems.Count(item => item.Status == "InStock");
+                    if (!string.Equals(current.Sku, variantDto.Sku.Trim(), StringComparison.Ordinal) ||
+                        !string.Equals(current.Condition ?? "", variantDto.Condition?.Trim() ?? "", StringComparison.Ordinal) ||
+                        current.Baseprice != variantDto.Baseprice ||
+                        current.Saleprice != variantDto.Saleprice ||
+                        currentQuantity != variantDto.Quantity)
+                    {
+                        return StatusCode(403, new ApiErrorDto(
+                            "Nhân viên nội dung chỉ được sửa tên, mô tả, hình ảnh và thông số; không được sửa giá, SKU, tình trạng hoặc tồn kho.",
+                            null));
+                    }
+                }
+            }
+
+            var loweredSkus = requestedSkus.Select(sku => sku.ToLower()).ToList();
+            var duplicateSku = await _context.Productvariants
+                .Where(variant =>
+                    !requestedExistingIds.Contains(variant.Variantid) &&
+                    variant.Sku != null &&
+                    loweredSkus.Contains(variant.Sku.ToLower()))
+                .Select(variant => variant.Sku)
+                .FirstOrDefaultAsync();
+            if (duplicateSku != null)
+                return Conflict(new ApiErrorDto($"Mã SKU '{duplicateSku}' đã tồn tại.", null));
+
+            var variantsToDelete = product.Productvariants
+                .Where(variant => !requestedExistingIds.Contains(variant.Variantid))
+                .ToList();
+            var protectedVariant = variantsToDelete.FirstOrDefault(variant =>
+                variant.Inventoryitems.Any(item =>
+                    item.Orderitems.Any() ||
+                    !item.Imei.StartsWith("TMP-", StringComparison.OrdinalIgnoreCase)));
+            if (protectedVariant != null)
+            {
+                return Conflict(new ApiErrorDto(
+                    $"Không thể xóa biến thể '{protectedVariant.Sku}' vì đã có IMEI thật hoặc lịch sử đơn hàng.",
+                    null));
+            }
+
+            foreach (var variantDto in dto.Variants.Where(variant => variant.Variantid.HasValue))
+            {
+                var variant = product.Productvariants.First(item => item.Variantid == variantDto.Variantid);
+                var realInStock = variant.Inventoryitems.Count(item =>
+                    item.Status == "InStock" &&
+                    !item.Imei.StartsWith("TMP-", StringComparison.OrdinalIgnoreCase));
+                if (variantDto.Quantity < realInStock)
+                {
+                    return Conflict(new ApiErrorDto(
+                        $"Tồn kho của SKU '{variant.Sku}' không thể thấp hơn {realInStock} IMEI thật đang còn hàng.",
+                        null));
+                }
+            }
+
+            var removedImageUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                product.Productname = dto.Productname.Trim();
+                product.Description = dto.Description?.Trim();
+                product.Categoryid = dto.Categoryid;
+                product.Brandid = dto.Brandid;
+                product.Seriesid = dto.Seriesid;
+
+                foreach (var variant in variantsToDelete)
+                {
+                    foreach (var image in variant.Productimages)
+                    {
+                        removedImageUrls.Add(image.Imageurl);
+                    }
+
+                    var cartItems = await _context.Cartitems
+                        .Where(item => item.Variantid == variant.Variantid)
+                        .ToListAsync();
+                    var reviews = await _context.Reviews
+                        .Where(review => review.Variantid == variant.Variantid)
+                        .ToListAsync();
+                    _context.Cartitems.RemoveRange(cartItems);
+                    _context.Reviews.RemoveRange(reviews);
+                    _context.Productimages.RemoveRange(variant.Productimages);
+                    _context.Inventoryitems.RemoveRange(variant.Inventoryitems);
+                    _context.Productvariants.Remove(variant);
+                }
+
+                foreach (var variantDto in dto.Variants)
+                {
+                    Productvariant variant;
+                    if (variantDto.Variantid.HasValue)
+                    {
+                        variant = product.Productvariants.First(item => item.Variantid == variantDto.Variantid);
+                    }
+                    else
+                    {
+                        variant = new Productvariant { Productid = product.Productid };
+                        _context.Productvariants.Add(variant);
+                    }
+
+                    variant.Sku = variantDto.Sku.Trim();
+                    variant.Condition = string.IsNullOrWhiteSpace(variantDto.Condition)
+                        ? "Mới 100%"
+                        : variantDto.Condition.Trim();
+                    variant.Baseprice = variantDto.Baseprice;
+                    variant.Saleprice = variantDto.Saleprice;
+
+                    var specifications = new Dictionary<string, string>();
+                    foreach (var spec in variantDto.Specs ?? new List<VariantSpecDto>())
+                    {
+                        if (!string.IsNullOrWhiteSpace(spec.Key))
+                        {
+                            specifications[spec.Key.Trim()] = spec.Value?.Trim() ?? "";
+                        }
+                    }
+                    variant.Specifications = specifications.Count > 0
+                        ? JsonSerializer.Serialize(specifications)
+                        : null;
+
+                    if (!variantDto.Variantid.HasValue)
+                    {
+                        await _context.SaveChangesAsync();
+                    }
+
+                    foreach (var oldImage in variant.Productimages)
+                    {
+                        if (!variantDto.Images!.Any(image =>
+                            string.Equals(image.Imageurl.Trim(), oldImage.Imageurl, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            removedImageUrls.Add(oldImage.Imageurl);
+                        }
+                    }
+                    _context.Productimages.RemoveRange(variant.Productimages);
+
+                    var images = variantDto.Images!;
+                    var mainImageIndex = images.FindIndex(image => image.Ismain);
+                    if (mainImageIndex < 0)
+                    {
+                        mainImageIndex = 0;
+                    }
+                    for (var imageIndex = 0; imageIndex < images.Count; imageIndex++)
+                    {
+                        _context.Productimages.Add(new Productimage
+                        {
+                            Variantid = variant.Variantid,
+                            Imageurl = images[imageIndex].Imageurl.Trim(),
+                            Ismain = imageIndex == mainImageIndex
+                        });
+                    }
+
+                    var realInStock = variant.Inventoryitems.Count(item =>
+                        item.Status == "InStock" &&
+                        !item.Imei.StartsWith("TMP-", StringComparison.OrdinalIgnoreCase));
+                    var temporaryInStock = variant.Inventoryitems
+                        .Where(item =>
+                            item.Status == "InStock" &&
+                            item.Imei.StartsWith("TMP-", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    var requiredTemporaryCount = variantDto.Quantity - realInStock;
+
+                    if (temporaryInStock.Count > requiredTemporaryCount)
+                    {
+                        _context.Inventoryitems.RemoveRange(
+                            temporaryInStock.Take(temporaryInStock.Count - requiredTemporaryCount));
+                    }
+                    else
+                    {
+                        for (var index = temporaryInStock.Count; index < requiredTemporaryCount; index++)
+                        {
+                            _context.Inventoryitems.Add(new Inventoryitem
+                            {
+                                Imei = GenerateTemporaryInventoryCode(variant.Variantid),
+                                Variantid = variant.Variantid,
+                                Status = "InStock",
+                                Importedat = DateTime.Now
+                            });
+                        }
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                await transaction.RollbackAsync();
+                logger.LogError(ex, "Không thể cập nhật đầy đủ sản phẩm {ProductId}.", id);
+                return Conflict(new ApiErrorDto("Không thể cập nhật sản phẩm vì dữ liệu đang được sử dụng.", null));
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                logger.LogError(ex, "Lỗi hệ thống khi cập nhật đầy đủ sản phẩm {ProductId}.", id);
+                return StatusCode(500, new ApiErrorDto("Lỗi hệ thống khi cập nhật sản phẩm.", null));
+            }
+
+            if (removedImageUrls.Count > 0)
+            {
+                var stillReferenced = await _context.Productimages
+                    .Where(image => removedImageUrls.Contains(image.Imageurl))
+                    .Select(image => image.Imageurl)
+                    .ToListAsync();
+                foreach (var imageUrl in removedImageUrls.Except(stillReferenced, StringComparer.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        _imageStorage.DeleteByUrl(imageUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Không thể xóa file ảnh cũ {ImageUrl}.", imageUrl);
+                    }
+                }
+            }
+
+            return NoContent();
+        }
+
         // PUT: api/Products/5
         [HttpPut("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
         public async Task<IActionResult> PutProduct(int id, [FromBody] UpdateProductRequestDto dto)
         {
             var product = await _context.Products.FindAsync(id);
@@ -419,6 +785,10 @@ namespace ECommerceBackend.Controllers
                 .Where(i => i.Variantid.HasValue && variantIds.Contains(i.Variantid.Value))
                 .ToListAsync();
             var inventoryCodes = inventoryItems.Select(i => i.Imei).ToList();
+            var localImageUrls = await _context.Productimages
+                .Where(image => image.Variantid.HasValue && variantIds.Contains(image.Variantid.Value))
+                .Select(image => image.Imageurl)
+                .ToListAsync();
 
             var hasOrderHistory = inventoryCodes.Count > 0 &&
                 await _context.Orderitems.AnyAsync(oi => oi.Imei != null && inventoryCodes.Contains(oi.Imei));
@@ -458,6 +828,18 @@ namespace ECommerceBackend.Controllers
                 _context.Products.Remove(product);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                foreach (var imageUrl in localImageUrls)
+                {
+                    try
+                    {
+                        _imageStorage.DeleteByUrl(imageUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Không thể xóa file ảnh cục bộ {ImageUrl}.", imageUrl);
+                    }
+                }
 
                 return NoContent();
             }

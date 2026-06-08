@@ -39,6 +39,8 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Productimage> Productimages { get; set; }
 
+    public virtual DbSet<Productseries> Productseries { get; set; }
+
     public virtual DbSet<Productvariant> Productvariants { get; set; }
 
     public virtual DbSet<Promotionalcontent> Promotionalcontents { get; set; }
@@ -165,6 +167,13 @@ public partial class ECommerceContext : DbContext
                 .HasMaxLength(50)
                 .HasDefaultValueSql("'Active'")
                 .HasColumnName("status");
+            entity.Property(e => e.Assigneduserid).HasColumnName("assigneduserid");
+            entity.Property(e => e.Handoffstatus)
+                .HasMaxLength(30)
+                .HasColumnName("handoffstatus");
+            entity.Property(e => e.Handoffrequestedat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("handoffrequestedat");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.Chatsessions)
                 .HasForeignKey(d => d.Customerid)
@@ -350,6 +359,7 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Productid).HasColumnName("productid");
             entity.Property(e => e.Brandid).HasColumnName("brandid");
             entity.Property(e => e.Categoryid).HasColumnName("categoryid");
+            entity.Property(e => e.Seriesid).HasColumnName("seriesid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
@@ -366,6 +376,41 @@ public partial class ECommerceContext : DbContext
             entity.HasOne(d => d.Category).WithMany(p => p.Products)
                 .HasForeignKey(d => d.Categoryid)
                 .HasConstraintName("fk_products_categories");
+
+            entity.HasOne(d => d.Series).WithMany(p => p.Products)
+                .HasForeignKey(d => d.Seriesid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_products_productseries");
+        });
+
+        modelBuilder.Entity<Productseries>(entity =>
+        {
+            entity.HasKey(e => e.Seriesid).HasName("productseries_pkey");
+
+            entity.ToTable("productseries");
+
+            entity.HasIndex(e => new { e.Brandid, e.Seriesname }, "ix_productseries_brandid_seriesname").IsUnique();
+
+            entity.Property(e => e.Seriesid).HasColumnName("seriesid");
+            entity.Property(e => e.Brandid).HasColumnName("brandid");
+            entity.Property(e => e.Seriesname)
+                .HasMaxLength(100)
+                .HasColumnName("seriesname");
+            entity.Property(e => e.Displayorder)
+                .HasDefaultValue(0)
+                .HasColumnName("displayorder");
+            entity.Property(e => e.Isactive)
+                .HasDefaultValue(true)
+                .HasColumnName("isactive");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+
+            entity.HasOne(d => d.Brand).WithMany(p => p.Productseries)
+                .HasForeignKey(d => d.Brandid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_productseries_brands");
         });
 
 

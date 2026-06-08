@@ -19,6 +19,7 @@ const ProductsListPage: React.FC = () => {
 
   const categoryId = searchParams.get('categoryId') ? Number(searchParams.get('categoryId')) : undefined;
   const brandId = searchParams.get('brandId') ? Number(searchParams.get('brandId')) : undefined;
+  const seriesId = searchParams.get('seriesId') ? Number(searchParams.get('seriesId')) : undefined;
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -40,6 +41,7 @@ const ProductsListPage: React.FC = () => {
         let filtered = res.data;
         if (categoryId) filtered = filtered.filter(p => p.category?.id === categoryId);
         if (brandId) filtered = filtered.filter(p => p.brand?.id === brandId);
+        if (seriesId) filtered = filtered.filter(p => p.series?.id === seriesId);
         setProducts(filtered);
       } catch {
         setProducts([]);
@@ -48,7 +50,7 @@ const ProductsListPage: React.FC = () => {
       }
     };
     fetchProducts();
-  }, [categoryId, brandId]);
+  }, [categoryId, brandId, seriesId]);
 
   const setFilter = (key: string, value: string | undefined) => {
     setSearchParams(prev => {
@@ -59,7 +61,7 @@ const ProductsListPage: React.FC = () => {
   };
 
   const clearFilters = () => setSearchParams({});
-  const hasFilter = !!(categoryId || brandId);
+  const hasFilter = !!(categoryId || brandId || seriesId);
 
   return (
     <div className="bg-slate-50 min-h-screen">

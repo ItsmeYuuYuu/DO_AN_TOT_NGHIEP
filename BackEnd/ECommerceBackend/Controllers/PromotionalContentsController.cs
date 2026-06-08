@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.PromotionalContents;
+using ECommerceBackend.Services;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,8 +16,15 @@ namespace ECommerceBackend.Controllers
     public class PromotionalContentsController : ControllerBase
     {
         private readonly ECommerceContext _context;
+        private readonly ProductImageStorageService _imageStorage;
 
-        public PromotionalContentsController(ECommerceContext context) => _context = context;
+        public PromotionalContentsController(
+            ECommerceContext context,
+            ProductImageStorageService imageStorage)
+        {
+            _context = context;
+            _imageStorage = imageStorage;
+        }
 
         private static PromotionalContentDto MapToDto(Promotionalcontent p) => new PromotionalContentDto(
             p.Contentid,
@@ -66,7 +74,7 @@ namespace ECommerceBackend.Controllers
 
         // POST: api/PromotionalContents
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Content")]
         public async Task<ActionResult<PromotionalContentDto>> PostPromotionalContent([FromBody] CreatePromotionalContentRequestDto dto)
         {
             var p = new Promotionalcontent
@@ -77,7 +85,7 @@ namespace ECommerceBackend.Controllers
                 Linkurl = dto.Linkurl,
                 Displayorder = dto.Displayorder ?? 0,
                 Isactive = dto.Isactive ?? true,
-                Createdat = DateTime.UtcNow
+                Createdat = DateTime.Now
             };
 
             _context.Promotionalcontents.Add(p);
@@ -88,12 +96,13 @@ namespace ECommerceBackend.Controllers
 
         // PUT: api/PromotionalContents/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Content")]
         public async Task<IActionResult> PutPromotionalContent(int id, [FromBody] UpdatePromotionalContentRequestDto dto)
         {
             var p = await _context.Promotionalcontents.FindAsync(id);
             if (p == null) return NotFound();
 
+            var oldImageUrl = p.Imageurl;
             p.Contenttype = dto.Contenttype;
             p.Title = dto.Title;
             p.Imageurl = dto.Imageurl;
@@ -104,6 +113,8 @@ namespace ECommerceBackend.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                if (!string.Equals(oldImageUrl, p.Imageurl, StringComparison.OrdinalIgnoreCase))
+                    _imageStorage.DeleteByUrl(oldImageUrl);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -116,14 +127,16 @@ namespace ECommerceBackend.Controllers
 
         // DELETE: api/PromotionalContents/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Content")]
         public async Task<IActionResult> DeletePromotionalContent(int id)
         {
             var p = await _context.Promotionalcontents.FindAsync(id);
             if (p == null) return NotFound();
 
+            var imageUrl = p.Imageurl;
             _context.Promotionalcontents.Remove(p);
             await _context.SaveChangesAsync();
+            _imageStorage.DeleteByUrl(imageUrl);
 
             return NoContent();
         }

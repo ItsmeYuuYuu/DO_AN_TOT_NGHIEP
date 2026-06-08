@@ -27,7 +27,7 @@ namespace ECommerceBackend.Controllers
 
         // GET: api/Customers
         [HttpGet]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
         public async Task<ActionResult<IEnumerable<CustomerDto>>> GetCustomers()
         {
             var customers = await _context.Customers.ToListAsync();
@@ -42,7 +42,13 @@ namespace ECommerceBackend.Controllers
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null) return NotFound();
 
-            var isAdminOrStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
+            var isAdminOrStaff =
+                User.IsInRole("Admin") ||
+                User.IsInRole("Manager") ||
+                User.IsInRole("Sales") ||
+                User.IsInRole("Warranty") ||
+                User.IsInRole("Consultant") ||
+                User.IsInRole("Staff");
             if (!isAdminOrStaff)
             {
                 var claimUserId = User.FindFirst("userid")?.Value;
@@ -65,7 +71,7 @@ namespace ECommerceBackend.Controllers
 
         // POST: api/Customers
         [HttpPost]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Staff")]
         public async Task<ActionResult<CustomerDto>> PostCustomer([FromBody] CreateCustomerRequestDto dto)
         {
             var customer = new Customer
@@ -91,7 +97,11 @@ namespace ECommerceBackend.Controllers
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null) return NotFound();
 
-            var isAdminOrStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
+            var isAdminOrStaff =
+                User.IsInRole("Admin") ||
+                User.IsInRole("Manager") ||
+                User.IsInRole("Sales") ||
+                User.IsInRole("Staff");
             if (!isAdminOrStaff)
             {
                 var claimUserId = User.FindFirst("userid")?.Value;

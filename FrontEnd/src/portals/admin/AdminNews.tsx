@@ -5,6 +5,8 @@ import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { DataTable } from '@/components/DataTable';
+import { productsApi } from '@/features/products/api/productsApi';
+import { LoaderCircle, Upload } from 'lucide-react';
 
 const AdminNews: React.FC = () => {
   const [news, setNews] = useState<News[]>([]);
@@ -13,6 +15,8 @@ const AdminNews: React.FC = () => {
   const [editing, setEditing] = useState<Partial<News> | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [uploadedThumbnailFileName, setUploadedThumbnailFileName] = useState<string | null>(null);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
 
   useEffect(() => {
     fetchNews();
@@ -31,20 +35,52 @@ const AdminNews: React.FC = () => {
   };
 
   const openCreate = () => {
+    if (uploadedThumbnailFileName) {
+      void productsApi.deleteUploadedImage(uploadedThumbnailFileName);
+    }
+    setUploadedThumbnailFileName(null);
     setEditing({ title: '', summary: '', content: '', thumbnail: '', isactive: true });
     setError('');
     setModalOpen(true);
   };
 
   const openEdit = (n: News) => {
+    if (uploadedThumbnailFileName) {
+      void productsApi.deleteUploadedImage(uploadedThumbnailFileName);
+    }
+    setUploadedThumbnailFileName(null);
     setEditing({ ...n });
     setError('');
     setModalOpen(true);
   };
 
-  const closeModal = () => {
+  const closeModal = (deleteTemporaryImage = true) => {
+    if (deleteTemporaryImage && uploadedThumbnailFileName) {
+      void productsApi.deleteUploadedImage(uploadedThumbnailFileName);
+    }
+    setUploadedThumbnailFileName(null);
     setModalOpen(false);
     setEditing(null);
+  };
+
+  const handleThumbnailUpload = async (file?: File) => {
+    if (!file) return;
+
+    setUploadingThumbnail(true);
+    setError('');
+    try {
+      if (uploadedThumbnailFileName) {
+        await productsApi.deleteUploadedImage(uploadedThumbnailFileName).catch(() => undefined);
+      }
+      const response = await productsApi.uploadImages([file]);
+      const uploaded = response.data[0];
+      setEditing(current => current ? { ...current, thumbnail: uploaded.url } : current);
+      setUploadedThumbnailFileName(uploaded.fileName);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Không thể tải ảnh thumbnail lên.');
+    } finally {
+      setUploadingThumbnail(false);
+    }
   };
 
   const handleSave = async () => {
@@ -69,7 +105,7 @@ const AdminNews: React.FC = () => {
         await newsApi.create(data);
       }
       await fetchNews();
-      closeModal();
+      closeModal(false);
     } catch (err: any) {
       setError(err.response?.data?.message || err.response?.data?.Message || 'Lỗi khi lưu thông tin. Vui lòng thử lại.');
     } finally {
@@ -150,18 +186,41 @@ const AdminNews: React.FC = () => {
         loading={loading}
       />
 
-      <Modal isOpen={modalOpen} onClose={closeModal} title={editing?.postid ? 'Sửa tin tức' : 'Thêm tin tức mới'}>
+      <Modal isOpen={modalOpen} onClose={() => closeModal()} title={editing?.postid ? 'Sửa tin tức' : 'Thêm tin tức mới'}>
         <div className="space-y-4">
           <Input 
             label="Tiêu đề (*)" 
             value={editing?.title || ''} 
             onChange={e => setEditing({ ...editing, title: e.target.value })} 
           />
-          <Input 
-            label="Đường dẫn Thumbnail" 
-            value={editing?.thumbnail || ''} 
-            onChange={e => setEditing({ ...editing, thumbnail: e.target.value })} 
-          />
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700">Ảnh thumbnail</label>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100">
+              {uploadingThumbnail
+                ? <LoaderCircle size={17} className="animate-spin" />
+                : <Upload size={17} />}
+              {uploadingThumbnail
+                ? 'Đang tải ảnh...'
+                : editing?.thumbnail ? 'Chọn ảnh khác' : 'Chọn ảnh từ máy'}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                disabled={uploadingThumbnail}
+                onChange={event => {
+                  void handleThumbnailUpload(event.target.files?.[0]);
+                  event.target.value = '';
+                }}
+              />
+            </label>
+            {editing?.thumbnail && (
+              <img
+                src={editing.thumbnail}
+                alt="Xem trước thumbnail"
+                className="h-40 w-full rounded-xl border border-slate-200 object-cover"
+              />
+            )}
+          </div>
           <div className="space-y-1">
             <label className="text-sm font-bold text-slate-700">Tóm tắt</label>
             <textarea 
@@ -195,7 +254,7 @@ const AdminNews: React.FC = () => {
           {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={closeModal} disabled={saving}>Hủy</Button>
+            <Button variant="outline" onClick={() => closeModal()} disabled={saving}>Hủy</Button>
             <Button onClick={handleSave} isLoading={saving}>Lưu tin tức</Button>
           </div>
         </div>

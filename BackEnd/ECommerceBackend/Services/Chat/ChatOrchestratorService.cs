@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Chats;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Linq;
 
 namespace ECommerceBackend.Services.Chat
@@ -11,63 +12,70 @@ namespace ECommerceBackend.Services.Chat
     {
         private readonly ECommerceContext _context;
         private readonly IAiProvider _aiProvider;
+        private readonly AiAssistantOptions _options;
 
-        public ChatOrchestratorService(ECommerceContext context, IAiProvider aiProvider)
+        public ChatOrchestratorService(
+            ECommerceContext context,
+            IAiProvider aiProvider,
+            IOptions<AiAssistantOptions> options)
         {
             _context = context;
             _aiProvider = aiProvider;
+            _options = options.Value;
         }
 
         public async Task<ChatMessageDto> ProcessUserMessageAsync(Chatsession session, string content)
         {
-            // 1. Transaction to save both user and assistant messages safely
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            var userMessage = new Chatmessage
             {
-                // 2. Save user message
-                var userMessage = new Chatmessage
-                {
-                    Sessionid = session.Sessionid,
-                    Sendertype = "user",
-                    Messagecontent = content,
-                    Sentat = DateTime.UtcNow
-                };
-                _context.Chatmessages.Add(userMessage);
-                await _context.SaveChangesAsync();
+                Sessionid = session.Sessionid,
+                Sendertype = "user",
+                Messagecontent = content.Trim(),
+                Sentat = DateTime.Now
+            };
+            _context.Chatmessages.Add(userMessage);
+            await _context.SaveChangesAsync();
 
-                // 3. Get AI Response
-                var aiResponseText = await _aiProvider.GetResponseAsync(content);
+            var history = await _context.Chatmessages
+                .AsNoTracking()
+                .Where(message =>
+                    message.Sessionid == session.Sessionid &&
+                    message.Messageid != userMessage.Messageid &&
+                    (message.Sendertype == "user" || message.Sendertype == "assistant"))
+                .OrderByDescending(message => message.Sentat)
+                .Take(Math.Clamp(_options.MaxHistoryMessages, 1, 30))
+                .OrderBy(message => message.Sentat)
+                .Select(message => new AiConversationMessage(
+                    message.Sendertype == "assistant" ? "assistant" : "user",
+                    message.Messagecontent))
+                .ToListAsync();
 
-                // 4. Save assistant message
-                var assistantMessage = new Chatmessage
-                {
-                    Sessionid = session.Sessionid,
-                    Sendertype = "assistant",
-                    Messagecontent = aiResponseText,
-                    Sentat = DateTime.UtcNow
-                };
-                _context.Chatmessages.Add(assistantMessage);
+            var aiResponseText = await _aiProvider.GetResponseAsync(
+                new AiConversationRequest(
+                    session.Sessionid,
+                    userMessage.Messagecontent,
+                    history));
 
-                // Update session time
-                session.Endtime = DateTime.UtcNow;
-                _context.Chatsessions.Update(session);
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return new ChatMessageDto(
-                    assistantMessage.Messageid,
-                    assistantMessage.Sessionid,
-                    assistantMessage.Sendertype,
-                    assistantMessage.Messagecontent,
-                    assistantMessage.Sentat
-                );
-            }
-            catch (Exception)
+            var assistantMessage = new Chatmessage
             {
-                await transaction.RollbackAsync();
-                throw;
-            }
+                Sessionid = session.Sessionid,
+                Sendertype = "assistant",
+                Messagecontent = aiResponseText,
+                Sentat = DateTime.Now
+            };
+            _context.Chatmessages.Add(assistantMessage);
+
+            session.Endtime = DateTime.Now;
+            _context.Chatsessions.Update(session);
+            await _context.SaveChangesAsync();
+
+            return new ChatMessageDto(
+                assistantMessage.Messageid,
+                assistantMessage.Sessionid,
+                assistantMessage.Sendertype,
+                assistantMessage.Messagecontent,
+                assistantMessage.Sentat
+            );
         }
     }
 }

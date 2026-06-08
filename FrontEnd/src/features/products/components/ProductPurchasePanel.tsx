@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Check } from 'lucide-react';
+import { ShoppingCart, Check, PackageCheck, Zap } from 'lucide-react';
 import { formatCurrency, getDiscountPercent } from '@/utils/formatters';
 import type { FullProductVariant } from '../api/productsApi';
 import { useCart } from '@/features/orders/context/CartContext';
@@ -12,6 +12,15 @@ interface ProductPurchasePanelProps {
   selectedVariant: FullProductVariant | null;
   onSelectVariant: (v: FullProductVariant) => void;
 }
+
+const COLOR_SWATCHES: Record<string, string> = {
+  Đen: '#171717',
+  Trắng: '#f8fafc',
+  Xanh: '#2563eb',
+  Vàng: '#eab308',
+  Hồng: '#ec4899',
+  Xám: '#94a3b8',
+};
 
 export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
   productId,
@@ -28,7 +37,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
   // Parse variants into attribute groups
   const optionGroups = useMemo(() => {
     const groups: Record<string, Set<string>> = {};
-    const allowedKeys = ['Màu sắc', 'Màu', 'RAM', 'Bộ nhớ trong', 'ROM'];
+    const allowedKeys = ['Màu sắc', 'Màu', 'RAM', 'Bộ nhớ trong', 'ROM', 'Dung lượng', 'Xuất xứ'];
 
     variants.forEach(v => {
       v.attributes?.forEach(attr => {
@@ -68,6 +77,8 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
 
   const discount = getDiscountPercent(selectedVariant?.baseprice, selectedVariant?.saleprice);
   const inCart = selectedVariant ? isInCart(selectedVariant.variantid) : false;
+  const stock = selectedVariant?.stockquantity ?? 0;
+  const isOutOfStock = !selectedVariant || stock <= 0;
 
   const handleOptionClick = (attrName: string, valName: string) => {
     const newOptions = { ...selectedOptions, [attrName]: valName };
@@ -103,15 +114,15 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
     }
   };
 
-  const handleAddToCart = () => {
-    if (!selectedVariant) return;
+  const handleAddToCart = async () => {
+    if (!selectedVariant || isOutOfStock) return;
     const images = selectedVariant.productimages ?? [];
     const primary = images.find(i => i.ismain) ?? images[0];
     
     const attrsName = selectedVariant.attributes?.map(a => a.valuename).join(' - ');
     const variantName = attrsName || selectedVariant.sku;
 
-    addToCart({
+    await addToCart({
       variantId: selectedVariant.variantid,
       productId: productId,
       productName: productName,
@@ -128,42 +139,58 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
   const hasOptions = Object.keys(optionGroups).length > 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end gap-4 pb-2 border-b border-slate-100">
-        <span className="text-4xl font-bold text-red-600">
+    <div className="flex h-full flex-col gap-5">
+      <div className="rounded-2xl bg-slate-50 p-5">
+        <div className="flex flex-wrap items-end gap-3">
+          <span className="text-3xl font-black tracking-tight text-red-600 md:text-4xl">
           {formatCurrency(selectedVariant?.saleprice ?? selectedVariant?.baseprice ?? 0)}
-        </span>
-        {discount && discount > 0 ? (
-          <div className="flex flex-col pb-1">
+          </span>
+          {discount && discount > 0 ? (
+            <>
             <span className="text-sm text-slate-400 line-through mb-1">
               {formatCurrency(selectedVariant?.baseprice ?? 0)}
             </span>
-          </div>
-        ) : null}
+              <span className="mb-0.5 rounded-md bg-red-600 px-2 py-1 text-xs font-black text-white">
+                -{discount}%
+              </span>
+            </>
+          ) : null}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold ${
+            isOutOfStock ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-700'
+          }`}>
+            <PackageCheck size={15} />
+            {isOutOfStock ? 'Tạm hết hàng' : `Còn ${stock} sản phẩm`}
+          </span>
+        </div>
       </div>
-
-      <p className="text-sm text-red-600 italic">
-        Quý khách vui lòng chọn màu sắc / ram / bộ nhớ trong / option để xem giá sản phẩm chính xác. Xin cảm ơn!
-      </p>
 
       {hasOptions ? (
         <div className="flex flex-col gap-5">
           {Object.entries(optionGroups).map(([attrName, values]) => (
             <div key={attrName}>
-              <h3 className="font-semibold text-slate-800 text-sm mb-2 uppercase tracking-wide">{attrName}:</h3>
+              <h3 className="mb-2 text-sm font-bold text-slate-800">{attrName}</h3>
               <div className="flex flex-wrap gap-2">
                 {values.map(val => {
                   const isActive = selectedOptions[attrName] === val;
+                  const isColor = attrName === 'Màu sắc' || attrName === 'Màu';
                   return (
                     <button
                       key={val}
                       onClick={() => handleOptionClick(attrName, val)}
-                      className={`px-4 py-2 border rounded text-sm font-medium transition-all min-w-[80px] ${
+                      className={`min-w-[84px] rounded-lg border-2 px-4 py-2.5 text-sm font-semibold transition-all ${
                         isActive 
-                          ? 'border-red-500 text-red-600 shadow-sm' 
-                          : 'border-slate-300 text-slate-700 hover:border-slate-400 bg-white hover:bg-slate-50'
+                          ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50/50'
                       }`}
                     >
+                      {isColor && (
+                        <span
+                          className="mr-2 inline-block h-4 w-4 rounded-full border border-slate-300 align-[-3px]"
+                          style={{ backgroundColor: COLOR_SWATCHES[val] ?? '#cbd5e1' }}
+                        />
+                      )}
                       {val}
                     </button>
                   );
@@ -184,11 +211,11 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
                   <button
                     key={v.variantid}
                     onClick={() => { onSelectVariant(v); }}
-                    className={`p-3 border rounded text-center transition-all ${
-                      isActive ? 'border-red-500 text-red-600' : 'border-slate-300 hover:border-slate-400 bg-white'
+                    className={`rounded-lg border-2 p-3 text-center transition-all ${
+                      isActive ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white hover:border-blue-300'
                     }`}
                   >
-                    <div className={`font-semibold text-sm line-clamp-2 ${isActive ? 'text-red-600' : 'text-slate-700'}`}>
+                    <div className={`font-semibold text-sm line-clamp-2 ${isActive ? 'text-blue-700' : 'text-slate-700'}`}>
                       {v.sku}
                     </div>
                   </button>
@@ -199,37 +226,31 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
         )
       )}
 
-      <div className="flex flex-col gap-3 mt-4">
+      <div className="mt-auto grid grid-cols-1 gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2">
         <button
-          onClick={() => { handleAddToCart(); navigate('/cart'); }}
-          className="w-full py-3 rounded bg-red-600 hover:bg-red-700 text-white transition-all shadow-md flex flex-col items-center justify-center"
+          onClick={async () => { await handleAddToCart(); navigate('/cart'); }}
+          disabled={isOutOfStock}
+          className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-white shadow-sm transition-all hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
-          <span className="font-bold text-lg uppercase">Mua Ngay</span>
-          <span className="text-xs opacity-90">(Giao hàng tận nơi hoặc nhận tại cửa hàng)</span>
+          <span className="flex items-center gap-2 text-sm font-black uppercase">
+            <Zap size={17} className="fill-current" /> {isOutOfStock ? 'Tạm hết hàng' : 'Mua ngay'}
+          </span>
         </button>
 
-        <div className="flex flex-row gap-3">
-          <button
-            onClick={handleAddToCart}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded font-bold transition-all ${
-              addedToCart
-                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                : inCart
-                ? 'bg-blue-50 border border-blue-500 text-blue-600 hover:bg-blue-100'
-                : 'bg-blue-500 text-white hover:bg-blue-600 shadow-sm'
-            }`}
-          >
-            {addedToCart ? <Check size={18} /> : <ShoppingCart size={18} />}
-            {addedToCart ? 'Đã thêm' : inCart ? 'Trong giỏ hàng' : 'Thêm vào giỏ hàng'}
-          </button>
-          <a
-            href="#"
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded font-bold transition-all bg-blue-500 text-white hover:bg-blue-600 shadow-sm"
-            onClick={(e) => { e.preventDefault(); alert('Chức năng mua trả góp đang được phát triển'); }}
-          >
-            Mua trả góp
-          </a>
-        </div>
+        <button
+          onClick={() => { void handleAddToCart(); }}
+          disabled={isOutOfStock}
+          className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-bold transition-all disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 ${
+            addedToCart
+              ? 'border-emerald-500 bg-emerald-500 text-white'
+              : inCart
+              ? 'border-blue-500 bg-blue-50 text-blue-600'
+              : 'border-blue-600 bg-white text-blue-600 hover:bg-blue-50'
+          }`}
+        >
+          {addedToCart ? <Check size={17} /> : <ShoppingCart size={17} />}
+          {addedToCart ? 'Đã thêm' : inCart ? 'Trong giỏ' : 'Thêm vào giỏ'}
+        </button>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.News;
 using ECommerceBackend.DTOs.Common;
+using ECommerceBackend.Services;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,8 +17,15 @@ namespace ECommerceBackend.Controllers
     public class NewsController : ControllerBase
     {
         private readonly ECommerceContext _context;
+        private readonly ProductImageStorageService _imageStorage;
 
-        public NewsController(ECommerceContext context) => _context = context;
+        public NewsController(
+            ECommerceContext context,
+            ProductImageStorageService imageStorage)
+        {
+            _context = context;
+            _imageStorage = imageStorage;
+        }
 
         private static NewsDto MapToDto(News n) => new NewsDto(
             n.Postid,
@@ -54,7 +62,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Content")]
         public async Task<ActionResult<NewsDto>> PostNews([FromBody] CreateNewsRequestDto dto)
         {
             var claimUserId = User.FindFirst("userid")?.Value;
@@ -68,7 +76,7 @@ namespace ECommerceBackend.Controllers
                 Content = dto.Content,
                 Thumbnail = dto.Thumbnail,
                 Userid = int.Parse(claimUserId),
-                Createdat = DateTime.UtcNow,
+                Createdat = DateTime.Now,
                 Isactive = dto.Isactive ?? true
             };
 
@@ -80,12 +88,13 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Content")]
         public async Task<IActionResult> PutNews(int id, [FromBody] UpdateNewsRequestDto dto)
         {
             var news = await _context.News.FindAsync(id);
             if (news == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
 
+            var oldThumbnail = news.Thumbnail;
             news.Title = dto.Title;
             news.Summary = dto.Summary;
             news.Content = dto.Content;
@@ -95,7 +104,12 @@ namespace ECommerceBackend.Controllers
                 news.Isactive = dto.Isactive.Value;
             }
 
-            try { await _context.SaveChangesAsync(); }
+            try
+            {
+                await _context.SaveChangesAsync();
+                if (!string.Equals(oldThumbnail, news.Thumbnail, StringComparison.OrdinalIgnoreCase))
+                    _imageStorage.DeleteByUrl(oldThumbnail);
+            }
             catch (DbUpdateConcurrencyException)
             {
                 if (!_context.News.Any(e => e.Postid == id)) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
@@ -107,13 +121,15 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Content")]
         public async Task<IActionResult> DeleteNews(int id)
         {
             var news = await _context.News.FindAsync(id);
             if (news == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
+            var thumbnail = news.Thumbnail;
             _context.News.Remove(news);
             await _context.SaveChangesAsync();
+            _imageStorage.DeleteByUrl(thumbnail);
             return NoContent();
         }
     }

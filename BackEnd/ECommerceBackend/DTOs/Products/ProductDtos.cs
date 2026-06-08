@@ -17,7 +17,8 @@ namespace ECommerceBackend.DTOs.Products
         decimal? Saleprice,
         ConditionDto? Condition,
         List<ProductImageDto>? Productimages,
-        List<VariantAttributeValueDto>? Attributes = null
+        List<VariantAttributeValueDto>? Attributes = null,
+        int? Stockquantity = null
     );
 
     public record ProductListItemDto(
@@ -27,6 +28,7 @@ namespace ECommerceBackend.DTOs.Products
         DateTime? Createdat,
         LookupDto? Brand,
         LookupDto? Category,
+        LookupDto? Series,
         List<ProductVariantDto>? Productvariants
     );
 
@@ -39,8 +41,9 @@ namespace ECommerceBackend.DTOs.Products
             DateTime? Createdat,
             LookupDto? Brand,
             LookupDto? Category,
+            LookupDto? Series,
             List<ProductVariantDto>? Productvariants
-        ) : base(Productid, Productname, Description, Createdat, Brand, Category, Productvariants) { }
+        ) : base(Productid, Productname, Description, Createdat, Brand, Category, Series, Productvariants) { }
     }
 
     public record ReviewSummaryDto(double AvgRating, int TotalReviews, int Star5, int Star4, int Star3, int Star2, int Star1);
@@ -59,10 +62,11 @@ namespace ECommerceBackend.DTOs.Products
             DateTime? Createdat,
             LookupDto? Brand,
             LookupDto? Category,
+            LookupDto? Series,
             List<ProductVariantDto>? Productvariants,
             ReviewSummaryDto? ReviewSummary = null,
             List<ProductListItemDto>? RelatedProducts = null
-        ) : base(Productid, Productname, Description, Createdat, Brand, Category, Productvariants)
+        ) : base(Productid, Productname, Description, Createdat, Brand, Category, Series, Productvariants)
         {
             this.ReviewSummary = ReviewSummary;
             this.RelatedProducts = RelatedProducts;
@@ -73,14 +77,16 @@ namespace ECommerceBackend.DTOs.Products
         [Required(ErrorMessage = "Tên sản phẩm là bắt buộc")] string Productname,
         string? Description,
         int? Categoryid,
-        int? Brandid
+        int? Brandid,
+        int? Seriesid
     );
 
     public record UpdateProductRequestDto(
         [Required(ErrorMessage = "Tên sản phẩm là bắt buộc")] string Productname,
         string? Description,
         int? Categoryid,
-        int? Brandid
+        int? Brandid,
+        int? Seriesid
     );
 
     public record CreateProductVariantRequestDto(
@@ -105,12 +111,18 @@ namespace ECommerceBackend.DTOs.Products
         [Required] string Value
     );
 
+    public record CreateProductImageDto(
+        [Required, StringLength(500)] string Imageurl,
+        bool Ismain = false
+    );
+
     public record CreateFullProductVariantDto(
         [StringLength(50, ErrorMessage = "Tình trạng không được vượt quá 50 ký tự")] string? Condition,
         [Required, StringLength(50, ErrorMessage = "SKU không được vượt quá 50 ký tự")] string Sku,
         [Range(0, double.MaxValue, ErrorMessage = "Giá cơ bản không hợp lệ")] decimal Baseprice,
         [Range(0, double.MaxValue, ErrorMessage = "Giá khuyến mãi không hợp lệ")] decimal? Saleprice,
         List<VariantSpecDto>? Specs,
+        List<CreateProductImageDto>? Images,
         [Range(0, 10000, ErrorMessage = "Số lượng tồn kho phải từ 0 đến 10000")] int? Quantity = null
     );
 
@@ -119,6 +131,27 @@ namespace ECommerceBackend.DTOs.Products
         string? Description,
         int? Categoryid,
         int? Brandid,
+        int? Seriesid,
         List<CreateFullProductVariantDto>? Variants
+    );
+
+    public record UpdateFullProductVariantDto(
+        int? Variantid,
+        [StringLength(50)] string? Condition,
+        [Required, StringLength(50)] string Sku,
+        [Range(0, double.MaxValue)] decimal Baseprice,
+        [Range(0, double.MaxValue)] decimal? Saleprice,
+        List<VariantSpecDto>? Specs,
+        List<CreateProductImageDto>? Images,
+        [Range(0, 10000)] int Quantity
+    );
+
+    public record UpdateFullProductDto(
+        [Required, StringLength(200)] string Productname,
+        string? Description,
+        int? Categoryid,
+        int? Brandid,
+        int? Seriesid,
+        [Required, MinLength(1)] List<UpdateFullProductVariantDto> Variants
     );
 }

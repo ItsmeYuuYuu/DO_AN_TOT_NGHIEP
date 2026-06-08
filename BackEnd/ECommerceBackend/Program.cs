@@ -10,7 +10,9 @@ using ECommerceBackend.Filters;
 using ECommerceBackend.Middlewares;
 using ECommerceBackend.DTOs.Common;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,9 +66,47 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// ── Chat abuse protection ────────────────────────────────────────────────────
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json; charset=utf-8";
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new ApiErrorDto(
+                "Bạn gửi yêu cầu quá nhanh. Vui lòng chờ một chút rồi thử lại.",
+                null),
+            cancellationToken);
+    };
+    options.AddPolicy("ChatRequests", httpContext =>
+    {
+        var userId = httpContext.User.FindFirst("userid")?.Value;
+        var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var partitionKey = !string.IsNullOrWhiteSpace(userId)
+            ? $"user:{userId}"
+            : $"ip:{remoteIp}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 12,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
+});
+
 // ── Audit Log (Singleton background service + scoped filter) ─────────────────────
-builder.Services.AddScoped<ECommerceBackend.Services.Chat.IAiProvider, ECommerceBackend.Services.Chat.MockAiProvider>();
+builder.Services.Configure<ECommerceBackend.Services.Chat.AiAssistantOptions>(
+    builder.Configuration.GetSection(ECommerceBackend.Services.Chat.AiAssistantOptions.SectionName));
+builder.Services.AddHttpClient("AiAssistant");
+builder.Services.AddScoped<ECommerceBackend.Services.Chat.IProductConsultationService, ECommerceBackend.Services.Chat.ProductConsultationService>();
+builder.Services.AddScoped<ECommerceBackend.Services.Chat.IAiProvider, ECommerceBackend.Services.Chat.GroundedAiProvider>();
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatOrchestratorService, ECommerceBackend.Services.Chat.ChatOrchestratorService>();
+builder.Services.AddSingleton<ProductImageStorageService>();
 builder.Services.AddSingleton<AuditLogService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AuditLogService>());
 builder.Services.AddScoped<AuditActionFilter>();
@@ -156,7 +196,10 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // ── Seed Database ─────────────────────────────────────────────────────────────
-await DbInitializer.SeedAsync(app.Services);
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    await DbInitializer.SeedAsync(app.Services);
+}
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
@@ -171,7 +214,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseAuthentication();   // ← Must come before UseAuthorization
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/api/health");

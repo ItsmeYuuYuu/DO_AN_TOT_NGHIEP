@@ -24,6 +24,7 @@ public static class DbInitializer
             {
                 logger.LogWarning(ex, "Failed to prepopulate migration history. This is expected if database doesn't support the raw SQL.");
             }
+            await EnsureProductSeriesSchemaAsync(context);
         }
         catch (Exception ex)
         {
@@ -32,14 +33,45 @@ public static class DbInitializer
         }
 
         // ── 1. ROLES ──────────────────────────────────────────────────────────
-        if (!context.Roles.Any())
+        var requiredRoles = new[]
         {
-            context.Roles.AddRange(
-                new Role { Roleid = 1, Rolename = "Admin" },
-                new Role { Roleid = 2, Rolename = "Staff" },
-                new Role { Roleid = 3, Rolename = "Customer" }
-            );
+            new Role { Roleid = 1, Rolename = "Admin" },
+            new Role { Roleid = 2, Rolename = "Staff" },
+            new Role { Roleid = 3, Rolename = "Customer" },
+            new Role { Roleid = 4, Rolename = "Manager" },
+            new Role { Roleid = 5, Rolename = "Sales" },
+            new Role { Roleid = 6, Rolename = "Warehouse" },
+            new Role { Roleid = 7, Rolename = "Warranty" },
+            new Role { Roleid = 8, Rolename = "Content" },
+            new Role { Roleid = 9, Rolename = "Consultant" }
+        };
+
+        var existingRoleIds = await context.Roles
+            .Select(role => role.Roleid)
+            .ToListAsync();
+        var missingRoles = requiredRoles
+            .Where(role => !existingRoleIds.Contains(role.Roleid))
+            .ToList();
+        if (missingRoles.Count > 0)
+        {
+            context.Roles.AddRange(missingRoles);
             await context.SaveChangesAsync();
+        }
+
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE chatsessions ADD COLUMN IF NOT EXISTS assigneduserid integer NULL;");
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE chatsessions ADD COLUMN IF NOT EXISTS handoffstatus character varying(30) NULL;");
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE chatsessions ADD COLUMN IF NOT EXISTS handoffrequestedat timestamp without time zone NULL;");
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE INDEX IF NOT EXISTS ix_chatsessions_handoffstatus ON chatsessions (handoffstatus);");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not initialize chat handoff columns.");
         }
 
         // ── 2. ADMIN USER (email @gmail.com + BCrypt hash) ───────────────────
@@ -89,6 +121,16 @@ public static class DbInitializer
         }
 
         await context.SaveChangesAsync();
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(
+                "SELECT setval(pg_get_serial_sequence('users', 'userid'), " +
+                "COALESCE((SELECT MAX(userid) FROM users), 1), true);");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not synchronize the user ID sequence.");
+        }
 
         // ── 3. CATEGORIES ────────────────────────────────────────────────────
         if (!context.Categories.Any())
@@ -126,14 +168,49 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
+        // ── 4.1. PRODUCT SERIES ──────────────────────────────────────────────
+        if (!context.Productseries.Any())
+        {
+            var brandIds = context.Brands.ToDictionary(b => b.Brandname, b => b.Brandid);
+            var series = new List<Productseries>();
+
+            void AddSeries(string brandName, params string[] names)
+            {
+                if (!brandIds.TryGetValue(brandName, out var brandId)) return;
+                for (var index = 0; index < names.Length; index++)
+                {
+                    series.Add(new Productseries
+                    {
+                        Brandid = brandId,
+                        Seriesname = names[index],
+                        Displayorder = index,
+                        Isactive = true,
+                        Createdat = DateTime.Now
+                    });
+                }
+            }
+
+            AddSeries("Google Pixel", "Pixel", "Pixel Pro", "Pixel Fold");
+            AddSeries("iPhone", "iPhone", "iPhone Pro", "iPhone Pro Max");
+            AddSeries("Samsung", "Galaxy S", "Galaxy A", "Galaxy Z Fold", "Galaxy Z Flip");
+            AddSeries("Xiaomi", "Xiaomi", "Redmi", "Poco");
+            AddSeries("OPPO", "Find", "Reno", "A Series");
+            AddSeries("vivo", "V Series", "Y Series", "X Series");
+            AddSeries("Realme", "Number Series", "GT Series", "C Series");
+            AddSeries("OnePlus", "OnePlus", "Nord");
+
+            context.Productseries.AddRange(series);
+            await context.SaveChangesAsync();
+        }
+
         // ── 5. PRODUCTS & VARIANTS ───────────────────────────────────────────
         if (!context.Products.Any())
         {
             var products = new[]
             {
-                new Product { Productid = 101, Categoryid = 1, Brandid = 1, Productname = "Google Pixel 8 Pro", Description = "Điện thoại Google Pixel cao cấp nhất với chip Tensor G3 và camera AI.", Createdat = DateTime.UtcNow },
-                new Product { Productid = 102, Categoryid = 1, Brandid = 2, Productname = "iPhone 15 Pro Max", Description = "Khung Titan, chip A17 Pro, cổng USB-C tiện lợi.", Createdat = DateTime.UtcNow },
-                new Product { Productid = 103, Categoryid = 1, Brandid = 3, Productname = "Samsung Galaxy S24 Ultra", Description = "Thiết kế phẳng, khung Titan chắc chắn, tích hợp các tính năng Galaxy AI.", Createdat = DateTime.UtcNow }
+                new Product { Productid = 101, Categoryid = 1, Brandid = 1, Seriesid = context.Productseries.FirstOrDefault(s => s.Seriesname == "Pixel Pro" && s.Brand.Brandname == "Google Pixel")?.Seriesid, Productname = "Google Pixel 8 Pro", Description = "Điện thoại Google Pixel cao cấp nhất với chip Tensor G3 và camera AI.", Createdat = DateTime.UtcNow },
+                new Product { Productid = 102, Categoryid = 1, Brandid = 11, Seriesid = context.Productseries.FirstOrDefault(s => s.Seriesname == "iPhone Pro Max" && s.Brand.Brandname == "iPhone")?.Seriesid, Productname = "iPhone 15 Pro Max", Description = "Khung Titan, chip A17 Pro, cổng USB-C tiện lợi.", Createdat = DateTime.UtcNow },
+                new Product { Productid = 103, Categoryid = 1, Brandid = 12, Seriesid = context.Productseries.FirstOrDefault(s => s.Seriesname == "Galaxy S" && s.Brand.Brandname == "Samsung")?.Seriesid, Productname = "Samsung Galaxy S24 Ultra", Description = "Thiết kế phẳng, khung Titan chắc chắn, tích hợp các tính năng Galaxy AI.", Createdat = DateTime.UtcNow }
             };
             context.Products.AddRange(products);
             await context.SaveChangesAsync();
@@ -147,6 +224,51 @@ public static class DbInitializer
                 new Productvariant { Variantid = 1031, Productid = 103, Condition = "Mới 100%", Sku = "SAM-S24U-256-NEW", Baseprice = 33990000, Saleprice = 31990000, Specifications = "{\"Màn hình\": \"6.8 inch Dynamic AMOLED 2X\", \"Chipset\": \"Snapdragon 8 Gen 3 for Galaxy\", \"RAM\": \"12GB\", \"Bộ nhớ\": \"256GB\", \"Pin\": \"5000 mAh\"}" }
             };
             context.Productvariants.AddRange(variants);
+            await context.SaveChangesAsync();
+        }
+
+        // Attach existing products to a matching series when possible.
+        if (context.Products.Any(p => p.Seriesid == null) && context.Productseries.Any())
+        {
+            var series = context.Productseries
+                .Include(s => s.Brand)
+                .ToList();
+            var productsWithoutSeries = context.Products
+                .Include(p => p.Brand)
+                .Where(p => p.Seriesid == null)
+                .ToList();
+
+            Productseries? FindSeries(Product product, params string[] names)
+            {
+                return series.FirstOrDefault(item =>
+                    item.Brandid == product.Brandid &&
+                    names.Any(name => item.Seriesname.Equals(name, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            foreach (var product in productsWithoutSeries)
+            {
+                var name = product.Productname.ToLowerInvariant();
+                Productseries? matched = null;
+
+                if (name.Contains("redmi")) matched = FindSeries(product, "Redmi");
+                else if (name.Contains("poco")) matched = FindSeries(product, "Poco");
+                else if (name.Contains("xiaomi")) matched = FindSeries(product, "Xiaomi");
+                else if (name.Contains("fold")) matched = FindSeries(product, "Galaxy Z Fold", "Pixel Fold");
+                else if (name.Contains("flip")) matched = FindSeries(product, "Galaxy Z Flip");
+                else if (name.Contains("galaxy s")) matched = FindSeries(product, "Galaxy S");
+                else if (name.Contains("galaxy a")) matched = FindSeries(product, "Galaxy A");
+                else if (name.Contains("pro max")) matched = FindSeries(product, "iPhone Pro Max");
+                else if (name.Contains("iphone") && name.Contains("pro")) matched = FindSeries(product, "iPhone Pro");
+                else if (name.Contains("iphone")) matched = FindSeries(product, "iPhone");
+                else if (name.Contains("pixel") && name.Contains("pro")) matched = FindSeries(product, "Pixel Pro");
+                else if (name.Contains("pixel")) matched = FindSeries(product, "Pixel");
+
+                if (matched != null)
+                {
+                    product.Seriesid = matched.Seriesid;
+                }
+            }
+
             await context.SaveChangesAsync();
         }
 
@@ -240,5 +362,60 @@ public static class DbInitializer
         }
 
         logger.LogInformation("✅ Seed data completed successfully.");
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(
+                "SELECT setval(pg_get_serial_sequence('productimages', 'imageid'), " +
+                "COALESCE(MAX(imageid), 1), MAX(imageid) IS NOT NULL) FROM productimages;");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not synchronize the product image ID sequence.");
+        }
+    }
+
+    private static async Task EnsureProductSeriesSchemaAsync(ECommerceContext context)
+    {
+        await context.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS productseries (
+                seriesid integer GENERATED BY DEFAULT AS IDENTITY,
+                brandid integer NOT NULL,
+                seriesname character varying(100) NOT NULL,
+                displayorder integer DEFAULT 0,
+                isactive boolean DEFAULT true,
+                createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT productseries_pkey PRIMARY KEY (seriesid)
+            );
+            """);
+
+        await context.Database.ExecuteSqlRawAsync("""
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS seriesid integer;
+            ALTER TABLE chatsessions ADD COLUMN IF NOT EXISTS assigneduserid integer;
+            ALTER TABLE chatsessions ADD COLUMN IF NOT EXISTS handoffrequestedat timestamp without time zone;
+            ALTER TABLE chatsessions ADD COLUMN IF NOT EXISTS handoffstatus character varying(30);
+            CREATE UNIQUE INDEX IF NOT EXISTS ix_productseries_brandid_seriesname ON productseries (brandid, seriesname);
+            CREATE INDEX IF NOT EXISTS "IX_products_seriesid" ON products (seriesid);
+            """);
+
+        await context.Database.ExecuteSqlRawAsync("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint WHERE conname = 'fk_productseries_brands'
+                ) THEN
+                    ALTER TABLE productseries
+                    ADD CONSTRAINT fk_productseries_brands
+                    FOREIGN KEY (brandid) REFERENCES brands (brandid) ON DELETE CASCADE;
+                END IF;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint WHERE conname = 'fk_products_productseries'
+                ) THEN
+                    ALTER TABLE products
+                    ADD CONSTRAINT fk_products_productseries
+                    FOREIGN KEY (seriesid) REFERENCES productseries (seriesid) ON DELETE SET NULL;
+                END IF;
+            END $$;
+            """);
     }
 }

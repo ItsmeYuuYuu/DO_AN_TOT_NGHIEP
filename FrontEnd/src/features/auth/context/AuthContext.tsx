@@ -55,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearSession();
     setUser(null);
     // Role-based redirect after logout
-    if (role === 'Admin' || role === 'Staff') {
+    if (role && role !== 'Customer') {
       navigate('/auth/login');
     } else {
       navigate('/');

@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Data.Sqlite;
 using ECommerceBackend.Models;
 using System.Linq;
@@ -14,6 +16,17 @@ namespace ECommerceBackend.Tests
 
         protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
         {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureAppConfiguration((_, configuration) =>
+            {
+                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["AiAssistant:Provider"] = "Catalog",
+                    ["AiAssistant:BaseUrl"] = string.Empty,
+                    ["AiAssistant:ApiKey"] = string.Empty,
+                    ["AiAssistant:Model"] = string.Empty
+                });
+            });
             builder.ConfigureServices(services =>
             {
                 var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<ECommerceContext>));

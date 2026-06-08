@@ -31,7 +31,7 @@ namespace ECommerceBackend.Controllers
         );
 
         [HttpGet]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant,Staff")]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetInventoryItems()
         {
             var items = await _context.Inventoryitems
@@ -42,7 +42,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("{imei}")]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant,Staff")]
         public async Task<ActionResult<InventoryItemDto>> GetInventoryItem(string imei)
         {
             var item = await _context.Inventoryitems
@@ -54,7 +54,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("variant/{variantId}")]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant,Staff")]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetByVariant(int variantId)
         {
             var items = await _context.Inventoryitems
@@ -66,7 +66,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("status/{status}")]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant,Staff")]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetByStatus(string status)
         {
             var items = await _context.Inventoryitems
@@ -78,7 +78,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Warehouse,Staff")]
         public async Task<ActionResult<InventoryItemDto>> PostInventoryItem([FromBody] CreateInventoryItemRequestDto dto)
         {
             var item = new Inventoryitem
@@ -104,7 +104,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPut("{imei}")]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Warehouse,Staff")]
         public async Task<IActionResult> PutInventoryItem(string imei, [FromBody] UpdateInventoryItemRequestDto dto)
         {
             var item = await _context.Inventoryitems.FindAsync(imei);

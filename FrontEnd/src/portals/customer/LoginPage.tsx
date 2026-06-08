@@ -9,36 +9,13 @@ import Logo from '@/assets/Logo.png';
 
 // ─── Validation helpers ────────────────────────────────────────────────────────
 const validateEmail = (email: string): string | null => {
-  if (!email) return 'Email không được để trống.';
-  if (!email.endsWith('@gmail.com')) return 'Email phải có định dạng @gmail.com.';
-  if (!/^[^\s@]+@gmail\.com$/.test(email)) return 'Email không hợp lệ.';
+  if (!email.trim()) return 'Tên đăng nhập hoặc email không được để trống.';
   return null;
 };
 
 const validatePassword = (password: string): string | null => {
   if (!password) return 'Mật khẩu không được để trống.';
-  if (password.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự.';
-  if (!/[A-Z]/.test(password)) return 'Mật khẩu phải chứa ít nhất một chữ hoa.';
-  if (!/[a-z]/.test(password)) return 'Mật khẩu phải chứa ít nhất một chữ thường.';
-  if (!/[0-9]/.test(password)) return 'Mật khẩu phải chứa ít nhất một chữ số.';
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password))
-    return 'Mật khẩu phải chứa ít nhất một ký tự đặc biệt (!@#$%...).';
   return null;
-};
-
-// ─── Password strength indicator ──────────────────────────────────────────────
-const getStrength = (password: string): { score: number; label: string; color: string } => {
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[a-z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) score++;
-
-  if (score <= 2) return { score, label: 'Yếu', color: 'bg-red-500' };
-  if (score === 3) return { score, label: 'Trung bình', color: 'bg-amber-500' };
-  if (score === 4) return { score, label: 'Mạnh', color: 'bg-blue-500' };
-  return { score, label: 'Rất mạnh', color: 'bg-emerald-500' };
 };
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -52,8 +29,6 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { refreshAuth } = useAuth();
-
-  const strength = password ? getStrength(password) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +44,7 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await apiClient.post('/Auth/login', {
-        username: email,
+        username: email.trim(),
         password: password,
       });
 
@@ -93,7 +68,7 @@ const LoginPage: React.FC = () => {
 
       // Điều hướng theo Role
       if (user.rolename === 'Admin') navigate('/admin');
-      else if (user.rolename === 'Staff') navigate('/staff');
+      else if (['Staff', 'Manager', 'Sales', 'Warehouse', 'Warranty', 'Content', 'Consultant'].includes(user.rolename)) navigate('/staff');
       else navigate('/');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
@@ -158,11 +133,11 @@ const LoginPage: React.FC = () => {
               {/* Email field */}
               <div>
                 <label className="text-sm font-semibold text-slate-700 block mb-1.5">
-                  Email <span className="text-red-500">*</span>
+                  Tên đăng nhập hoặc email <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="email"
-                  placeholder="example@gmail.com"
+                  type="text"
+                  placeholder="Tên đăng nhập hoặc example@gmail.com"
                   value={email}
                   onChange={e => { setEmail(e.target.value); setEmailError(''); }}
                   onBlur={() => setEmailError(validateEmail(email) ?? '')}
@@ -171,7 +146,7 @@ const LoginPage: React.FC = () => {
                       ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-50'
                       : 'border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50'
                     }`}
-                  autoComplete="email"
+                  autoComplete="username"
                 />
                 {emailError && (
                   <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
@@ -188,7 +163,7 @@ const LoginPage: React.FC = () => {
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Tối thiểu 8 ký tự, có số và ký tự đặc biệt"
+                    placeholder="Nhập mật khẩu"
                     value={password}
                     onChange={e => { setPassword(e.target.value); setPasswordError(''); }}
                     onBlur={() => setPasswordError(validatePassword(password) ?? '')}
@@ -210,25 +185,6 @@ const LoginPage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Password strength bar */}
-                {password && strength && (
-                  <div className="mt-2 space-y-1">
-                    <div className="flex gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                            i < strength.score ? strength.color : 'bg-slate-200'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      Độ mạnh: <span className="font-semibold">{strength.label}</span>
-                    </p>
-                  </div>
-                )}
-
                 {passwordError && (
                   <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
                     <span>⚠</span> {passwordError}
@@ -240,24 +196,6 @@ const LoginPage: React.FC = () => {
                     Quên mật khẩu?
                   </Link>
                 </div>
-              </div>
-
-              {/* Requirements hint */}
-              <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-500 space-y-1">
-                <p className="font-semibold text-slate-700 mb-1.5">Yêu cầu mật khẩu:</p>
-                {[
-                  { rule: password.length >= 8, text: 'Ít nhất 8 ký tự' },
-                  { rule: /[A-Z]/.test(password), text: 'Có chữ hoa (A-Z)' },
-                  { rule: /[0-9]/.test(password), text: 'Có chữ số (0-9)' },
-                  { rule: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password), text: 'Có ký tự đặc biệt (!@#$...)' },
-                ].map(({ rule, text }) => (
-                  <div key={text} className="flex items-center gap-1.5">
-                    <span className={rule ? 'text-emerald-500' : 'text-slate-300'}>
-                      {rule ? '✓' : '○'}
-                    </span>
-                    <span className={rule ? 'text-emerald-700' : ''}>{text}</span>
-                  </div>
-                ))}
               </div>
 
               <Button type="submit" fullWidth size="lg" isLoading={loading}>

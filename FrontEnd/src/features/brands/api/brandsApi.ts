@@ -3,6 +3,7 @@ import apiClient from '@/api/apiClient';
 export interface Brand {
   brandid: number;
   brandname: string;
+  productcount?: number;
   products?: unknown[];
 }
 

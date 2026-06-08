@@ -11,6 +11,8 @@ public partial class Product
 
     public int? Brandid { get; set; }
 
+    public int? Seriesid { get; set; }
+
     public string Productname { get; set; } = null!;
 
     public string? Description { get; set; }
@@ -20,6 +22,8 @@ public partial class Product
     public virtual Brand? Brand { get; set; }
 
     public virtual Category? Category { get; set; }
+
+    public virtual Productseries? Series { get; set; }
 
     public virtual ICollection<Productvariant> Productvariants { get; set; } = new List<Productvariant>();
 }

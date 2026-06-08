@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '@/api/apiClient';
 import { Plus, Edit2, Trash2, Tag, Percent, DollarSign, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 interface Voucher {
   vouchercode: string;
@@ -13,6 +14,8 @@ interface Voucher {
 }
 
 const AdminVouchers: React.FC = () => {
+  const { user } = useAuth();
+  const canManage = user?.rolename === 'Admin' || user?.rolename === 'Manager';
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);
@@ -93,9 +96,11 @@ const AdminVouchers: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-800">Quản lý Voucher</h1>
           <p className="text-slate-500 text-sm">Tạo và quản lý các mã giảm giá cho hệ thống</p>
         </div>
-        <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
-          <Plus size={18} /> Thêm Voucher
-        </button>
+        {canManage && (
+          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+            <Plus size={18} /> Thêm Voucher
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -135,10 +140,12 @@ const AdminVouchers: React.FC = () => {
                   </span>
                 </td>
                 <td className="p-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => openEditModal(v)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(v.vouchercode)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
-                  </div>
+                  {canManage && (
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => openEditModal(v)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(v.vouchercode)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

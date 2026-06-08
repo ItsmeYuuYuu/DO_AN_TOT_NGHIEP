@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { chatSessionsApi } from '../../features/chat/api/chatSessionsApi';
 import type { ChatSession, ChatMessage } from '../../features/chat/api/chatSessionsApi';
-import { MessageSquare, Plus, Send, Trash2, Bot, User } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { MessageSquare, Plus, Send, Trash2, Bot, User, Headphones } from 'lucide-react';
 import { formatDateTime } from '../../utils/formatters';
 
 export default function CustomerChat() {
+  const [searchParams] = useSearchParams();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputMsg, setInputMsg] = useState('');
+  const [inputMsg, setInputMsg] = useState(() => (searchParams.get('q') ?? '').slice(0, 500));
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +32,26 @@ export default function CustomerChat() {
     fetchSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!activeSession?.handoffstatus || activeSession.handoffstatus === 'Closed') return;
+
+    const timer = window.setInterval(async () => {
+      try {
+        const [session, latestMessages] = await Promise.all([
+          chatSessionsApi.getSession(activeSession.sessionid),
+          chatSessionsApi.getMessages(activeSession.sessionid),
+        ]);
+        setActiveSession(session);
+        setSessions(prev => prev.map(item => item.sessionid === session.sessionid ? session : item));
+        setMessages(latestMessages);
+      } catch {
+        // Ignore transient polling errors and keep the conversation visible.
+      }
+    }, 3000);
+
+    return () => window.clearInterval(timer);
+  }, [activeSession?.sessionid, activeSession?.handoffstatus]);
 
   const selectSession = async (session: ChatSession) => {
     setActiveSession(session);
@@ -96,8 +118,12 @@ export default function CustomerChat() {
     scrollToBottom();
 
     try {
-      const assistantMsg = await chatSessionsApi.postMessage(currentSession.sessionid, sentContent);
-      setMessages(prev => [...prev, assistantMsg]);
+      const responseMessage = await chatSessionsApi.postMessage(currentSession.sessionid, sentContent);
+      if (responseMessage.sendertype === 'user') {
+        setMessages(await chatSessionsApi.getMessages(currentSession.sessionid));
+      } else {
+        setMessages(prev => [...prev, responseMessage]);
+      }
       scrollToBottom();
     } catch (err: any) {
       alert(err.response?.data?.message || err.response?.data?.Message || 'Lỗi khi gửi tin nhắn');
@@ -108,11 +134,39 @@ export default function CustomerChat() {
     }
   };
 
+  const requestConsultant = async () => {
+    if (!activeSession) return;
+    try {
+      const updated = await chatSessionsApi.requestHandoff(activeSession.sessionid);
+      setActiveSession(updated);
+      setSessions(prev => prev.map(item => item.sessionid === updated.sessionid ? updated : item));
+      setMessages(await chatSessionsApi.getMessages(activeSession.sessionid));
+      scrollToBottom();
+    } catch (err: any) {
+      alert(err.response?.data?.message ?? 'Không thể chuyển cuộc trò chuyện cho nhân viên.');
+    }
+  };
+
   const scrollToBottom = () => {
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   };
+
+  const renderMessageContent = (content: string) =>
+    content.split(/(\/products\/\d+)/g).map((part, index) =>
+      /^\/products\/\d+$/.test(part) ? (
+        <Link
+          key={`${part}-${index}`}
+          to={part}
+          className="font-semibold text-blue-600 underline underline-offset-2"
+        >
+          {part}
+        </Link>
+      ) : (
+        part
+      )
+    );
 
   return (
     <div className="max-w-6xl mx-auto h-[80vh] flex bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
@@ -162,9 +216,28 @@ export default function CustomerChat() {
 
       {/* Main Chat Area */}
       <div className="w-2/3 flex flex-col bg-slate-50/50">
-        <div className="p-4 bg-white border-b border-slate-200 flex flex-col">
-          <h3 className="font-bold text-slate-800">{activeSession ? activeSession.title : 'Chọn hoặc tạo hội thoại'}</h3>
-          {activeSession && <span className="text-xs text-slate-500">ID: {activeSession.sessionid}</span>}
+        <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-slate-800">{activeSession ? activeSession.title : 'Chọn hoặc tạo hội thoại'}</h3>
+            {activeSession && (
+              <span className="text-xs text-slate-500">
+                ID: {activeSession.sessionid}
+                {activeSession.handoffstatus === 'Waiting' && ' · Đang chờ nhân viên tư vấn'}
+                {activeSession.handoffstatus === 'InProgress' && ` · Đang tư vấn${activeSession.assignedname ? ` bởi ${activeSession.assignedname}` : ''}`}
+                {activeSession.handoffstatus === 'Closed' && ' · Phiên tư vấn đã kết thúc'}
+              </span>
+            )}
+          </div>
+          {activeSession && !activeSession.handoffstatus && (
+            <button
+              type="button"
+              onClick={requestConsultant}
+              className="inline-flex items-center gap-2 rounded-lg bg-teal-50 px-3 py-2 text-sm font-bold text-teal-700 hover:bg-teal-100"
+            >
+              <Headphones size={17} />
+              Gặp nhân viên tư vấn
+            </button>
+          )}
         </div>
         
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -177,15 +250,24 @@ export default function CustomerChat() {
 
           {messages.map((msg, idx) => {
             const isUser = msg.sendertype === 'user';
+            if (msg.sendertype === 'system') {
+              return (
+                <div key={msg.messageid || idx} className="text-center text-xs font-medium text-slate-400">
+                  {msg.messagecontent}
+                </div>
+              );
+            }
             return (
               <div key={msg.messageid || idx} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm
                   ${isUser ? 'bg-blue-600 text-white' : 'bg-emerald-500 text-white'}`}>
-                  {isUser ? <User size={16} /> : <Bot size={16} />}
+                  {isUser ? <User size={16} /> : msg.sendertype === 'consultant' ? <Headphones size={16} /> : <Bot size={16} />}
                 </div>
                 <div className={`max-w-[70%] p-4 rounded-2xl shadow-sm
                   ${isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'}`}>
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.messagecontent}</p>
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                    {renderMessageContent(msg.messagecontent)}
+                  </p>
                   <span className={`text-[10px] mt-2 block ${isUser ? 'text-blue-200' : 'text-slate-400'}`}>
                     {msg.sentat ? new Date(msg.sentat).toLocaleTimeString() : 'Đang gửi...'}
                   </span>
@@ -215,6 +297,7 @@ export default function CustomerChat() {
             value={inputMsg}
             onChange={(e) => setInputMsg(e.target.value)}
             placeholder="Nhập câu hỏi của bạn..."
+            maxLength={500}
             className="flex-1 bg-slate-100 border-transparent rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition text-sm"
             disabled={loading}
           />

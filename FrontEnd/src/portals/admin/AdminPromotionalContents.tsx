@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { promotionsApi, type PromotionalContent } from '@/features/content/api/promotionsApi';
+import { productsApi } from '@/features/products/api/productsApi';
 import { Button } from '@/components/Button';
-import { Edit2, Trash2, Sliders, Image, Check, X } from 'lucide-react';
+import { Edit2, Trash2, Sliders, Image, Check, X, Upload, LoaderCircle } from 'lucide-react';
 
 export const AdminPromotionalContents: React.FC = () => {
   const [contents, setContents] = useState<PromotionalContent[]>([]);
@@ -16,6 +17,8 @@ export const AdminPromotionalContents: React.FC = () => {
   const [linkurl, setLinkurl] = useState('');
   const [displayorder, setDisplayorder] = useState(0);
   const [isactive, setIsactive] = useState(true);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     loadContents();
@@ -35,7 +38,10 @@ export const AdminPromotionalContents: React.FC = () => {
 
   const filteredContents = contents.filter(c => c.contenttype === activeTab);
 
-  const resetForm = () => {
+  const resetForm = (deleteTemporaryImage = true) => {
+    if (deleteTemporaryImage && uploadedFileName) {
+      void productsApi.deleteUploadedImage(uploadedFileName);
+    }
     setTitle('');
     setImageurl('');
     setLinkurl('');
@@ -43,9 +49,13 @@ export const AdminPromotionalContents: React.FC = () => {
     setIsactive(true);
     setIsEditing(false);
     setCurrentId(null);
+    setUploadedFileName(null);
   };
 
   const handleEdit = (c: PromotionalContent) => {
+    if (uploadedFileName) {
+      void productsApi.deleteUploadedImage(uploadedFileName);
+    }
     setCurrentId(c.contentid);
     setTitle(c.title || '');
     setImageurl(c.imageurl);
@@ -53,6 +63,25 @@ export const AdminPromotionalContents: React.FC = () => {
     setDisplayorder(c.displayorder || 0);
     setIsactive(c.isactive ?? true);
     setIsEditing(true);
+    setUploadedFileName(null);
+  };
+
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      if (uploadedFileName) {
+        await productsApi.deleteUploadedImage(uploadedFileName).catch(() => undefined);
+      }
+      const response = await productsApi.uploadImages([file]);
+      const uploaded = response.data[0];
+      setImageurl(uploaded.url);
+      setUploadedFileName(uploaded.fileName);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Không thể tải ảnh lên.');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -85,7 +114,7 @@ export const AdminPromotionalContents: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!imageurl) {
-      alert('Vui lòng nhập URL hình ảnh.');
+      alert('Vui lòng chọn hình ảnh từ máy.');
       return;
     }
 
@@ -108,7 +137,8 @@ export const AdminPromotionalContents: React.FC = () => {
         setContents(prev => [created, ...prev]);
         alert('Thêm mới thành công.');
       }
-      resetForm();
+      setUploadedFileName(null);
+      resetForm(false);
     } catch (err) {
       alert('Có lỗi xảy ra khi lưu nội dung.');
     }
@@ -166,14 +196,28 @@ export const AdminPromotionalContents: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">URL Hình ảnh</label>
-              <input
-                type="text"
-                value={imageurl}
-                onChange={(e) => setImageurl(e.target.value)}
-                placeholder="https://example.com/banner.jpg"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800"
-              />
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Hình ảnh</label>
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100">
+                {uploadingImage ? <LoaderCircle size={17} className="animate-spin" /> : <Upload size={17} />}
+                {uploadingImage ? 'Đang tải ảnh...' : imageurl ? 'Chọn ảnh khác' : 'Chọn ảnh từ máy'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  disabled={uploadingImage}
+                  onChange={event => {
+                    void handleImageUpload(event.target.files?.[0]);
+                    event.target.value = '';
+                  }}
+                />
+              </label>
+              {imageurl && (
+                <img
+                  src={imageurl}
+                  alt="Xem trước nội dung quảng cáo"
+                  className="mt-3 h-36 w-full rounded-lg border border-slate-200 object-cover"
+                />
+              )}
             </div>
 
             <div>
@@ -215,7 +259,7 @@ export const AdminPromotionalContents: React.FC = () => {
                 {isEditing ? 'Cập nhật' : 'Thêm mới'}
               </Button>
               {isEditing && (
-                <Button type="button" variant="secondary" onClick={resetForm}>
+                <Button type="button" variant="secondary" onClick={() => resetForm()}>
                   Hủy
                 </Button>
               )}

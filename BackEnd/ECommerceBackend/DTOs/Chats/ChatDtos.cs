@@ -10,7 +10,12 @@ namespace ECommerceBackend.DTOs.Chats
         DateTime? Starttime,
         DateTime? Endtime,
         string? Status,
-        string Title // Giả sử Status có thể dùng làm title hoặc FE tự hiển thị
+        string Title,
+        int? Assigneduserid = null,
+        string? Assignedname = null,
+        string? Handoffstatus = null,
+        DateTime? Handoffrequestedat = null,
+        string? Customername = null
     );
 
     public record ChatMessageDto(
@@ -34,7 +39,7 @@ namespace ECommerceBackend.DTOs.Chats
     public class CreateChatMessageRequestDto
     {
         [Required(ErrorMessage = "Nội dung tin nhắn không được để trống.")]
-        [StringLength(2000, ErrorMessage = "Nội dung tin nhắn không được vượt quá 2000 ký tự.")]
+        [StringLength(500, ErrorMessage = "Nội dung tin nhắn không được vượt quá 500 ký tự.")]
         public string Messagecontent { get; set; } = string.Empty;
     }
 }

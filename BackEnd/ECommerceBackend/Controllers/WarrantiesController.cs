@@ -36,7 +36,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Manager,Warranty,Consultant,Staff")]
         public async Task<ActionResult<IEnumerable<WarrantyDto>>> GetWarranties()
         {
             var items = await _context.Inventoryitems
@@ -49,7 +49,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("{imei}")]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Manager,Warranty,Consultant,Staff")]
         public async Task<ActionResult<WarrantyDto>> GetWarranty(string imei)
         {
             var item = await _context.Inventoryitems
@@ -63,7 +63,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("customer/{customerId}")]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Manager,Warranty,Consultant,Staff")]
         public async Task<ActionResult<IEnumerable<WarrantyDto>>> GetWarrantiesByCustomer(int customerId)
         {
             var items = await _context.Inventoryitems
@@ -76,7 +76,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Warranty,Staff")]
         public async Task<ActionResult<WarrantyDto>> PostWarranty([FromBody] CreateWarrantyRequestDto dto)
         {
             if (string.IsNullOrEmpty(dto.Imei))
@@ -106,7 +106,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPut("{imei}")]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Warranty,Staff")]
         public async Task<IActionResult> PutWarranty(string imei, [FromBody] UpdateWarrantyRequestDto dto)
         {
             var item = await _context.Inventoryitems.FindAsync(imei);
@@ -136,7 +136,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpDelete("{imei}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Warranty")]
         public async Task<IActionResult> DeleteWarranty(string imei)
         {
             var item = await _context.Inventoryitems.FindAsync(imei);

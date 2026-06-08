@@ -7,6 +7,7 @@ import {
   ChevronDown,
   FileText,
   Gift,
+  Headphones,
   Home,
   LayoutDashboard,
   LogOut,
@@ -64,8 +65,11 @@ const adminNav: NavGroup[] = [
   },
   {
     label: 'Khách hàng',
-    to: '/admin/customers',
     icon: <Users2 size={17} />,
+    items: [
+      { label: 'Danh sách khách hàng', to: '/admin/customers', icon: <Users2 size={16} /> },
+      { label: 'Tư vấn AI', to: '/admin/consultations', icon: <Headphones size={16} /> },
+    ],
   },
   {
     label: 'Nhân viên',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { 
   Search, 
@@ -12,13 +12,84 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/features/orders/context/CartContext';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { brandsApi, type Brand } from '@/features/brands/api/brandsApi';
+import { categoriesApi, type Category } from '@/features/categories/api/categoriesApi';
+import { productsApi, type Product } from '@/features/products/api/productsApi';
+import { productSeriesApi, type ProductSeries } from '@/features/productSeries/api/productSeriesApi';
 import Logo from '@/assets/Logo.png';
+
+const normalizeMenuText = (value: string) =>
+  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export const CustomerLayout: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [menuBrands, setMenuBrands] = useState<Brand[]>([]);
+  const [menuCategories, setMenuCategories] = useState<Category[]>([]);
+  const [menuProducts, setMenuProducts] = useState<Product[]>([]);
+  const [menuSeries, setMenuSeries] = useState<ProductSeries[]>([]);
+  const [activePhoneBrandId, setActivePhoneBrandId] = useState<number | null>(null);
   const navigate = useNavigate();
   const { totalItems } = useCart();
   const { user, isLoggedIn, logout } = useAuth();
+
+  useEffect(() => {
+    brandsApi.getAll()
+      .then(response => setMenuBrands(response.data))
+      .catch(() => setMenuBrands([]));
+
+    categoriesApi.getAll()
+      .then(response => setMenuCategories(response.data))
+      .catch(() => setMenuCategories([]));
+
+    productsApi.getAll()
+      .then(response => setMenuProducts(response.data))
+      .catch(() => setMenuProducts([]));
+
+    productSeriesApi.getAll({ activeOnly: true })
+      .then(response => setMenuSeries(response.data))
+      .catch(() => setMenuSeries([]));
+  }, []);
+
+  const phoneCategory = useMemo(
+    () => menuCategories.find(category => {
+      const name = normalizeMenuText(category.categoryname);
+      return name.includes('dien thoai') || name.includes('smartphone');
+    }),
+    [menuCategories],
+  );
+
+  const phoneMenuBrands = useMemo(() => {
+    return menuBrands
+      .map(brand => ({
+        ...brand,
+        phoneSeries: menuSeries
+          .filter(series => series.brandid === brand.brandid)
+          .sort((a, b) => a.displayorder - b.displayorder || a.seriesname.localeCompare(b.seriesname)),
+        phoneProducts: menuProducts.filter(product =>
+          (!phoneCategory || product.category?.id === phoneCategory.categoryid) &&
+          product.brand?.id === brand.brandid
+        ),
+      }));
+  }, [menuBrands, menuProducts, menuSeries, phoneCategory]);
+
+  useEffect(() => {
+    if (!phoneMenuBrands.some(brand => brand.brandid === activePhoneBrandId)) {
+      setActivePhoneBrandId(phoneMenuBrands[0]?.brandid ?? null);
+    }
+  }, [activePhoneBrandId, phoneMenuBrands]);
+
+  const activePhoneBrand =
+    phoneMenuBrands.find(brand => brand.brandid === activePhoneBrandId) ??
+    phoneMenuBrands[0];
+
+  const buildPhoneBrandUrl = (brandId?: number, seriesId?: number) => {
+    const params = new URLSearchParams();
+    if (phoneCategory) params.set('categoryId', String(phoneCategory.categoryid));
+    if (brandId) params.set('brandId', String(brandId));
+    if (seriesId) params.set('seriesId', String(seriesId));
+    const query = params.toString();
+    return query ? `/products?${query}` : '/products';
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,7 +216,7 @@ export const CustomerLayout: React.FC = () => {
               </button>
 
               {/* Dropdown panel */}
-              <div className="absolute top-full left-0 z-[999] w-[520px] pt-2 opacity-0 pointer-events-none group-hover/phone:opacity-100 group-hover/phone:pointer-events-auto transition-all duration-200 translate-y-1 group-hover/phone:translate-y-0">
+              <div className="absolute top-full left-0 z-[999] w-[760px] max-w-[calc(100vw-2rem)] pt-2 opacity-0 pointer-events-none group-hover/phone:opacity-100 group-hover/phone:pointer-events-auto transition-all duration-200 translate-y-1 group-hover/phone:translate-y-0">
                 <div className="bg-white rounded-2xl shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
 
                   {/* Header */}
@@ -154,85 +225,85 @@ export const CustomerLayout: React.FC = () => {
                       <p className="text-white font-black text-sm tracking-wide">ĐIỆN THOẠI CHÍNH HÃNG</p>
                       <p className="text-blue-200 text-xs mt-0.5">Chọn thương hiệu yêu thích của bạn</p>
                     </div>
-                    <NavLink to="/products?category=phones" className="text-xs text-white font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors">
+                    <NavLink
+                      to={phoneCategory ? `/products?categoryId=${phoneCategory.categoryid}` : '/products'}
+                      className="text-xs text-white font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors"
+                    >
                       Xem tất cả →
                     </NavLink>
                   </div>
 
-                  {/* Brands grid */}
-                  <div className="p-5">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">HÃNG SẢN XUẤT</p>
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-0">
-                      {[
-                        { name: 'Apple (iPhone)', icon: '🍎', to: '/products?brand=apple' },
-                        { name: 'Samsung', icon: '🔵', to: '/products?brand=samsung' },
-                        { name: 'Xiaomi', icon: '🟠', to: '/products?brand=xiaomi' },
-                        { name: 'OPPO', icon: '🟢', to: '/products?brand=oppo' },
-                        { name: 'vivo', icon: '🔷', to: '/products?brand=vivo' },
-                        { name: 'Huawei', icon: '🔴', to: '/products?brand=huawei' },
-                        { name: 'Honor', icon: '⚡', to: '/products?brand=honor' },
-                        { name: 'Realme', icon: '🌟', to: '/products?brand=realme' },
-                        { name: 'Sony Xperia', icon: '🎵', to: '/products?brand=sony' },
-                        { name: 'Google Pixel', icon: '🌈', to: '/products?brand=google' },
-                        { name: 'OnePlus', icon: '🔥', to: '/products?brand=oneplus' },
-                        { name: 'Motorola', icon: '📱', to: '/products?brand=motorola' },
-                      ].map(brand => (
-                        <NavLink
-                          key={brand.to}
-                          to={brand.to}
-                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-slate-600 font-semibold hover:bg-blue-50 hover:text-blue-600 transition-all group/brand"
-                        >
-                          <span className="text-base leading-none">{brand.icon}</span>
-                          <span className="group-hover/brand:translate-x-0.5 transition-transform">{brand.name}</span>
-                        </NavLink>
-                      ))}
+                  {phoneMenuBrands.length > 0 ? (
+                    <div className="grid min-h-64 grid-cols-[220px_1fr]">
+                      <div className="border-r border-slate-100 bg-slate-50 p-3">
+                        <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          HÃNG SẢN XUẤT
+                        </p>
+                        <div className="max-h-80 space-y-1 overflow-y-auto">
+                          {phoneMenuBrands.map(brand => (
+                            <NavLink
+                              key={brand.brandid}
+                              to={buildPhoneBrandUrl(brand.brandid)}
+                              onMouseEnter={() => setActivePhoneBrandId(brand.brandid)}
+                              onFocus={() => setActivePhoneBrandId(brand.brandid)}
+                              className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
+                                activePhoneBrand?.brandid === brand.brandid
+                                  ? 'bg-blue-600 text-white'
+                                  : 'text-slate-600 hover:bg-blue-50 hover:text-blue-600'
+                              }`}
+                            >
+                              <span>{brand.brandname}</span>
+                              <span aria-hidden="true">›</span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-5">
+                        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                              DÒNG MÁY
+                            </p>
+                            <h3 className="mt-1 text-base font-black text-slate-900">
+                              {activePhoneBrand?.brandname}
+                            </h3>
+                          </div>
+                          {activePhoneBrand && (
+                            <NavLink
+                              to={buildPhoneBrandUrl(activePhoneBrand.brandid)}
+                              className="text-xs font-bold text-blue-600 hover:underline"
+                            >
+                              Xem tất cả
+                            </NavLink>
+                          )}
+                        </div>
+
+                        {activePhoneBrand?.phoneSeries.length ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {activePhoneBrand.phoneSeries.map(series => (
+                              <NavLink
+                                key={series.seriesid}
+                                to={buildPhoneBrandUrl(activePhoneBrand.brandid, series.seriesid)}
+                                className="rounded-lg border border-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-blue-100 hover:bg-blue-50 hover:text-blue-600"
+                              >
+                                <span>{series.seriesname}</span>
+                                <span className="ml-2 text-[11px] font-medium text-slate-400">{series.productcount} sp</span>
+                              </NavLink>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
+                            Chưa có dòng máy nào thuộc thương hiệu này.
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Promo footer */}
-                  <div className="border-t border-slate-100 px-5 py-3 bg-slate-50 flex items-center gap-3">
-                    <span className="text-lg">🎁</span>
-                    <p className="text-xs text-slate-500">
-                      <span className="font-bold text-orange-500">Ưu đãi đặc biệt:</span> Giảm thêm 500K khi thanh toán qua VNPAY
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── PHỤ KIỆN ĐIỆN THOẠI — Dropdown ── */}
-            <div className="relative h-full group/acc flex items-center">
-              <button className="px-3 h-full flex items-center gap-1 text-[11px] font-black tracking-wider text-slate-600 group-hover/acc:text-blue-600 border-b-2 border-transparent group-hover/acc:border-blue-400 transition-all whitespace-nowrap">
-                PHỤ KIỆN
-                <svg className="w-3 h-3 transition-transform group-hover/acc:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              <div className="absolute top-full left-0 z-[999] w-60 pt-2 opacity-0 pointer-events-none group-hover/acc:opacity-100 group-hover/acc:pointer-events-auto transition-all duration-200 translate-y-1 group-hover/acc:translate-y-0">
-                <div className="bg-white rounded-2xl shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
-                  {/* Header */}
-                  <div className="bg-gradient-to-r from-orange-500 to-orange-400 px-4 py-2.5">
-                    <p className="text-white font-black text-xs tracking-wide">PHỤ KIỆN ĐIỆN THOẠI</p>
-                    <p className="text-orange-100 text-[10px] mt-0.5">Chính hãng · Tương thích cao</p>
-                  </div>
-                  <div className="p-2">
-                    {[
-                      { name: '🛡️ Ốp lưng & Case',        to: '/products?category=cases' },
-                      { name: '🔋 Sạc nhanh & Cáp',       to: '/products?category=chargers' },
-                      { name: '🎧 Tai nghe & AirPods',     to: '/products?category=earphones' },
-                      { name: '🔲 Kính cường lực',          to: '/products?category=screen-protector' },
-                      { name: '⚡ Pin sạc dự phòng',        to: '/products?category=powerbank' },
-                      { name: '📲 Giá đỡ & Kẹp điện thoại', to: '/products?category=holders' },
-                      { name: '💾 Thẻ nhớ & OTG',           to: '/products?category=memory-cards' },
-                      { name: '🔌 Hub & Bộ chuyển đổi',    to: '/products?category=adapters' },
-                    ].map(item => (
-                      <NavLink key={item.to} to={item.to}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-600 font-semibold hover:bg-orange-50 hover:text-orange-600 transition-all">
-                        {item.name}
-                      </NavLink>
-                    ))}
-                  </div>
+                  ) : (
+                    <div className="px-6 py-12 text-center text-sm text-slate-400">
+                      Chưa có thương hiệu nào được tạo trong hệ thống.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -8,7 +8,7 @@ export interface AuthUser {
   username: string;
   fullname: string;
   email: string;
-  rolename: string;  // "Admin" | "Staff" | "Customer"
+  rolename: string;
   exp: number;       // expiry timestamp (seconds)
 }
 

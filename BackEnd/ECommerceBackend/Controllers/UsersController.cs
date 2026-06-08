@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Users;
+using ECommerceBackend.DTOs.Common;
+using System.Security.Claims;
 
 namespace ECommerceBackend.Controllers
 {
@@ -13,6 +15,35 @@ namespace ECommerceBackend.Controllers
         private readonly ECommerceContext _context;
 
         public UsersController(ECommerceContext context) => _context = context;
+
+        private int? CurrentUserId
+        {
+            get
+            {
+                var value = User.FindFirstValue("userid")
+                    ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+                return int.TryParse(value, out var userId) ? userId : null;
+            }
+        }
+
+        private async Task<bool> RoleExistsAsync(int? roleId) =>
+            roleId.HasValue && await _context.Roles.AnyAsync(role => role.Roleid == roleId.Value);
+
+        private async Task<bool> IsAdminRoleAsync(int? roleId) =>
+            roleId.HasValue && await _context.Roles
+                .AnyAsync(role => role.Roleid == roleId.Value && role.Rolename == "Admin");
+
+        private async Task<bool> IsLastActiveAdminAsync(User user)
+        {
+            if (user.Isactive != true || !await IsAdminRoleAsync(user.Roleid))
+                return false;
+
+            var activeAdminCount = await _context.Users.CountAsync(candidate =>
+                candidate.Isactive == true &&
+                candidate.Role != null &&
+                candidate.Role.Rolename == "Admin");
+            return activeAdminCount <= 1;
+        }
 
         // GET: api/Users
         [HttpGet]
@@ -39,6 +70,9 @@ namespace ECommerceBackend.Controllers
         [HttpPost]
         public async Task<ActionResult<UserListItemDto>> PostUser([FromBody] CreateUserRequestDto dto)
         {
+            if (!await RoleExistsAsync(dto.Roleid))
+                return BadRequest(new ApiErrorDto("Vai trò đã chọn không tồn tại.", null));
+
             var user = new User
             {
                 Username = dto.Username,
@@ -48,7 +82,7 @@ namespace ECommerceBackend.Controllers
                 Phone = dto.Phone,
                 Roleid = dto.Roleid,
                 Isactive = dto.Isactive ?? true,
-                Createdat = DateTime.UtcNow
+                Createdat = DateTime.Now
             };
 
             _context.Users.Add(user);
@@ -68,8 +102,31 @@ namespace ECommerceBackend.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutUser(int id, [FromBody] UpdateUserRequestDto dto)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users
+                .Include(item => item.Role)
+                .FirstOrDefaultAsync(item => item.Userid == id);
             if (user == null) return NotFound();
+
+            if (!await RoleExistsAsync(dto.Roleid))
+                return BadRequest(new ApiErrorDto("Vai trò đã chọn không tồn tại.", null));
+
+            var willRemainAdmin = await IsAdminRoleAsync(dto.Roleid);
+            var willRemainActive = dto.Isactive ?? user.Isactive ?? true;
+            var isCurrentUser = CurrentUserId == user.Userid;
+
+            if (isCurrentUser && (!willRemainAdmin || !willRemainActive))
+            {
+                return Conflict(new ApiErrorDto(
+                    "Bạn không thể tự hạ quyền hoặc vô hiệu hóa tài khoản Admin đang đăng nhập.",
+                    null));
+            }
+
+            if ((!willRemainAdmin || !willRemainActive) && await IsLastActiveAdminAsync(user))
+            {
+                return Conflict(new ApiErrorDto(
+                    "Không thể thay đổi vì đây là tài khoản Admin hoạt động cuối cùng.",
+                    null));
+            }
 
             user.Fullname = dto.Fullname;
             user.Email = dto.Email;
@@ -103,8 +160,21 @@ namespace ECommerceBackend.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users
+                .Include(item => item.Role)
+                .FirstOrDefaultAsync(item => item.Userid == id);
             if (user == null) return NotFound();
+
+            if (CurrentUserId == user.Userid)
+                return Conflict(new ApiErrorDto("Bạn không thể tự xóa tài khoản đang đăng nhập.", null));
+
+            if (await IsLastActiveAdminAsync(user))
+            {
+                return Conflict(new ApiErrorDto(
+                    "Không thể xóa tài khoản Admin hoạt động cuối cùng.",
+                    null));
+            }
+
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
             return NoContent();
@@ -114,8 +184,25 @@ namespace ECommerceBackend.Controllers
         [HttpPatch("{id}/toggle-active")]
         public async Task<IActionResult> ToggleActive(int id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users
+                .Include(item => item.Role)
+                .FirstOrDefaultAsync(item => item.Userid == id);
             if (user == null) return NotFound();
+
+            if (user.Isactive == true && CurrentUserId == user.Userid)
+            {
+                return Conflict(new ApiErrorDto(
+                    "Bạn không thể tự vô hiệu hóa tài khoản đang đăng nhập.",
+                    null));
+            }
+
+            if (user.Isactive == true && await IsLastActiveAdminAsync(user))
+            {
+                return Conflict(new ApiErrorDto(
+                    "Không thể vô hiệu hóa tài khoản Admin hoạt động cuối cùng.",
+                    null));
+            }
+
             user.Isactive = !user.Isactive;
             await _context.SaveChangesAsync();
             return Ok(new ToggleUserActiveResponseDto(user.Userid, user.Isactive));

@@ -4,7 +4,8 @@ import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { DataTable } from '@/components/DataTable';
 import { Pagination } from '@/components/Pagination';
-import { usersApi } from '@/features/users/api/usersApi';
+import axios from 'axios';
+import { employeeRoles, roleLabels, roleNamesById, usersApi } from '@/features/users/api/usersApi';
 import type { UserItem } from '@/features/users/api/usersApi';
 import { formatDate } from '@/utils/formatters';
 import { Users, UserCheck } from 'lucide-react';
@@ -14,6 +15,12 @@ const PAGE_SIZE = 10;
 const roleColors: Record<string, string> = {
   Admin:    'bg-purple-50 text-purple-700 border border-purple-200',
   Staff:    'bg-blue-50 text-blue-700 border border-blue-200',
+  Manager:  'bg-indigo-50 text-indigo-700 border border-indigo-200',
+  Sales:    'bg-cyan-50 text-cyan-700 border border-cyan-200',
+  Warehouse:'bg-amber-50 text-amber-700 border border-amber-200',
+  Warranty: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  Content:  'bg-pink-50 text-pink-700 border border-pink-200',
+  Consultant:'bg-teal-50 text-teal-700 border border-teal-200',
   Customer: 'bg-slate-100 text-slate-600 border border-slate-200',
 };
 
@@ -46,7 +53,7 @@ const AdminUsers: React.FC = () => {
   useEffect(() => { fetchUsers(); }, []);
 
   // Split by role
-  const staffUsers    = users.filter(u => (u.roleid ?? 0) <= 2);    // Admin + Staff
+  const staffUsers    = users.filter(u => u.roleid !== 3);
   const customerUsers = users.filter(u => (u.roleid ?? 0) === 3);   // Customer
 
   const source = tab === 'staff' ? staffUsers : customerUsers;
@@ -61,7 +68,7 @@ const AdminUsers: React.FC = () => {
 
   const openCreate = () => {
     // preset roleid based on current tab
-    setEditing({ isactive: true, roleid: tab === 'staff' ? 2 : 3 });
+    setEditing({ isactive: true, roleid: tab === 'staff' ? 5 : 3 });
     setModalOpen(true);
   };
   const openEdit = (u: UserItem) => { setEditing({ ...u }); setModalOpen(true); };
@@ -81,8 +88,9 @@ const AdminUsers: React.FC = () => {
       }
       await fetchUsers();
       closeModal();
-    } catch {
-      alert('Lỗi khi lưu tài khoản.');
+    } catch (err) {
+      const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
+      alert(message ?? 'Lỗi khi lưu tài khoản.');
     } finally {
       setSaving(false);
     }
@@ -90,13 +98,19 @@ const AdminUsers: React.FC = () => {
 
   const handleToggle = async (id: number) => {
     try { await usersApi.toggleActive(id); await fetchUsers(); }
-    catch { alert('Không thể thay đổi trạng thái tài khoản.'); }
+    catch (err) {
+      const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
+      alert(message ?? 'Không thể thay đổi trạng thái tài khoản.');
+    }
   };
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Xóa tài khoản này?')) return;
     try { await usersApi.delete(id); await fetchUsers(); }
-    catch { alert('Không thể xóa tài khoản này.'); }
+    catch (err) {
+      const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
+      alert(message ?? 'Không thể xóa tài khoản này.');
+    }
   };
 
   const columns = [
@@ -135,10 +149,13 @@ const AdminUsers: React.FC = () => {
       key: 'roleid',
       header: 'Vai trò',
       render: (u: UserItem) => {
-        const roleName = u.role?.rolename ?? (u.roleid === 1 ? 'Admin' : u.roleid === 2 ? 'Staff' : 'Customer');
+        const roleName = u.rolename
+          ?? u.role?.rolename
+          ?? roleNamesById[u.roleid ?? 0]
+          ?? 'Customer';
         return (
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${roleColors[roleName] ?? 'bg-slate-100 text-slate-600'}`}>
-            {roleName}
+            {roleLabels[roleName] ?? roleName}
           </span>
         );
       },
@@ -264,13 +281,17 @@ const AdminUsers: React.FC = () => {
             <label className="text-sm font-medium text-slate-700 block mb-1.5">Vai trò</label>
             <select
               className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500"
-              value={editing?.roleid ?? (tab === 'staff' ? 2 : 3)}
+              value={editing?.roleid ?? (tab === 'staff' ? 5 : 3)}
               onChange={e => setEditing(p => ({ ...p, roleid: parseInt(e.target.value) }))}
             >
               {tab === 'staff' ? (
                 <>
-                  <option value={1}>Admin</option>
-                  <option value={2}>Staff</option>
+                  {editing?.roleid === 2 && (
+                    <option value={2}>Nhân viên chung (quyền cũ)</option>
+                  )}
+                  {employeeRoles.map(role => (
+                    <option key={role.id} value={role.id}>{role.label}</option>
+                  ))}
                 </>
               ) : (
                 <option value={3}>Customer</option>

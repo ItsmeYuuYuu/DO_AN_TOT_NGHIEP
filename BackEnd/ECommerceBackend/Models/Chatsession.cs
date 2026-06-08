@@ -17,6 +17,12 @@ public partial class Chatsession
 
     public string? Status { get; set; }
 
+    public int? Assigneduserid { get; set; }
+
+    public string? Handoffstatus { get; set; }
+
+    public DateTime? Handoffrequestedat { get; set; }
+
     public virtual ICollection<Chatmessage> Chatmessages { get; set; } = new List<Chatmessage>();
 
     public virtual Customer? Customer { get; set; }

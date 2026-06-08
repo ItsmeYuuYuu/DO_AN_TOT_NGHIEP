@@ -3,6 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '@/features/auth/api/authApi';
 import { User, Mail, Phone, Lock, ChevronRight, XCircle } from 'lucide-react';
 
+const isStrongPassword = (password: string) =>
+  password.length >= 8 &&
+  !/\s/.test(password) &&
+  /[a-z]/.test(password) &&
+  /[A-Z]/.test(password) &&
+  /\d/.test(password) &&
+  /[^A-Za-z0-9]/.test(password);
+
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -19,33 +27,49 @@ const RegisterPage: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!isStrongPassword(formData.password)) {
+      setError('Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.');
+      return;
+    }
     
     if (formData.password !== formData.confirmPassword) {
       setError('Mật khẩu nhập lại không khớp.');
       return;
     }
 
+    if (!/^0\d{9}$/.test(formData.phone.trim())) {
+      setError('Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0.');
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await authApi.register({
-        username: formData.username,
+        username: formData.username.trim(),
         password: formData.password,
-        fullname: formData.fullname,
-        email: formData.email || undefined,
-        phone: formData.phone || undefined,
+        fullname: formData.fullname.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
       });
       setSuccess(res.data.message || 'Đăng ký thành công!');
       setTimeout(() => {
         navigate('/auth/login', { state: { username: formData.username } });
       }, 2000);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || 'Đã xảy ra lỗi. Vui lòng thử lại sau.');
+      const data = (err as {
+        response?: { data?: { message?: string; errors?: Record<string, string[]> } };
+      })?.response?.data;
+      const validationMessage = data?.errors
+        ? Object.values(data.errors).flat().find(Boolean)
+        : undefined;
+      setError(validationMessage || data?.message || 'Đã xảy ra lỗi. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
@@ -87,28 +111,32 @@ const RegisterPage: React.FC = () => {
             </div>
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="email" name="email" placeholder="Email"
+              <input type="email" name="email" placeholder="Email *" required maxLength={100}
                 value={formData.email} onChange={handleChange}
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-medium outline-none transition-colors"
               />
             </div>
             <div className="relative">
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="tel" name="phone" placeholder="Số điện thoại"
+              <input type="tel" name="phone" placeholder="Số điện thoại *" required
+                inputMode="numeric" pattern="0[0-9]{9}" maxLength={10}
                 value={formData.phone} onChange={handleChange}
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-medium outline-none transition-colors"
               />
             </div>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="password" name="password" placeholder="Mật khẩu *" required minLength={6}
+              <input type="password" name="password" placeholder="Mật khẩu *" required minLength={8}
                 value={formData.password} onChange={handleChange}
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-medium outline-none transition-colors"
               />
             </div>
+            <p className="-mt-2 text-xs text-slate-500">
+              Ít nhất 8 ký tự, có chữ hoa, chữ thường, chữ số và ký tự đặc biệt.
+            </p>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="password" name="confirmPassword" placeholder="Nhập lại mật khẩu *" required minLength={6}
+              <input type="password" name="confirmPassword" placeholder="Nhập lại mật khẩu *" required minLength={8}
                 value={formData.confirmPassword} onChange={handleChange}
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-medium outline-none transition-colors"
               />

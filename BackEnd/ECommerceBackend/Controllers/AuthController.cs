@@ -34,11 +34,14 @@ namespace ECommerceBackend.Controllers
                 string.IsNullOrWhiteSpace(request.Password))
                 return BadRequest(new ApiErrorDto("Email và Mật khẩu không được để trống."));
 
-            // Tìm user theo username (email) — must be active
+            var identifier = request.Username.Trim().ToLowerInvariant();
+
+            // Cho phép đăng nhập bằng tên đăng nhập hoặc email.
             var user = await _context.Users
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u =>
-                    u.Username == request.Username &&
+                    (u.Username.ToLower() == identifier ||
+                     (u.Email != null && u.Email.ToLower() == identifier)) &&
                     u.Isactive == true);
 
             if (user == null)
@@ -157,31 +160,79 @@ namespace ECommerceBackend.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto req)
         {
-            // Check username uniqueness
-            bool exists = await _context.Users.AnyAsync(u => u.Username == req.Username);
-            if (exists)
-                return BadRequest(new ApiErrorDto("Tên đăng nhập đã tồn tại.", null));
+            var username = req.Username.Trim();
+            var fullname = req.Fullname.Trim();
+            var email = req.Email.Trim().ToLowerInvariant();
+            var phone = req.Phone.Trim();
 
-            // Resolve Customer role from DB — không hardcode RoleId
+            if (await _context.Users.AnyAsync(user =>
+                    user.Username.ToLower() == username.ToLower()))
+            {
+                return Conflict(new ApiErrorDto("Tên đăng nhập đã tồn tại.", null));
+            }
+
+            if (await _context.Users.AnyAsync(user =>
+                    user.Email != null && user.Email.ToLower() == email))
+            {
+                return Conflict(new ApiErrorDto("Email đã được sử dụng cho tài khoản khác.", null));
+            }
+
+            if (await _context.Users.AnyAsync(user => user.Phone == phone))
+            {
+                return Conflict(new ApiErrorDto("Số điện thoại đã được sử dụng cho tài khoản khác.", null));
+            }
+
             var customerRole = await _context.Roles.FirstOrDefaultAsync(r => r.Rolename == "Customer");
             if (customerRole == null)
                 return StatusCode(500, new ApiErrorDto("Hệ thống chưa cấu hình role Customer. Vui lòng liên hệ Admin.", null));
 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             var user = new User
             {
-                Username     = req.Username,
+                Username     = username,
                 Passwordhash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-                Fullname     = req.Fullname,
-                Email        = req.Email,
-                Phone        = req.Phone,
+                Fullname     = fullname,
+                Email        = email,
+                Phone        = phone,
                 Roleid       = customerRole.Roleid,
                 Isactive     = true,
-                Createdat    = DateTime.UtcNow
+                Createdat    = DateTime.Now
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return Ok(new ApiMessageDto("Đăng ký thành công. Bạn có thể đăng nhập ngay."));
+            try
+            {
+                _context.Users.Add(user);
+
+                var customer = await _context.Customers.FirstOrDefaultAsync(item =>
+                    item.Email == email || item.Phone == phone);
+                if (customer == null)
+                {
+                    _context.Customers.Add(new Customer
+                    {
+                        Fullname = fullname,
+                        Email = email,
+                        Phone = phone,
+                        Createdat = DateTime.Now
+                    });
+                }
+                else
+                {
+                    customer.Fullname = fullname;
+                    customer.Email ??= email;
+                    customer.Phone = phone;
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new ApiMessageDto("Đăng ký thành công. Bạn có thể đăng nhập ngay."));
+            }
+            catch (DbUpdateException)
+            {
+                await transaction.RollbackAsync();
+                return Conflict(new ApiErrorDto(
+                    "Tên đăng nhập, email hoặc số điện thoại đã được sử dụng.",
+                    null));
+            }
         }
 
         // ── POST /api/auth/forgot-password ────────────────────────────────────

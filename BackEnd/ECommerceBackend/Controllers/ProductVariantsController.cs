@@ -88,7 +88,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse")]
         public async Task<ActionResult<ProductVariantDto>> PostProductVariant([FromBody] CreateProductVariantRequestDto dto)
         {
             var variant = new Productvariant
@@ -112,7 +112,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPut("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse")]
         public async Task<IActionResult> PutProductVariant(int id, [FromBody] UpdateProductVariantRequestDto dto)
         {
             var variant = await _context.Productvariants.FindAsync(id);
@@ -139,7 +139,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse")]
         public async Task<IActionResult> DeleteProductVariant(int id)
         {
             var variant = await _context.Productvariants.FindAsync(id);
@@ -162,7 +162,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPut("{id}/attributes")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
         public async Task<IActionResult> AssignVariantAttributes(int id, [FromBody] List<VariantSpecDto> specs)
         {
             var variant = await _context.Productvariants.FindAsync(id);

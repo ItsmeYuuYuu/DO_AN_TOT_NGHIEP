@@ -1,30 +1,28 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
-import { Modal } from '@/components/Modal';
 import { DataTable } from '@/components/DataTable';
 import { Pagination } from '@/components/Pagination';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import type { Product } from '@/features/products/api/productsApi';
 import { productsApi } from '@/features/products/api/productsApi';
 import { formatCurrency, formatDate } from '@/utils/formatters';
-import { VariantAttributesModal } from './VariantAttributesModal';
 import { ProductFormWizard } from './ProductFormWizard';
+import { ProductEditModal } from './ProductEditModal';
 import { brandsApi } from '@/features/brands/api/brandsApi';
 import { categoriesApi } from '@/features/categories/api/categoriesApi';
 import axios from 'axios';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 const PAGE_SIZE = 10;
 
 const AdminProducts: React.FC = () => {
+  const { user } = useAuth();
   const { products, loading, error, refetch, deleteProduct } = useProducts();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Partial<Product> | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
 
   // New Filters
   const [filterBrand, setFilterBrand] = useState('');
@@ -52,36 +50,7 @@ const AdminProducts: React.FC = () => {
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const openCreate = () => setWizardOpen(true);
-  const openEdit = (p: Product) => {
-    setEditing({
-      ...p,
-      brandid: p.brand?.id,
-      categoryid: p.category?.id,
-    });
-    setModalOpen(true);
-  };
-  const closeModal = () => { setModalOpen(false); setEditing(null); };
-
-  const handleSave = async () => {
-    if (!editing?.productname?.trim()) return;
-    setSaving(true);
-    try {
-      if (editing.productid) {
-        await productsApi.update(editing.productid, editing);
-      } else {
-        await productsApi.create(editing as Partial<Product>);
-      }
-      await refetch();
-      closeModal();
-    } catch (err) {
-      const message = axios.isAxiosError(err)
-        ? err.response?.data?.message
-        : null;
-      alert(message || 'Lỗi khi lưu sản phẩm. Vui lòng thử lại.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const openEdit = (product: Product) => setEditingProductId(product.productid);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
@@ -151,9 +120,11 @@ const AdminProducts: React.FC = () => {
           <button onClick={() => openEdit(p)} className="px-2.5 py-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md font-semibold transition-colors">
             Sửa
           </button>
-          <button onClick={() => handleDelete(p.productid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-md font-semibold transition-colors">
-            Xóa
-          </button>
+          {user?.rolename === 'Admin' && (
+            <button onClick={() => handleDelete(p.productid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-md font-semibold transition-colors">
+              Xóa
+            </button>
+          )}
         </div>
       ),
     },
@@ -169,9 +140,11 @@ const AdminProducts: React.FC = () => {
             {loading ? 'Đang tải...' : `${filtered.length} sản phẩm trong hệ thống`}
           </p>
         </div>
-        <Button onClick={openCreate} size="sm">
-          + Thêm sản phẩm
-        </Button>
+        {user?.rolename !== 'Content' && (
+          <Button onClick={openCreate} size="sm">
+            + Thêm sản phẩm
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -219,101 +192,16 @@ const AdminProducts: React.FC = () => {
         pageSize={PAGE_SIZE}
       />
 
-      {/* Create / Edit Modal */}
-      <Modal
-        isOpen={modalOpen}
-        onClose={closeModal}
-        title={editing?.productid ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
-      >
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <Input
-              label="Tên sản phẩm *"
-            value={editing?.productname ?? ''}
-            onChange={e => setEditing(prev => ({ ...prev, productname: e.target.value }))}
-            placeholder="VD: iPhone 15 Pro Max 256GB"
-          />
-          <div>
-            <label className="text-sm font-medium text-slate-700 block mb-1.5">Mô tả</label>
-            <textarea
-              className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 placeholder:text-slate-400 transition-all resize-none"
-              rows={4}
-              value={editing?.description ?? ''}
-              onChange={e => setEditing(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Mô tả chi tiết sản phẩm..."
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1.5">Danh mục</label>
-              <select
-                className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500"
-                value={editing?.categoryid ?? ''}
-                onChange={e => setEditing(prev => ({ ...prev, categoryid: parseInt(e.target.value) || undefined }))}
-              >
-                <option value="">Chọn danh mục</option>
-                {categories.map(c => <option key={c.categoryid} value={c.categoryid}>{c.categoryname}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1.5">Thương hiệu</label>
-              <select
-                className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500"
-                value={editing?.brandid ?? ''}
-                onChange={e => setEditing(prev => ({ ...prev, brandid: parseInt(e.target.value) || undefined }))}
-              >
-                <option value="">Chọn thương hiệu</option>
-                {brands.map(b => <option key={b.brandid} value={b.brandid}>{b.brandname}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {editing?.productid && editing.productvariants && (
-            <div className="pt-4 border-t border-slate-100">
-              <h3 className="text-sm font-bold text-slate-800 mb-3">Các phiên bản (Variants)</h3>
-              {editing.productvariants.length === 0 ? (
-                <p className="text-xs text-slate-500">Chưa có phiên bản nào.</p>
-              ) : (
-                <div className="space-y-2">
-                  {editing.productvariants.map(v => (
-                    <div key={v.variantid} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
-                      <div>
-                        <p className="text-xs font-bold text-slate-800">SKU: {v.sku}</p>
-                        <p className="text-[10px] text-slate-500">Giá: {formatCurrency(v.saleprice ?? v.baseprice)}</p>
-                      </div>
-                      <button 
-                        type="button"
-                        onClick={() => setActiveVariantId(v.variantid)}
-                        className="px-3 py-1.5 bg-white border border-slate-300 rounded-md text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors"
-                      >
-                        Thuộc tính
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            <Button onClick={handleSave} isLoading={saving} className="flex-1">
-              {editing?.productid ? 'Cập nhật' : 'Thêm mới'}
-            </Button>
-            <Button variant="secondary" onClick={closeModal} className="flex-1">
-              Hủy
-            </Button>
-          </div>
-          </div>
-        </div>
-      </Modal>
-
-      {activeVariantId && (
-        <VariantAttributesModal 
-          isOpen={true} 
-          variantId={activeVariantId} 
-          onClose={() => setActiveVariantId(null)} 
-        />
-      )}
+      <ProductEditModal
+        productId={editingProductId}
+        brands={brands}
+        categories={categories}
+        onClose={() => setEditingProductId(null)}
+        onSaved={async () => {
+          await refetch();
+          setEditingProductId(null);
+        }}
+      />
 
       <ProductFormWizard 
         isOpen={wizardOpen} 

@@ -90,7 +90,14 @@ namespace ECommerceBackend.Tests
             
             db.Customers.Add(new Customer { Customerid = 1, Fullname = "Test User", Email = "test@test.com", Phone = "123" });
             
-            var variant = new Productvariant { Variantid = 10, Baseprice = 1000, Saleprice = 900 };
+            var variant = new Productvariant
+            {
+                Variantid = 10,
+                Sku = "TEST-VARIANT-10",
+                Baseprice = 1000,
+                Saleprice = 900,
+                Condition = "New Seal"
+            };
             db.Productvariants.Add(variant);
             
             db.Inventoryitems.Add(new Inventoryitem { Imei = "IMEI1", Variantid = 10, Status = "InStock" });

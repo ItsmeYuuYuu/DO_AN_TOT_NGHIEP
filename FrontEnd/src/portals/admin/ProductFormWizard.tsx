@@ -4,11 +4,19 @@ import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { brandsApi } from '@/features/brands/api/brandsApi';
 import { categoriesApi } from '@/features/categories/api/categoriesApi';
-import type { CreateFullProduct, CreateFullProductVariant } from '@/features/products/api/productsApi';
+import { productsApi } from '@/features/products/api/productsApi';
+import { productSeriesApi, type ProductSeries } from '@/features/productSeries/api/productSeriesApi';
+import type {
+  CreateFullProduct,
+  CreateFullProductVariant,
+  UploadedProductImage,
+} from '@/features/products/api/productsApi';
 import { 
   AlertCircle, 
   CheckCircle, 
   Image as ImageIcon,
+  LoaderCircle,
+  Upload,
   Trash2
 } from 'lucide-react';
 
@@ -45,6 +53,12 @@ const SPEC_KEYS = [
   'Chất liệu'
 ];
 
+interface WizardImage {
+  imageurl: string;
+  ismain: boolean;
+  uploadedFileName?: string;
+}
+
 export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, onClose, onSubmit }) => {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -53,11 +67,13 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   // Lookups
   const [brands, setBrands] = useState<{ brandid: number; brandname: string }[]>([]);
   const [categories, setCategories] = useState<{ categoryid: number; categoryname: string }[]>([]);
+  const [seriesList, setSeriesList] = useState<ProductSeries[]>([]);
 
   // Step 1: Base Info
   const [productname, setProductname] = useState('');
   const [brandid, setBrandid] = useState<number | ''>('');
   const [categoryid, setCategoryid] = useState<number | ''>('');
+  const [seriesid, setSeriesid] = useState<number | ''>('');
   const [baseprice, setBaseprice] = useState<number | ''>('');
   const [hasDiscount, setHasDiscount] = useState(false);
   const [saleprice, setSaleprice] = useState<number | ''>('');
@@ -65,7 +81,10 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
 
   // Step 2: Description
   const [description, setDescription] = useState('');
+  const [descriptionImages, setDescriptionImages] = useState<UploadedProductImage[]>([]);
+  const [uploadingDescriptionImages, setUploadingDescriptionImages] = useState(false);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const descriptionImageInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3: Options (Lựa chọn) - Configure one variant at a time
   const [allColors, setAllColors] = useState<string[]>(['Đen', 'Trắng', 'Xanh', 'Vàng', 'Hồng', 'Xám']);
@@ -86,6 +105,8 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   const [variantBasePrice, setVariantBasePrice] = useState<number | ''>('');
   const [variantSalePrice, setVariantSalePrice] = useState<number | ''>('');
   const [variantStock, setVariantStock] = useState<number | ''>('');
+  const [activeImages, setActiveImages] = useState<WizardImage[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   // List of added variants
   interface VariantState {
@@ -96,6 +117,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     quantity: number;
     condition: string;
     specs: { key: string; value: string }[];
+    images: WizardImage[];
   }
   const [variants, setVariants] = useState<VariantState[]>([]);
 
@@ -107,9 +129,23 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     if (isOpen) {
       brandsApi.getAll().then(res => setBrands(res.data));
       categoriesApi.getAll().then(res => setCategories(res.data));
+      productSeriesApi.getAll({ activeOnly: true }).then(res => setSeriesList(res.data));
       resetForm();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (seriesid && brandid) {
+      const selected = seriesList.find(series => series.seriesid === seriesid);
+      if (selected && selected.brandid !== brandid) {
+        setSeriesid('');
+      }
+    }
+  }, [brandid, seriesid, seriesList]);
+
+  const filteredSeries = brandid
+    ? seriesList.filter(series => series.brandid === brandid)
+    : [];
 
   // Sync default values from Step 1 to active variant when Step 1 changes
   useEffect(() => {
@@ -137,11 +173,14 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     setProductname('');
     setBrandid('');
     setCategoryid('');
+    setSeriesid('');
     setBaseprice('');
     setHasDiscount(false);
     setSaleprice('');
     setStock('');
     setDescription('');
+    setDescriptionImages([]);
+    setUploadingDescriptionImages(false);
     setVariants([]);
     setActiveSpecs([]);
     setSpecsData({});
@@ -152,12 +191,12 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     setActiveCondition('New Seal');
     setActiveOrigin('Chính hãng');
     setCustomColor('');
+    setActiveImages([]);
+    setUploadingImages(false);
   };
 
   // Step 2 Helpers
-  const insertImage = () => {
-    const url = prompt('Nhập URL hình ảnh:');
-    if (!url) return;
+  const insertDescriptionImageMarkdown = (images: UploadedProductImage[]) => {
     const textarea = descriptionRef.current;
     if (!textarea) return;
 
@@ -166,15 +205,51 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     const text = textarea.value;
     const before = text.substring(0, start);
     const after = text.substring(end, text.length);
-    const insertText = `\n![Hình ảnh](${url})\n`;
-    
+    const insertText = images
+      .map(image => `\n![Hình ảnh sản phẩm](${image.url})\n`)
+      .join('');
+
     setDescription(before + insertText + after);
 
-    // Reposition cursor
     setTimeout(() => {
       textarea.focus();
       textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
     }, 50);
+  };
+
+  const handleUploadDescriptionImages = async (files: File[]) => {
+    if (files.length === 0) return;
+    if (files.length > 8) {
+      setError('Mỗi lần chỉ được chọn tối đa 8 ảnh mô tả.');
+      return;
+    }
+
+    setUploadingDescriptionImages(true);
+    setError(null);
+    try {
+      const response = await productsApi.uploadImages(files);
+      setDescriptionImages(current => [...current, ...response.data]);
+      insertDescriptionImageMarkdown(response.data);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Không thể tải ảnh mô tả lên.');
+    } finally {
+      setUploadingDescriptionImages(false);
+      if (descriptionImageInputRef.current) {
+        descriptionImageInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeDescriptionImage = async (image: UploadedProductImage) => {
+    await productsApi.deleteUploadedImage(image.fileName).catch(() => undefined);
+    setDescriptionImages(current =>
+      current.filter(item => item.fileName !== image.fileName)
+    );
+    setDescription(current =>
+      current
+        .replace(`\n![Hình ảnh sản phẩm](${image.url})\n`, '\n')
+        .replace(`![Hình ảnh sản phẩm](${image.url})`, '')
+    );
   };
 
   // Step 3 Helpers
@@ -186,6 +261,66 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     }
     setActiveColor(cleanColor);
     setCustomColor('');
+  };
+
+  const cleanupUploadedFiles = async (images: WizardImage[]) => {
+    const fileNames = [...new Set(
+      images
+        .map(image => image.uploadedFileName)
+        .filter((fileName): fileName is string => Boolean(fileName))
+    )];
+
+    await Promise.allSettled(
+      fileNames.map(fileName => productsApi.deleteUploadedImage(fileName))
+    );
+  };
+
+  const handleUploadImages = async (files: File[]) => {
+    if (files.length === 0) return;
+
+    const remainingSlots = 8 - activeImages.length;
+    if (files.length > remainingSlots) {
+      setError(`Biến thể này chỉ còn có thể thêm ${remainingSlots} ảnh.`);
+      return;
+    }
+
+    setUploadingImages(true);
+    setError(null);
+    try {
+      const response = await productsApi.uploadImages(files);
+      setActiveImages(current => [
+        ...current,
+        ...response.data.map((image, index) => ({
+          imageurl: image.url,
+          ismain: current.length === 0 && index === 0,
+          uploadedFileName: image.fileName,
+        })),
+      ]);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Không thể tải hình ảnh lên máy chủ.');
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const removedImage = activeImages[index];
+    if (removedImage?.uploadedFileName) {
+      void productsApi.deleteUploadedImage(removedImage.uploadedFileName);
+    }
+
+    const remaining = activeImages.filter((_, imageIndex) => imageIndex !== index);
+    if (remaining.length > 0 && !remaining.some(image => image.ismain)) {
+      remaining[0] = { ...remaining[0], ismain: true };
+    }
+    setActiveImages(remaining);
+  };
+
+  const handleSetMainImage = (index: number) => {
+    setActiveImages(activeImages.map((image, imageIndex) => ({
+      ...image,
+      ismain: imageIndex === index,
+    })));
   };
 
   const handleAddVariant = () => {
@@ -208,6 +343,11 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
       return;
     }
 
+    if (activeImages.length === 0) {
+      setError('Vui lòng thêm ít nhất 1 hình ảnh cho biến thể.');
+      return;
+    }
+
     const optionKeys = [activeColor, activeRam, activeRom, activeCondition, activeOrigin];
     const specsList = [
       { key: 'Màu sắc', value: activeColor },
@@ -226,13 +366,32 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
         saleprice: variantSalePrice ? Number(variantSalePrice) : '',
         quantity: Number(variantStock),
         condition: activeCondition,
-        specs: specsList
+        specs: specsList,
+        images: activeImages.map(image => ({ ...image })),
       }
     ]);
+    setActiveImages([]);
   };
 
   const handleRemoveVariant = (idx: number) => {
+    void cleanupUploadedFiles(variants[idx]?.images ?? []);
     setVariants(variants.filter((_, i) => i !== idx));
+  };
+
+  const handleClose = async () => {
+    if (submitting || uploadingImages) return;
+
+    await cleanupUploadedFiles([
+      ...activeImages,
+      ...variants.flatMap(variant => variant.images),
+      ...descriptionImages.map(image => ({
+        imageurl: image.url,
+        ismain: false,
+        uploadedFileName: image.fileName,
+      })),
+    ]);
+    resetForm();
+    onClose();
   };
 
   // Step 4 Helpers
@@ -302,7 +461,11 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
           saleprice: v.saleprice ? Number(v.saleprice) : undefined,
           condition: v.condition,
           quantity: Number(v.quantity),
-          specs: specsList
+          specs: specsList,
+          images: v.images.map(image => ({
+            imageurl: image.imageurl,
+            ismain: image.ismain,
+          })),
         };
       });
 
@@ -311,6 +474,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
         description: description.trim(),
         categoryid: Number(categoryid),
         brandid: Number(brandid),
+        seriesid: seriesid ? Number(seriesid) : undefined,
         variants: parsedVariants
       };
 
@@ -326,7 +490,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   };
 
   return (
-    <Modal isOpen={isOpen} title="Thêm sản phẩm mới" onClose={onClose} size="xl">
+    <Modal isOpen={isOpen} title="Thêm sản phẩm mới" onClose={() => { void handleClose(); }} size="xl">
       <div className="w-full pb-6">
         
         {/* Step Navigation Bar */}
@@ -375,9 +539,24 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Thương hiệu *</label>
-                <select className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-blue-500 bg-white" value={brandid} onChange={e => setBrandid(e.target.value ? Number(e.target.value) : '')}>
+                <select className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-blue-500 bg-white" value={brandid} onChange={e => {
+                  setBrandid(e.target.value ? Number(e.target.value) : '');
+                  setSeriesid('');
+                }}>
                   <option value="">-- Chọn thương hiệu --</option>
                   {brands.map(b => <option key={b.brandid} value={b.brandid}>{b.brandname}</option>)}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Dòng máy</label>
+                <select
+                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-blue-500 bg-white disabled:bg-slate-100"
+                  value={seriesid}
+                  disabled={!brandid || filteredSeries.length === 0}
+                  onChange={e => setSeriesid(e.target.value ? Number(e.target.value) : '')}
+                >
+                  <option value="">{brandid ? '-- Chọn dòng máy --' : '-- Chọn thương hiệu trước --'}</option>
+                  {filteredSeries.map(series => <option key={series.seriesid} value={series.seriesid}>{series.seriesname}</option>)}
                 </select>
               </div>
             </div>
@@ -412,8 +591,26 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-slate-600 uppercase">Mô tả sản phẩm</label>
-              <button type="button" onClick={insertImage} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xs rounded-xl transition-colors">
-                <ImageIcon size={14} /> Chèn hình ảnh vào mô tả
+              <input
+                ref={descriptionImageInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={event => {
+                  void handleUploadDescriptionImages(Array.from(event.target.files ?? []));
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => descriptionImageInputRef.current?.click()}
+                disabled={uploadingDescriptionImages}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xs rounded-xl transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {uploadingDescriptionImages
+                  ? <LoaderCircle size={14} className="animate-spin" />
+                  : <ImageIcon size={14} />}
+                {uploadingDescriptionImages ? 'Đang tải ảnh...' : 'Chèn ảnh từ máy'}
               </button>
             </div>
             <textarea
@@ -424,6 +621,32 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
               value={description}
               onChange={e => setDescription(e.target.value)}
             />
+            <p className="text-xs leading-5 text-slate-500">
+              Đặt con trỏ tại vị trí muốn chèn rồi chọn ảnh từ máy. Hỗ trợ JPG, PNG, WebP; tối đa 5 MB mỗi ảnh.
+            </p>
+            {descriptionImages.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {descriptionImages.map(image => (
+                  <div
+                    key={image.fileName}
+                    className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5"
+                  >
+                    <img src={image.url} alt="" className="h-9 w-9 rounded object-cover" />
+                    <span className="max-w-32 truncate text-[11px] font-medium text-slate-600">
+                      {image.fileName}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { void removeDescriptionImage(image); }}
+                      className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      title="Xóa ảnh mô tả"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -494,6 +717,80 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 <div>
                   <Input type="number" label="Số lượng tồn kho *" value={variantStock} onChange={e => setVariantStock(e.target.value ? Number(e.target.value) : '')} />
                 </div>
+              </div>
+
+              <div className="border-t border-slate-200/50 pt-4 space-y-3">
+                <div className="flex flex-wrap items-end justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase text-slate-600">Hình ảnh biến thể *</h4>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Nên thêm 4-5 ảnh. Ảnh đại diện dùng ở danh sách, các ảnh còn lại dùng trong gallery chi tiết.
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500">{activeImages.length}/8 ảnh</span>
+                </div>
+
+                <label
+                  className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-4 text-sm font-bold transition-colors ${
+                    uploadingImages || activeImages.length >= 8
+                      ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                      : 'border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-400 hover:bg-blue-100'
+                  }`}
+                >
+                  {uploadingImages ? <LoaderCircle size={18} className="animate-spin" /> : <Upload size={18} />}
+                  {uploadingImages ? 'Đang tải ảnh lên...' : 'Chọn nhiều ảnh từ máy'}
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={uploadingImages || activeImages.length >= 8}
+                    className="hidden"
+                    onChange={event => {
+                      const files = Array.from(event.target.files ?? []);
+                      event.target.value = '';
+                      void handleUploadImages(files);
+                    }}
+                  />
+                </label>
+
+                {activeImages.length === 0 ? (
+                  <div className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-white py-7 text-xs font-medium text-slate-400">
+                    <ImageIcon size={18} />
+                    Chưa có hình ảnh cho biến thể này.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {activeImages.map((image, imageIndex) => (
+                      <div
+                        key={image.imageurl}
+                        className={`relative overflow-hidden rounded-xl border-2 bg-white p-2 ${
+                          image.ismain ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200'
+                        }`}
+                      >
+                        <div className="aspect-square overflow-hidden rounded-lg bg-slate-50">
+                          <img src={image.imageurl} alt="" className="h-full w-full object-contain" />
+                        </div>
+                        <label className="mt-2 flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-600">
+                          <input
+                            type="radio"
+                            name="main-variant-image"
+                            checked={image.ismain}
+                            onChange={() => handleSetMainImage(imageIndex)}
+                          />
+                          Ảnh đại diện
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(imageIndex)}
+                          className="absolute right-2 top-2 rounded-lg bg-white/90 p-1.5 text-red-500 shadow hover:bg-red-50"
+                          aria-label="Xóa hình ảnh"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="pt-2">
@@ -605,6 +902,10 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase">Thương hiệu</span>
                   <p className="font-bold text-slate-800 mt-0.5">{brands.find(b => b.brandid === brandid)?.brandname || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase">Dòng máy</span>
+                  <p className="font-bold text-slate-800 mt-0.5">{seriesList.find(series => series.seriesid === seriesid)?.seriesname || '—'}</p>
                 </div>
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase">Tổng tồn kho dự kiến</span>

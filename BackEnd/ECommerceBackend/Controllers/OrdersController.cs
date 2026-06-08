@@ -46,7 +46,7 @@ namespace ECommerceBackend.Controllers
 
         // GET: api/Orders
         [HttpGet]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Staff")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrders()
         {
             var orders = await _context.Orders
@@ -64,7 +64,7 @@ namespace ECommerceBackend.Controllers
 
         // GET: api/Orders/5
         [HttpGet("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Staff")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
         public async Task<ActionResult<OrderDetailDto>> GetOrder(int id)
         {
             var order = await _context.Orders
@@ -83,7 +83,7 @@ namespace ECommerceBackend.Controllers
 
         // GET: api/Orders/customer/5
         [HttpGet("customer/{customerId}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Staff")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrdersByCustomer(int customerId)
         {
             var orders = await _context.Orders
@@ -105,7 +105,13 @@ namespace ECommerceBackend.Controllers
         [Microsoft.AspNetCore.Authorization.Authorize]
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrdersByUser(int userId)
         {
-            var isStaffOrAdmin = User.IsInRole("Admin") || User.IsInRole("Staff");
+            var isStaffOrAdmin =
+                User.IsInRole("Admin") ||
+                User.IsInRole("Manager") ||
+                User.IsInRole("Sales") ||
+                User.IsInRole("Warranty") ||
+                User.IsInRole("Consultant") ||
+                User.IsInRole("Staff");
             var claimUserId = User.FindFirst("userid")?.Value;
             
             if (!isStaffOrAdmin && claimUserId != userId.ToString())
@@ -320,7 +326,7 @@ namespace ECommerceBackend.Controllers
 
         // PUT: api/Orders/5
         [HttpPut("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Staff")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Staff")]
         public async Task<IActionResult> PutOrder(int id, [FromBody] UpdateOrderRequestDto dto)
         {
             var order = await _context.Orders.FindAsync(id);
@@ -346,7 +352,7 @@ namespace ECommerceBackend.Controllers
 
         // PATCH: api/Orders/5/status
         [HttpPatch("{id}/status")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Staff")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Staff")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusRequestDto dto)
         {
             var validTransitions = new Dictionary<string, string[]>
@@ -407,7 +413,7 @@ namespace ECommerceBackend.Controllers
 
         // POST: api/Orders/bulk-status
         [HttpPost("bulk-status")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Staff")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Staff")]
         public async Task<IActionResult> BulkUpdateStatus([FromBody] BulkUpdateStatusRequestDto dto, [FromServices] ILogger<OrdersController> logger)
         {
             var validTransitions = new Dictionary<string, string[]>

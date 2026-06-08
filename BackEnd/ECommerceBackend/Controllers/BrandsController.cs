@@ -17,22 +17,27 @@ namespace ECommerceBackend.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BrandDto>>> GetBrands()
         {
-            var brands = await _context.Brands.ToListAsync();
-            return Ok(brands.Select(b => new BrandDto(b.Brandid, b.Brandname)));
+            var brands = await _context.Brands
+                .Select(b => new BrandDto(b.Brandid, b.Brandname, b.Products.Count))
+                .ToListAsync();
+            return Ok(brands);
         }
 
         // GET: api/Brands/5
         [HttpGet("{id}")]
         public async Task<ActionResult<BrandDto>> GetBrand(int id)
         {
-            var brand = await _context.Brands.FindAsync(id);
+            var brand = await _context.Brands
+                .Where(b => b.Brandid == id)
+                .Select(b => new BrandDto(b.Brandid, b.Brandname, b.Products.Count))
+                .FirstOrDefaultAsync();
             if (brand == null) return NotFound();
-            return Ok(new BrandDto(brand.Brandid, brand.Brandname));
+            return Ok(brand);
         }
 
         // POST: api/Brands
         [HttpPost]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
         public async Task<ActionResult<BrandDto>> PostBrand([FromBody] CreateBrandRequestDto dto)
         {
             var brand = new Brand
@@ -42,13 +47,13 @@ namespace ECommerceBackend.Controllers
             _context.Brands.Add(brand);
             await _context.SaveChangesAsync();
 
-            var responseDto = new BrandDto(brand.Brandid, brand.Brandname);
+            var responseDto = new BrandDto(brand.Brandid, brand.Brandname, 0);
             return CreatedAtAction(nameof(GetBrand), new { id = brand.Brandid }, responseDto);
         }
 
         // PUT: api/Brands/5
         [HttpPut("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
         public async Task<IActionResult> PutBrand(int id, [FromBody] UpdateBrandRequestDto dto)
         {
             var brand = await _context.Brands.FindAsync(id);
@@ -63,7 +68,8 @@ namespace ECommerceBackend.Controllers
                 throw;
             }
 
-            var responseDto = new BrandDto(brand.Brandid, brand.Brandname);
+            var productCount = await _context.Products.CountAsync(p => p.Brandid == id);
+            var responseDto = new BrandDto(brand.Brandid, brand.Brandname, productCount);
             return Ok(responseDto);
         }
 

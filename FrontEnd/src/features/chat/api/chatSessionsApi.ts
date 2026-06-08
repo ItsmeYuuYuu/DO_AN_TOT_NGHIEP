@@ -8,6 +8,11 @@ export interface ChatSession {
   endtime: string | null;
   status: string | null;
   title: string;
+  assigneduserid?: number | null;
+  assignedname?: string | null;
+  handoffstatus?: 'Waiting' | 'InProgress' | 'Closed' | null;
+  handoffrequestedat?: string | null;
+  customername?: string | null;
 }
 
 export interface ChatMessage {
@@ -54,7 +59,38 @@ export const chatSessionsApi = {
   },
 
   postMessage: async (id: number, content: string): Promise<ChatMessage> => {
-    const response = await apiClient.post(`/chatsessions/${id}/messages`, { messagecontent: content }, { headers: getHeaders() });
+    const response = await apiClient.post(
+      `/chatsessions/${id}/messages`,
+      { messagecontent: content },
+      { headers: getHeaders(), timeout: 120_000 },
+    );
+    return response.data;
+  },
+
+  requestHandoff: async (id: number): Promise<ChatSession> => {
+    const response = await apiClient.post(`/chatsessions/${id}/handoff`, {}, { headers: getHeaders() });
+    return response.data;
+  },
+
+  getHandoffs: async (): Promise<ChatSession[]> => {
+    const response = await apiClient.get('/chatsessions/handoffs');
+    return response.data;
+  },
+
+  acceptHandoff: async (id: number): Promise<ChatSession> => {
+    const response = await apiClient.post(`/chatsessions/${id}/accept`);
+    return response.data;
+  },
+
+  postConsultantMessage: async (id: number, content: string): Promise<ChatMessage> => {
+    const response = await apiClient.post(`/chatsessions/${id}/consultant-messages`, {
+      messagecontent: content,
+    });
+    return response.data;
+  },
+
+  closeHandoff: async (id: number): Promise<ChatSession> => {
+    const response = await apiClient.post(`/chatsessions/${id}/close-handoff`);
     return response.data;
   },
 

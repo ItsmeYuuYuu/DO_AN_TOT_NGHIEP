@@ -25,7 +25,29 @@ public partial class Order
 
     public string? Orderstatus { get; set; }
 
+    public string? Checkouttype { get; set; }
+
+    public string? Paymentstatus { get; set; }
+
+    public decimal? Requiredpayment { get; set; }
+
+    public decimal? Paidamount { get; set; }
+
+    public decimal? Depositpercentage { get; set; }
+
+    public string? Shippingname { get; set; }
+
+    public string? Shippingphone { get; set; }
+
+    public string? Shippingemail { get; set; }
+
+    public string? Shippingaddress { get; set; }
+
+    public string? Customernote { get; set; }
+
     public virtual Customer? Customer { get; set; }
+
+    public virtual ICollection<Orderpayment> Orderpayments { get; set; } = new List<Orderpayment>();
 
     public virtual ICollection<Orderitem> Orderitems { get; set; } = new List<Orderitem>();
 

@@ -1,12 +1,10 @@
+using ECommerceBackend.DTOs.Common;
+using ECommerceBackend.DTOs.Orders;
+using ECommerceBackend.Models;
+using ECommerceBackend.Services.Checkout;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ECommerceBackend.Models;
-using ECommerceBackend.DTOs.Orders;
-using ECommerceBackend.DTOs.Common;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace ECommerceBackend.Controllers
 {
@@ -14,39 +12,220 @@ namespace ECommerceBackend.Controllers
     [ApiController]
     public class OrdersController : ControllerBase
     {
-        private readonly ECommerceContext _context;
+        private const string StatusPending = "Pending";
+        private const string StatusProcessing = "Processing";
+        private const string StatusShipped = "Shipped";
+        private const string StatusCompleted = "Completed";
+        private const string StatusCancelled = "Cancelled";
 
-        public OrdersController(ECommerceContext context) => _context = context;
+        private readonly ECommerceContext _context;
+        private readonly ICheckoutAbuseProtectionService _checkoutAbuseProtection;
+
+        public OrdersController(
+            ECommerceContext context,
+            ICheckoutAbuseProtectionService checkoutAbuseProtection)
+        {
+            _context = context;
+            _checkoutAbuseProtection = checkoutAbuseProtection;
+        }
 
         private static OrderListItemDto MapToDto(Order o)
         {
-            var customer = o.Customer != null ? new CustomerLiteDto(o.Customer.Customerid, o.Customer.Fullname, o.Customer.Phone, o.Customer.Email) : null;
+            var customer = o.Customer != null
+                ? new CustomerLiteDto(o.Customer.Customerid, o.Customer.Fullname, o.Customer.Phone, o.Customer.Email)
+                : null;
             var items = o.Orderitems.Select(i => new OrderItemDto(
-                i.Orderitemid, i.Orderid, i.Imei, i.Sellingprice, i.Warrantyprice, i.Packageid, i.Package?.Packagename,
-                i.ImeiNavigation?.Variant?.Product?.Productname, i.ImeiNavigation?.Variant?.Sku
+                i.Orderitemid,
+                i.Orderid,
+                i.Imei,
+                i.Sellingprice,
+                i.Warrantyprice,
+                i.Packageid,
+                i.Package?.Packagename,
+                i.ImeiNavigation?.Variant?.Product?.Productname,
+                i.ImeiNavigation?.Variant?.Sku
             )).ToList();
 
             return new OrderListItemDto(
-                o.Orderid, o.Customerid, o.Orderdate, o.Orderstatus, o.Totalamount, o.Discountamount, o.Finalamount, o.Paymentmethod, customer, items
+                o.Orderid,
+                o.Customerid,
+                o.Orderdate,
+                o.Orderstatus,
+                o.Totalamount,
+                o.Discountamount,
+                o.Finalamount,
+                o.Paymentmethod,
+                o.Checkouttype,
+                o.Paymentstatus,
+                o.Requiredpayment,
+                o.Paidamount,
+                o.Depositpercentage,
+                o.Shippingname,
+                o.Shippingphone,
+                o.Shippingemail,
+                o.Shippingaddress,
+                o.Customernote,
+                customer,
+                items
             );
         }
 
         private static OrderDetailDto MapToDetailDto(Order o)
         {
-            var customer = o.Customer != null ? new CustomerLiteDto(o.Customer.Customerid, o.Customer.Fullname, o.Customer.Phone, o.Customer.Email) : null;
-            var items = o.Orderitems.Select(i => new OrderItemDto(
-                i.Orderitemid, i.Orderid, i.Imei, i.Sellingprice, i.Warrantyprice, i.Packageid, i.Package?.Packagename,
-                i.ImeiNavigation?.Variant?.Product?.Productname, i.ImeiNavigation?.Variant?.Sku
-            )).ToList();
-
+            var mapped = MapToDto(o);
             return new OrderDetailDto(
-                o.Orderid, o.Customerid, o.Orderdate, o.Orderstatus, o.Totalamount, o.Discountamount, o.Finalamount, o.Paymentmethod, customer, items
+                mapped.Orderid,
+                mapped.Customerid,
+                mapped.Orderdate,
+                mapped.Orderstatus,
+                mapped.Totalamount,
+                mapped.Discountamount,
+                mapped.Finalamount,
+                mapped.Paymentmethod,
+                mapped.Checkouttype,
+                mapped.Paymentstatus,
+                mapped.Requiredpayment,
+                mapped.Paidamount,
+                mapped.Depositpercentage,
+                mapped.Shippingname,
+                mapped.Shippingphone,
+                mapped.Shippingemail,
+                mapped.Shippingaddress,
+                mapped.Customernote,
+                mapped.Customer,
+                mapped.Orderitems
             );
         }
 
-        // GET: api/Orders
+        private int? GetClaimUserId()
+        {
+            var value = User.FindFirst("userid")?.Value;
+            return int.TryParse(value, out var userId) ? userId : null;
+        }
+
+        private static string NormalizePaymentMethod(string? method)
+        {
+            var value = (method ?? string.Empty).Trim().ToUpperInvariant();
+            return value switch
+            {
+                "TIENMAT" or "TIEN MAT" or "TIEN_MAT" or "CASH" => "COD",
+                "CHUYENKHOAN" or "CHUYEN KHOAN" or "BANKTRANSFER" or "BANK_TRANSFER" => "BANK",
+                "NGANHANG" or "NGAN HANG" => "BANK",
+                "MOMO" => "MOMO",
+                "VNPAY" => "VNPAY",
+                "BANK" => "BANK",
+                "COD" => "COD",
+                _ => value
+            };
+        }
+
+        private static bool IsStaffOrAdmin(System.Security.Claims.ClaimsPrincipal user) =>
+            user.IsInRole("Admin") ||
+            user.IsInRole("Manager") ||
+            user.IsInRole("Sales") ||
+            user.IsInRole("Staff");
+
+        private static bool IsValidPaymentMethod(string paymentMethod) =>
+            paymentMethod is "COD" or "MOMO" or "VNPAY" or "BANK";
+
+        private static string NormalizePaymentOption(string? option)
+        {
+            var value = (option ?? string.Empty).Trim().ToUpperInvariant();
+            return value switch
+            {
+                "DEPOSIT" or "DEPOSIT30" or "COC" or "COC30" or "30" => "Deposit30",
+                "FULL" or "FULLPAYMENT" or "100" => "Full",
+                _ => string.Empty
+            };
+        }
+
+        private async Task<Customer> FindOrCreateCustomerAsync(
+            string fullName,
+            string phone,
+            string? email,
+            string shippingAddress)
+        {
+            Customer? customer = null;
+            if (!string.IsNullOrWhiteSpace(phone))
+            {
+                customer = await _context.Customers.FirstOrDefaultAsync(c => c.Phone == phone);
+            }
+
+            if (customer == null && !string.IsNullOrWhiteSpace(email))
+            {
+                customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email == email);
+            }
+
+            if (customer == null)
+            {
+                customer = new Customer
+                {
+                    Fullname = fullName,
+                    Phone = phone,
+                    Email = string.IsNullOrWhiteSpace(email) ? null : email,
+                    Address = shippingAddress,
+                    Createdat = DateTime.UtcNow
+                };
+                _context.Customers.Add(customer);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                customer.Fullname = fullName;
+                customer.Email = string.IsNullOrWhiteSpace(email) ? customer.Email : email;
+                customer.Address = shippingAddress;
+            }
+
+            return customer;
+        }
+
+        private static Dictionary<string, string[]> ValidTransitions() => new()
+        {
+            { StatusPending, new[] { StatusProcessing, StatusCancelled } },
+            { StatusProcessing, new[] { StatusShipped, StatusCancelled } },
+            { StatusShipped, new[] { StatusCompleted, StatusCancelled } }
+        };
+
+        private async Task ApplyInventoryForStatusAsync(Order order, string newStatus)
+        {
+            var imeis = order.Orderitems
+                .Where(item => item.Imei != null)
+                .Select(item => item.Imei!)
+                .ToList();
+            if (imeis.Count == 0) return;
+
+            var inventoryItems = await _context.Inventoryitems
+                .Where(item => imeis.Contains(item.Imei))
+                .ToListAsync();
+
+            if (newStatus == StatusCancelled)
+            {
+                foreach (var inv in inventoryItems)
+                {
+                    inv.Status = "InStock";
+                    inv.Warrantystartdate = null;
+                    inv.Warrantyenddate = null;
+                    inv.Warrantystatus = null;
+                }
+                return;
+            }
+
+            if (newStatus == StatusCompleted)
+            {
+                var now = DateTime.UtcNow;
+                foreach (var inv in inventoryItems)
+                {
+                    var orderItem = order.Orderitems.FirstOrDefault(item => item.Imei == inv.Imei);
+                    inv.Status = "Sold";
+                    inv.Warrantystartdate = now;
+                    inv.Warrantyenddate = now.AddMonths(orderItem?.Package?.Durationmonths ?? 12);
+                    inv.Warrantystatus = "Active";
+                }
+            }
+        }
+
         [HttpGet]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrders()
         {
             var orders = await _context.Orders
@@ -57,14 +236,14 @@ namespace ECommerceBackend.Controllers
                     .ThenInclude(oi => oi.ImeiNavigation)
                         .ThenInclude(inv => inv!.Variant)
                             .ThenInclude(v => v!.Product)
+                .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
-            
+
             return Ok(orders.Select(MapToDto));
         }
 
-        // GET: api/Orders/5
         [HttpGet("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
         public async Task<ActionResult<OrderDetailDto>> GetOrder(int id)
         {
             var order = await _context.Orders
@@ -76,17 +255,17 @@ namespace ECommerceBackend.Controllers
                         .ThenInclude(inv => inv!.Variant)
                             .ThenInclude(v => v!.Product)
                 .FirstOrDefaultAsync(o => o.Orderid == id);
-            
+
             if (order == null) return NotFound();
             return Ok(MapToDetailDto(order));
         }
 
-        // GET: api/Orders/customer/5
         [HttpGet("customer/{customerId}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrdersByCustomer(int customerId)
         {
             var orders = await _context.Orders
+                .Include(o => o.Customer)
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Package)
                 .Include(o => o.Orderitems)
@@ -96,30 +275,22 @@ namespace ECommerceBackend.Controllers
                 .Where(o => o.Customerid == customerId)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
-            
+
             return Ok(orders.Select(MapToDto));
         }
 
-        // GET: api/Orders/user/5
         [HttpGet("user/{userId}")]
-        [Microsoft.AspNetCore.Authorization.Authorize]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrdersByUser(int userId)
         {
-            var isStaffOrAdmin =
-                User.IsInRole("Admin") ||
-                User.IsInRole("Manager") ||
-                User.IsInRole("Sales") ||
-                User.IsInRole("Warranty") ||
-                User.IsInRole("Consultant") ||
-                User.IsInRole("Staff");
-            var claimUserId = User.FindFirst("userid")?.Value;
-            
-            if (!isStaffOrAdmin && claimUserId != userId.ToString())
+            var claimUserId = GetClaimUserId();
+            if (!IsStaffOrAdmin(User) && claimUserId != userId)
             {
                 return Forbid();
             }
 
             var orders = await _context.Orders
+                .Include(o => o.Customer)
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Package)
                 .Include(o => o.Orderitems)
@@ -129,18 +300,17 @@ namespace ECommerceBackend.Controllers
                 .Where(o => o.Userid == userId)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
-            
+
             return Ok(orders.Select(MapToDto));
         }
 
-        // GET: api/Orders/lookup?phone=&orderid= — public, no auth, limited fields only
         [HttpGet("lookup")]
         public async Task<ActionResult<IEnumerable<OrderLookupDto>>> LookupOrders(
             [FromQuery] string? phone,
             [FromQuery] int? orderid)
         {
             if (string.IsNullOrWhiteSpace(phone))
-                return BadRequest(new ApiErrorDto("Vui lòng nhập số điện thoại để tra cứu.", null));
+                return BadRequest(new ApiErrorDto("Vui long nhap so dien thoai de tra cuu.", null));
 
             var query = _context.Orders
                 .Include(o => o.Customer)
@@ -151,10 +321,9 @@ namespace ECommerceBackend.Controllers
 
             var orders = await query
                 .OrderByDescending(o => o.Orderdate)
-                .Take(20) // safety cap
+                .Take(20)
                 .ToListAsync();
 
-            // Return limited safe fields — no IMEI, no internal details
             var result = orders.Select(o => new OrderLookupDto(
                 o.Orderid,
                 o.Orderdate,
@@ -170,128 +339,148 @@ namespace ECommerceBackend.Controllers
             return Ok(result);
         }
 
-
         [HttpPost]
-        [Microsoft.AspNetCore.Authorization.Authorize]
+        [AllowAnonymous]
         public async Task<ActionResult<OrderDetailDto>> PostOrder([FromBody] CreateOrderRequestDto dto)
         {
-            var claimUserIdStr = User.FindFirst("userid")?.Value;
-            int claimUserId = 0;
-            if (!string.IsNullOrEmpty(claimUserIdStr)) int.TryParse(claimUserIdStr, out claimUserId);
-            
-            var isStaffOrAdmin = User.IsInRole("Admin") || User.IsInRole("Staff");
-            
-            int userId = claimUserId;
-            if (dto.Userid.HasValue && dto.Userid.Value != claimUserId)
+            if (dto.Items == null || dto.Items.Count == 0)
+                return BadRequest(new ApiErrorDto("Don hang phai co it nhat 1 san pham.", null));
+
+            var claimUserId = GetClaimUserId();
+            var isAuthenticated = claimUserId.HasValue;
+            var isGuest = !isAuthenticated;
+            var userId = claimUserId;
+
+            if (dto.Userid.HasValue && dto.Userid != claimUserId)
             {
-                if (!isStaffOrAdmin)
+                if (!IsStaffOrAdmin(User))
                 {
-                    return StatusCode(403, new ApiErrorDto("Bạn không có quyền tạo đơn hàng cho người dùng khác.", null));
+                    return StatusCode(403, new ApiErrorDto("Ban khong co quyen tao don cho nguoi dung khac.", null));
                 }
                 userId = dto.Userid.Value;
+                isGuest = false;
             }
-            
-            if (userId == 0) 
-                return BadRequest(new ApiErrorDto("Không xác định được User.", null));
-                
+
+            var paymentMethod = NormalizePaymentMethod(dto.Paymentmethod);
+            if (!IsValidPaymentMethod(paymentMethod))
+                return BadRequest(new ApiErrorDto("Phuong thuc thanh toan khong hop le.", null));
+
+            if (isGuest && paymentMethod == "COD")
+                return BadRequest(new ApiErrorDto("Khach vang lai khong the chon COD. Vui long dat coc 30% hoac thanh toan truoc 100%.", null));
+
+            User? user = null;
+            if (!isGuest)
+            {
+                user = await _context.Users.FindAsync(userId!.Value);
+                if (user == null)
+                    return BadRequest(new ApiErrorDto("User khong ton tai.", null));
+            }
+
+            var shippingName = (dto.Customername ?? user?.Fullname ?? string.Empty).Trim();
+            var shippingPhone = (dto.Customerphone ?? user?.Phone ?? string.Empty).Trim();
+            var shippingEmail = (dto.Customeremail ?? user?.Email)?.Trim();
+            var shippingAddress = (dto.Shippingaddress ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(shippingName) ||
+                string.IsNullOrWhiteSpace(shippingPhone) ||
+                string.IsNullOrWhiteSpace(shippingAddress))
+            {
+                return BadRequest(new ApiErrorDto("Vui long nhap day du ho ten, so dien thoai va dia chi nhan hang.", null));
+            }
+
+            var abuseCheck = await _checkoutAbuseProtection.CheckAsync(
+                HttpContext,
+                shippingPhone,
+                Request.Headers["x-guest-session-token"].FirstOrDefault(),
+                isGuest);
+            if (!abuseCheck.Allowed)
+                return StatusCode(429, new ApiErrorDto(abuseCheck.Message ?? "Yeu cau checkout bi gioi han.", null));
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // 1. Identity Mapping
-                var user = await _context.Users.FindAsync(userId);
-                if (user == null) 
-                    return BadRequest(new ApiErrorDto("User không tồn tại.", null));
-                    
-                Customer? customer = null;
-                if (!string.IsNullOrEmpty(user.Email))
-                    customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email == user.Email);
-                if (customer == null && !string.IsNullOrEmpty(user.Phone))
-                    customer = await _context.Customers.FirstOrDefaultAsync(c => c.Phone == user.Phone);
-                    
-                if (customer == null)
-                {
-                    if (string.IsNullOrEmpty(user.Email) && string.IsNullOrEmpty(user.Phone))
-                    {
-                        return BadRequest(new ApiErrorDto("Vui lòng cập nhật Email hoặc Phone trong Profile trước khi đặt hàng.", null));
-                    }
-                    customer = new Customer
-                    {
-                        Fullname = user.Fullname,
-                        Email = user.Email,
-                        Phone = user.Phone ?? "N/A", // Phone is required, fallback if only email is provided
-                        Createdat = DateTime.UtcNow
-                    };
-                    _context.Customers.Add(customer);
-                    await _context.SaveChangesAsync();
-                }
+                var customer = await FindOrCreateCustomerAsync(
+                    shippingName,
+                    shippingPhone,
+                    shippingEmail,
+                    shippingAddress);
 
-                // 2. Initialize Order
                 var order = new Order
                 {
-                    Userid = user.Userid,
+                    Userid = user?.Userid,
                     Customerid = customer.Customerid,
-                    Orderstatus = "Pending",
-                    Paymentmethod = dto.Paymentmethod,
+                    Orderstatus = StatusPending,
+                    Paymentmethod = paymentMethod,
+                    Paymentstatus = "Unpaid",
+                    Checkouttype = isGuest ? "Guest" : "Registered",
                     Vouchercode = dto.Vouchercode,
                     Orderdate = DateTime.UtcNow,
                     Totalamount = 0,
                     Discountamount = 0,
-                    Finalamount = 0
+                    Finalamount = 0,
+                    Paidamount = 0,
+                    Requiredpayment = 0,
+                    Shippingname = shippingName,
+                    Shippingphone = shippingPhone,
+                    Shippingemail = shippingEmail,
+                    Shippingaddress = shippingAddress,
+                    Customernote = dto.Note
                 };
 
-                // 3. Inventory Allocation & Items
                 foreach (var reqItem in dto.Items)
                 {
                     var variant = await _context.Productvariants.FindAsync(reqItem.Variantid);
                     if (variant == null)
-                        return BadRequest(new ApiErrorDto($"VariantId {reqItem.Variantid} không tồn tại.", null));
-                        
+                        return BadRequest(new ApiErrorDto($"VariantId {reqItem.Variantid} khong ton tai.", null));
+
                     var availableItems = await _context.Inventoryitems
                         .Where(i => i.Variantid == reqItem.Variantid && i.Status == "InStock")
                         .OrderBy(i => i.Importedat)
                         .Take(reqItem.Quantity)
                         .ToListAsync();
-                        
-                    if (availableItems.Count < reqItem.Quantity)
-                        return BadRequest(new ApiErrorDto($"Sản phẩm (VariantId: {reqItem.Variantid}) không đủ tồn kho (Chỉ còn {availableItems.Count}).", null));
 
-                    decimal price = variant.Saleprice ?? variant.Baseprice;
+                    if (availableItems.Count < reqItem.Quantity)
+                    {
+                        return BadRequest(new ApiErrorDto(
+                            $"San pham VariantId {reqItem.Variantid} khong du ton kho. Chi con {availableItems.Count}.",
+                            null));
+                    }
+
+                    var price = variant.Saleprice ?? variant.Baseprice;
                     Warrantypackage? package = null;
                     if (reqItem.Packageid.HasValue)
                     {
                         package = await _context.Warrantypackages.FindAsync(reqItem.Packageid);
-                        if (package == null) 
-                            return BadRequest(new ApiErrorDto($"Gói bảo hành ID {reqItem.Packageid} không tồn tại.", null));
+                        if (package == null)
+                            return BadRequest(new ApiErrorDto($"Goi bao hanh ID {reqItem.Packageid} khong ton tai.", null));
                     }
-                    decimal packagePrice = package?.Price ?? 0;
-                    
+
+                    var packagePrice = package?.Price ?? 0;
                     foreach (var invItem in availableItems)
                     {
-                        invItem.Status = "Sold";
-                        
-                        var orderItem = new Orderitem
+                        invItem.Status = "Reserved";
+                        order.Orderitems.Add(new Orderitem
                         {
                             Imei = invItem.Imei,
                             Sellingprice = price,
                             Packageid = package?.Packageid,
                             Warrantyprice = packagePrice > 0 ? packagePrice : null
-                        };
-                        order.Orderitems.Add(orderItem);
+                        });
                         order.Totalamount += price + packagePrice;
                     }
                 }
 
-                // 4. Voucher Logic
-                if (!string.IsNullOrEmpty(dto.Vouchercode))
+                if (!string.IsNullOrWhiteSpace(dto.Vouchercode))
                 {
-                    var voucher = await _context.Vouchers.FirstOrDefaultAsync(v => v.Vouchercode == dto.Vouchercode && v.Isactive == true);
+                    var voucher = await _context.Vouchers.FirstOrDefaultAsync(v =>
+                        v.Vouchercode == dto.Vouchercode && v.Isactive == true);
                     if (voucher == null)
-                        return BadRequest(new ApiErrorDto("Voucher không hợp lệ hoặc không hoạt động.", null));
-                    
+                        return BadRequest(new ApiErrorDto("Voucher khong hop le hoac khong hoat dong.", null));
+
                     if (voucher.Validfrom.HasValue && voucher.Validfrom > DateTime.UtcNow)
-                         return BadRequest(new ApiErrorDto("Voucher chưa đến thời gian áp dụng.", null));
+                        return BadRequest(new ApiErrorDto("Voucher chua den thoi gian ap dung.", null));
                     if (voucher.Validto.HasValue && voucher.Validto < DateTime.UtcNow)
-                         return BadRequest(new ApiErrorDto("Voucher đã hết hạn.", null));
+                        return BadRequest(new ApiErrorDto("Voucher da het han.", null));
 
                     if (voucher.Discountpercentage.HasValue && voucher.Discountpercentage > 0)
                     {
@@ -305,14 +494,65 @@ namespace ECommerceBackend.Controllers
 
                 order.Finalamount = Math.Max(0, order.Totalamount - (order.Discountamount ?? 0));
 
+                var paymentOption = NormalizePaymentOption(dto.Paymentoption);
+                if (isGuest && string.IsNullOrEmpty(paymentOption))
+                {
+                    return BadRequest(new ApiErrorDto("Khach vang lai phai chon dat coc 30% hoac thanh toan truoc 100%.", null));
+                }
+                if (!isGuest && string.IsNullOrEmpty(paymentOption))
+                {
+                    paymentOption = paymentMethod == "COD" ? "COD" : "Full";
+                }
+
+                if (paymentMethod == "COD")
+                {
+                    order.Paymentstatus = "CODPending";
+                    order.Requiredpayment = 0;
+                    order.Depositpercentage = null;
+                }
+                else if (paymentOption == "Deposit30")
+                {
+                    order.Paymentstatus = "AwaitingDeposit";
+                    order.Depositpercentage = 30;
+                    order.Requiredpayment = Math.Round(order.Finalamount * 0.3m, 0, MidpointRounding.AwayFromZero);
+                }
+                else
+                {
+                    order.Paymentstatus = "AwaitingFullPayment";
+                    order.Depositpercentage = null;
+                    order.Requiredpayment = order.Finalamount;
+                }
+
+                order.Orderpayments.Add(new Orderpayment
+                {
+                    Provider = paymentMethod,
+                    Paymenttype = paymentMethod == "COD" ? "COD" : paymentOption,
+                    Amount = order.Requiredpayment ?? 0,
+                    Status = paymentMethod == "COD" ? "NotRequired" : "Pending",
+                    Createdat = DateTime.UtcNow
+                });
+
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
+
+                if (isGuest)
+                {
+                    await _checkoutAbuseProtection.MarkGuestPendingAsync(
+                        Request.Headers["x-guest-session-token"].FirstOrDefault(),
+                        shippingPhone,
+                        order.Orderid);
+                }
+
                 await transaction.CommitAsync();
 
                 var created = await _context.Orders
                     .Include(o => o.Customer)
                     .Include(o => o.Orderitems)
                         .ThenInclude(oi => oi.Package)
+                    .Include(o => o.Orderitems)
+                        .ThenInclude(oi => oi.ImeiNavigation)
+                            .ThenInclude(inv => inv!.Variant)
+                                .ThenInclude(v => v!.Product)
                     .FirstOrDefaultAsync(o => o.Orderid == order.Orderid);
 
                 return CreatedAtAction(nameof(GetOrder), new { id = order.Orderid }, MapToDetailDto(created!));
@@ -320,19 +560,20 @@ namespace ECommerceBackend.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                return StatusCode(500, new ApiErrorDto("Lỗi hệ thống khi tạo đơn hàng.", new Dictionary<string, string[]> { { "Error", new[] { ex.Message } } }));
+                return StatusCode(500, new ApiErrorDto(
+                    "Loi he thong khi tao don hang.",
+                    new Dictionary<string, string[]> { { "Error", new[] { ex.Message } } }));
             }
         }
 
-        // PUT: api/Orders/5
         [HttpPut("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Staff")]
         public async Task<IActionResult> PutOrder(int id, [FromBody] UpdateOrderRequestDto dto)
         {
             var order = await _context.Orders.FindAsync(id);
             if (order == null) return NotFound();
 
-            order.Paymentmethod = dto.Paymentmethod;
+            order.Paymentmethod = NormalizePaymentMethod(dto.Paymentmethod);
             order.Vouchercode = dto.Vouchercode;
 
             try { await _context.SaveChangesAsync(); }
@@ -350,55 +591,44 @@ namespace ECommerceBackend.Controllers
             return Ok(MapToDetailDto(updated!));
         }
 
-        // PATCH: api/Orders/5/status
         [HttpPatch("{id}/status")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Staff")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusRequestDto dto)
         {
-            var validTransitions = new Dictionary<string, string[]>
-            {
-                { "Pending", new[] { "Processing", "Cancelled" } },
-                { "Processing", new[] { "Shipped", "Cancelled" } },
-                { "Shipped", new[] { "Completed", "Cancelled" } }
-            };
+            var validTransitions = ValidTransitions();
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 var order = await _context.Orders
                     .Include(o => o.Orderitems)
+                        .ThenInclude(item => item.Package)
                     .FirstOrDefaultAsync(o => o.Orderid == id);
-                    
+
                 if (order == null) return NotFound();
-                
-                string currentStatus = order.Orderstatus ?? "Pending";
-                string newStatus = dto.Status;
-                
-                if (currentStatus == "Cancelled" || currentStatus == "Completed")
+
+                var currentStatus = order.Orderstatus ?? StatusPending;
+                var newStatus = dto.Status;
+
+                if (currentStatus == StatusCancelled || currentStatus == StatusCompleted)
                 {
-                    return BadRequest(new ApiErrorDto($"Đơn hàng đã ở trạng thái kết thúc ({currentStatus}) và không thể thay đổi.", null));
+                    return BadRequest(new ApiErrorDto($"Don hang da ket thuc o trang thai {currentStatus}.", null));
                 }
 
                 if (!validTransitions.ContainsKey(currentStatus) || !validTransitions[currentStatus].Contains(newStatus))
                 {
-                    return BadRequest(new ApiErrorDto($"Không thể chuyển trạng thái từ '{currentStatus}' sang '{newStatus}'.", null));
+                    return BadRequest(new ApiErrorDto($"Khong the chuyen trang thai tu {currentStatus} sang {newStatus}.", null));
                 }
 
-                if (newStatus == "Cancelled")
-                {
-                    // Hoàn tồn kho
-                    var imeis = order.Orderitems.Where(i => i.Imei != null).Select(i => i.Imei).ToList();
-                    if (imeis.Any())
-                    {
-                        var inventoryItems = await _context.Inventoryitems.Where(i => imeis.Contains(i.Imei)).ToListAsync();
-                        foreach(var inv in inventoryItems)
-                        {
-                            inv.Status = "InStock";
-                        }
-                    }
-                }
-
+                await ApplyInventoryForStatusAsync(order, newStatus);
                 order.Orderstatus = newStatus;
+
+                if (newStatus == StatusCompleted && order.Paymentmethod == "COD")
+                {
+                    order.Paymentstatus = "Paid";
+                    order.Paidamount = order.Finalamount;
+                }
+
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -407,91 +637,81 @@ namespace ECommerceBackend.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                return StatusCode(500, new ApiErrorDto("Lỗi khi cập nhật trạng thái đơn hàng.", new Dictionary<string, string[]> { { "Error", new[] { ex.Message } } }));
+                return StatusCode(500, new ApiErrorDto(
+                    "Loi khi cap nhat trang thai don hang.",
+                    new Dictionary<string, string[]> { { "Error", new[] { ex.Message } } }));
             }
         }
 
-        // POST: api/Orders/bulk-status
         [HttpPost("bulk-status")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Sales,Staff")]
-        public async Task<IActionResult> BulkUpdateStatus([FromBody] BulkUpdateStatusRequestDto dto, [FromServices] ILogger<OrdersController> logger)
+        [Authorize(Roles = "Admin,Manager,Sales,Staff")]
+        public async Task<IActionResult> BulkUpdateStatus(
+            [FromBody] BulkUpdateStatusRequestDto dto,
+            [FromServices] ILogger<OrdersController> logger)
         {
-            var validTransitions = new Dictionary<string, string[]>
-            {
-                { "Pending", new[] { "Processing", "Cancelled" } },
-                { "Processing", new[] { "Shipped", "Cancelled" } },
-                { "Shipped", new[] { "Completed", "Cancelled" } }
-            };
+            var validTransitions = ValidTransitions();
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 var orders = await _context.Orders
                     .Include(o => o.Orderitems)
+                        .ThenInclude(item => item.Package)
                     .Where(o => dto.OrderIds.Contains(o.Orderid))
                     .ToListAsync();
 
                 if (!orders.Any())
-                    return BadRequest(new ApiErrorDto("Không tìm thấy đơn hàng nào.", null));
+                    return BadRequest(new ApiErrorDto("Khong tim thay don hang nao.", null));
 
                 var updatedOrderIds = new List<int>();
                 var failed = new List<BulkUpdateFailedItemDto>();
 
                 foreach (var order in orders)
                 {
-                    string currentStatus = order.Orderstatus ?? "Pending";
-                    string newStatus = dto.Status;
+                    var currentStatus = order.Orderstatus ?? StatusPending;
+                    var newStatus = dto.Status;
 
-                    if (currentStatus == "Cancelled" || currentStatus == "Completed")
+                    if (currentStatus == StatusCancelled || currentStatus == StatusCompleted)
                     {
-                        failed.Add(new BulkUpdateFailedItemDto(order.Orderid, $"Đơn hàng đã ở trạng thái kết thúc ({currentStatus})."));
+                        failed.Add(new BulkUpdateFailedItemDto(order.Orderid, $"Don hang da ket thuc o trang thai {currentStatus}."));
                         continue;
                     }
 
                     if (!validTransitions.ContainsKey(currentStatus) || !validTransitions[currentStatus].Contains(newStatus))
                     {
-                        failed.Add(new BulkUpdateFailedItemDto(order.Orderid, $"Không thể chuyển từ '{currentStatus}' sang '{newStatus}'."));
+                        failed.Add(new BulkUpdateFailedItemDto(order.Orderid, $"Khong the chuyen tu {currentStatus} sang {newStatus}."));
                         continue;
                     }
 
-                    if (newStatus == "Cancelled")
-                    {
-                        // Hoàn tồn kho
-                        var imeis = order.Orderitems.Where(i => i.Imei != null).Select(i => i.Imei).ToList();
-                        if (imeis.Any())
-                        {
-                            var inventoryItems = await _context.Inventoryitems.Where(i => imeis.Contains(i.Imei)).ToListAsync();
-                            foreach (var inv in inventoryItems)
-                            {
-                                inv.Status = "InStock";
-                            }
-                        }
-                    }
-
+                    await ApplyInventoryForStatusAsync(order, newStatus);
                     order.Orderstatus = newStatus;
+                    if (newStatus == StatusCompleted && order.Paymentmethod == "COD")
+                    {
+                        order.Paymentstatus = "Paid";
+                        order.Paidamount = order.Finalamount;
+                    }
                     updatedOrderIds.Add(order.Orderid);
                 }
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                string message = failed.Any() 
-                    ? $"Cập nhật thành công {updatedOrderIds.Count} đơn hàng, {failed.Count} lỗi."
-                    : $"Đã cập nhật thành công {updatedOrderIds.Count} đơn hàng.";
+                var message = failed.Any()
+                    ? $"Cap nhat thanh cong {updatedOrderIds.Count} don hang, {failed.Count} loi."
+                    : $"Da cap nhat thanh cong {updatedOrderIds.Count} don hang.";
 
                 return Ok(new BulkUpdateStatusResponseDto(updatedOrderIds, failed, message));
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Lỗi hệ thống khi cập nhật trạng thái đơn hàng hàng loạt.");
+                logger.LogError(ex, "Bulk order status update failed.");
                 await transaction.RollbackAsync();
-                return StatusCode(500, new ApiErrorDto("Lỗi hệ thống khi cập nhật trạng thái.", null));
+                return StatusCode(500, new ApiErrorDto("Loi he thong khi cap nhat trang thai.", null));
             }
         }
 
-        // DELETE: api/Orders/5
         [HttpDelete("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
             var order = await _context.Orders.FindAsync(id);

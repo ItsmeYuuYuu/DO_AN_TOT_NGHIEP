@@ -35,6 +35,8 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Orderitem> Orderitems { get; set; }
 
+    public virtual DbSet<Orderpayment> Orderpayments { get; set; }
+
     public virtual DbSet<Product> Products { get; set; }
 
     public virtual DbSet<Productimage> Productimages { get; set; }
@@ -296,6 +298,40 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Paymentmethod)
                 .HasMaxLength(50)
                 .HasColumnName("paymentmethod");
+            entity.Property(e => e.Checkouttype)
+                .HasMaxLength(20)
+                .HasDefaultValue("Registered")
+                .HasColumnName("checkouttype");
+            entity.Property(e => e.Paymentstatus)
+                .HasMaxLength(50)
+                .HasDefaultValue("Unpaid")
+                .HasColumnName("paymentstatus");
+            entity.Property(e => e.Requiredpayment)
+                .HasPrecision(18, 2)
+                .HasDefaultValueSql("0")
+                .HasColumnName("requiredpayment");
+            entity.Property(e => e.Paidamount)
+                .HasPrecision(18, 2)
+                .HasDefaultValueSql("0")
+                .HasColumnName("paidamount");
+            entity.Property(e => e.Depositpercentage)
+                .HasPrecision(5, 2)
+                .HasColumnName("depositpercentage");
+            entity.Property(e => e.Shippingname)
+                .HasMaxLength(100)
+                .HasColumnName("shippingname");
+            entity.Property(e => e.Shippingphone)
+                .HasMaxLength(20)
+                .HasColumnName("shippingphone");
+            entity.Property(e => e.Shippingemail)
+                .HasMaxLength(100)
+                .HasColumnName("shippingemail");
+            entity.Property(e => e.Shippingaddress)
+                .HasMaxLength(500)
+                .HasColumnName("shippingaddress");
+            entity.Property(e => e.Customernote)
+                .HasMaxLength(500)
+                .HasColumnName("customernote");
             entity.Property(e => e.Totalamount)
                 .HasPrecision(18, 2)
                 .HasColumnName("totalamount");
@@ -315,6 +351,43 @@ public partial class ECommerceContext : DbContext
             entity.HasOne(d => d.VouchercodeNavigation).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.Vouchercode)
                 .HasConstraintName("fk_orders_vouchers");
+        });
+
+        modelBuilder.Entity<Orderpayment>(entity =>
+        {
+            entity.HasKey(e => e.Paymentid).HasName("orderpayments_pkey");
+
+            entity.ToTable("orderpayments");
+
+            entity.Property(e => e.Paymentid).HasColumnName("paymentid");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
+            entity.Property(e => e.Provider)
+                .HasMaxLength(50)
+                .HasColumnName("provider");
+            entity.Property(e => e.Paymenttype)
+                .HasMaxLength(30)
+                .HasColumnName("paymenttype");
+            entity.Property(e => e.Amount)
+                .HasPrecision(18, 2)
+                .HasColumnName("amount");
+            entity.Property(e => e.Status)
+                .HasMaxLength(30)
+                .HasColumnName("status");
+            entity.Property(e => e.Transactionref)
+                .HasMaxLength(100)
+                .HasColumnName("transactionref");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+            entity.Property(e => e.Paidat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("paidat");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.Orderpayments)
+                .HasForeignKey(d => d.Orderid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_orderpayments_orders");
         });
 
         modelBuilder.Entity<Orderitem>(entity =>

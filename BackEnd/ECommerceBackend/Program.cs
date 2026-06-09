@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using ECommerceBackend.Models;
 using ECommerceBackend.Data;
 using ECommerceBackend.Services;
+using ECommerceBackend.Services.Checkout;
 using ECommerceBackend.Filters;
 using ECommerceBackend.Middlewares;
 using ECommerceBackend.DTOs.Common;
@@ -107,6 +108,20 @@ builder.Services.AddScoped<ECommerceBackend.Services.Chat.IProductConsultationSe
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IAiProvider, ECommerceBackend.Services.Chat.GroundedAiProvider>();
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatOrchestratorService, ECommerceBackend.Services.Chat.ChatOrchestratorService>();
 builder.Services.AddSingleton<ProductImageStorageService>();
+var redisConnection = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrWhiteSpace(redisConnection))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnection;
+        options.InstanceName = "ECommerce:";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+builder.Services.AddScoped<ICheckoutAbuseProtectionService, CheckoutAbuseProtectionService>();
 builder.Services.AddSingleton<AuditLogService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AuditLogService>());
 builder.Services.AddScoped<AuditActionFilter>();

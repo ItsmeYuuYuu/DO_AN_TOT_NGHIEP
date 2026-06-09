@@ -121,7 +121,10 @@ namespace ECommerceBackend.Tests
                 "TEST10",
                 new List<CreateOrderItemRequestDto> { new CreateOrderItemRequestDto(10, 2) },
                 "123 Street",
-                "Note"
+                "Note",
+                Customername: "Test User",
+                Customerphone: "0911111111",
+                Customeremail: "test@test.com"
             );
 
             _client.DefaultRequestHeaders.Add("X-Test-UserId", "1");
@@ -133,11 +136,15 @@ namespace ECommerceBackend.Tests
             Assert.Equal(1800, order.Totalamount); // 2 * 900
             Assert.Equal(180, order.Discountamount); // 10% of 1800
             Assert.Equal(1620, order.Finalamount);
+            Assert.Equal("Registered", order.Checkouttype);
+            Assert.Equal("CODPending", order.Paymentstatus);
 
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
             var stock = db.Inventoryitems.Count(i => i.Status == "InStock");
-            Assert.Equal(0, stock); // 2 items were bought
+            var reserved = db.Inventoryitems.Count(i => i.Status == "Reserved");
+            Assert.Equal(0, stock); // 2 items were reserved for the order
+            Assert.Equal(2, reserved);
         }
 
         [Fact]
@@ -148,7 +155,10 @@ namespace ECommerceBackend.Tests
             var req = new CreateOrderRequestDto(
                 null, "COD", null,
                 new List<CreateOrderItemRequestDto> { new CreateOrderItemRequestDto(10, 5) },
-                null, null
+                "123 Street", null,
+                Customername: "Test User",
+                Customerphone: "0922222222",
+                Customeremail: "test@test.com"
             );
 
             _client.DefaultRequestHeaders.Add("X-Test-UserId", "1");
@@ -156,7 +166,7 @@ namespace ECommerceBackend.Tests
             
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var err = await response.Content.ReadFromJsonAsync<ApiErrorDto>();
-            Assert.Contains("không đủ tồn kho", err.Message);
+            Assert.Contains("khong du ton kho", err.Message);
         }
 
         [Fact]
@@ -168,7 +178,10 @@ namespace ECommerceBackend.Tests
                 2, // Attempt to create for Userid = 2
                 "COD", null,
                 new List<CreateOrderItemRequestDto> { new CreateOrderItemRequestDto(10, 1) },
-                null, null
+                "123 Street", null,
+                Customername: "Test User",
+                Customerphone: "0933333333",
+                Customeremail: "test@test.com"
             );
 
             _client.DefaultRequestHeaders.Add("X-Test-UserId", "1");
@@ -177,6 +190,67 @@ namespace ECommerceBackend.Tests
             var response = await _client.PostAsJsonAsync("/api/Orders", req);
             
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task PostOrder_GuestCannotUseCod()
+        {
+            await SeedDataAsync();
+            using var anonymousClient = _factory.CreateClient();
+
+            var req = new CreateOrderRequestDto(
+                null,
+                "COD",
+                null,
+                new List<CreateOrderItemRequestDto> { new CreateOrderItemRequestDto(10, 1) },
+                "123 Street",
+                "Guest note",
+                Paymentoption: "Deposit30",
+                Customername: "Guest Buyer",
+                Customerphone: "0944444444",
+                Customeremail: "guest@test.com"
+            );
+
+            var response = await anonymousClient.PostAsJsonAsync("/api/Orders", req);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var err = await response.Content.ReadFromJsonAsync<ApiErrorDto>();
+            Assert.Contains("Khach vang lai khong the chon COD", err!.Message);
+        }
+
+        [Fact]
+        public async Task PostOrder_GuestDeposit_ReservesInventoryAndRequiresThirtyPercent()
+        {
+            await SeedDataAsync();
+            using var anonymousClient = _factory.CreateClient();
+            anonymousClient.DefaultRequestHeaders.Add("x-guest-session-token", "guest-checkout-test");
+
+            var req = new CreateOrderRequestDto(
+                null,
+                "MOMO",
+                null,
+                new List<CreateOrderItemRequestDto> { new CreateOrderItemRequestDto(10, 1) },
+                "123 Street",
+                "Guest deposit",
+                Paymentoption: "Deposit30",
+                Customername: "Guest Buyer",
+                Customerphone: "0955555555",
+                Customeremail: "guest-deposit@test.com"
+            );
+
+            var response = await anonymousClient.PostAsJsonAsync("/api/Orders", req);
+
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            var order = await response.Content.ReadFromJsonAsync<OrderDetailDto>();
+            Assert.NotNull(order);
+            Assert.Equal("Guest", order.Checkouttype);
+            Assert.Equal("AwaitingDeposit", order.Paymentstatus);
+            Assert.Equal(270, order.Requiredpayment);
+            Assert.Equal(30, order.Depositpercentage);
+
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+            Assert.Equal(1, db.Inventoryitems.Count(i => i.Status == "Reserved"));
         }
 
         [Fact]

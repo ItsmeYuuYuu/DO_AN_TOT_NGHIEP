@@ -10,8 +10,18 @@ export interface Order {
   discountamount?: number;
   finalamount?: number;
   paymentmethod?: string;
+  checkouttype?: string;
+  paymentstatus?: string;
+  requiredpayment?: number;
+  paidamount?: number;
+  depositpercentage?: number;
+  shippingname?: string;
+  shippingphone?: string;
+  shippingemail?: string;
+  shippingaddress?: string;
+  customernote?: string;
   vouchercode?: string;
-  customer?: { customerid: number; fullname: string; phone: string };
+  customer?: { customerid: number; fullname: string; phone: string; email?: string };
   orderitems?: OrderItem[];
 }
 

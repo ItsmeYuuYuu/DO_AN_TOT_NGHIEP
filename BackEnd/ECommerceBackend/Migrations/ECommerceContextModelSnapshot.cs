@@ -447,9 +447,26 @@ namespace ECommerceBackend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Orderid"));
 
+                    b.Property<string>("Checkouttype")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Registered")
+                        .HasColumnName("checkouttype");
+
                     b.Property<int?>("Customerid")
                         .HasColumnType("integer")
                         .HasColumnName("customerid");
+
+                    b.Property<string>("Customernote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("customernote");
+
+                    b.Property<decimal?>("Depositpercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("depositpercentage");
 
                     b.Property<decimal?>("Discountamount")
                         .ValueGeneratedOnAdd()
@@ -474,10 +491,51 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("orderstatus");
 
+                    b.Property<decimal?>("Paidamount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("paidamount")
+                        .HasDefaultValueSql("0");
+
                     b.Property<string>("Paymentmethod")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("paymentmethod");
+
+                    b.Property<string>("Paymentstatus")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("Unpaid")
+                        .HasColumnName("paymentstatus");
+
+                    b.Property<decimal?>("Requiredpayment")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("requiredpayment")
+                        .HasDefaultValueSql("0");
+
+                    b.Property<string>("Shippingaddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("shippingaddress");
+
+                    b.Property<string>("Shippingemail")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("shippingemail");
+
+                    b.Property<string>("Shippingname")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("shippingname");
+
+                    b.Property<string>("Shippingphone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("shippingphone");
 
                     b.Property<decimal>("Totalamount")
                         .HasPrecision(18, 2)
@@ -559,6 +617,65 @@ namespace ECommerceBackend.Migrations
                     b.HasIndex("Packageid");
 
                     b.ToTable("orderitems", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Orderpayment", b =>
+                {
+                    b.Property<int>("Paymentid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("paymentid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Paymentid"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime?>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("Orderid")
+                        .HasColumnType("integer")
+                        .HasColumnName("orderid");
+
+                    b.Property<DateTime?>("Paidat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("paidat");
+
+                    b.Property<string>("Paymenttype")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("paymenttype");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Transactionref")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("transactionref");
+
+                    b.HasKey("Paymentid")
+                        .HasName("orderpayments_pkey");
+
+                    b.HasIndex("Orderid");
+
+                    b.ToTable("orderpayments", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Product", b =>
@@ -1151,6 +1268,18 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Package");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Orderpayment", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Order", "Order")
+                        .WithMany("Orderpayments")
+                        .HasForeignKey("Orderid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_orderpayments_orders");
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Product", b =>
                 {
                     b.HasOne("ECommerceBackend.Models.Brand", "Brand")
@@ -1274,6 +1403,8 @@ namespace ECommerceBackend.Migrations
             modelBuilder.Entity("ECommerceBackend.Models.Order", b =>
                 {
                     b.Navigation("Orderitems");
+
+                    b.Navigation("Orderpayments");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Product", b =>

@@ -2,6 +2,16 @@ import axios from 'axios';
 import { getAccessToken, clearSession } from '@/features/auth/utils/authUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7035/api';
+const GUEST_CHECKOUT_TOKEN_KEY = 'ec_guest_checkout_token';
+
+function getGuestCheckoutToken(): string {
+  let token = localStorage.getItem(GUEST_CHECKOUT_TOKEN_KEY);
+  if (!token) {
+    token = crypto.randomUUID();
+    localStorage.setItem(GUEST_CHECKOUT_TOKEN_KEY, token);
+  }
+  return token;
+}
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -15,6 +25,8 @@ apiClient.interceptors.request.use(
     const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      config.headers['x-guest-session-token'] = getGuestCheckoutToken();
     }
     return config;
   },

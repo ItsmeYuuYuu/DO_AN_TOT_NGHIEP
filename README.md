@@ -1,193 +1,315 @@
+# E-Commerce Phone Store
 
-# 🛒 E-Commerce - Đồ Án Tốt Nghiệp
+![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=111827)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Local%20Demo-F59E0B?style=flat-square)
 
-Dự án Hệ thống Thương mại Điện tử bán điện thoại xách tay hiện đại, tích hợp đầy đủ tính năng với 3 vai trò chính:
-- **Admin** (Quản trị viên)
-- **Staff** (Nhân viên)
-- **Customer** (Khách hàng)
+Hệ thống thương mại điện tử bán điện thoại, được xây dựng cho đồ án tốt
+nghiệp. Điểm trọng tâm của dự án là luồng tư vấn sản phẩm bằng chatbot AI,
+chuyển tiếp cho nhân viên Consultant và kết nối trực tiếp với giỏ hàng, đặt
+hàng, thanh toán và xử lý kho.
 
-Dự án được triển khai Full-stack với Frontend (React + Vite), Backend (ASP.NET Core Web API), và Database (PostgreSQL).
+Dự án hiện được thiết kế để chạy và trình diễn trên môi trường local.
 
-## 🚀 1. Công nghệ sử dụng
+## Chức năng hiện tại
+
+### Khách hàng
+
+- Xem, tìm kiếm và lọc sản phẩm theo danh mục, thương hiệu và dòng máy.
+- Xem chi tiết sản phẩm, thư viện ảnh, mô tả, thông số và đánh giá.
+- Chọn đúng biến thể theo màu sắc, RAM, bộ nhớ, tình trạng và xuất xứ.
+- Biến thể hết hàng được làm mờ và không thể thêm vào giỏ.
+- Giỏ hàng hoạt động cho cả người đã đăng nhập và khách vãng lai.
+- Đặt hàng bằng COD, Momo, VNPay hoặc chuyển khoản ngân hàng.
+- Tra cứu đơn hàng, xem lịch sử và trạng thái đơn.
+- Đăng ký, đăng nhập, cập nhật hồ sơ và đổi mật khẩu.
+
+### Checkout và thanh toán
+
+- Người đã đăng nhập có thể chọn COD hoặc thanh toán online.
+- Khách vãng lai không được dùng COD.
+- Khách vãng lai phải đặt cọc 30% hoặc thanh toán trước 100%.
+- Hàng được giữ trong 15 phút khi chờ thanh toán online.
+- Đơn quá hạn chưa thanh toán tự hủy và hoàn tồn kho.
+- Momo, VNPay và chuyển khoản hiện dùng luồng thanh toán giả lập phục vụ demo.
+- Redis được dùng để hạn chế khách vãng lai spam đặt hàng; nếu chưa cấu hình
+  Redis, hệ thống tự dùng distributed memory cache.
+
+### Sản phẩm và kho
+
+- Quản lý danh mục, thương hiệu và dòng sản phẩm như Xiaomi, Redmi, Poco,
+  Galaxy S, Galaxy Z Fold.
+- Tạo sản phẩm theo quy trình nhiều bước:
+  1. Thông tin cơ bản.
+  2. Mô tả sản phẩm.
+  3. Biến thể và hình ảnh.
+  4. Thông số kỹ thuật.
+  5. Xác nhận.
+- Upload ảnh sản phẩm, ảnh biến thể, ảnh mô tả, slider và banner từ máy.
+- Ảnh được lưu tại `BackEnd/ECommerceBackend/wwwroot/uploads/products`.
+- Số lượng lô hàng ban đầu phải được phân bổ chính xác cho các biến thể.
+- Tồn kho thực tế được quản lý theo từng biến thể và từng IMEI.
+- Theo dõi lịch sử nhập kho, giữ hàng, xuất giao, hoàn kho, bán và điều chỉnh.
+- Cảnh báo biến thể sắp hết hàng.
+
+### Đơn hàng và nhân viên
+
+- Sales nhận đơn, kiểm tra thanh toán và bàn giao sang Warehouse.
+- Warehouse nhận đơn đã bàn giao, đối chiếu IMEI và xác nhận xuất giao.
+- Hệ thống ngăn hai nhân viên cùng nhận một công việc trong cùng công đoạn.
+- Admin và Manager có thể theo dõi hoặc phân công đơn cho nhân viên.
+- Hủy đơn hoặc hết hạn thanh toán sẽ trả IMEI về trạng thái còn hàng.
+
+### Chatbot và Consultant
+
+- Chatbot truy xuất sản phẩm, giá, cấu hình và tồn kho từ PostgreSQL.
+- Kết quả tư vấn hiển thị sản phẩm có cấu trúc và cho phép thêm biến thể vào
+  giỏ hàng ngay trong cuộc trò chuyện.
+- Lưu lại sản phẩm chatbot đã đề xuất và thời điểm khách thêm vào giỏ.
+- Khách có thể yêu cầu gặp nhân viên tư vấn.
+- Consultant tiếp nhận cuộc trò chuyện cùng toàn bộ lịch sử và các sản phẩm AI
+  đã đề xuất.
+- Có thể chạy với Ollama local, API OpenAI-compatible hoặc chế độ chỉ dùng dữ
+  liệu catalog.
+
+## Công nghệ
 
 ### Frontend
-- **Framework:** React 18 + TypeScript + Vite
-- **Routing:** React Router v6 (Auth Guard bảo vệ tuyến đường)
-- **Networking:** Axios (Interceptor tích hợp JWT)
-- **Styling:** Tailwind CSS (Modern Retail Light Mode)
-- **State Management:** Hooks & Context API
+
+- React 19
+- TypeScript 6
+- Vite 8
+- React Router 7
+- Tailwind CSS 4
+- Axios
+- Lucide React
 
 ### Backend
-- **Framework:** ASP.NET Core Web API (.NET 8/9)
-- **Database:** PostgreSQL
-- **ORM:** Entity Framework Core (Fluent API)
-- **Security:**
-  - JWT Authentication + Role-based Authorization.
-  - BCrypt password hashing.
-- **Features:**
-  - **Audit Logs:** Hệ thống ghi log thao tác chạy ngầm (Background Service) đảm bảo hiệu suất.
-  - **Database Indexing:** Tối ưu hóa truy vấn.
-  - **Auto-seeding:** Tự động khởi tạo dữ liệu mẫu khi chạy ứng dụng lần đầu.
 
----
+- ASP.NET Core Web API trên .NET 8
+- Entity Framework Core 8
+- PostgreSQL
+- JWT Bearer Authentication
+- BCrypt
+- Redis hoặc distributed memory cache
+- Serilog
+- Swagger/OpenAPI
+- xUnit và SQLite cho integration tests
 
-## 🏗️ 2. Cấu trúc dự án
+## Phân quyền
+
+| Vai trò | Phạm vi chính |
+| --- | --- |
+| `Admin` | Toàn quyền hệ thống, nhân viên, nội dung, sản phẩm, đơn và audit log |
+| `Manager` | Dashboard và giám sát các bộ phận |
+| `Sales` | Nhận đơn, xác nhận thanh toán và bàn giao kho |
+| `Warehouse` | Quản lý tồn kho, IMEI và xuất giao |
+| `Warranty` | Tiếp nhận và xử lý bảo hành |
+| `Content` | Sản phẩm, tin tức, slider và banner; không sửa giá hoặc tồn kho |
+| `Consultant` | Tiếp nhận hội thoại do chatbot chuyển giao |
+| `Staff` | Vai trò nhân viên tổng hợp dùng cho demo |
+| `Customer` | Tài khoản mua hàng |
+
+Backend kiểm tra quyền tại API và frontend tiếp tục giới hạn route, menu và thao
+tác theo role. Hệ thống cũng bảo vệ Admin cuối cùng và không cho Admin tự vô
+hiệu hóa hoặc tự hạ quyền chính mình.
+
+## Cấu trúc dự án
 
 ```text
 ECommerce/
 ├── BackEnd/
-│   └── ECommerceBackend/        # .NET 8 Web API Project
-│       ├── Controllers/         # API endpoints (Auth, Products, Orders...)
-│       ├── DTOs/                # Request/Response DTOs theo module
-│       ├── Models/              # EF entities & Database Context
-│       ├── Data/                # EF DbContext & Seeding logic
-│       ├── Services/            # Background services (Audit logs...)
-│       ├── Filters/             # Action filters (Custom Filters)
-│       ├── Middlewares/         # Global exception, correlation id...
-│       └── Migrations/          # EF migrations
-├── FrontEnd/                    # React Application
-│   ├── src/
-│   │   ├── api/                 # Axios client configuration
-│   │   ├── components/          # Shared components (DataTable, Modal, AuthGuard...)
-│   │   ├── features/            # Feature modules (Business logic)
-│   │   ├── layouts/             # Page structures (Admin/Staff/Customer)
-│   │   ├── portals/             # Main views for each role
-│   │   ├── hooks/               # Reusable hooks
-│   │   └── utils/               # Helpers/formatters
-│   └── ...
+│   ├── ECommerceBackend/
+│   │   ├── Controllers/       # REST API
+│   │   ├── DTOs/              # Request/response contracts
+│   │   ├── Data/              # Seed dữ liệu và khởi tạo schema hỗ trợ
+│   │   ├── Filters/           # Audit action filter
+│   │   ├── Middlewares/       # Exception handling, correlation ID
+│   │   ├── Migrations/        # EF Core migrations
+│   │   ├── Models/            # Entities và ECommerceContext
+│   │   ├── Services/          # Chatbot, checkout, upload ảnh, audit
+│   │   └── wwwroot/uploads/   # File ảnh upload local
+│   └── ECommerceBackend.Tests/
+├── FrontEnd/
+│   └── src/
+│       ├── api/
+│       ├── components/
+│       ├── features/
+│       ├── layouts/
+│       └── portals/
 ├── docs/
-│   └── database_migration_guide.md
-├── .github/
-│   └── workflows/ci.yml
-├── ANTIGRAVITY_EXECUTION_SPEC.md
-└── .gitignore
-
+├── CHATBOT_SETUP.md
+└── PROJECT_ROADMAP.md
 ```
 
+## Yêu cầu môi trường
 
-## 🌟 3. Tổng quan chức năng & Tình trạng roadmap
+- .NET SDK 8
+- Node.js 20 trở lên
+- PostgreSQL
+- Redis, không bắt buộc
+- Ollama, không bắt buộc
 
-### Đã hoàn thiện đến cuối Phase 4
+## Cài đặt và chạy local
 
-* **Auth:** Login, Get Me, Change Password, Logout, Register, Forgot Password (hiện tại là stub - chưa gửi email thật).
-* **Catalog:** Quản lý danh sách sản phẩm, chi tiết, tìm kiếm, danh mục, thương hiệu, biến thể (variants).
-* **Order Core Flow (Phase 2):** Tạo đơn, trừ tồn kho, áp dụng voucher, chuyển đổi trạng thái đơn, hủy đơn và hoàn kho.
-* **Customer Pages:** Home, Product Detail, Cart, Checkout, Profile, Products, Search, News, Promotions, Order Lookup.
-* **Admin Pages:** Dashboard, Products, Orders, Users, Customers, Categories/Brands, Vouchers.
-* **Staff Pages:** Orders, Inventory (List/Create/Update), Purchase Orders (List/Create/Update), Warranties (List/Create/Update).
-* **Security (Phase 1):** DTO-first, Validation, Role guards, Standardized error format (`ApiErrorDto`), dọn dẹp secrets.
-* **Quality/Ops (Phase 3):** Tests, Migrations baseline, Logging middleware, Correlation ID, Health check, CI workflow.
+### 1. Tạo database PostgreSQL
 
-### Tình trạng Roadmap
+Tạo đúng database có tên phân biệt hoa thường:
 
-* **P0 - P4:** Done ✅
-* **Phase tiếp theo (P5):** Nâng cấp UX / Chốt nghiệp vụ còn lại + E2E browser tests (Playwright) + Tối ưu hiệu năng nâng cao.
+```sql
+CREATE DATABASE "ECommerDB";
+```
 
----
+Database dự án đang sử dụng là `ECommerDB`, không phải `ecommerdb`.
 
-## 🔐 4. Tài khoản mặc định (Dành cho Testing)
+Cập nhật connection string trong
+`BackEnd/ECommerceBackend/appsettings.json`, hoặc dùng User Secrets:
+
+```powershell
+cd BackEnd/ECommerceBackend
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=ECommerDB;Username=postgres;Password=YOUR_PASSWORD"
+dotnet user-secrets set "JwtSettings:SecretKey" "YOUR_LOCAL_SECRET_KEY_MINIMUM_32_CHARACTERS"
+```
+
+### 2. Áp dụng migration
+
+```powershell
+cd BackEnd/ECommerceBackend
+dotnet restore
+dotnet ef database update
+```
+
+Khi backend chạy, `DbInitializer` sẽ bổ sung dữ liệu mẫu còn thiếu. Không cần
+chạy lại file SQL seed thủ công.
+
+### 3. Chạy backend
+
+```powershell
+cd BackEnd/ECommerceBackend
+dotnet run --launch-profile https
+```
+
+- API: `https://localhost:7035/api`
+- Swagger: `https://localhost:7035/swagger`
+- Health check: `https://localhost:7035/api/health`
+
+Nếu máy chưa tin cậy chứng chỉ development:
+
+```powershell
+dotnet dev-certs https --trust
+```
+
+### 4. Chạy frontend
+
+```powershell
+cd FrontEnd
+npm install
+npm run dev
+```
+
+Frontend mặc định chạy tại `http://localhost:5173` và gọi API
+`https://localhost:7035/api`.
+
+Để đổi địa chỉ backend, tạo `FrontEnd/.env.local`:
+
+```env
+VITE_API_URL=https://localhost:7035/api
+```
+
+## Tài khoản demo
 
 | Vai trò | Email | Mật khẩu |
 | --- | --- | --- |
-| **Quản trị (Admin)** | `admin300475@gmail.com` | `Admin@300475!` |
-| **Nhân viên (Staff)** | `staff01@gmail.com` | `Staff@123456!` |
+| Admin | `admin300475@gmail.com` | `Admin@300475!` |
+| Staff | `staff01@gmail.com` | `Staff@123456!` |
 
----
+Các tài khoản Manager, Sales, Warehouse, Warranty, Content và Consultant có thể
+được Admin tạo tại màn hình quản lý nhân viên.
 
-## 🛠️ 5. Yêu cầu môi trường & Cài đặt
+## Cấu hình Redis
 
-### Yêu cầu hệ thống
+Redis là tùy chọn khi chạy local. Thiết lập:
 
-* **Node.js** 20+ (Khuyến nghị)
-* **.NET SDK** 8+
-* **PostgreSQL**
-
-### Hướng dẫn chạy Local
-
-#### Bước 1: Khởi động Backend
-
-Mở Terminal tại thư mục `BackEnd/ECommerceBackend` và chạy các lệnh sau:
-
-```bash
-dotnet restore
-
+```powershell
+dotnet user-secrets set "ConnectionStrings:Redis" "localhost:6379"
 ```
 
-Thiết lập secrets local (Bắt buộc) để bảo mật thông tin:
+Nếu chuỗi kết nối Redis để trống, backend vẫn chạy bằng memory cache. Memory
+cache chỉ phù hợp cho một instance local và mất dữ liệu khi backend khởi động
+lại.
 
-```bash
-dotnet user-secrets init
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=ECommerDB;Username=postgres;Password=YOUR_PASSWORD"
-dotnet user-secrets set "JwtSettings:SecretKey" "YOUR_SECRET_KEY_MIN_32_CHARS"
+## Cấu hình chatbot
 
+Cấu hình mặc định dùng API tương thích OpenAI của Ollama:
+
+```json
+{
+  "AiAssistant": {
+    "Provider": "OpenAICompatible",
+    "BaseUrl": "http://localhost:11434/v1",
+    "ApiKey": "",
+    "Model": "qwen2.5:3b"
+  }
+}
 ```
 
-Chạy Backend:
+Chạy model local:
 
-```bash
-dotnet run
-
+```powershell
+ollama pull qwen2.5:3b
+ollama serve
 ```
 
-*Lưu ý: Ứng dụng sẽ tự động tạo bảng và đổ dữ liệu mẫu ở lần chạy đầu tiên.*
+Nếu không muốn chạy model, đổi `AiAssistant:Provider` thành `Catalog`. Chatbot
+vẫn tư vấn dựa trên dữ liệu PostgreSQL nhưng không gọi mô hình ngôn ngữ.
 
-#### Bước 2: Khởi động Frontend
+Xem thêm tại [CHATBOT_SETUP.md](CHATBOT_SETUP.md).
 
-Mở Terminal tại thư mục `FrontEnd`:
+## Build và kiểm thử
 
-```bash
-npm install
-npm run dev
+Backend:
 
-```
-
-Mặc định truy cập Frontend tại: `http://localhost:5173`
-
----
-
-## 🧪 6. Build, Test & Migration
-
-### Build & Test
-
-**Backend:**
-
-```bash
+```powershell
 cd BackEnd/ECommerceBackend
-dotnet build
-dotnet test
-
+dotnet build -c Release
+dotnet test ECommerceBackend.sln -c Release
 ```
 
-**Frontend:**
+Frontend:
 
-```bash
+```powershell
 cd FrontEnd
 npm run build
-
 ```
 
-### Database Migration
+Kiểm tra ESLint:
 
-Tham khảo hướng dẫn chi tiết tại: `docs/database_migration_guide.md`
-
-Lệnh cơ bản:
-
-```bash
-cd BackEnd/ECommerceBackend
-dotnet ef migrations add <MigrationName>
-dotnet ef database update
-
+```powershell
+cd FrontEnd
+npm run lint
 ```
 
----
+Frontend hiện build production thành công. Tuy nhiên, cấu hình ESLint 10 vẫn
+đang báo một số lỗi kỹ thuật tồn đọng, chủ yếu liên quan tới quy tắc React Hooks,
+`no-explicit-any` và Fast Refresh.
 
-## 🛡️ 7. Ghi chú về API và Bảo mật
+## Trạng thái và giới hạn hiện tại
 
-* Xác thực hoàn toàn bằng **JWT Bearer token**.
-* Ma trận phân quyền (Role matrix) bao gồm: `Admin`, `Staff`, `Customer`.
-* Format lỗi trả về chuẩn hóa: `ApiErrorDto { message, errors? }`.
-* **Tuyệt đối không** hardcode thông tin nhạy cảm (credentials) trong source code đẩy lên Git.
+- Thanh toán Momo, VNPay và ngân hàng đang là mô phỏng, chưa kết nối sandbox
+  hoặc cổng thanh toán production.
+- IMEI được tạo tạm khi Admin tạo sản phẩm để phục vụ demo. Khi vận hành thực
+  tế, IMEI phải được nhập hoặc quét từ lô hàng thật.
+- Forgot password chưa gửi email khôi phục thật.
+- Redis và Ollama đều là thành phần tùy chọn khi chạy local.
+- Dự án chưa cấu hình quy trình deploy production.
+- Frontend chưa đạt trạng thái ESLint sạch hoàn toàn.
+- Dashboard và KPI riêng cho từng role vẫn còn có thể hoàn thiện thêm.
+- Cần tiếp tục kiểm thử toàn bộ ma trận phân quyền trước khi triển khai thật.
 
-```</MigrationName>
-
-```
+Kế hoạch tiếp theo được theo dõi tại [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
+Hướng dẫn migration chi tiết nằm tại
+[docs/database_migration_guide.md](docs/database_migration_guide.md).

@@ -12,6 +12,8 @@ import {
   Newspaper,
   Package,
   ShieldCheck,
+  Truck,
+  UserCheck,
   Users,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
@@ -34,17 +36,20 @@ const navigationByRole: Record<string, StaffNavItem[]> = {
     { label: 'Tổng quan', to: '/staff/dashboard', icon: <BarChart3 size={18} /> },
     { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={18} /> },
     { label: 'Đơn hàng', to: '/staff/orders', icon: <ClipboardList size={18} /> },
+    { label: 'Hàng đợi Sales', to: '/staff/sales-orders', icon: <UserCheck size={18} /> },
+    { label: 'Hàng đợi kho', to: '/staff/warehouse-orders', icon: <Truck size={18} /> },
     { label: 'Kho hàng', to: '/staff/inventory', icon: <Box size={18} /> },
     { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={18} /> },
     { label: 'Voucher', to: '/staff/vouchers', icon: <Gift size={18} /> },
     { label: 'Tư vấn AI', to: '/staff/consultations', icon: <Headphones size={18} /> },
   ],
   Sales: [
-    { label: 'Đơn hàng', to: '/staff/orders', icon: <ClipboardList size={18} /> },
+    { label: 'Đơn cần xác nhận', to: '/staff/sales-orders', icon: <ClipboardList size={18} /> },
     { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={18} /> },
     { label: 'Voucher', to: '/staff/vouchers', icon: <Gift size={18} /> },
   ],
   Warehouse: [
+    { label: 'Đơn cần xuất kho', to: '/staff/warehouse-orders', icon: <Truck size={18} /> },
     { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={18} /> },
     { label: 'Kho & IMEI', to: '/staff/inventory', icon: <Box size={18} /> },
   ],

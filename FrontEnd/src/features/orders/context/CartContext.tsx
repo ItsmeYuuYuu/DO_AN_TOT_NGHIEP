@@ -18,7 +18,7 @@ interface CartContextValue {
   items: CartItem[];
   totalItems: number;
   totalPrice: number;
-  addToCart: (item: Omit<CartItem, 'quantity'>, qty?: number) => Promise<void>;
+  addToCart: (item: Omit<CartItem, 'quantity'>, qty?: number) => Promise<boolean>;
   removeFromCart: (variantId: number) => Promise<void>;
   updateQuantity: (variantId: number, qty: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -33,7 +33,7 @@ const CartContext = createContext<CartContextValue>({
   items: [],
   totalItems: 0,
   totalPrice: 0,
-  addToCart: async () => {},
+  addToCart: async () => false,
   removeFromCart: async () => {},
   updateQuantity: async () => {},
   clearCart: async () => {},
@@ -104,8 +104,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const res = await cartApi.addToCart(item.variantId, qty);
         setItems(res.data.items);
+        return true;
       } catch (error) {
         console.error('Failed to add to cart on server:', error);
+        return false;
       } finally {
         setLoading(false);
       }
@@ -121,6 +123,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return [...prev, { ...item, quantity: qty }];
       });
+      return true;
     }
   }, [isLoggedIn]);
 

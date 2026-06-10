@@ -29,6 +29,11 @@ public partial class User
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 
+    public virtual ICollection<Orderassignment> AssignedOrderassignments { get; set; } = new List<Orderassignment>();
+
+    public virtual ICollection<Orderassignment> CreatedOrderassignments { get; set; } = new List<Orderassignment>();
+
+    public virtual ICollection<Inventorytransaction> Inventorytransactions { get; set; } = new List<Inventorytransaction>();
 
     public virtual Role? Role { get; set; }
 

@@ -122,6 +122,7 @@ else
     builder.Services.AddDistributedMemoryCache();
 }
 builder.Services.AddScoped<ICheckoutAbuseProtectionService, CheckoutAbuseProtectionService>();
+builder.Services.AddHostedService<ExpiredOrderCleanupService>();
 builder.Services.AddSingleton<AuditLogService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AuditLogService>());
 builder.Services.AddScoped<AuditActionFilter>();

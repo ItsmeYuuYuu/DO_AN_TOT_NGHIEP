@@ -46,4 +46,12 @@ namespace ECommerceBackend.DTOs.Inventory
         DateTime? Warrantyenddate = null,
         string? Warrantystatus = null
     );
+
+    public record LowStockVariantDto(
+        int Variantid,
+        string? VariantSku,
+        string? ProductName,
+        int InStockQuantity,
+        int Threshold
+    );
 }

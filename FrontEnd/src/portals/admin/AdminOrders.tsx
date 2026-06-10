@@ -3,6 +3,7 @@ import { DataTable } from '@/components/DataTable';
 import { Pagination } from '@/components/Pagination';
 import { useOrders } from '@/features/orders/hooks/useOrders';
 import type { Order } from '@/features/orders/api/ordersApi';
+import { ordersApi } from '@/features/orders/api/ordersApi';
 import { formatCurrency, formatDateTime } from '@/utils/formatters';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
@@ -26,7 +27,7 @@ const AdminOrders: React.FC = () => {
   const [searchParams] = useSearchParams();
   const queryStatus = searchParams.get('status');
 
-  const { orders, loading, error, updateStatus, bulkUpdateStatus } = useOrders();
+  const { orders, loading, error, refetch, updateStatus, bulkUpdateStatus } = useOrders();
   const [page, setPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState('all');
 
@@ -44,6 +45,7 @@ const AdminOrders: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState('');
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
+  const [paymentUpdating, setPaymentUpdating] = useState(false);
 
   const filtered = useMemo(() => orders.filter(o => {
     const matchStatus = filterStatus === 'all' || o.orderstatus === filterStatus;
@@ -67,8 +69,27 @@ const AdminOrders: React.FC = () => {
 
   const handleStatusChange = async (id: number, status: string) => {
     setUpdatingId(id);
-    try { await updateStatus(id, status); }
+    try {
+      await updateStatus(id, status);
+    } catch (err: any) {
+      alert(err?.response?.data?.message ?? 'Không thể cập nhật trạng thái đơn hàng.');
+    }
     finally { setUpdatingId(null); }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!viewOrder) return;
+    setPaymentUpdating(true);
+    try {
+      await ordersApi.confirmPayment(viewOrder.orderid);
+      const refreshed = await ordersApi.getById(viewOrder.orderid);
+      setViewOrder(refreshed.data);
+      await refetch();
+    } catch (err: any) {
+      alert(err?.response?.data?.message ?? 'Không thể xác nhận thanh toán.');
+    } finally {
+      setPaymentUpdating(false);
+    }
   };
 
   const handleBulkUpdate = async () => {
@@ -189,9 +210,14 @@ const AdminOrders: React.FC = () => {
       key: 'paymentmethod',
       header: 'Thanh toán',
       render: (o: Order) => (
-        <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">
-          {o.paymentmethod ?? '—'}
-        </span>
+        <div className="space-y-1">
+          <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">
+            {o.paymentmethod ?? '—'}
+          </span>
+          <p className={`text-[11px] font-bold ${o.paymentstatus === 'Paid' ? 'text-emerald-600' : o.paymentstatus === 'DepositPaid' ? 'text-blue-600' : 'text-amber-600'}`}>
+            {o.paymentstatus ?? 'Chưa ghi nhận'}
+          </p>
+        </div>
       ),
     },
     {
@@ -357,8 +383,28 @@ const AdminOrders: React.FC = () => {
                   <h4 className="font-bold text-slate-800 text-sm mb-2">Thanh toán</h4>
                   <p className="text-sm text-slate-600"><span className="font-semibold">Hình thức:</span> {viewOrder.paymentmethod}</p>
                   <p className="text-sm text-slate-600"><span className="font-semibold">Tổng tiền:</span> {formatCurrency(viewOrder.finalamount ?? 0)}</p>
+                  <p className="text-sm text-slate-600"><span className="font-semibold">Đã trả:</span> {formatCurrency(viewOrder.paidamount ?? 0)}</p>
+                  <p className="text-sm text-slate-600"><span className="font-semibold">Còn lại:</span> {formatCurrency(Math.max(0, (viewOrder.finalamount ?? 0) - (viewOrder.paidamount ?? 0)))}</p>
+                  <p className="text-sm text-slate-600"><span className="font-semibold">Trạng thái:</span> {viewOrder.paymentstatus ?? '—'}</p>
+                  {viewOrder.paymentmethod !== 'COD' &&
+                    viewOrder.paymentstatus !== 'Paid' &&
+                    viewOrder.orderstatus !== 'Cancelled' && (
+                      <Button
+                        size="sm"
+                        className="mt-3"
+                        isLoading={paymentUpdating}
+                        onClick={handleConfirmPayment}
+                      >
+                        Xác nhận khoản cần thanh toán
+                      </Button>
+                    )}
                </div>
             </div>
+            {viewOrder.cancellationreason && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
+                <span className="font-bold">Lý do hủy:</span> {viewOrder.cancellationreason}
+              </div>
+            )}
           </div>
         )}
       </Modal>

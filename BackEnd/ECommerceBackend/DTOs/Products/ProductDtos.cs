@@ -132,6 +132,7 @@ namespace ECommerceBackend.DTOs.Products
         int? Categoryid,
         int? Brandid,
         int? Seriesid,
+        [Range(0, 10000, ErrorMessage = "Tổng số lượng lô hàng phải từ 0 đến 10000")] int Totalquantity,
         List<CreateFullProductVariantDto>? Variants
     );
 

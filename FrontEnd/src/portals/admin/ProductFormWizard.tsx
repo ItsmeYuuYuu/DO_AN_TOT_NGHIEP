@@ -120,6 +120,9 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     images: WizardImage[];
   }
   const [variants, setVariants] = useState<VariantState[]>([]);
+  const allocatedStock = variants.reduce((sum, variant) => sum + variant.quantity, 0);
+  const totalBatchStock = stock === '' ? 0 : Number(stock);
+  const remainingStock = totalBatchStock - allocatedStock;
 
   // Step 4: Specs
   const [activeSpecs, setActiveSpecs] = useState<string[]>([]);
@@ -151,8 +154,13 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   useEffect(() => {
     setVariantBasePrice(baseprice);
     setVariantSalePrice(saleprice);
-    setVariantStock(stock);
-  }, [baseprice, saleprice, stock, step]);
+  }, [baseprice, saleprice]);
+
+  useEffect(() => {
+    if (step === 3 && variantStock === '') {
+      setVariantStock(Math.max(remainingStock, 0));
+    }
+  }, [step, remainingStock, variantStock]);
 
   // Auto-generate SKU based on product name and active options
   useEffect(() => {
@@ -191,6 +199,10 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     setActiveCondition('New Seal');
     setActiveOrigin('Chính hãng');
     setCustomColor('');
+    setVariantSku('');
+    setVariantBasePrice('');
+    setVariantSalePrice('');
+    setVariantStock('');
     setActiveImages([]);
     setUploadingImages(false);
   };
@@ -343,6 +355,13 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
       return;
     }
 
+    if (Number(variantStock) > remainingStock) {
+      setError(
+        `Biến thể này vượt quá số lượng còn lại của lô hàng. Chỉ còn ${Math.max(remainingStock, 0)} máy chưa phân bổ.`
+      );
+      return;
+    }
+
     if (activeImages.length === 0) {
       setError('Vui lòng thêm ít nhất 1 hình ảnh cho biến thể.');
       return;
@@ -371,6 +390,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
       }
     ]);
     setActiveImages([]);
+    setVariantStock(Math.max(remainingStock - Number(variantStock), 0));
   };
 
   const handleRemoveVariant = (idx: number) => {
@@ -428,6 +448,11 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
       setStep(3);
     } else if (step === 3) {
       if (variants.length === 0) return setError('Vui lòng tạo ít nhất 1 biến thể cho sản phẩm.');
+      if (allocatedStock !== totalBatchStock) {
+        return setError(
+          `Bạn mới phân bổ ${allocatedStock}/${totalBatchStock} máy. Tổng số lượng các biến thể phải bằng đúng số lượng lô hàng.`
+        );
+      }
       setStep(4);
     } else if (step === 4) {
       // Validate active specs have values
@@ -441,8 +466,14 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   };
 
   const handleSubmit = async () => {
-    setSubmitting(true);
     setError(null);
+    if (allocatedStock !== totalBatchStock) {
+      setError(
+        `Tổng số lượng các biến thể (${allocatedStock}) phải bằng số lượng lô hàng (${totalBatchStock}).`
+      );
+      return;
+    }
+    setSubmitting(true);
     try {
       const parsedVariants: CreateFullProductVariant[] = variants.map(v => {
         // Build specs for this variant: option specs + active specs
@@ -475,6 +506,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
         categoryid: Number(categoryid),
         brandid: Number(brandid),
         seriesid: seriesid ? Number(seriesid) : undefined,
+        totalquantity: totalBatchStock,
         variants: parsedVariants
       };
 
@@ -581,7 +613,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
             </div>
 
             <div className="w-1/3">
-              <Input type="number" label="Số lượng tồn kho *" value={stock} onChange={e => setStock(e.target.value ? Number(e.target.value) : '')} placeholder="0" />
+              <Input type="number" min={0} label="Số lượng lô hàng ban đầu *" value={stock} onChange={e => setStock(e.target.value ? Number(e.target.value) : '')} placeholder="0" />
             </div>
           </div>
         )}
@@ -653,6 +685,31 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
         {/* STEP 3: CÁC LỰA CHỌN */}
         {step === 3 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
+            <div className={`rounded-2xl border p-4 ${
+              remainingStock === 0
+                ? 'border-emerald-200 bg-emerald-50'
+                : remainingStock < 0
+                  ? 'border-red-200 bg-red-50'
+                  : 'border-blue-200 bg-blue-50'
+            }`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-600">Phân bổ lô hàng theo biến thể</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Đã phân bổ <strong>{allocatedStock}</strong> trên tổng <strong>{totalBatchStock}</strong> máy.
+                  </p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-black ${
+                  remainingStock === 0
+                    ? 'bg-emerald-200 text-emerald-800'
+                    : remainingStock < 0
+                      ? 'bg-red-200 text-red-800'
+                      : 'bg-blue-200 text-blue-800'
+                }`}>
+                  {remainingStock >= 0 ? `Còn ${remainingStock} máy` : `Vượt ${Math.abs(remainingStock)} máy`}
+                </span>
+              </div>
+            </div>
             <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
               <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Thiết lập biến thể (Variants)</h3>
               
@@ -715,7 +772,14 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                   <Input type="number" label="Giá giảm (đ)" value={variantSalePrice} onChange={e => setVariantSalePrice(e.target.value ? Number(e.target.value) : '')} />
                 </div>
                 <div>
-                  <Input type="number" label="Số lượng tồn kho *" value={variantStock} onChange={e => setVariantStock(e.target.value ? Number(e.target.value) : '')} />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={Math.max(remainingStock, 0)}
+                    label={`Số lượng biến thể * (còn ${Math.max(remainingStock, 0)})`}
+                    value={variantStock}
+                    onChange={e => setVariantStock(e.target.value ? Number(e.target.value) : '')}
+                  />
                 </div>
               </div>
 
@@ -908,8 +972,10 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                   <p className="font-bold text-slate-800 mt-0.5">{seriesList.find(series => series.seriesid === seriesid)?.seriesname || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-400 uppercase">Tổng tồn kho dự kiến</span>
-                  <p className="font-bold text-blue-600 mt-0.5">{stock ? stock.toLocaleString('vi-VN') + ' máy' : '0'}</p>
+                  <span className="text-xs font-bold text-slate-400 uppercase">Phân bổ lô hàng</span>
+                  <p className={`font-bold mt-0.5 ${allocatedStock === totalBatchStock ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {allocatedStock.toLocaleString('vi-VN')} / {totalBatchStock.toLocaleString('vi-VN')} máy
+                  </p>
                 </div>
               </div>
 

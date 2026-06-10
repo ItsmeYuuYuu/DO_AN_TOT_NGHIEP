@@ -18,6 +18,12 @@ namespace ECommerceBackend.Controllers
 
         public InventoryController(ECommerceContext context) => _context = context;
 
+        private int? GetClaimUserId()
+        {
+            var value = User.FindFirst("userid")?.Value;
+            return int.TryParse(value, out var userId) ? userId : null;
+        }
+
         private static InventoryItemDto MapToDto(Inventoryitem i) => new InventoryItemDto(
             i.Imei,
             i.Variantid,
@@ -77,6 +83,34 @@ namespace ECommerceBackend.Controllers
             return Ok(items.Select(MapToDto));
         }
 
+        [HttpGet("low-stock")]
+        [Authorize(Roles = "Admin,Manager,Warehouse,Staff")]
+        public async Task<ActionResult<IEnumerable<LowStockVariantDto>>> GetLowStock(
+            [FromQuery] int threshold = 2)
+        {
+            threshold = Math.Clamp(threshold, 0, 100);
+            var variants = await _context.Productvariants
+                .AsNoTracking()
+                .Select(variant => new
+                {
+                    variant.Variantid,
+                    VariantSku = variant.Sku,
+                    ProductName = variant.Product != null ? variant.Product.Productname : null,
+                    InStockQuantity = variant.Inventoryitems.Count(item => item.Status == "InStock")
+                })
+                .Where(item => item.InStockQuantity <= threshold)
+                .OrderBy(item => item.InStockQuantity)
+                .ThenBy(item => item.ProductName)
+                .ToListAsync();
+
+            return Ok(variants.Select(item => new LowStockVariantDto(
+                item.Variantid,
+                item.VariantSku,
+                item.ProductName,
+                item.InStockQuantity,
+                threshold)));
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin,Warehouse,Staff")]
         public async Task<ActionResult<InventoryItemDto>> PostInventoryItem([FromBody] CreateInventoryItemRequestDto dto)
@@ -92,6 +126,15 @@ namespace ECommerceBackend.Controllers
                 Warrantystatus = dto.Warrantystatus
             };
 
+            item.Inventorytransactions.Add(new Inventorytransaction
+            {
+                Userid = GetClaimUserId(),
+                Transactiontype = "Import",
+                Fromstatus = null,
+                Tostatus = item.Status ?? "InStock",
+                Note = "Inventory item created manually.",
+                Createdat = DateTime.UtcNow
+            });
             _context.Inventoryitems.Add(item);
             await _context.SaveChangesAsync();
 
@@ -110,6 +153,7 @@ namespace ECommerceBackend.Controllers
             var item = await _context.Inventoryitems.FindAsync(imei);
             if (item == null) return NotFound();
 
+            var previousStatus = item.Status;
             item.Variantid = dto.Variantid;
             item.Status = dto.Status;
             if (dto.Importedat.HasValue)
@@ -119,6 +163,20 @@ namespace ECommerceBackend.Controllers
             item.Warrantystartdate = dto.Warrantystartdate;
             item.Warrantyenddate = dto.Warrantyenddate;
             item.Warrantystatus = dto.Warrantystatus;
+
+            if (!string.Equals(previousStatus, item.Status, StringComparison.OrdinalIgnoreCase))
+            {
+                _context.Inventorytransactions.Add(new Inventorytransaction
+                {
+                    Imei = item.Imei,
+                    Userid = GetClaimUserId(),
+                    Transactiontype = item.Status == "Defective" ? "Defective" : "Adjustment",
+                    Fromstatus = previousStatus,
+                    Tostatus = item.Status ?? "Unknown",
+                    Note = "Inventory status adjusted manually.",
+                    Createdat = DateTime.UtcNow
+                });
+            }
 
             try { await _context.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException)
@@ -141,6 +199,13 @@ namespace ECommerceBackend.Controllers
         {
             var item = await _context.Inventoryitems.FindAsync(imei);
             if (item == null) return NotFound();
+            if (await _context.Inventorytransactions.AnyAsync(transaction => transaction.Imei == imei))
+            {
+                return Conflict(new
+                {
+                    message = "Khong the xoa IMEI da co lich su giao dich kho."
+                });
+            }
             _context.Inventoryitems.Remove(item);
             await _context.SaveChangesAsync();
             return NoContent();

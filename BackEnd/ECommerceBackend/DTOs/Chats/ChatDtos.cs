@@ -23,7 +23,24 @@ namespace ECommerceBackend.DTOs.Chats
         int? Sessionid,
         string Sendertype,
         string Messagecontent,
-        DateTime? Sentat
+        DateTime? Sentat,
+        IReadOnlyList<ChatRecommendationDto>? Recommendations = null
+    );
+
+    public record ChatRecommendationDto(
+        int Recommendationid,
+        int Productid,
+        int Variantid,
+        string Productname,
+        string Variantname,
+        string Sku,
+        string Imageurl,
+        decimal Price,
+        decimal Baseprice,
+        int Stock,
+        string Condition,
+        int Rank,
+        DateTime? Addedtocartat
     );
 
     public class CreateChatSessionRequestDto

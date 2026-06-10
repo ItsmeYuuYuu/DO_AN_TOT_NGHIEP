@@ -27,7 +27,7 @@ public sealed class GroundedAiProvider : IAiProvider
         _logger = logger;
     }
 
-    public async Task<string> GetResponseAsync(
+    public async Task<AiAssistantResponse> GetResponseAsync(
         AiConversationRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -44,7 +44,9 @@ public sealed class GroundedAiProvider : IAiProvider
 
         if (products.Count == 0)
         {
-            return BuildCatalogResponse(request.UserMessage, products);
+            return new AiAssistantResponse(
+                BuildCatalogResponse(request.UserMessage, products),
+                Array.Empty<ProductConsultationResult>());
         }
 
         if (_options.UseLanguageModel)
@@ -66,7 +68,10 @@ public sealed class GroundedAiProvider : IAiProvider
                         .ToList();
                     if (selectedProducts.Count > 0)
                     {
-                        return BuildCatalogResponse(request.UserMessage, selectedProducts);
+                        var displayedProducts = SelectDisplayedVariants(selectedProducts);
+                        return new AiAssistantResponse(
+                            BuildCatalogResponse(request.UserMessage, displayedProducts),
+                            displayedProducts);
                     }
                 }
 
@@ -81,8 +86,19 @@ public sealed class GroundedAiProvider : IAiProvider
             }
         }
 
-        return BuildCatalogResponse(request.UserMessage, products);
+        var displayedFallback = SelectDisplayedVariants(products);
+        return new AiAssistantResponse(
+            BuildCatalogResponse(request.UserMessage, displayedFallback),
+            displayedFallback);
     }
+
+    private static IReadOnlyList<ProductConsultationResult> SelectDisplayedVariants(
+        IReadOnlyList<ProductConsultationResult> products) =>
+        products
+            .GroupBy(product => product.ProductId)
+            .Take(MaxDisplayedProducts)
+            .SelectMany(group => group.Take(MaxDisplayedVariantsPerProduct))
+            .ToList();
 
     private async Task<IReadOnlyList<int>> GetLanguageModelSelectionAsync(
         AiConversationRequest request,

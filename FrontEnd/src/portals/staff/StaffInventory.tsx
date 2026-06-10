@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '@/api/apiClient';
-import { Package, Plus, Filter, Edit2, X } from 'lucide-react';
+import { Package, Plus, Filter, Edit2, History, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 
 interface InventoryItem {
@@ -12,6 +12,27 @@ interface InventoryItem {
   productName?: string;
 }
 
+interface InventoryTransaction {
+  transactionid: number;
+  imei: string;
+  orderid?: number;
+  userid?: number;
+  username?: string;
+  transactiontype: string;
+  fromstatus?: string;
+  tostatus: string;
+  note?: string;
+  createdat?: string;
+}
+
+interface LowStockVariant {
+  variantid: number;
+  variantSku?: string;
+  productName?: string;
+  inStockQuantity: number;
+  threshold: number;
+}
+
 const StaffInventory: React.FC = () => {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +42,10 @@ const StaffInventory: React.FC = () => {
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [formData, setFormData] = useState<{ imei: string; variantid: number | ''; status: string }>({ imei: '', variantid: '', status: 'InStock' });
   const [saving, setSaving] = useState(false);
+  const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
+  const [transactions, setTransactions] = useState<InventoryTransaction[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [lowStockVariants, setLowStockVariants] = useState<LowStockVariant[]>([]);
 
   useEffect(() => { fetchItems(); }, [statusFilter]);
 
@@ -28,8 +53,12 @@ const StaffInventory: React.FC = () => {
     setLoading(true);
     try {
       const url = statusFilter ? `/Inventory/status/${statusFilter}` : '/Inventory';
-      const res = await apiClient.get<InventoryItem[]>(url);
-      setItems(res.data);
+      const [itemsResponse, lowStockResponse] = await Promise.all([
+        apiClient.get<InventoryItem[]>(url),
+        apiClient.get<LowStockVariant[]>('/Inventory/low-stock', { params: { threshold: 2 } }),
+      ]);
+      setItems(itemsResponse.data);
+      setLowStockVariants(lowStockResponse.data);
     } catch (err) {
       console.error(err);
       setItems([]);
@@ -57,6 +86,20 @@ const StaffInventory: React.FC = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingItem(null);
+  };
+
+  const openHistory = async (item: InventoryItem) => {
+    setHistoryItem(item);
+    setTransactions([]);
+    setHistoryLoading(true);
+    try {
+      const response = await apiClient.get<InventoryTransaction[]>(`/InventoryTransactions/imei/${item.imei}`);
+      setTransactions(response.data);
+    } catch {
+      setTransactions([]);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -112,9 +155,41 @@ const StaffInventory: React.FC = () => {
           <option value="InStock">InStock (Trong kho)</option>
           <option value="Sold">Sold (Đã bán)</option>
           <option value="Reserved">Reserved (Đã đặt trước)</option>
+          <option value="Shipping">Shipping (Đang giao)</option>
           <option value="Defective">Defective (Lỗi)</option>
         </select>
       </div>
+
+      {lowStockVariants.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="font-black text-amber-900">Cảnh báo tồn kho thấp</h2>
+              <p className="text-sm text-amber-700">
+                {lowStockVariants.length} cấu hình còn tối đa 2 máy sẵn sàng bán.
+              </p>
+            </div>
+            <span className="rounded-full bg-amber-200 px-3 py-1 text-xs font-black text-amber-900">
+              Cần nhập kho
+            </span>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {lowStockVariants.slice(0, 6).map(variant => (
+              <div key={variant.variantid} className="rounded-xl border border-amber-200 bg-white/80 px-3 py-2">
+                <p className="truncate text-xs font-bold text-slate-800">
+                  {variant.productName ?? `Variant #${variant.variantid}`}
+                </p>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <span className="truncate text-[11px] text-slate-400">{variant.variantSku ?? 'Không có SKU'}</span>
+                  <span className={`text-xs font-black ${variant.inStockQuantity === 0 ? 'text-red-600' : 'text-amber-700'}`}>
+                    {variant.inStockQuantity} máy
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -145,12 +220,16 @@ const StaffInventory: React.FC = () => {
                   <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider
                     ${item.status === 'InStock' ? 'bg-green-100 text-green-700' :
                       item.status === 'Sold' ? 'bg-slate-100 text-slate-500' :
+                      item.status === 'Shipping' ? 'bg-blue-100 text-blue-700' :
                       item.status === 'Defective' ? 'bg-red-100 text-red-700' :
                       'bg-orange-100 text-orange-700'}`}>
                     {item.status}
                   </span>
                 </td>
                 <td className="p-4 text-right">
+                  <button onClick={() => openHistory(item)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors" title="Lịch sử kho">
+                    <History size={16} />
+                  </button>
                   <button onClick={() => openEditModal(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                     <Edit2 size={16} />
                   </button>
@@ -193,6 +272,7 @@ const StaffInventory: React.FC = () => {
                   <option value="InStock">InStock</option>
                   <option value="Sold">Sold</option>
                   <option value="Reserved">Reserved</option>
+                  <option value="Shipping">Shipping</option>
                   <option value="Defective">Defective</option>
                 </select>
               </div>
@@ -204,6 +284,50 @@ const StaffInventory: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {historyItem && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h2 className="text-lg font-black text-slate-800">Lịch sử giao dịch kho</h2>
+                <p className="text-xs font-mono font-bold text-blue-600">{historyItem.imei}</p>
+              </div>
+              <button onClick={() => setHistoryItem(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <div className="p-6 max-h-[65vh] overflow-y-auto">
+              {historyLoading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : transactions.length === 0 ? (
+                <p className="py-10 text-center text-sm text-slate-400">IMEI này chưa có lịch sử giao dịch.</p>
+              ) : (
+                <div className="space-y-3">
+                  {transactions.map(transaction => (
+                    <div key={transaction.transactionid} className="rounded-xl border border-slate-200 p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-black text-slate-800">{transaction.transactiontype}</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {transaction.fromstatus ?? 'Khởi tạo'} → <span className="font-bold text-blue-700">{transaction.tostatus}</span>
+                          </p>
+                        </div>
+                        <p className="text-xs text-slate-400">
+                          {transaction.createdat ? new Date(transaction.createdat).toLocaleString('vi-VN') : '—'}
+                        </p>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
+                        {transaction.orderid && <span>Đơn #{transaction.orderid}</span>}
+                        {transaction.username && <span>Thao tác: {transaction.username}</span>}
+                      </div>
+                      {transaction.note && <p className="mt-2 text-xs text-slate-400">{transaction.note}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

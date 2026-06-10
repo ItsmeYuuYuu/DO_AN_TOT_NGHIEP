@@ -50,7 +50,7 @@ namespace ECommerceBackend.Services.Chat
                     message.Messagecontent))
                 .ToListAsync();
 
-            var aiResponseText = await _aiProvider.GetResponseAsync(
+            var aiResponse = await _aiProvider.GetResponseAsync(
                 new AiConversationRequest(
                     session.Sessionid,
                     userMessage.Messagecontent,
@@ -60,22 +60,57 @@ namespace ECommerceBackend.Services.Chat
             {
                 Sessionid = session.Sessionid,
                 Sendertype = "assistant",
-                Messagecontent = aiResponseText,
+                Messagecontent = aiResponse.Text,
                 Sentat = DateTime.Now
             };
+            var rank = 1;
+            foreach (var recommendation in aiResponse.Recommendations)
+            {
+                assistantMessage.Chatproductrecommendations.Add(new Chatproductrecommendation
+                {
+                    Productid = recommendation.ProductId,
+                    Variantid = recommendation.VariantId,
+                    Rank = rank++,
+                    Createdat = DateTime.Now
+                });
+            }
             _context.Chatmessages.Add(assistantMessage);
 
             session.Endtime = DateTime.Now;
             _context.Chatsessions.Update(session);
             await _context.SaveChangesAsync();
 
-            return new ChatMessageDto(
-                assistantMessage.Messageid,
-                assistantMessage.Sessionid,
-                assistantMessage.Sendertype,
-                assistantMessage.Messagecontent,
-                assistantMessage.Sentat
-            );
+            return await _context.Chatmessages
+                .AsNoTracking()
+                .Where(message => message.Messageid == assistantMessage.Messageid)
+                .Select(message => new ChatMessageDto(
+                    message.Messageid,
+                    message.Sessionid,
+                    message.Sendertype,
+                    message.Messagecontent,
+                    message.Sentat,
+                    message.Chatproductrecommendations
+                        .OrderBy(item => item.Rank)
+                        .Select(item => new ChatRecommendationDto(
+                            item.Recommendationid,
+                            item.Productid,
+                            item.Variantid,
+                            item.Product.Productname,
+                            item.Variant.Condition + " - " + (item.Variant.Sku ?? string.Empty),
+                            item.Variant.Sku ?? string.Empty,
+                            item.Variant.Productimages
+                                .OrderByDescending(image => image.Ismain == true)
+                                .ThenBy(image => image.Imageid)
+                                .Select(image => image.Imageurl)
+                                .FirstOrDefault() ?? string.Empty,
+                            item.Variant.Saleprice ?? item.Variant.Baseprice,
+                            item.Variant.Baseprice,
+                            item.Variant.Inventoryitems.Count(inventory => inventory.Status == "InStock"),
+                            item.Variant.Condition,
+                            item.Rank,
+                            item.Addedtocartat))
+                        .ToList()))
+                .SingleAsync();
         }
     }
 }

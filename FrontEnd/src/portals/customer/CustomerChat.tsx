@@ -4,6 +4,7 @@ import type { ChatSession, ChatMessage } from '../../features/chat/api/chatSessi
 import { Link, useSearchParams } from 'react-router-dom';
 import { MessageSquare, Plus, Send, Trash2, Bot, User, Headphones } from 'lucide-react';
 import { formatDateTime } from '../../utils/formatters';
+import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
 
 export default function CustomerChat() {
   const [searchParams] = useSearchParams();
@@ -263,11 +264,18 @@ export default function CustomerChat() {
                   ${isUser ? 'bg-blue-600 text-white' : 'bg-emerald-500 text-white'}`}>
                   {isUser ? <User size={16} /> : msg.sendertype === 'consultant' ? <Headphones size={16} /> : <Bot size={16} />}
                 </div>
-                <div className={`max-w-[70%] p-4 rounded-2xl shadow-sm
+                <div className={`${msg.recommendations?.length ? 'max-w-[85%]' : 'max-w-[70%]'} p-4 rounded-2xl shadow-sm
                   ${isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'}`}>
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">
                     {renderMessageContent(msg.messagecontent)}
                   </p>
+                  {msg.recommendations && msg.recommendations.length > 0 && activeSession && (
+                    <ChatRecommendationCards
+                      sessionId={activeSession.sessionid}
+                      recommendations={msg.recommendations}
+                      allowAddToCart
+                    />
+                  )}
                   <span className={`text-[10px] mt-2 block ${isUser ? 'text-blue-200' : 'text-slate-400'}`}>
                     {msg.sentat ? new Date(msg.sentat).toLocaleTimeString() : 'Đang gửi...'}
                   </span>

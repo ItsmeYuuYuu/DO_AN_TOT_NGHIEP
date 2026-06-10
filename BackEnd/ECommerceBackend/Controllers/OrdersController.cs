@@ -45,6 +45,18 @@ namespace ECommerceBackend.Controllers
                 i.ImeiNavigation?.Variant?.Product?.Productname,
                 i.ImeiNavigation?.Variant?.Sku
             )).ToList();
+            var payments = o.Orderpayments
+                .OrderByDescending(payment => payment.Createdat)
+                .Select(payment => new OrderPaymentDto(
+                    payment.Paymentid,
+                    payment.Provider,
+                    payment.Paymenttype,
+                    payment.Amount,
+                    payment.Status,
+                    payment.Transactionref,
+                    payment.Createdat,
+                    payment.Paidat))
+                .ToList();
 
             return new OrderListItemDto(
                 o.Orderid,
@@ -65,8 +77,12 @@ namespace ECommerceBackend.Controllers
                 o.Shippingemail,
                 o.Shippingaddress,
                 o.Customernote,
+                o.Reservationexpiresat,
+                o.Paymenttoken,
+                o.Cancellationreason,
                 customer,
-                items
+                items,
+                payments
             );
         }
 
@@ -92,8 +108,12 @@ namespace ECommerceBackend.Controllers
                 mapped.Shippingemail,
                 mapped.Shippingaddress,
                 mapped.Customernote,
+                mapped.Reservationexpiresat,
+                mapped.Paymenttoken,
+                mapped.Cancellationreason,
                 mapped.Customer,
-                mapped.Orderitems
+                mapped.Orderitems,
+                mapped.Orderpayments
             );
         }
 
@@ -186,6 +206,91 @@ namespace ECommerceBackend.Controllers
             { StatusShipped, new[] { StatusCompleted, StatusCancelled } }
         };
 
+        private static bool IsPaymentReadyForProcessing(Order order)
+        {
+            if (order.Paymentmethod == "COD")
+            {
+                return order.Checkouttype == "Registered" && order.Paymentstatus == "CODPending";
+            }
+
+            return order.Paymentstatus is "DepositPaid" or "Paid";
+        }
+
+        private static decimal RemainingAmount(Order order) =>
+            Math.Max(0, order.Finalamount - (order.Paidamount ?? 0));
+
+        private async Task<PaymentActionResultDto> RecordSuccessfulPaymentAsync(
+            Order order,
+            decimal amount,
+            string? transactionRef,
+            string source)
+        {
+            var remaining = RemainingAmount(order);
+            var acceptedAmount = Math.Min(amount, remaining);
+            var now = DateTime.UtcNow;
+            var payment = order.Orderpayments
+                .Where(item => item.Status == "Pending")
+                .OrderByDescending(item => item.Createdat)
+                .FirstOrDefault();
+
+            if (payment == null)
+            {
+                payment = new Orderpayment
+                {
+                    Orderid = order.Orderid,
+                    Provider = order.Paymentmethod ?? "UNKNOWN",
+                    Paymenttype = order.Paymentstatus == "DepositPaid" ? "Remaining" : "Confirmation",
+                    Createdat = now
+                };
+                order.Orderpayments.Add(payment);
+            }
+
+            payment.Amount = acceptedAmount;
+            payment.Status = "Success";
+            payment.Transactionref = string.IsNullOrWhiteSpace(transactionRef)
+                ? $"{source}-{order.Orderid}-{now:yyyyMMddHHmmss}"
+                : transactionRef.Trim();
+            payment.Paidat = now;
+
+            order.Paidamount = (order.Paidamount ?? 0) + acceptedAmount;
+            var remainingAfterPayment = RemainingAmount(order);
+            order.Paymentstatus = remainingAfterPayment <= 0
+                ? "Paid"
+                : order.Depositpercentage.HasValue && order.Paidamount >= order.Requiredpayment
+                    ? "DepositPaid"
+                    : "PartialPayment";
+            order.Reservationexpiresat = null;
+
+            if (!string.IsNullOrWhiteSpace(order.Shippingphone))
+            {
+                await _checkoutAbuseProtection.ReleaseGuestPendingAsync(order.Guesttoken, order.Shippingphone);
+            }
+
+            return new PaymentActionResultDto(
+                order.Orderid,
+                order.Paymentstatus,
+                order.Paidamount ?? 0,
+                remainingAfterPayment,
+                payment.Transactionref);
+        }
+
+        private async Task ExpireOrderAsync(Order order)
+        {
+            await ApplyInventoryForStatusAsync(order, StatusCancelled);
+            foreach (var payment in order.Orderpayments.Where(item => item.Status == "Pending"))
+            {
+                payment.Status = "Expired";
+            }
+            order.Orderstatus = StatusCancelled;
+            order.Paymentstatus = "Expired";
+            order.Cancellationreason = "Qua 15 phut chua hoan tat thanh toan.";
+
+            if (!string.IsNullOrWhiteSpace(order.Shippingphone))
+            {
+                await _checkoutAbuseProtection.ReleaseGuestPendingAsync(order.Guesttoken, order.Shippingphone);
+            }
+        }
+
         private async Task ApplyInventoryForStatusAsync(Order order, string newStatus)
         {
             var imeis = order.Orderitems
@@ -202,10 +307,25 @@ namespace ECommerceBackend.Controllers
             {
                 foreach (var inv in inventoryItems)
                 {
+                    var previousStatus = inv.Status;
                     inv.Status = "InStock";
                     inv.Warrantystartdate = null;
                     inv.Warrantyenddate = null;
                     inv.Warrantystatus = null;
+                    if (previousStatus != "InStock")
+                    {
+                        _context.Inventorytransactions.Add(new Inventorytransaction
+                        {
+                            Imei = inv.Imei,
+                            Orderid = order.Orderid,
+                            Userid = GetClaimUserId(),
+                            Transactiontype = "Restock",
+                            Fromstatus = previousStatus,
+                            Tostatus = "InStock",
+                            Note = "Order cancelled or payment reservation expired.",
+                            Createdat = DateTime.UtcNow
+                        });
+                    }
                 }
                 return;
             }
@@ -216,10 +336,25 @@ namespace ECommerceBackend.Controllers
                 foreach (var inv in inventoryItems)
                 {
                     var orderItem = order.Orderitems.FirstOrDefault(item => item.Imei == inv.Imei);
+                    var previousStatus = inv.Status;
                     inv.Status = "Sold";
                     inv.Warrantystartdate = now;
                     inv.Warrantyenddate = now.AddMonths(orderItem?.Package?.Durationmonths ?? 12);
                     inv.Warrantystatus = "Active";
+                    if (previousStatus != "Sold")
+                    {
+                        _context.Inventorytransactions.Add(new Inventorytransaction
+                        {
+                            Imei = inv.Imei,
+                            Orderid = order.Orderid,
+                            Userid = GetClaimUserId(),
+                            Transactiontype = "CompleteSale",
+                            Fromstatus = previousStatus,
+                            Tostatus = "Sold",
+                            Note = "Order completed and warranty activated.",
+                            Createdat = now
+                        });
+                    }
                 }
             }
         }
@@ -236,6 +371,7 @@ namespace ECommerceBackend.Controllers
                     .ThenInclude(oi => oi.ImeiNavigation)
                         .ThenInclude(inv => inv!.Variant)
                             .ThenInclude(v => v!.Product)
+                .Include(o => o.Orderpayments)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
 
@@ -254,6 +390,7 @@ namespace ECommerceBackend.Controllers
                     .ThenInclude(oi => oi.ImeiNavigation)
                         .ThenInclude(inv => inv!.Variant)
                             .ThenInclude(v => v!.Product)
+                .Include(o => o.Orderpayments)
                 .FirstOrDefaultAsync(o => o.Orderid == id);
 
             if (order == null) return NotFound();
@@ -272,6 +409,7 @@ namespace ECommerceBackend.Controllers
                     .ThenInclude(oi => oi.ImeiNavigation)
                         .ThenInclude(inv => inv!.Variant)
                             .ThenInclude(v => v!.Product)
+                .Include(o => o.Orderpayments)
                 .Where(o => o.Customerid == customerId)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
@@ -297,6 +435,7 @@ namespace ECommerceBackend.Controllers
                     .ThenInclude(oi => oi.ImeiNavigation)
                         .ThenInclude(inv => inv!.Variant)
                             .ThenInclude(v => v!.Product)
+                .Include(o => o.Orderpayments)
                 .Where(o => o.Userid == userId)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
@@ -380,6 +519,7 @@ namespace ECommerceBackend.Controllers
             var shippingPhone = (dto.Customerphone ?? user?.Phone ?? string.Empty).Trim();
             var shippingEmail = (dto.Customeremail ?? user?.Email)?.Trim();
             var shippingAddress = (dto.Shippingaddress ?? string.Empty).Trim();
+            var guestToken = Request.Headers["x-guest-session-token"].FirstOrDefault();
 
             if (string.IsNullOrWhiteSpace(shippingName) ||
                 string.IsNullOrWhiteSpace(shippingPhone) ||
@@ -391,7 +531,7 @@ namespace ECommerceBackend.Controllers
             var abuseCheck = await _checkoutAbuseProtection.CheckAsync(
                 HttpContext,
                 shippingPhone,
-                Request.Headers["x-guest-session-token"].FirstOrDefault(),
+                guestToken,
                 isGuest);
             if (!abuseCheck.Allowed)
                 return StatusCode(429, new ApiErrorDto(abuseCheck.Message ?? "Yeu cau checkout bi gioi han.", null));
@@ -424,7 +564,8 @@ namespace ECommerceBackend.Controllers
                     Shippingphone = shippingPhone,
                     Shippingemail = shippingEmail,
                     Shippingaddress = shippingAddress,
-                    Customernote = dto.Note
+                    Customernote = dto.Note,
+                    Guesttoken = isGuest ? guestToken : null
                 };
 
                 foreach (var reqItem in dto.Items)
@@ -465,6 +606,16 @@ namespace ECommerceBackend.Controllers
                             Sellingprice = price,
                             Packageid = package?.Packageid,
                             Warrantyprice = packagePrice > 0 ? packagePrice : null
+                        });
+                        order.Inventorytransactions.Add(new Inventorytransaction
+                        {
+                            Imei = invItem.Imei,
+                            Userid = claimUserId,
+                            Transactiontype = "Reserve",
+                            Fromstatus = "InStock",
+                            Tostatus = "Reserved",
+                            Note = "Inventory reserved for new order.",
+                            Createdat = DateTime.UtcNow
                         });
                         order.Totalamount += price + packagePrice;
                     }
@@ -509,18 +660,24 @@ namespace ECommerceBackend.Controllers
                     order.Paymentstatus = "CODPending";
                     order.Requiredpayment = 0;
                     order.Depositpercentage = null;
+                    order.Reservationexpiresat = null;
+                    order.Paymenttoken = null;
                 }
                 else if (paymentOption == "Deposit30")
                 {
                     order.Paymentstatus = "AwaitingDeposit";
                     order.Depositpercentage = 30;
                     order.Requiredpayment = Math.Round(order.Finalamount * 0.3m, 0, MidpointRounding.AwayFromZero);
+                    order.Reservationexpiresat = DateTime.UtcNow.AddMinutes(15);
+                    order.Paymenttoken = Guid.NewGuid().ToString("N");
                 }
                 else
                 {
                     order.Paymentstatus = "AwaitingFullPayment";
                     order.Depositpercentage = null;
                     order.Requiredpayment = order.Finalamount;
+                    order.Reservationexpiresat = DateTime.UtcNow.AddMinutes(15);
+                    order.Paymenttoken = Guid.NewGuid().ToString("N");
                 }
 
                 order.Orderpayments.Add(new Orderpayment
@@ -538,7 +695,7 @@ namespace ECommerceBackend.Controllers
                 if (isGuest)
                 {
                     await _checkoutAbuseProtection.MarkGuestPendingAsync(
-                        Request.Headers["x-guest-session-token"].FirstOrDefault(),
+                        guestToken,
                         shippingPhone,
                         order.Orderid);
                 }
@@ -553,6 +710,7 @@ namespace ECommerceBackend.Controllers
                         .ThenInclude(oi => oi.ImeiNavigation)
                             .ThenInclude(inv => inv!.Variant)
                                 .ThenInclude(v => v!.Product)
+                    .Include(o => o.Orderpayments)
                     .FirstOrDefaultAsync(o => o.Orderid == order.Orderid);
 
                 return CreatedAtAction(nameof(GetOrder), new { id = order.Orderid }, MapToDetailDto(created!));
@@ -564,6 +722,136 @@ namespace ECommerceBackend.Controllers
                     "Loi he thong khi tao don hang.",
                     new Dictionary<string, string[]> { { "Error", new[] { ex.Message } } }));
             }
+        }
+
+        [HttpGet("{id}/payment")]
+        [AllowAnonymous]
+        public async Task<ActionResult<PaymentCheckoutDto>> GetPaymentCheckout(
+            int id,
+            [FromQuery] string? token)
+        {
+            var order = await _context.Orders
+                .Include(item => item.Orderitems)
+                .Include(item => item.Orderpayments)
+                .FirstOrDefaultAsync(item => item.Orderid == id);
+            if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
+            if (string.IsNullOrWhiteSpace(token) || token != order.Paymenttoken)
+                return StatusCode(403, new ApiErrorDto("Ma thanh toan khong hop le.", null));
+
+            if (order.Reservationexpiresat.HasValue &&
+                order.Reservationexpiresat <= DateTime.UtcNow &&
+                order.Paymentstatus is not ("DepositPaid" or "Paid"))
+            {
+                await ExpireOrderAsync(order);
+                await _context.SaveChangesAsync();
+                return StatusCode(410, new ApiErrorDto("Don hang da het thoi gian thanh toan va da duoc huy.", null));
+            }
+
+            var amountDue = order.Paymentstatus == "DepositPaid"
+                ? RemainingAmount(order)
+                : order.Requiredpayment ?? RemainingAmount(order);
+            return Ok(new PaymentCheckoutDto(
+                order.Orderid,
+                order.Paymentmethod,
+                order.Paymentstatus,
+                order.Finalamount,
+                amountDue,
+                order.Paidamount ?? 0,
+                order.Reservationexpiresat,
+                order.Shippingname));
+        }
+
+        [HttpPost("{id}/simulate-payment")]
+        [AllowAnonymous]
+        public async Task<ActionResult<PaymentActionResultDto>> SimulatePayment(
+            int id,
+            [FromBody] SimulatePaymentRequestDto dto)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            var order = await _context.Orders
+                .Include(item => item.Orderitems)
+                    .ThenInclude(item => item.Package)
+                .Include(item => item.Orderpayments)
+                .FirstOrDefaultAsync(item => item.Orderid == id);
+            if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
+            if (dto.Paymenttoken != order.Paymenttoken)
+                return StatusCode(403, new ApiErrorDto("Ma thanh toan khong hop le.", null));
+            if (order.Orderstatus == StatusCancelled)
+                return Conflict(new ApiErrorDto("Don hang da bi huy.", null));
+            if (order.Paymentmethod == "COD")
+                return BadRequest(new ApiErrorDto("Don COD khong su dung cong thanh toan online.", null));
+
+            if (order.Reservationexpiresat.HasValue &&
+                order.Reservationexpiresat <= DateTime.UtcNow &&
+                order.Paymentstatus is not ("DepositPaid" or "Paid"))
+            {
+                await ExpireOrderAsync(order);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return StatusCode(410, new ApiErrorDto("Don hang da het thoi gian thanh toan va da duoc huy.", null));
+            }
+
+            if (!dto.Success)
+            {
+                order.Orderpayments.Add(new Orderpayment
+                {
+                    Provider = order.Paymentmethod ?? "UNKNOWN",
+                    Paymenttype = "Simulation",
+                    Amount = order.Paymentstatus == "DepositPaid"
+                        ? RemainingAmount(order)
+                        : order.Requiredpayment ?? 0,
+                    Status = "Failed",
+                    Transactionref = $"SIM-FAILED-{id}-{DateTime.UtcNow:yyyyMMddHHmmss}",
+                    Createdat = DateTime.UtcNow
+                });
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return BadRequest(new ApiErrorDto("Thanh toan gia lap that bai. Ban co the thu lai truoc khi het han.", null));
+            }
+
+            if (order.Paymentstatus == "Paid")
+                return Conflict(new ApiErrorDto("Don hang da thanh toan du.", null));
+
+            var amount = order.Paymentstatus == "DepositPaid"
+                ? RemainingAmount(order)
+                : order.Requiredpayment ?? RemainingAmount(order);
+            var result = await RecordSuccessfulPaymentAsync(order, amount, null, "SIM");
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return Ok(result);
+        }
+
+        [HttpPost("{id}/confirm-payment")]
+        [Authorize(Roles = "Admin,Manager,Sales,Staff")]
+        public async Task<ActionResult<PaymentActionResultDto>> ConfirmPayment(
+            int id,
+            [FromBody] ConfirmPaymentRequestDto dto)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            var order = await _context.Orders
+                .Include(item => item.Orderpayments)
+                .FirstOrDefaultAsync(item => item.Orderid == id);
+            if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
+            if (order.Orderstatus == StatusCancelled)
+                return Conflict(new ApiErrorDto("Khong the xac nhan thanh toan cho don da huy.", null));
+            if (order.Paymentmethod == "COD")
+                return BadRequest(new ApiErrorDto("COD duoc ghi nhan thanh toan khi don hoan thanh.", null));
+            if (order.Paymentstatus == "Paid")
+                return Conflict(new ApiErrorDto("Don hang da thanh toan du.", null));
+
+            var minimumAmount = order.Paymentstatus == "DepositPaid"
+                ? RemainingAmount(order)
+                : order.Requiredpayment ?? RemainingAmount(order);
+            var amount = dto.Amount ?? minimumAmount;
+            if (amount <= 0 || amount > RemainingAmount(order))
+                return BadRequest(new ApiErrorDto("So tien xac nhan khong hop le.", null));
+            if (order.Paymentstatus is "AwaitingDeposit" or "AwaitingFullPayment" && amount < minimumAmount)
+                return BadRequest(new ApiErrorDto("So tien chua dat muc thanh toan bat buoc cua don hang.", null));
+
+            var result = await RecordSuccessfulPaymentAsync(order, amount, dto.Transactionref, "STAFF");
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return Ok(result);
         }
 
         [HttpPut("{id}")]
@@ -603,6 +891,7 @@ namespace ECommerceBackend.Controllers
                 var order = await _context.Orders
                     .Include(o => o.Orderitems)
                         .ThenInclude(item => item.Package)
+                    .Include(o => o.Orderpayments)
                     .FirstOrDefaultAsync(o => o.Orderid == id);
 
                 if (order == null) return NotFound();
@@ -620,6 +909,22 @@ namespace ECommerceBackend.Controllers
                     return BadRequest(new ApiErrorDto($"Khong the chuyen trang thai tu {currentStatus} sang {newStatus}.", null));
                 }
 
+                if (newStatus == StatusProcessing && !IsPaymentReadyForProcessing(order))
+                {
+                    return BadRequest(new ApiErrorDto(
+                        "Don hang chua dat coc/thanh toan du dieu kien de chuyen sang xu ly.",
+                        null));
+                }
+
+                if (newStatus == StatusCompleted &&
+                    order.Paymentmethod != "COD" &&
+                    order.Paymentstatus != "Paid")
+                {
+                    return BadRequest(new ApiErrorDto(
+                        "Don hang online phai thanh toan du truoc khi hoan thanh.",
+                        null));
+                }
+
                 await ApplyInventoryForStatusAsync(order, newStatus);
                 order.Orderstatus = newStatus;
 
@@ -627,6 +932,18 @@ namespace ECommerceBackend.Controllers
                 {
                     order.Paymentstatus = "Paid";
                     order.Paidamount = order.Finalamount;
+                }
+                if (newStatus == StatusCancelled)
+                {
+                    order.Cancellationreason ??= "Nhan vien huy don.";
+                    foreach (var payment in order.Orderpayments.Where(item => item.Status == "Pending"))
+                    {
+                        payment.Status = "Cancelled";
+                    }
+                    if (!string.IsNullOrWhiteSpace(order.Shippingphone))
+                    {
+                        await _checkoutAbuseProtection.ReleaseGuestPendingAsync(order.Guesttoken, order.Shippingphone);
+                    }
                 }
 
                 await _context.SaveChangesAsync();
@@ -657,6 +974,7 @@ namespace ECommerceBackend.Controllers
                 var orders = await _context.Orders
                     .Include(o => o.Orderitems)
                         .ThenInclude(item => item.Package)
+                    .Include(o => o.Orderpayments)
                     .Where(o => dto.OrderIds.Contains(o.Orderid))
                     .ToListAsync();
 
@@ -683,12 +1001,42 @@ namespace ECommerceBackend.Controllers
                         continue;
                     }
 
+                    if (newStatus == StatusProcessing && !IsPaymentReadyForProcessing(order))
+                    {
+                        failed.Add(new BulkUpdateFailedItemDto(
+                            order.Orderid,
+                            "Don hang chua dat coc/thanh toan du dieu kien."));
+                        continue;
+                    }
+
+                    if (newStatus == StatusCompleted &&
+                        order.Paymentmethod != "COD" &&
+                        order.Paymentstatus != "Paid")
+                    {
+                        failed.Add(new BulkUpdateFailedItemDto(
+                            order.Orderid,
+                            "Don online chua thanh toan du."));
+                        continue;
+                    }
+
                     await ApplyInventoryForStatusAsync(order, newStatus);
                     order.Orderstatus = newStatus;
                     if (newStatus == StatusCompleted && order.Paymentmethod == "COD")
                     {
                         order.Paymentstatus = "Paid";
                         order.Paidamount = order.Finalamount;
+                    }
+                    if (newStatus == StatusCancelled)
+                    {
+                        order.Cancellationreason ??= "Nhan vien huy don.";
+                        foreach (var payment in order.Orderpayments.Where(item => item.Status == "Pending"))
+                        {
+                            payment.Status = "Cancelled";
+                        }
+                        if (!string.IsNullOrWhiteSpace(order.Shippingphone))
+                        {
+                            await _checkoutAbuseProtection.ReleaseGuestPendingAsync(order.Guesttoken, order.Shippingphone);
+                        }
                     }
                     updatedOrderIds.Add(order.Orderid);
                 }

@@ -3,6 +3,7 @@ import { useOrders } from '@/features/orders/hooks/useOrders';
 import { Skeleton } from '@/components/Skeleton';
 import { formatCurrency, generateOrderCode } from '@/utils/formatters';
 import { Package, Clock, Truck } from 'lucide-react';
+import { ordersApi } from '@/features/orders/api/ordersApi';
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   Pending:    { label: 'Chờ xử lý', cls: 'bg-amber-100 text-amber-700 border border-amber-200' },
@@ -13,8 +14,35 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
 };
 
 const StaffOrders: React.FC = () => {
-  const { orders, loading, error, updateStatus } = useOrders();
+  const { orders, loading, error, refetch, updateStatus } = useOrders();
+  const [updatingId, setUpdatingId] = React.useState<number | null>(null);
+  const [actionError, setActionError] = React.useState('');
   const pendingOrders = orders.filter((o) => ['Pending', 'Processing'].includes(o.orderstatus ?? ''));
+
+  const changeStatus = async (orderId: number, status: string) => {
+    setUpdatingId(orderId);
+    setActionError('');
+    try {
+      await updateStatus(orderId, status);
+    } catch (err: any) {
+      setActionError(err?.response?.data?.message ?? 'Không thể cập nhật trạng thái đơn hàng.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const confirmPayment = async (orderId: number) => {
+    setUpdatingId(orderId);
+    setActionError('');
+    try {
+      await ordersApi.confirmPayment(orderId);
+      await refetch();
+    } catch (err: any) {
+      setActionError(err?.response?.data?.message ?? 'Không thể xác nhận thanh toán.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -42,6 +70,7 @@ const StaffOrders: React.FC = () => {
       </div>
 
       {error && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>}
+      {actionError && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{actionError}</p>}
 
       {/* Table */}
       {loading ? (
@@ -66,7 +95,7 @@ const StaffOrders: React.FC = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
-                {['Mã đơn', 'Khách hàng', 'SĐT', 'Giá trị', 'Trạng thái', 'Cập nhật'].map((col) => (
+                {['Mã đơn', 'Khách hàng', 'SĐT', 'Giá trị', 'Thanh toán', 'Trạng thái', 'Cập nhật'].map((col) => (
                   <th key={col} className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wide">
                     {col}
                   </th>
@@ -89,6 +118,26 @@ const StaffOrders: React.FC = () => {
                     {formatCurrency(order.finalamount ?? order.totalamount ?? 0)}
                   </td>
                   <td className="px-4 py-3">
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-slate-700">{order.paymentmethod ?? '—'}</p>
+                      <p className={`text-[11px] font-semibold ${order.paymentstatus === 'Paid' ? 'text-emerald-600' : order.paymentstatus === 'DepositPaid' ? 'text-blue-600' : 'text-amber-600'}`}>
+                        {order.paymentstatus ?? 'Chưa ghi nhận'}
+                      </p>
+                      {order.paymentmethod !== 'COD' &&
+                        order.paymentstatus !== 'Paid' &&
+                        order.orderstatus !== 'Cancelled' && (
+                          <button
+                            type="button"
+                            disabled={updatingId === order.orderid}
+                            onClick={() => confirmPayment(order.orderid)}
+                            className="text-[11px] font-bold text-blue-600 hover:underline disabled:opacity-50"
+                          >
+                            Xác nhận thanh toán
+                          </button>
+                        )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${(statusConfig[order.orderstatus ?? ''] ?? statusConfig['Pending']).cls}`}>
                       {(statusConfig[order.orderstatus ?? ''] ?? { label: order.orderstatus }).label}
                     </span>
@@ -97,7 +146,8 @@ const StaffOrders: React.FC = () => {
                     <select
                       className="bg-white border border-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:border-blue-400 hover:border-slate-300 transition-colors"
                       value={order.orderstatus ?? ''}
-                      onChange={(e) => updateStatus(order.orderid, e.target.value)}
+                      disabled={updatingId === order.orderid}
+                      onChange={(e) => changeStatus(order.orderid, e.target.value)}
                     >
                       {['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled'].map((s) => (
                         <option key={s} value={s}>{(statusConfig[s] ?? { label: s }).label}</option>
@@ -108,7 +158,7 @@ const StaffOrders: React.FC = () => {
               ))}
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-16 text-center text-sm text-slate-400">
+                  <td colSpan={7} className="px-4 py-16 text-center text-sm text-slate-400">
                     <Package size={32} className="mx-auto mb-3 text-slate-200" />
                     Chưa có đơn hàng nào.
                   </td>

@@ -20,9 +20,24 @@ export interface Order {
   shippingemail?: string;
   shippingaddress?: string;
   customernote?: string;
+  reservationexpiresat?: string;
+  paymenttoken?: string;
+  cancellationreason?: string;
   vouchercode?: string;
   customer?: { customerid: number; fullname: string; phone: string; email?: string };
   orderitems?: OrderItem[];
+  orderpayments?: OrderPayment[];
+}
+
+export interface OrderPayment {
+  paymentid: number;
+  provider: string;
+  paymenttype: string;
+  amount: number;
+  status: string;
+  transactionref?: string;
+  createdat?: string;
+  paidat?: string;
 }
 
 export interface OrderItem {
@@ -48,6 +63,25 @@ export interface BulkUpdateStatusResponse {
   message: string;
 }
 
+export interface PaymentCheckout {
+  orderid: number;
+  paymentmethod?: string;
+  paymentstatus?: string;
+  finalamount: number;
+  requiredpayment: number;
+  paidamount: number;
+  reservationexpiresat?: string;
+  shippingname?: string;
+}
+
+export interface PaymentActionResult {
+  orderid: number;
+  paymentstatus: string;
+  paidamount: number;
+  remainingamount: number;
+  transactionref?: string;
+}
+
 export const ordersApi = {
   getAll: () => apiClient.get<Order[]>('/Orders'),
   getById: (id: number) => apiClient.get<Order>(`/Orders/${id}`),
@@ -56,5 +90,11 @@ export const ordersApi = {
   update: (id: number, data: Partial<Order>) => apiClient.put(`/Orders/${id}`, data),
   updateStatus: (id: number, status: string) => apiClient.patch(`/Orders/${id}/status`, { status }),
   bulkUpdateStatus: (orderIds: number[], status: string) => apiClient.post<BulkUpdateStatusResponse>(`/Orders/bulk-status`, { orderIds, status }),
+  getPayment: (id: number, token: string) =>
+    apiClient.get<PaymentCheckout>(`/Orders/${id}/payment`, { params: { token } }),
+  simulatePayment: (id: number, paymenttoken: string, success: boolean) =>
+    apiClient.post<PaymentActionResult>(`/Orders/${id}/simulate-payment`, { paymenttoken, success }),
+  confirmPayment: (id: number, amount?: number, transactionref?: string, note?: string) =>
+    apiClient.post<PaymentActionResult>(`/Orders/${id}/confirm-payment`, { amount, transactionref, note }),
   delete: (id: number) => apiClient.delete(`/Orders/${id}`),
 };

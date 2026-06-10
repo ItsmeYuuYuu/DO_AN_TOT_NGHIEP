@@ -23,15 +23,21 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Chatmessage> Chatmessages { get; set; }
 
+    public virtual DbSet<Chatproductrecommendation> Chatproductrecommendations { get; set; }
+
     public virtual DbSet<Chatsession> Chatsessions { get; set; }
 
     public virtual DbSet<Customer> Customers { get; set; }
 
     public virtual DbSet<Inventoryitem> Inventoryitems { get; set; }
 
+    public virtual DbSet<Inventorytransaction> Inventorytransactions { get; set; }
+
     public virtual DbSet<News> News { get; set; }
 
     public virtual DbSet<Order> Orders { get; set; }
+
+    public virtual DbSet<Orderassignment> Orderassignments { get; set; }
 
     public virtual DbSet<Orderitem> Orderitems { get; set; }
 
@@ -147,6 +153,50 @@ public partial class ECommerceContext : DbContext
                 .HasConstraintName("fk_chatmessages_chatsessions");
         });
 
+        modelBuilder.Entity<Chatproductrecommendation>(entity =>
+        {
+            entity.HasKey(e => e.Recommendationid)
+                .HasName("chatproductrecommendations_pkey");
+
+            entity.ToTable("chatproductrecommendations");
+
+            entity.HasIndex(e => new { e.Messageid, e.Variantid },
+                    "chatproductrecommendations_messageid_variantid_key")
+                .IsUnique();
+            entity.HasIndex(e => e.Productid, "ix_chatproductrecommendations_productid");
+            entity.HasIndex(e => e.Variantid, "ix_chatproductrecommendations_variantid");
+            entity.HasIndex(e => e.Addedtocartat, "ix_chatproductrecommendations_addedtocartat");
+
+            entity.Property(e => e.Recommendationid).HasColumnName("recommendationid");
+            entity.Property(e => e.Messageid).HasColumnName("messageid");
+            entity.Property(e => e.Productid).HasColumnName("productid");
+            entity.Property(e => e.Variantid).HasColumnName("variantid");
+            entity.Property(e => e.Rank).HasColumnName("rank");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+            entity.Property(e => e.Addedtocartat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("addedtocartat");
+
+            entity.HasOne(e => e.Message)
+                .WithMany(e => e.Chatproductrecommendations)
+                .HasForeignKey(e => e.Messageid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_chatproductrecommendations_messages");
+            entity.HasOne(e => e.Product)
+                .WithMany(e => e.Chatproductrecommendations)
+                .HasForeignKey(e => e.Productid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_chatproductrecommendations_products");
+            entity.HasOne(e => e.Variant)
+                .WithMany(e => e.Chatproductrecommendations)
+                .HasForeignKey(e => e.Variantid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_chatproductrecommendations_variants");
+        });
+
         modelBuilder.Entity<Chatsession>(entity =>
         {
             entity.HasKey(e => e.Sessionid).HasName("chatsessions_pkey");
@@ -242,6 +292,56 @@ public partial class ECommerceContext : DbContext
                 .HasConstraintName("fk_inventory_variants");
         });
 
+        modelBuilder.Entity<Inventorytransaction>(entity =>
+        {
+            entity.HasKey(e => e.Transactionid).HasName("inventorytransactions_pkey");
+
+            entity.ToTable("inventorytransactions");
+
+            entity.HasIndex(e => e.Imei, "ix_inventorytransactions_imei");
+            entity.HasIndex(e => e.Orderid, "ix_inventorytransactions_orderid");
+            entity.HasIndex(e => e.Userid, "ix_inventorytransactions_userid");
+            entity.HasIndex(e => e.Createdat, "ix_inventorytransactions_createdat");
+
+            entity.Property(e => e.Transactionid).HasColumnName("transactionid");
+            entity.Property(e => e.Imei)
+                .HasMaxLength(50)
+                .HasColumnName("imei");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+            entity.Property(e => e.Transactiontype)
+                .HasMaxLength(30)
+                .HasColumnName("transactiontype");
+            entity.Property(e => e.Fromstatus)
+                .HasMaxLength(50)
+                .HasColumnName("fromstatus");
+            entity.Property(e => e.Tostatus)
+                .HasMaxLength(50)
+                .HasColumnName("tostatus");
+            entity.Property(e => e.Note)
+                .HasMaxLength(500)
+                .HasColumnName("note");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+
+            entity.HasOne(d => d.Inventoryitem).WithMany(p => p.Inventorytransactions)
+                .HasForeignKey(d => d.Imei)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_inventorytransactions_inventory");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.Inventorytransactions)
+                .HasForeignKey(d => d.Orderid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_inventorytransactions_orders");
+
+            entity.HasOne(d => d.User).WithMany(p => p.Inventorytransactions)
+                .HasForeignKey(d => d.Userid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_inventorytransactions_users");
+        });
+
         modelBuilder.Entity<News>(entity =>
         {
             entity.HasKey(e => e.Postid).HasName("news_pkey");
@@ -332,6 +432,18 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Customernote)
                 .HasMaxLength(500)
                 .HasColumnName("customernote");
+            entity.Property(e => e.Reservationexpiresat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("reservationexpiresat");
+            entity.Property(e => e.Paymenttoken)
+                .HasMaxLength(100)
+                .HasColumnName("paymenttoken");
+            entity.Property(e => e.Guesttoken)
+                .HasMaxLength(100)
+                .HasColumnName("guesttoken");
+            entity.Property(e => e.Cancellationreason)
+                .HasMaxLength(500)
+                .HasColumnName("cancellationreason");
             entity.Property(e => e.Totalamount)
                 .HasPrecision(18, 2)
                 .HasColumnName("totalamount");
@@ -388,6 +500,57 @@ public partial class ECommerceContext : DbContext
                 .HasForeignKey(d => d.Orderid)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_orderpayments_orders");
+        });
+
+        modelBuilder.Entity<Orderassignment>(entity =>
+        {
+            entity.HasKey(e => e.Assignmentid).HasName("orderassignments_pkey");
+
+            entity.ToTable("orderassignments");
+
+            entity.HasIndex(
+                    e => new { e.Orderid, e.Department },
+                    "ux_orderassignments_order_department")
+                .IsUnique();
+
+            entity.HasIndex(e => new { e.Department, e.Status }, "ix_orderassignments_department_status");
+            entity.HasIndex(e => e.Assigneduserid, "ix_orderassignments_assigneduserid");
+
+            entity.Property(e => e.Assignmentid).HasColumnName("assignmentid");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
+            entity.Property(e => e.Department)
+                .HasMaxLength(30)
+                .HasColumnName("department");
+            entity.Property(e => e.Assigneduserid).HasColumnName("assigneduserid");
+            entity.Property(e => e.Assignedbyuserid).HasColumnName("assignedbyuserid");
+            entity.Property(e => e.Status)
+                .HasMaxLength(30)
+                .HasDefaultValue("Pending")
+                .HasColumnName("status");
+            entity.Property(e => e.Assignedat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("assignedat");
+            entity.Property(e => e.Completedat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("completedat");
+            entity.Property(e => e.Note)
+                .HasMaxLength(500)
+                .HasColumnName("note");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.Orderassignments)
+                .HasForeignKey(d => d.Orderid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_orderassignments_orders");
+
+            entity.HasOne(d => d.Assigneduser).WithMany(p => p.AssignedOrderassignments)
+                .HasForeignKey(d => d.Assigneduserid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_orderassignments_assigned_users");
+
+            entity.HasOne(d => d.Assignedbyuser).WithMany(p => p.CreatedOrderassignments)
+                .HasForeignKey(d => d.Assignedbyuserid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_orderassignments_assignedby_users");
         });
 
         modelBuilder.Entity<Orderitem>(entity =>

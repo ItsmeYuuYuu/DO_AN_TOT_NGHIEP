@@ -10,10 +10,13 @@ using ECommerceBackend.DTOs.Common;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using ECommerceBackend.DTOs.Inventory;
+using ECommerceBackend.DTOs.Cart;
 
 namespace ECommerceBackend.Tests
 {
@@ -111,6 +114,137 @@ namespace ECommerceBackend.Tests
         }
 
         [Fact]
+        public async Task GetLowStock_ReturnsVariantsAtOrBelowThreshold()
+        {
+            await SeedDataAsync();
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Warehouse");
+
+            var response = await _client.GetAsync("/api/Inventory/low-stock?threshold=2");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var items = await response.Content.ReadFromJsonAsync<List<LowStockVariantDto>>();
+            var item = Assert.Single(items!);
+            Assert.Equal(10, item.Variantid);
+            Assert.Equal(2, item.InStockQuantity);
+            Assert.Equal(2, item.Threshold);
+        }
+
+        [Fact]
+        public async Task AddToCart_WhenQuantityExceedsStock_ReturnsConflict()
+        {
+            await SeedDataAsync();
+            _client.DefaultRequestHeaders.Add("X-Test-UserId", "1");
+
+            var response = await _client.PostAsJsonAsync(
+                "/api/Cart/add",
+                new AddToCartDto(10, 3));
+
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+            Assert.Empty(db.Cartitems);
+        }
+
+        [Fact]
+        public async Task CreateProduct_WhenVariantAllocationDiffersFromBatch_ReturnsBadRequest()
+        {
+            await SeedDataAsync();
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+                db.Categories.Add(new Category { Categoryid = 50, Categoryname = "Điện thoại" });
+                db.Brands.Add(new Brand { Brandid = 50, Brandname = "Test Brand" });
+                await db.SaveChangesAsync();
+            }
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+
+            var response = await _client.PostAsJsonAsync("/api/Products/full", new
+            {
+                productname = "Test Batch Product",
+                categoryid = 50,
+                brandid = 50,
+                totalquantity = 2,
+                variants = new[]
+                {
+                    new
+                    {
+                        condition = "New Seal",
+                        sku = "TEST-BATCH-001",
+                        baseprice = 10_000_000,
+                        quantity = 3,
+                        images = new[]
+                        {
+                            new { imageurl = "https://example.com/product.jpg", ismain = true }
+                        }
+                    }
+                }
+            });
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task CreateProduct_WhenVariantAllocationMatchesBatch_CreatesExactInventory()
+        {
+            await SeedDataAsync();
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+                db.Categories.Add(new Category { Categoryid = 51, Categoryname = "Test Category" });
+                db.Brands.Add(new Brand { Brandid = 51, Brandname = "Allocation Brand" });
+                await db.SaveChangesAsync();
+            }
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+
+            var response = await _client.PostAsJsonAsync("/api/Products/full", new
+            {
+                productname = "Allocated Batch Product",
+                categoryid = 51,
+                brandid = 51,
+                totalquantity = 4,
+                variants = new[]
+                {
+                    new
+                    {
+                        condition = "New Seal",
+                        sku = "ALLOCATED-BATCH-001",
+                        baseprice = 10_000_000,
+                        quantity = 1,
+                        images = new[]
+                        {
+                            new { imageurl = "https://example.com/product-1.jpg", ismain = true }
+                        }
+                    },
+                    new
+                    {
+                        condition = "Likenew",
+                        sku = "ALLOCATED-BATCH-002",
+                        baseprice = 9_000_000,
+                        quantity = 3,
+                        images = new[]
+                        {
+                            new { imageurl = "https://example.com/product-2.jpg", ismain = true }
+                        }
+                    }
+                }
+            });
+
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+            using var verificationScope = _factory.Services.CreateScope();
+            var verificationDb = verificationScope.ServiceProvider.GetRequiredService<ECommerceContext>();
+            var variantIds = await verificationDb.Productvariants
+                .Where(item => item.Sku == "ALLOCATED-BATCH-001" || item.Sku == "ALLOCATED-BATCH-002")
+                .Select(item => item.Variantid)
+                .ToListAsync();
+            var inventoryCount = await verificationDb.Inventoryitems
+                .CountAsync(item => item.Variantid.HasValue && variantIds.Contains(item.Variantid.Value));
+
+            Assert.Equal(2, variantIds.Count);
+            Assert.Equal(4, inventoryCount);
+        }
+
+        [Fact]
         public async Task PostOrder_Success_WithInventoryDeductionAndVoucher()
         {
             await SeedDataAsync();
@@ -145,6 +279,10 @@ namespace ECommerceBackend.Tests
             var reserved = db.Inventoryitems.Count(i => i.Status == "Reserved");
             Assert.Equal(0, stock); // 2 items were reserved for the order
             Assert.Equal(2, reserved);
+            Assert.Equal(2, db.Inventorytransactions.Count(item =>
+                item.Orderid == order.Orderid &&
+                item.Transactiontype == "Reserve" &&
+                item.Tostatus == "Reserved"));
         }
 
         [Fact]
@@ -247,10 +385,127 @@ namespace ECommerceBackend.Tests
             Assert.Equal("AwaitingDeposit", order.Paymentstatus);
             Assert.Equal(270, order.Requiredpayment);
             Assert.Equal(30, order.Depositpercentage);
+            Assert.False(string.IsNullOrWhiteSpace(order.Paymenttoken));
+            Assert.NotNull(order.Reservationexpiresat);
 
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
             Assert.Equal(1, db.Inventoryitems.Count(i => i.Status == "Reserved"));
+        }
+
+        [Fact]
+        public async Task SimulatePayment_GuestDeposit_MarksDepositPaidAndAllowsProcessing()
+        {
+            await SeedDataAsync();
+            using var anonymousClient = _factory.CreateClient();
+            anonymousClient.DefaultRequestHeaders.Add("x-guest-session-token", "guest-payment-success");
+
+            var createResponse = await anonymousClient.PostAsJsonAsync("/api/Orders", new CreateOrderRequestDto(
+                null,
+                "MOMO",
+                null,
+                new List<CreateOrderItemRequestDto> { new CreateOrderItemRequestDto(10, 1) },
+                "123 Street",
+                "Guest deposit",
+                Paymentoption: "Deposit30",
+                Customername: "Guest Buyer",
+                Customerphone: "0961111111",
+                Customeremail: "guest-payment@test.com"
+            ));
+            var order = await createResponse.Content.ReadFromJsonAsync<OrderDetailDto>();
+            Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+            Assert.NotNull(order);
+
+            var paymentResponse = await anonymousClient.PostAsJsonAsync(
+                $"/api/Orders/{order.Orderid}/simulate-payment",
+                new SimulatePaymentRequestDto(order.Paymenttoken!, true));
+            var payment = await paymentResponse.Content.ReadFromJsonAsync<PaymentActionResultDto>();
+
+            Assert.Equal(HttpStatusCode.OK, paymentResponse.StatusCode);
+            Assert.NotNull(payment);
+            Assert.Equal("DepositPaid", payment.Paymentstatus);
+            Assert.Equal(270, payment.Paidamount);
+
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+            var statusResponse = await _client.PatchAsJsonAsync(
+                $"/api/Orders/{order.Orderid}/status",
+                new UpdateOrderStatusRequestDto("Processing"));
+
+            Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+        }
+
+        [Fact]
+        public async Task PatchOrderStatus_UnpaidOnlineOrder_RejectsProcessing()
+        {
+            await SeedDataAsync();
+            using var anonymousClient = _factory.CreateClient();
+            anonymousClient.DefaultRequestHeaders.Add("x-guest-session-token", "guest-unpaid-processing");
+
+            var createResponse = await anonymousClient.PostAsJsonAsync("/api/Orders", new CreateOrderRequestDto(
+                null,
+                "VNPAY",
+                null,
+                new List<CreateOrderItemRequestDto> { new CreateOrderItemRequestDto(10, 1) },
+                "123 Street",
+                null,
+                Paymentoption: "Full",
+                Customername: "Guest Buyer",
+                Customerphone: "0962222222",
+                Customeremail: "guest-unpaid@test.com"
+            ));
+            var order = await createResponse.Content.ReadFromJsonAsync<OrderDetailDto>();
+            Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+            Assert.NotNull(order);
+
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+            var statusResponse = await _client.PatchAsJsonAsync(
+                $"/api/Orders/{order.Orderid}/status",
+                new UpdateOrderStatusRequestDto("Processing"));
+
+            Assert.Equal(HttpStatusCode.BadRequest, statusResponse.StatusCode);
+            var error = await statusResponse.Content.ReadFromJsonAsync<ApiErrorDto>();
+            Assert.Contains("chua dat coc", error!.Message);
+        }
+
+        [Fact]
+        public async Task GetPaymentCheckout_ExpiredOrder_CancelsAndRestoresInventory()
+        {
+            await SeedDataAsync();
+            using var anonymousClient = _factory.CreateClient();
+            anonymousClient.DefaultRequestHeaders.Add("x-guest-session-token", "guest-expired-payment");
+
+            var createResponse = await anonymousClient.PostAsJsonAsync("/api/Orders", new CreateOrderRequestDto(
+                null,
+                "BANK",
+                null,
+                new List<CreateOrderItemRequestDto> { new CreateOrderItemRequestDto(10, 1) },
+                "123 Street",
+                null,
+                Paymentoption: "Full",
+                Customername: "Guest Buyer",
+                Customerphone: "0963333333",
+                Customeremail: "guest-expired@test.com"
+            ));
+            var order = await createResponse.Content.ReadFromJsonAsync<OrderDetailDto>();
+            Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+            Assert.NotNull(order);
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+                var storedOrder = db.Orders.Single(item => item.Orderid == order.Orderid);
+                storedOrder.Reservationexpiresat = DateTime.UtcNow.AddMinutes(-1);
+                await db.SaveChangesAsync();
+            }
+
+            var paymentResponse = await anonymousClient.GetAsync(
+                $"/api/Orders/{order.Orderid}/payment?token={order.Paymenttoken}");
+
+            Assert.Equal(HttpStatusCode.Gone, paymentResponse.StatusCode);
+            using var verifyScope = _factory.Services.CreateScope();
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ECommerceContext>();
+            Assert.Equal("Cancelled", verifyDb.Orders.Single(item => item.Orderid == order.Orderid).Orderstatus);
+            Assert.Equal(2, verifyDb.Inventoryitems.Count(item => item.Status == "InStock"));
         }
 
         [Fact]
@@ -283,6 +538,95 @@ namespace ECommerceBackend.Tests
                 var inv = db.Inventoryitems.First(i => i.Imei == "IMEI1");
                 Assert.Equal("InStock", inv.Status); // Restocked
             }
+        }
+
+        [Fact]
+        public async Task OrderAssignment_SecondSalesCannotClaimAssignedOrder()
+        {
+            await SeedDataAsync();
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Sales");
+            _client.DefaultRequestHeaders.Add("X-Test-UserId", "1");
+
+            var firstResponse = await _client.PostAsJsonAsync(
+                "/api/OrderAssignments/99/claim",
+                new ClaimOrderRequestDto("Sales"));
+            Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+
+            _client.DefaultRequestHeaders.Remove("X-Test-UserId");
+            _client.DefaultRequestHeaders.Add("X-Test-UserId", "2");
+            var secondResponse = await _client.PostAsJsonAsync(
+                "/api/OrderAssignments/99/claim",
+                new ClaimOrderRequestDto("Sales"));
+
+            Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
+        }
+
+        [Fact]
+        public async Task OrderAssignment_SalesHandoffThenWarehouseShips()
+        {
+            await SeedDataAsync();
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+                var order = db.Orders.Single(item => item.Orderid == 99);
+                order.Paymentmethod = "COD";
+                order.Checkouttype = "Registered";
+                order.Paymentstatus = "CODPending";
+                order.Orderitems.Add(new Orderitem
+                {
+                    Imei = "IMEI1",
+                    Sellingprice = 900
+                });
+                db.Inventoryitems.Single(item => item.Imei == "IMEI1").Status = "Reserved";
+                await db.SaveChangesAsync();
+            }
+
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Sales");
+            _client.DefaultRequestHeaders.Add("X-Test-UserId", "1");
+            var claimSales = await _client.PostAsJsonAsync(
+                "/api/OrderAssignments/99/claim",
+                new ClaimOrderRequestDto("Sales"));
+            Assert.Equal(HttpStatusCode.OK, claimSales.StatusCode);
+
+            var handoff = await _client.PostAsJsonAsync(
+                "/api/OrderAssignments/99/handoff-to-warehouse",
+                new HandoffOrderRequestDto("Da xac nhan don."));
+            Assert.Equal(HttpStatusCode.OK, handoff.StatusCode);
+
+            _client.DefaultRequestHeaders.Remove("X-Test-Role");
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Warehouse");
+            _client.DefaultRequestHeaders.Remove("X-Test-UserId");
+            _client.DefaultRequestHeaders.Add("X-Test-UserId", "2");
+
+            var claimWarehouse = await _client.PostAsJsonAsync(
+                "/api/OrderAssignments/99/claim",
+                new ClaimOrderRequestDto("Warehouse"));
+            Assert.Equal(HttpStatusCode.OK, claimWarehouse.StatusCode);
+
+            var wrongImei = await _client.PostAsJsonAsync(
+                "/api/OrderAssignments/99/mark-shipped",
+                new MarkOrderShippedRequestDto(new List<string> { "WRONG-IMEI" }));
+            Assert.Equal(HttpStatusCode.BadRequest, wrongImei.StatusCode);
+
+            var shipped = await _client.PostAsJsonAsync(
+                "/api/OrderAssignments/99/mark-shipped",
+                new MarkOrderShippedRequestDto(new List<string> { "IMEI1" }, "Da doi chieu."));
+            Assert.Equal(HttpStatusCode.OK, shipped.StatusCode);
+
+            using var verifyScope = _factory.Services.CreateScope();
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ECommerceContext>();
+            Assert.Equal("Shipped", verifyDb.Orders.Single(item => item.Orderid == 99).Orderstatus);
+            Assert.Equal(
+                "Completed",
+                verifyDb.Orderassignments.Single(item =>
+                    item.Orderid == 99 && item.Department == "Warehouse").Status);
+            Assert.Equal("Shipping", verifyDb.Inventoryitems.Single(item => item.Imei == "IMEI1").Status);
+            Assert.Contains(verifyDb.Inventorytransactions, item =>
+                item.Orderid == 99 &&
+                item.Imei == "IMEI1" &&
+                item.Transactiontype == "Ship" &&
+                item.Fromstatus == "Reserved" &&
+                item.Tostatus == "Shipping");
         }
     }
 }

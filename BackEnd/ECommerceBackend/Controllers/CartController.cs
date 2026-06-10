@@ -156,6 +156,15 @@ namespace ECommerceBackend.Controllers
 
                 var cart = await GetOrCreateCartAsync(userId);
                 var existingItem = cart.Cartitems.FirstOrDefault(ci => ci.Variantid == dto.VariantId);
+                var availableStock = await _context.Inventoryitems.CountAsync(item =>
+                    item.Variantid == dto.VariantId &&
+                    item.Status == "InStock");
+                var requestedQuantity = (existingItem?.Quantity ?? 0) + dto.Quantity;
+                if (requestedQuantity > availableStock)
+                {
+                    return Conflict(new ApiErrorDto(
+                        $"Chỉ còn {availableStock} sản phẩm sẵn sàng bán."));
+                }
 
                 if (existingItem != null)
                 {
@@ -206,6 +215,14 @@ namespace ECommerceBackend.Controllers
                 }
                 else
                 {
+                    var availableStock = await _context.Inventoryitems.CountAsync(item =>
+                        item.Variantid == dto.VariantId &&
+                        item.Status == "InStock");
+                    if (dto.Quantity > availableStock)
+                    {
+                        return Conflict(new ApiErrorDto(
+                            $"Chỉ còn {availableStock} sản phẩm sẵn sàng bán."));
+                    }
                     existingItem.Quantity = dto.Quantity;
                 }
 
@@ -267,10 +284,17 @@ namespace ECommerceBackend.Controllers
                         if (variant == null) continue;
 
                         var existingItem = cart.Cartitems.FirstOrDefault(ci => ci.Variantid == item.VariantId);
+                        var availableStock = await _context.Inventoryitems.CountAsync(inventory =>
+                            inventory.Variantid == item.VariantId &&
+                            inventory.Status == "InStock");
+                        if (availableStock <= 0)
+                            continue;
+
                         if (existingItem != null)
                         {
-                            // Merge by taking the sum of quantities
-                            existingItem.Quantity += item.Quantity;
+                            existingItem.Quantity = Math.Min(
+                                existingItem.Quantity + item.Quantity,
+                                availableStock);
                         }
                         else
                         {
@@ -278,7 +302,7 @@ namespace ECommerceBackend.Controllers
                             {
                                 Cartid = cart.Cartid,
                                 Variantid = item.VariantId,
-                                Quantity = item.Quantity,
+                                Quantity = Math.Min(item.Quantity, availableStock),
                                 Createdat = DateTime.UtcNow
                             });
                         }

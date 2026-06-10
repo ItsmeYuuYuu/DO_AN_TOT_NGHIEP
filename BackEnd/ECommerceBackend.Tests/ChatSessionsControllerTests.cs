@@ -241,6 +241,12 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
             db.Categories.Add(category);
             db.Products.Add(product);
             db.Productvariants.AddRange(variant, secondVariant);
+            db.Productimages.Add(new Productimage
+            {
+                Variantid = variant.Variantid,
+                Imageurl = "/uploads/products/xiaomi-14t.jpg",
+                Ismain = true
+            });
             db.Inventoryitems.Add(new Inventoryitem
             {
                 Imei = "CHATBOT-XIAOMI-001",
@@ -280,6 +286,25 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
             1,
             message?.Messagecontent.Split("/products/200").Length - 1);
         Assert.Contains("chỉ hiển thị tối đa 3 sản phẩm", message?.Messagecontent);
+        Assert.Equal(2, message?.Recommendations?.Count);
+        Assert.All(message!.Recommendations!, item => Assert.Equal(200, item.Productid));
+        Assert.Equal(2001, message.Recommendations![0].Variantid);
+        Assert.Equal("/uploads/products/xiaomi-14t.jpg", message.Recommendations[0].Imageurl);
+
+        using var trackRequest = CreatePost(
+            $"/api/chatsessions/{sessionId}/recommendations/{message.Recommendations[0].Recommendationid}/added-to-cart",
+            "Customer",
+            1,
+            includeGuestToken: true);
+        var trackResponse = await _client.SendAsync(trackRequest);
+        Assert.Equal(HttpStatusCode.OK, trackResponse.StatusCode);
+
+        using var verifyScope = _application.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ECommerceContext>();
+        var trackedRecommendation = await verifyDb.Chatproductrecommendations
+            .SingleAsync(item =>
+                item.Recommendationid == message.Recommendations[0].Recommendationid);
+        Assert.NotNull(trackedRecommendation.Addedtocartat);
     }
 
     [Fact]
@@ -297,6 +322,7 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
                 Price: 10_000_000 + index,
                 BasePrice: 10_000_000 + index,
                 Stock: 1,
+                ImageUrl: string.Empty,
                 Specifications: new Dictionary<string, string>()))
             .ToList();
 

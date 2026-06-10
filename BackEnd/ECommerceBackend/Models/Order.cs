@@ -45,9 +45,21 @@ public partial class Order
 
     public string? Customernote { get; set; }
 
+    public DateTime? Reservationexpiresat { get; set; }
+
+    public string? Paymenttoken { get; set; }
+
+    public string? Guesttoken { get; set; }
+
+    public string? Cancellationreason { get; set; }
+
     public virtual Customer? Customer { get; set; }
 
     public virtual ICollection<Orderpayment> Orderpayments { get; set; } = new List<Orderpayment>();
+
+    public virtual ICollection<Orderassignment> Orderassignments { get; set; } = new List<Orderassignment>();
+
+    public virtual ICollection<Inventorytransaction> Inventorytransactions { get; set; } = new List<Inventorytransaction>();
 
     public virtual ICollection<Orderitem> Orderitems { get; set; } = new List<Orderitem>();
 

@@ -21,6 +21,23 @@ export interface ChatMessage {
   sendertype: string;
   messagecontent: string;
   sentat: string;
+  recommendations?: ChatRecommendation[];
+}
+
+export interface ChatRecommendation {
+  recommendationid: number;
+  productid: number;
+  variantid: number;
+  productname: string;
+  variantname: string;
+  sku: string;
+  imageurl: string;
+  price: number;
+  baseprice: number;
+  stock: number;
+  condition: string;
+  rank: number;
+  addedtocartat?: string | null;
 }
 
 const GUEST_TOKEN_KEY = 'guest_chat_token';
@@ -91,6 +108,18 @@ export const chatSessionsApi = {
 
   closeHandoff: async (id: number): Promise<ChatSession> => {
     const response = await apiClient.post(`/chatsessions/${id}/close-handoff`);
+    return response.data;
+  },
+
+  markRecommendationAddedToCart: async (
+    sessionId: number,
+    recommendationId: number,
+  ): Promise<ChatRecommendation> => {
+    const response = await apiClient.post(
+      `/chatsessions/${sessionId}/recommendations/${recommendationId}/added-to-cart`,
+      {},
+      { headers: getHeaders() },
+    );
     return response.data;
   },
 

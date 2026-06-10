@@ -147,13 +147,76 @@ namespace ECommerceBackend.Controllers
             };
         }
 
-        private static ChatMessageDto MapMessageToDto(Chatmessage m) => new ChatMessageDto(
+        private static string GetVariantName(Productvariant variant)
+        {
+            if (string.IsNullOrWhiteSpace(variant.Specifications))
+                return $"{variant.Condition} - {variant.Sku}".Trim(' ', '-');
+
+            try
+            {
+                var specifications = System.Text.Json.JsonSerializer
+                    .Deserialize<Dictionary<string, string>>(variant.Specifications);
+                if (specifications != null)
+                {
+                    var preferredKeys = new[]
+                    {
+                        "Màu sắc", "Màu", "Dung lượng RAM", "RAM",
+                        "Bộ nhớ trong", "Bộ nhớ", "ROM"
+                    };
+                    var values = preferredKeys
+                        .Where(specifications.ContainsKey)
+                        .Select(key => specifications[key])
+                        .Distinct()
+                        .Take(3)
+                        .ToList();
+                    if (values.Count > 0)
+                        return string.Join(" - ", values.Append(variant.Condition));
+                }
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // Fall back to condition and SKU for legacy specification values.
+            }
+
+            return $"{variant.Condition} - {variant.Sku}".Trim(' ', '-');
+        }
+
+        private static ChatRecommendationDto MapRecommendationToDto(
+            Chatproductrecommendation recommendation)
+        {
+            var variant = recommendation.Variant;
+            var imageUrl = variant.Productimages
+                .OrderByDescending(image => image.Ismain == true)
+                .ThenBy(image => image.Imageid)
+                .Select(image => image.Imageurl)
+                .FirstOrDefault() ?? string.Empty;
+
+            return new ChatRecommendationDto(
+                recommendation.Recommendationid,
+                recommendation.Productid,
+                recommendation.Variantid,
+                recommendation.Product.Productname,
+                GetVariantName(variant),
+                variant.Sku ?? string.Empty,
+                imageUrl,
+                variant.Saleprice ?? variant.Baseprice,
+                variant.Baseprice,
+                variant.Inventoryitems.Count(item => item.Status == "InStock"),
+                variant.Condition,
+                recommendation.Rank,
+                recommendation.Addedtocartat);
+        }
+
+        private static ChatMessageDto MapMessageToDto(Chatmessage m) => new(
             m.Messageid,
             m.Sessionid,
             m.Sendertype,
             m.Messagecontent,
-            m.Sentat
-        );
+            m.Sentat,
+            m.Chatproductrecommendations
+                .OrderBy(item => item.Rank)
+                .Select(MapRecommendationToDto)
+                .ToList());
 
         [HttpGet("my")]
         public async Task<ActionResult<IEnumerable<ChatSessionDto>>> GetMySessions()
@@ -262,6 +325,15 @@ namespace ECommerceBackend.Controllers
                 return StatusCode(403, new ApiErrorDto("Bạn không có quyền xem tin nhắn của session này.", null));
 
             var messages = await _context.Chatmessages
+                .AsNoTracking()
+                .Include(message => message.Chatproductrecommendations)
+                    .ThenInclude(recommendation => recommendation.Product)
+                .Include(message => message.Chatproductrecommendations)
+                    .ThenInclude(recommendation => recommendation.Variant)
+                        .ThenInclude(variant => variant.Productimages)
+                .Include(message => message.Chatproductrecommendations)
+                    .ThenInclude(recommendation => recommendation.Variant)
+                        .ThenInclude(variant => variant.Inventoryitems)
                 .Where(m => m.Sessionid == id)
                 .OrderBy(m => m.Sentat)
                 .ToListAsync();
@@ -302,6 +374,35 @@ namespace ECommerceBackend.Controllers
             var result = await _chatOrchestrator.ProcessUserMessageAsync(session, dto.Messagecontent);
 
             return Ok(result);
+        }
+
+        [HttpPost("{id}/recommendations/{recommendationId}/added-to-cart")]
+        public async Task<ActionResult<ChatRecommendationDto>> MarkRecommendationAddedToCart(
+            int id,
+            int recommendationId)
+        {
+            var session = await _context.Chatsessions.FindAsync(id);
+            if (session == null)
+                return NotFound(new ApiErrorDto("Session không tồn tại.", null));
+            if (!await IsOwnerAsync(session))
+                return StatusCode(403, new ApiErrorDto("Bạn không có quyền cập nhật session này.", null));
+
+            var recommendation = await _context.Chatproductrecommendations
+                .Include(item => item.Message)
+                .Include(item => item.Product)
+                .Include(item => item.Variant)
+                    .ThenInclude(variant => variant.Productimages)
+                .Include(item => item.Variant)
+                    .ThenInclude(variant => variant.Inventoryitems)
+                .FirstOrDefaultAsync(item =>
+                    item.Recommendationid == recommendationId &&
+                    item.Message.Sessionid == id);
+            if (recommendation == null)
+                return NotFound(new ApiErrorDto("Sản phẩm đề xuất không tồn tại trong phiên chat.", null));
+
+            recommendation.Addedtocartat ??= DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Ok(MapRecommendationToDto(recommendation));
         }
 
         [HttpPost("{id}/handoff")]

@@ -33,6 +33,7 @@ const PromotionsPage    = lazy(() => import('@/portals/customer/PromotionsPage')
 const OrderLookupPage   = lazy(() => import('@/portals/customer/OrderLookupPage'));
 const CartPage          = lazy(() => import('@/portals/customer/CartPage'));
 const CheckoutPage      = lazy(() => import('@/portals/customer/CheckoutPage'));
+const PaymentSimulationPage = lazy(() => import('@/portals/customer/PaymentSimulationPage'));
 const ProfilePage       = lazy(() => import('@/portals/customer/ProfilePage'));
 const CustomerChat      = lazy(() => import('@/portals/customer/CustomerChat'));
 // Batch 2 — Auth (wired after Batch 2 is done)
@@ -54,6 +55,8 @@ const AdminAuditLogs     = lazy(() => import('@/portals/admin/AdminAuditLogs'));
 
 // ── Staff pages ───────────────────────────────────────────────────────────────
 const StaffOrders         = lazy(() => import('@/portals/staff/StaffOrders'));
+const SalesOrders         = lazy(() => import('@/portals/staff/SalesOrders'));
+const WarehouseOrders     = lazy(() => import('@/portals/staff/WarehouseOrders'));
 const StaffInventory      = lazy(() => import('@/portals/staff/StaffInventory'));
 const StaffWarranties     = lazy(() => import('@/portals/staff/StaffWarranties'));
 const ConsultantChats     = lazy(() => import('@/portals/staff/ConsultantChats'));
@@ -66,8 +69,8 @@ const StaffHomeRedirect = () => {
   const destinations: Record<string, string> = {
     Staff: '/staff/orders',
     Manager: '/staff/dashboard',
-    Sales: '/staff/orders',
-    Warehouse: '/staff/products',
+    Sales: '/staff/sales-orders',
+    Warehouse: '/staff/warehouse-orders',
     Warranty: '/staff/warranties',
     Content: '/staff/products',
     Consultant: '/staff/consultations',
@@ -95,6 +98,7 @@ const App: React.FC = () => {
           <Route path="promotions"        element={<PromotionsPage />} />
           <Route path="cart"              element={<CartPage />} />
           <Route path="checkout"          element={<CheckoutPage />} />
+          <Route path="payment/:orderId"  element={<PaymentSimulationPage />} />
           <Route path="profile"           element={<ProfilePage />} />
           <Route path="order-lookup"      element={<OrderLookupPage />} />
         </Route>
@@ -105,6 +109,8 @@ const App: React.FC = () => {
             <Route index                  element={<AdminDashboard />} />
             <Route path="products"        element={<AdminProducts />} />
             <Route path="orders"          element={<AdminOrders />} />
+            <Route path="sales-orders"    element={<SalesOrders />} />
+            <Route path="warehouse-orders" element={<WarehouseOrders />} />
             <Route path="inventory"       element={<StaffInventory />} />
             <Route path="warranties"      element={<StaffWarranties />} />
             <Route path="users"           element={<AdminUsers />} />
@@ -133,6 +139,12 @@ const App: React.FC = () => {
             </Route>
             <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Staff']} />}>
               <Route path="orders" element={<StaffOrders />} />
+            </Route>
+            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Staff']} />}>
+              <Route path="sales-orders" element={<SalesOrders />} />
+            </Route>
+            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warehouse', 'Staff']} />}>
+              <Route path="warehouse-orders" element={<WarehouseOrders />} />
             </Route>
             <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warehouse', 'Staff']} />}>
               <Route path="inventory" element={<StaffInventory />} />

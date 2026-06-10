@@ -84,6 +84,7 @@ export interface CreateFullProduct {
   categoryid?: number;
   brandid?: number;
   seriesid?: number;
+  totalquantity: number;
   variants?: CreateFullProductVariant[];
 }
 

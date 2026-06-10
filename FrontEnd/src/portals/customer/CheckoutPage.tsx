@@ -25,6 +25,8 @@ interface CreatedOrder {
   finalamount?: number;
   paymentstatus?: string;
   checkouttype?: string;
+  paymenttoken?: string;
+  reservationexpiresat?: string;
 }
 
 const CheckoutPage: React.FC = () => {
@@ -100,17 +102,25 @@ const CheckoutPage: React.FC = () => {
         {createdOrder.requiredpayment && createdOrder.requiredpayment > 0 && (
           <div className="bg-blue-50 border border-blue-100 text-blue-800 rounded-2xl p-4 mb-6 text-sm">
             Cần thanh toán trước: <span className="font-black">{formatCurrency(createdOrder.requiredpayment)}</span>.
-            Đây là bước giả lập, nhân viên sẽ xác nhận thanh toán trong phần quản trị.
+            Hàng được giữ trong 15 phút trong lúc bạn hoàn tất thanh toán.
           </div>
         )}
         <div className="flex gap-3 justify-center">
+          {createdOrder.paymenttoken && (
+            <Link
+              to={`/payment/${createdOrder.orderid}?token=${createdOrder.paymenttoken}`}
+              className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+            >
+              Thanh toán ngay
+            </Link>
+          )}
           <Link
             to={isGuestOrder ? '/order-lookup' : '/profile'}
             className="px-6 py-3 border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors"
           >
             Xem đơn hàng
           </Link>
-          <Link to="/" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
+          <Link to="/" className="px-6 py-3 border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors">
             Tiếp tục mua sắm
           </Link>
         </div>

@@ -18,6 +18,17 @@ namespace ECommerceBackend.DTOs.Orders
         string? Variantsku
     );
 
+    public record OrderPaymentDto(
+        int Paymentid,
+        string Provider,
+        string Paymenttype,
+        decimal Amount,
+        string Status,
+        string? Transactionref,
+        DateTime? Createdat,
+        DateTime? Paidat
+    );
+
     public record OrderListItemDto(
         int Orderid,
         int? Customerid,
@@ -37,8 +48,12 @@ namespace ECommerceBackend.DTOs.Orders
         string? Shippingemail,
         string? Shippingaddress,
         string? Customernote,
+        DateTime? Reservationexpiresat,
+        string? Paymenttoken,
+        string? Cancellationreason,
         CustomerLiteDto? Customer,
-        List<OrderItemDto>? Orderitems
+        List<OrderItemDto>? Orderitems,
+        List<OrderPaymentDto>? Orderpayments
     );
 
     public record OrderDetailDto : OrderListItemDto
@@ -62,8 +77,12 @@ namespace ECommerceBackend.DTOs.Orders
             string? Shippingemail,
             string? Shippingaddress,
             string? Customernote,
+            DateTime? Reservationexpiresat,
+            string? Paymenttoken,
+            string? Cancellationreason,
             CustomerLiteDto? Customer,
-            List<OrderItemDto>? Orderitems
+            List<OrderItemDto>? Orderitems,
+            List<OrderPaymentDto>? Orderpayments
         ) : base(
             Orderid,
             Customerid,
@@ -83,8 +102,12 @@ namespace ECommerceBackend.DTOs.Orders
             Shippingemail,
             Shippingaddress,
             Customernote,
+            Reservationexpiresat,
+            Paymenttoken,
+            Cancellationreason,
             Customer,
-            Orderitems) { }
+            Orderitems,
+            Orderpayments) { }
     }
 
     public record CreateOrderItemRequestDto(
@@ -113,6 +136,36 @@ namespace ECommerceBackend.DTOs.Orders
     );
 
     public record UpdateOrderStatusResponseDto(int Orderid, string Orderstatus);
+
+    public record ConfirmPaymentRequestDto(
+        decimal? Amount,
+        string? Transactionref,
+        string? Note
+    );
+
+    public record SimulatePaymentRequestDto(
+        [Required] string Paymenttoken,
+        bool Success
+    );
+
+    public record PaymentCheckoutDto(
+        int Orderid,
+        string? Paymentmethod,
+        string? Paymentstatus,
+        decimal Finalamount,
+        decimal Requiredpayment,
+        decimal Paidamount,
+        DateTime? Reservationexpiresat,
+        string? Shippingname
+    );
+
+    public record PaymentActionResultDto(
+        int Orderid,
+        string Paymentstatus,
+        decimal Paidamount,
+        decimal Remainingamount,
+        string? Transactionref
+    );
 
     /// <summary>Safe limited DTO for public order lookup: no IMEI, no internal fields.</summary>
     public record OrderLookupDto(

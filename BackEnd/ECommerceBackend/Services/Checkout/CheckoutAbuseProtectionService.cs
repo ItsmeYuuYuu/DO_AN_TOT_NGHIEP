@@ -9,6 +9,8 @@ public interface ICheckoutAbuseProtectionService
     Task<CheckoutAbuseResult> CheckAsync(HttpContext httpContext, string phone, string? guestToken, bool isGuest);
 
     Task MarkGuestPendingAsync(string? guestToken, string phone, int orderId);
+
+    Task ReleaseGuestPendingAsync(string? guestToken, string phone);
 }
 
 public class CheckoutAbuseProtectionService : ICheckoutAbuseProtectionService
@@ -68,6 +70,15 @@ public class CheckoutAbuseProtectionService : ICheckoutAbuseProtectionService
         foreach (var key in PendingKeys(guestToken, normalizedPhone))
         {
             await _cache.SetStringAsync(key, orderId.ToString(), options);
+        }
+    }
+
+    public async Task ReleaseGuestPendingAsync(string? guestToken, string phone)
+    {
+        var normalizedPhone = Normalize(phone);
+        foreach (var key in PendingKeys(guestToken, normalizedPhone))
+        {
+            await _cache.RemoveAsync(key);
         }
     }
 

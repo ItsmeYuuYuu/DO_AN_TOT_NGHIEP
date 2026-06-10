@@ -302,6 +302,17 @@ namespace ECommerceBackend.Controllers
                 return BadRequest(new ApiErrorDto("Dòng máy đã chọn không tồn tại hoặc không thuộc thương hiệu đã chọn.", null));
             }
 
+            if (dto.Variants == null || dto.Variants.Count == 0)
+                return BadRequest(new ApiErrorDto("Sản phẩm phải có ít nhất một biến thể.", null));
+
+            var allocatedQuantity = dto.Variants.Sum(variant => variant.Quantity ?? 0);
+            if (allocatedQuantity != dto.Totalquantity)
+            {
+                return BadRequest(new ApiErrorDto(
+                    $"Tổng số lượng các biến thể ({allocatedQuantity}) phải bằng số lượng lô hàng ({dto.Totalquantity}).",
+                    null));
+            }
+
             var requestedSkus = dto.Variants?
                 .Select(v => v.Sku.Trim())
                 .ToList() ?? new List<string>();

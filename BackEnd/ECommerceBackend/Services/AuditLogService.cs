@@ -18,15 +18,20 @@ public class AuditLogService : BackgroundService
     private readonly SemaphoreSlim _signal = new(0);
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AuditLogService> _logger;
+    private readonly IHostEnvironment _environment;
 
     // Batch processing — gom nhiều entries và ghi 1 lần để giảm DB roundtrip
     private const int BatchSize       = 20;
     private const int FlushIntervalMs = 3_000; // flush mỗi 3 giây dù chưa đủ batch
 
-    public AuditLogService(IServiceScopeFactory scopeFactory, ILogger<AuditLogService> logger)
+    public AuditLogService(
+        IServiceScopeFactory scopeFactory,
+        ILogger<AuditLogService> logger,
+        IHostEnvironment environment)
     {
         _scopeFactory = scopeFactory;
         _logger       = logger;
+        _environment  = environment;
     }
 
     /// <summary>
@@ -46,6 +51,8 @@ public class AuditLogService : BackgroundService
     /// </summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (_environment.IsEnvironment("Testing")) return;
+
         _logger.LogInformation("🔍 AuditLogService started.");
 
         while (!stoppingToken.IsCancellationRequested)

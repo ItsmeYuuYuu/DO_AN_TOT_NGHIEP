@@ -229,6 +229,56 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("chatmessages", (string)null);
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Chatproductrecommendation", b =>
+                {
+                    b.Property<int>("Recommendationid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("recommendationid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Recommendationid"));
+
+                    b.Property<DateTime?>("Addedtocartat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("addedtocartat");
+
+                    b.Property<DateTime?>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("Messageid")
+                        .HasColumnType("integer")
+                        .HasColumnName("messageid");
+
+                    b.Property<int>("Productid")
+                        .HasColumnType("integer")
+                        .HasColumnName("productid");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("integer")
+                        .HasColumnName("rank");
+
+                    b.Property<int>("Variantid")
+                        .HasColumnType("integer")
+                        .HasColumnName("variantid");
+
+                    b.HasKey("Recommendationid")
+                        .HasName("chatproductrecommendations_pkey");
+
+                    b.HasIndex(new[] { "Messageid", "Variantid" }, "chatproductrecommendations_messageid_variantid_key")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "Addedtocartat" }, "ix_chatproductrecommendations_addedtocartat");
+
+                    b.HasIndex(new[] { "Productid" }, "ix_chatproductrecommendations_productid");
+
+                    b.HasIndex(new[] { "Variantid" }, "ix_chatproductrecommendations_variantid");
+
+                    b.ToTable("chatproductrecommendations", (string)null);
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Chatsession", b =>
                 {
                     b.Property<int>("Sessionid")
@@ -385,6 +435,71 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("inventoryitems", (string)null);
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Inventorytransaction", b =>
+                {
+                    b.Property<int>("Transactionid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("transactionid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Transactionid"));
+
+                    b.Property<DateTime?>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Fromstatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("fromstatus");
+
+                    b.Property<string>("Imei")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("imei");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<int?>("Orderid")
+                        .HasColumnType("integer")
+                        .HasColumnName("orderid");
+
+                    b.Property<string>("Tostatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("tostatus");
+
+                    b.Property<string>("Transactiontype")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("transactiontype");
+
+                    b.Property<int?>("Userid")
+                        .HasColumnType("integer")
+                        .HasColumnName("userid");
+
+                    b.HasKey("Transactionid")
+                        .HasName("inventorytransactions_pkey");
+
+                    b.HasIndex(new[] { "Createdat" }, "ix_inventorytransactions_createdat");
+
+                    b.HasIndex(new[] { "Imei" }, "ix_inventorytransactions_imei");
+
+                    b.HasIndex(new[] { "Orderid" }, "ix_inventorytransactions_orderid");
+
+                    b.HasIndex(new[] { "Userid" }, "ix_inventorytransactions_userid");
+
+                    b.ToTable("inventorytransactions", (string)null);
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.News", b =>
                 {
                     b.Property<int>("Postid")
@@ -447,6 +562,11 @@ namespace ECommerceBackend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Orderid"));
 
+                    b.Property<string>("Cancellationreason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("cancellationreason");
+
                     b.Property<string>("Checkouttype")
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
@@ -480,6 +600,11 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("finalamount");
 
+                    b.Property<string>("Guesttoken")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("guesttoken");
+
                     b.Property<DateTime?>("Orderdate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
@@ -510,12 +635,21 @@ namespace ECommerceBackend.Migrations
                         .HasDefaultValue("Unpaid")
                         .HasColumnName("paymentstatus");
 
+                    b.Property<string>("Paymenttoken")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("paymenttoken");
+
                     b.Property<decimal?>("Requiredpayment")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("requiredpayment")
                         .HasDefaultValueSql("0");
+
+                    b.Property<DateTime?>("Reservationexpiresat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("reservationexpiresat");
 
                     b.Property<string>("Shippingaddress")
                         .HasMaxLength(500)
@@ -569,6 +703,69 @@ namespace ECommerceBackend.Migrations
                         .HasDatabaseName("ix_orders_customerid_orderdate");
 
                     b.ToTable("orders", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Orderassignment", b =>
+                {
+                    b.Property<int>("Assignmentid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("assignmentid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Assignmentid"));
+
+                    b.Property<DateTime?>("Assignedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("assignedat");
+
+                    b.Property<int?>("Assignedbyuserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("assignedbyuserid");
+
+                    b.Property<int?>("Assigneduserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("assigneduserid");
+
+                    b.Property<DateTime?>("Completedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("completedat");
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("department");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<int>("Orderid")
+                        .HasColumnType("integer")
+                        .HasColumnName("orderid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("status");
+
+                    b.HasKey("Assignmentid")
+                        .HasName("orderassignments_pkey");
+
+                    b.HasIndex("Assignedbyuserid");
+
+                    b.HasIndex(new[] { "Assigneduserid" }, "ix_orderassignments_assigneduserid");
+
+                    b.HasIndex(new[] { "Department", "Status" }, "ix_orderassignments_department_status");
+
+                    b.HasIndex(new[] { "Orderid", "Department" }, "ux_orderassignments_order_department")
+                        .IsUnique();
+
+                    b.ToTable("orderassignments", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Orderitem", b =>
@@ -1190,6 +1387,36 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Session");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Chatproductrecommendation", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Chatmessage", "Message")
+                        .WithMany("Chatproductrecommendations")
+                        .HasForeignKey("Messageid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_chatproductrecommendations_messages");
+
+                    b.HasOne("ECommerceBackend.Models.Product", "Product")
+                        .WithMany("Chatproductrecommendations")
+                        .HasForeignKey("Productid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_chatproductrecommendations_products");
+
+                    b.HasOne("ECommerceBackend.Models.Productvariant", "Variant")
+                        .WithMany("Chatproductrecommendations")
+                        .HasForeignKey("Variantid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_chatproductrecommendations_variants");
+
+                    b.Navigation("Message");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Variant");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Chatsession", b =>
                 {
                     b.HasOne("ECommerceBackend.Models.Customer", "Customer")
@@ -1208,6 +1435,34 @@ namespace ECommerceBackend.Migrations
                         .HasConstraintName("fk_inventory_variants");
 
                     b.Navigation("Variant");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Inventorytransaction", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Inventoryitem", "Inventoryitem")
+                        .WithMany("Inventorytransactions")
+                        .HasForeignKey("Imei")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventorytransactions_inventory");
+
+                    b.HasOne("ECommerceBackend.Models.Order", "Order")
+                        .WithMany("Inventorytransactions")
+                        .HasForeignKey("Orderid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_inventorytransactions_orders");
+
+                    b.HasOne("ECommerceBackend.Models.User", "User")
+                        .WithMany("Inventorytransactions")
+                        .HasForeignKey("Userid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_inventorytransactions_users");
+
+                    b.Navigation("Inventoryitem");
+
+                    b.Navigation("Order");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.News", b =>
@@ -1242,6 +1497,34 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("User");
 
                     b.Navigation("VouchercodeNavigation");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Orderassignment", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.User", "Assignedbyuser")
+                        .WithMany("CreatedOrderassignments")
+                        .HasForeignKey("Assignedbyuserid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_orderassignments_assignedby_users");
+
+                    b.HasOne("ECommerceBackend.Models.User", "Assigneduser")
+                        .WithMany("AssignedOrderassignments")
+                        .HasForeignKey("Assigneduserid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_orderassignments_assigned_users");
+
+                    b.HasOne("ECommerceBackend.Models.Order", "Order")
+                        .WithMany("Orderassignments")
+                        .HasForeignKey("Orderid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_orderassignments_orders");
+
+                    b.Navigation("Assignedbyuser");
+
+                    b.Navigation("Assigneduser");
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Orderitem", b =>
@@ -1381,6 +1664,11 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Products");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Chatmessage", b =>
+                {
+                    b.Navigation("Chatproductrecommendations");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Chatsession", b =>
                 {
                     b.Navigation("Chatmessages");
@@ -1397,11 +1685,17 @@ namespace ECommerceBackend.Migrations
 
             modelBuilder.Entity("ECommerceBackend.Models.Inventoryitem", b =>
                 {
+                    b.Navigation("Inventorytransactions");
+
                     b.Navigation("Orderitems");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Order", b =>
                 {
+                    b.Navigation("Inventorytransactions");
+
+                    b.Navigation("Orderassignments");
+
                     b.Navigation("Orderitems");
 
                     b.Navigation("Orderpayments");
@@ -1409,6 +1703,8 @@ namespace ECommerceBackend.Migrations
 
             modelBuilder.Entity("ECommerceBackend.Models.Product", b =>
                 {
+                    b.Navigation("Chatproductrecommendations");
+
                     b.Navigation("Productvariants");
                 });
 
@@ -1420,6 +1716,8 @@ namespace ECommerceBackend.Migrations
             modelBuilder.Entity("ECommerceBackend.Models.Productvariant", b =>
                 {
                     b.Navigation("Cartitems");
+
+                    b.Navigation("Chatproductrecommendations");
 
                     b.Navigation("Inventoryitems");
 
@@ -1435,9 +1733,15 @@ namespace ECommerceBackend.Migrations
 
             modelBuilder.Entity("ECommerceBackend.Models.User", b =>
                 {
+                    b.Navigation("AssignedOrderassignments");
+
                     b.Navigation("Auditlogs");
 
                     b.Navigation("Cart");
+
+                    b.Navigation("CreatedOrderassignments");
+
+                    b.Navigation("Inventorytransactions");
 
                     b.Navigation("News");
 

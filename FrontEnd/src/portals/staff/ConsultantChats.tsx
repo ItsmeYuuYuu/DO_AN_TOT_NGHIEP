@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Bot, CheckCircle2, Headphones, MessageSquare, Send, User } from 'lucide-react';
 import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '@/features/chat/api/chatSessionsApi';
+import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
 
 const ConsultantChats = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -203,6 +204,12 @@ const ConsultantChats = () => {
                           : 'rounded-tr-none bg-teal-600 text-white'
                       }`}>
                         <p className="whitespace-pre-wrap">{message.messagecontent}</p>
+                        {message.recommendations && message.recommendations.length > 0 && (
+                          <ChatRecommendationCards
+                            sessionId={activeSession.sessionid}
+                            recommendations={message.recommendations}
+                          />
+                        )}
                         <p className={`mt-1 text-[10px] ${fromCustomer ? 'text-slate-400' : 'text-teal-100'}`}>
                           {message.sendertype === 'assistant' ? 'AI' : message.sendertype === 'consultant' ? 'Tư vấn viên' : 'Khách hàng'}
                         </p>

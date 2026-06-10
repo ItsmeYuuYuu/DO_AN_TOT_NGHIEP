@@ -19,6 +19,7 @@ public sealed record ProductConsultationResult(
     decimal Price,
     decimal BasePrice,
     int Stock,
+    string ImageUrl,
     IReadOnlyDictionary<string, string> Specifications);
 
 public interface IProductConsultationService
@@ -64,6 +65,8 @@ public sealed class ProductConsultationService : IProductConsultationService
             .Include(product => product.Category)
             .Include(product => product.Productvariants)
                 .ThenInclude(variant => variant.Inventoryitems)
+            .Include(product => product.Productvariants)
+                .ThenInclude(variant => variant.Productimages)
             .AsSplitQuery()
             .OrderByDescending(product => product.Createdat)
             .Take(250)
@@ -151,6 +154,11 @@ public sealed class ProductConsultationService : IProductConsultationService
                         price,
                         variant.Baseprice,
                         stock,
+                        variant.Productimages
+                            .OrderByDescending(image => image.Ismain == true)
+                            .ThenBy(image => image.Imageid)
+                            .Select(image => image.Imageurl)
+                            .FirstOrDefault() ?? string.Empty,
                         specifications),
                     score));
             }

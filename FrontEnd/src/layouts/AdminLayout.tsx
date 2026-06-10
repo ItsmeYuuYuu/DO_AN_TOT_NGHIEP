@@ -17,6 +17,8 @@ import {
   ShieldCheck,
   ShoppingCart,
   Tags,
+  Truck,
+  UserCheck,
   Users,
   Users2,
   X,
@@ -60,6 +62,8 @@ const adminNav: NavGroup[] = [
     icon: <ShoppingCart size={17} />,
     items: [
       { label: 'Danh sách đơn hàng', to: '/admin/orders', icon: <ShoppingCart size={16} /> },
+      { label: 'Hàng đợi Sales', to: '/admin/sales-orders', icon: <UserCheck size={16} /> },
+      { label: 'Hàng đợi kho', to: '/admin/warehouse-orders', icon: <Truck size={16} /> },
       { label: 'Quản lý bảo hành', to: '/admin/warranties', icon: <ShieldCheck size={16} /> },
     ],
   },

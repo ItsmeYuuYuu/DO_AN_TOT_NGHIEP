@@ -14,7 +14,6 @@ const PAGE_SIZE = 10;
 
 const roleColors: Record<string, string> = {
   Admin:    'bg-purple-50 text-purple-700 border border-purple-200',
-  Staff:    'bg-blue-50 text-blue-700 border border-blue-200',
   Manager:  'bg-indigo-50 text-indigo-700 border border-indigo-200',
   Sales:    'bg-cyan-50 text-cyan-700 border border-cyan-200',
   Warehouse:'bg-amber-50 text-amber-700 border border-amber-200',

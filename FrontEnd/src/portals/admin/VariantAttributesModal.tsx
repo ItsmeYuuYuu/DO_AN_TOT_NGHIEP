@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/Button';
 import { attributesApi } from '@/features/products/api/attributesApi';
@@ -15,13 +15,7 @@ export const VariantAttributesModal: React.FC<VariantAttributesModalProps> = ({ 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && variantId) {
-      loadData();
-    }
-  }, [isOpen, variantId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const variantAttrs = await attributesApi.getVariantAttributes(variantId);
@@ -31,7 +25,13 @@ export const VariantAttributesModal: React.FC<VariantAttributesModalProps> = ({ 
     } finally {
       setLoading(false);
     }
-  };
+  }, [variantId]);
+
+  useEffect(() => {
+    if (isOpen && variantId) {
+      loadData();
+    }
+  }, [isOpen, variantId, loadData]);
 
   const addSpec = () => {
     setSpecs(prev => [...prev, { key: '', value: '' }]);
@@ -57,7 +57,7 @@ export const VariantAttributesModal: React.FC<VariantAttributesModalProps> = ({ 
       await attributesApi.assignVariantAttributes(variantId, filtered);
       alert('Đã cập nhật thông số kỹ thuật thành công.');
       onClose();
-    } catch (err) {
+    } catch {
       alert('Không thể cập nhật thông số kỹ thuật. Vui lòng kiểm tra lại.');
     } finally {
       setSaving(false);

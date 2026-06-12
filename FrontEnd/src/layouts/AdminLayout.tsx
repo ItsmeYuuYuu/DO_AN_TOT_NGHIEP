@@ -14,6 +14,7 @@ import {
   Menu,
   Newspaper,
   Package,
+  RotateCcw,
   ShieldCheck,
   ShoppingCart,
   Tags,
@@ -42,6 +43,11 @@ interface NavGroup {
 }
 
 const adminNav: NavGroup[] = [
+  {
+    label: 'Đổi trả',
+    to: '/admin/returns',
+    icon: <RotateCcw size={17} />,
+  },
   {
     label: 'Tổng quan',
     to: '/admin',

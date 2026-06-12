@@ -308,6 +308,69 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
     }
 
     [Fact]
+    public async Task PostMessage_WithVagueRequest_AsksForBudgetAndUsage()
+    {
+        var sessionId = await SeedSessionAsync();
+        using var request = CreatePost(
+            $"/api/chatsessions/{sessionId}/messages",
+            "Customer",
+            1,
+            new CreateChatMessageRequestDto
+            {
+                Messagecontent = "Tư vấn cho tôi một chiếc điện thoại"
+            },
+            includeGuestToken: true);
+
+        var response = await _client.SendAsync(request);
+        var message = await response.Content.ReadFromJsonAsync<ChatMessageDto>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("assistant", message?.Sendertype);
+        Assert.Contains("Ngân sách", message?.Messagecontent);
+        Assert.Contains("chơi game", message?.Messagecontent);
+        Assert.Empty(message?.Recommendations ?? []);
+    }
+
+    [Fact]
+    public void BuildCatalogResponse_WhenComparingProducts_ReturnsStructuredComparison()
+    {
+        var products = new[]
+        {
+            new ProductConsultationResult(
+                1, 11, "Camera Phone", "Brand A", "Điện thoại", "New Seal", "A-1",
+                15_000_000, 16_000_000, 2, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Chip A",
+                    ["Dung lượng RAM"] = "12GB",
+                    ["Bộ nhớ trong"] = "256GB",
+                    ["Camera sau"] = "50MP OIS",
+                    ["Pin"] = "5000mAh"
+                }),
+            new ProductConsultationResult(
+                2, 22, "Gaming Phone", "Brand B", "Điện thoại", "New Seal", "B-1",
+                14_000_000, 14_000_000, 1, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Chip B",
+                    ["Dung lượng RAM"] = "16GB",
+                    ["Bộ nhớ trong"] = "512GB",
+                    ["Camera sau"] = "48MP",
+                    ["Pin"] = "5500mAh"
+                })
+        };
+
+        var response = GroundedAiProvider.BuildCatalogResponse(
+            "So sánh hai sản phẩm này",
+            products);
+
+        Assert.Contains("So sánh nhanh 2 sản phẩm", response);
+        Assert.Contains("RAM / Bộ nhớ: 12GB / 256GB", response);
+        Assert.Contains("Giá thấp nhất: Gaming Phone", response);
+        Assert.Contains("Bạn ưu tiên camera, hiệu năng hay pin", response);
+    }
+
+    [Fact]
     public void BuildCatalogResponse_WhenManyProducts_ReturnsOnlyTopThree()
     {
         var products = Enumerable.Range(1, 4)

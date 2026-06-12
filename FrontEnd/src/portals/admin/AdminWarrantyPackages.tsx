@@ -6,6 +6,7 @@ import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { DataTable } from '@/components/DataTable';
 import { formatCurrency } from '@/utils/formatters';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 const AdminWarrantyPackages: React.FC = () => {
   const [packages, setPackages] = useState<WarrantyPackage[]>([]);
@@ -69,8 +70,8 @@ const AdminWarrantyPackages: React.FC = () => {
       }
       await fetchPackages();
       closeModal();
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.Message || 'Lỗi khi lưu thông tin. Vui lòng thử lại.');
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Lỗi khi lưu thông tin. Vui lòng thử lại.'));
     } finally {
       setSaving(false);
     }
@@ -81,8 +82,8 @@ const AdminWarrantyPackages: React.FC = () => {
     try {
       await warrantyPackagesApi.delete(id);
       await fetchPackages();
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.response?.data?.Message || 'Không thể xóa gói bảo hành này.');
+    } catch (error) {
+      alert(getApiErrorMessage(error, 'Không thể xóa gói bảo hành này.'));
     }
   };
 

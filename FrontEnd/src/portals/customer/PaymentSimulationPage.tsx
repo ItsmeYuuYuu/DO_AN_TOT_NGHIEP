@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Clock3, CreditCard, Loader2, RefreshCcw, XCircle } from 'lucide-react';
 import { ordersApi, type PaymentCheckout } from '@/features/orders/api/ordersApi';
 import { formatCurrency } from '@/utils/formatters';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 const PaymentSimulationPage: React.FC = () => {
   const { orderId } = useParams();
@@ -16,7 +17,7 @@ const PaymentSimulationPage: React.FC = () => {
   const [result, setResult] = useState<'success' | 'failed' | null>(null);
   const [message, setMessage] = useState('');
 
-  const loadPayment = async () => {
+  const loadPayment = useCallback(async () => {
     if (!numericOrderId || !token) {
       setMessage('Liên kết thanh toán không hợp lệ.');
       setLoading(false);
@@ -28,16 +29,16 @@ const PaymentSimulationPage: React.FC = () => {
     try {
       const response = await ordersApi.getPayment(numericOrderId, token);
       setCheckout(response.data);
-    } catch (error: any) {
-      setMessage(error?.response?.data?.message ?? 'Không thể tải thông tin thanh toán.');
+    } catch (error: unknown) {
+      setMessage(getApiErrorMessage(error, 'Không thể tải thông tin thanh toán.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [numericOrderId, token]);
 
   useEffect(() => {
     loadPayment();
-  }, [numericOrderId, token]);
+  }, [loadPayment]);
 
   useEffect(() => {
     if (!checkout?.reservationexpiresat) {
@@ -83,9 +84,9 @@ const PaymentSimulationPage: React.FC = () => {
         requiredpayment: response.data.remainingamount,
         reservationexpiresat: undefined,
       } : current);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setResult('failed');
-      setMessage(error?.response?.data?.message ?? 'Thanh toán thất bại. Vui lòng thử lại.');
+      setMessage(getApiErrorMessage(error, 'Thanh toán thất bại. Vui lòng thử lại.'));
     } finally {
       setSubmitting(false);
     }

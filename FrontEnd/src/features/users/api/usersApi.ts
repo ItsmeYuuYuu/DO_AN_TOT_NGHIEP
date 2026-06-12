@@ -25,7 +25,6 @@ export const employeeRoles = [
 
 export const roleNamesById: Record<number, string> = {
   1: 'Admin',
-  2: 'Staff',
   3: 'Customer',
   4: 'Manager',
   5: 'Sales',
@@ -37,7 +36,6 @@ export const roleNamesById: Record<number, string> = {
 
 export const roleLabels: Record<string, string> = {
   Admin: 'Quản trị viên',
-  Staff: 'Nhân viên (quyền cũ)',
   Customer: 'Khách hàng',
   Manager: 'Quản lý cửa hàng',
   Sales: 'Nhân viên bán hàng',

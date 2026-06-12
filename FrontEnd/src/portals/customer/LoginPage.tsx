@@ -68,7 +68,7 @@ const LoginPage: React.FC = () => {
 
       // Điều hướng theo Role
       if (user.rolename === 'Admin') navigate('/admin');
-      else if (['Staff', 'Manager', 'Sales', 'Warehouse', 'Warranty', 'Content', 'Consultant'].includes(user.rolename)) navigate('/staff');
+      else if (['Manager', 'Sales', 'Warehouse', 'Warranty', 'Content', 'Consultant'].includes(user.rolename)) navigate('/staff');
       else navigate('/');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };

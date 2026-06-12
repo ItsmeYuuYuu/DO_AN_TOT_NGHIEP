@@ -136,7 +136,7 @@ namespace ECommerceBackend.Controllers
                 // Group by hour of the day (00h to 23h)
                 for (int h = 0; h < 24; h++)
                 {
-                    decimal hourlyRev = orders.Where(o => o.Orderdate.Value.Hour == h).Sum(o => o.Finalamount);
+                    decimal hourlyRev = orders.Where(o => o.Orderdate!.Value.Hour == h).Sum(o => o.Finalamount);
                     result.Add(new RevenueBreakdownItemDto($"{h:D2}h", hourlyRev));
                 }
             }
@@ -156,7 +156,7 @@ namespace ECommerceBackend.Controllers
 
                 foreach (var (d, label) in daysOfWeek)
                 {
-                    decimal dayRev = orders.Where(o => o.Orderdate.Value.DayOfWeek == d).Sum(o => o.Finalamount);
+                    decimal dayRev = orders.Where(o => o.Orderdate!.Value.DayOfWeek == d).Sum(o => o.Finalamount);
                     result.Add(new RevenueBreakdownItemDto(label, dayRev));
                 }
             }
@@ -167,7 +167,7 @@ namespace ECommerceBackend.Controllers
                 for (int i = 0; i < totalDays; i++)
                 {
                     var date = start.AddDays(i);
-                    decimal dateRev = orders.Where(o => o.Orderdate.Value.Date == date.Date).Sum(o => o.Finalamount);
+                    decimal dateRev = orders.Where(o => o.Orderdate!.Value.Date == date.Date).Sum(o => o.Finalamount);
                     result.Add(new RevenueBreakdownItemDto(date.ToString("dd/MM"), dateRev));
                 }
             }
@@ -284,7 +284,7 @@ namespace ECommerceBackend.Controllers
                 .Where(oi => oi.Order != null && oi.Order.Orderstatus == "Completed" && oi.Order.Orderdate != null && oi.Order.Orderdate >= start && oi.Order.Orderdate < end)
                 .Where(oi => oi.ImeiNavigation != null && oi.ImeiNavigation.Variant != null && oi.ImeiNavigation.Variant.Product != null)
                 .Select(oi => new {
-                    oi.ImeiNavigation.Variant.Product.Productid,
+                    oi.ImeiNavigation!.Variant!.Product!.Productid,
                     oi.ImeiNavigation.Variant.Product.Productname,
                     oi.Sellingprice
                 })

@@ -193,7 +193,7 @@ namespace ECommerceBackend.Controllers
 
             var allReviews = product.Productvariants.SelectMany(v => v.Reviews).ToList();
             var totalReviews = allReviews.Count;
-            var avgRating = totalReviews > 0 ? allReviews.Average(r => (double)r.Rating) : 0;
+            var avgRating = totalReviews > 0 ? allReviews.Average(r => (double)(r.Rating ?? 0)) : 0;
             var star5 = allReviews.Count(r => r.Rating == 5);
             var star4 = allReviews.Count(r => r.Rating == 4);
             var star3 = allReviews.Count(r => r.Rating == 3);

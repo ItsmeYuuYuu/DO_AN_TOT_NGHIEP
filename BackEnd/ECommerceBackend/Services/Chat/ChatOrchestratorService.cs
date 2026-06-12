@@ -108,7 +108,9 @@ namespace ECommerceBackend.Services.Chat
                             item.Variant.Inventoryitems.Count(inventory => inventory.Status == "InStock"),
                             item.Variant.Condition,
                             item.Rank,
-                            item.Addedtocartat))
+                            item.Addedtocartat,
+                            item.Orderedat,
+                            item.Orderid))
                         .ToList()))
                 .SingleAsync();
         }

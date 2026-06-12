@@ -139,11 +139,10 @@ namespace ECommerceBackend.Controllers
             };
         }
 
-        private static bool IsStaffOrAdmin(System.Security.Claims.ClaimsPrincipal user) =>
+        private static bool CanManageOrdersForOtherUsers(System.Security.Claims.ClaimsPrincipal user) =>
             user.IsInRole("Admin") ||
             user.IsInRole("Manager") ||
-            user.IsInRole("Sales") ||
-            user.IsInRole("Staff");
+            user.IsInRole("Sales");
 
         private static bool IsValidPaymentMethod(string paymentMethod) =>
             paymentMethod is "COD" or "MOMO" or "VNPAY" or "BANK";
@@ -199,11 +198,44 @@ namespace ECommerceBackend.Controllers
             return customer;
         }
 
+        private async Task AttributeChatRecommendationsAsync(
+            Order order,
+            int customerId,
+            string? guestToken,
+            IReadOnlyCollection<int> variantIds)
+        {
+            if (variantIds.Count == 0) return;
+
+            var since = DateTime.UtcNow.AddDays(-30);
+            var recommendations = await _context.Chatproductrecommendations
+                .Include(item => item.Message)
+                    .ThenInclude(message => message.Session)
+                .Where(item =>
+                    variantIds.Contains(item.Variantid) &&
+                    item.Addedtocartat != null &&
+                    item.Orderedat == null &&
+                    item.Createdat >= since &&
+                    item.Message.Session != null &&
+                    (item.Message.Session.Customerid == customerId ||
+                     (!string.IsNullOrWhiteSpace(guestToken) &&
+                      item.Message.Session.Guestsessiontoken == guestToken)))
+                .OrderByDescending(item => item.Addedtocartat)
+                .ToListAsync();
+
+            foreach (var recommendation in recommendations
+                         .GroupBy(item => item.Variantid)
+                         .Select(group => group.First()))
+            {
+                recommendation.Orderid = order.Orderid;
+                recommendation.Orderedat = DateTime.UtcNow;
+            }
+        }
+
         private static Dictionary<string, string[]> ValidTransitions() => new()
         {
             { StatusPending, new[] { StatusProcessing, StatusCancelled } },
             { StatusProcessing, new[] { StatusShipped, StatusCancelled } },
-            { StatusShipped, new[] { StatusCompleted, StatusCancelled } }
+            { StatusShipped, new[] { StatusCompleted } }
         };
 
         private static bool IsPaymentReadyForProcessing(Order order)
@@ -360,7 +392,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant")]
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrders()
         {
             var orders = await _context.Orders
@@ -379,7 +411,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant")]
         public async Task<ActionResult<OrderDetailDto>> GetOrder(int id)
         {
             var order = await _context.Orders
@@ -398,7 +430,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("customer/{customerId}")]
-        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant")]
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrdersByCustomer(int customerId)
         {
             var orders = await _context.Orders
@@ -422,7 +454,7 @@ namespace ECommerceBackend.Controllers
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrdersByUser(int userId)
         {
             var claimUserId = GetClaimUserId();
-            if (!IsStaffOrAdmin(User) && claimUserId != userId)
+            if (!CanManageOrdersForOtherUsers(User) && claimUserId != userId)
             {
                 return Forbid();
             }
@@ -492,7 +524,7 @@ namespace ECommerceBackend.Controllers
 
             if (dto.Userid.HasValue && dto.Userid != claimUserId)
             {
-                if (!IsStaffOrAdmin(User))
+                if (!CanManageOrdersForOtherUsers(User))
                 {
                     return StatusCode(403, new ApiErrorDto("Ban khong co quyen tao don cho nguoi dung khac.", null));
                 }
@@ -567,6 +599,7 @@ namespace ECommerceBackend.Controllers
                     Customernote = dto.Note,
                     Guesttoken = isGuest ? guestToken : null
                 };
+                var orderedVariantIds = new HashSet<int>();
 
                 foreach (var reqItem in dto.Items)
                 {
@@ -588,6 +621,7 @@ namespace ECommerceBackend.Controllers
                     }
 
                     var price = variant.Saleprice ?? variant.Baseprice;
+                    orderedVariantIds.Add(reqItem.Variantid);
                     Warrantypackage? package = null;
                     if (reqItem.Packageid.HasValue)
                     {
@@ -690,6 +724,12 @@ namespace ECommerceBackend.Controllers
                 });
 
                 _context.Orders.Add(order);
+                await _context.SaveChangesAsync();
+                await AttributeChatRecommendationsAsync(
+                    order,
+                    customer.Customerid,
+                    guestToken,
+                    orderedVariantIds);
                 await _context.SaveChangesAsync();
 
                 if (isGuest)
@@ -822,7 +862,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost("{id}/confirm-payment")]
-        [Authorize(Roles = "Admin,Manager,Sales,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales")]
         public async Task<ActionResult<PaymentActionResultDto>> ConfirmPayment(
             int id,
             [FromBody] ConfirmPaymentRequestDto dto)
@@ -855,7 +895,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Manager,Sales,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales")]
         public async Task<IActionResult> PutOrder(int id, [FromBody] UpdateOrderRequestDto dto)
         {
             var order = await _context.Orders.FindAsync(id);
@@ -880,7 +920,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPatch("{id}/status")]
-        [Authorize(Roles = "Admin,Manager,Sales,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusRequestDto dto)
         {
             var validTransitions = ValidTransitions();
@@ -961,7 +1001,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost("bulk-status")]
-        [Authorize(Roles = "Admin,Manager,Sales,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales")]
         public async Task<IActionResult> BulkUpdateStatus(
             [FromBody] BulkUpdateStatusRequestDto dto,
             [FromServices] ILogger<OrdersController> logger)

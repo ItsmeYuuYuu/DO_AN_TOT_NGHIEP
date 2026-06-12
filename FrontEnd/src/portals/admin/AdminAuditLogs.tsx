@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { auditLogsApi } from '@/features/system/api/auditLogsApi';
 import type { AuditLog, GetAuditLogsParams } from '@/features/system/api/auditLogsApi';
 import { DataTable } from '@/components/DataTable';
@@ -6,6 +6,7 @@ import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { Pagination } from '@/components/Pagination';
 import { formatDateTime } from '@/utils/formatters';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 export default function AdminAuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -21,7 +22,7 @@ export default function AdminAuditLogs() {
   const [filterFromDate, setFilterFromDate] = useState('');
   const [filterToDate, setFilterToDate] = useState('');
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
       const params: GetAuditLogsParams = { page, pageSize };
@@ -34,16 +35,16 @@ export default function AdminAuditLogs() {
       const result = await auditLogsApi.getLogs(params);
       setLogs(result.items);
       setTotalCount(result.totalCount);
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.response?.data?.Message || 'Lỗi khi tải nhật ký hệ thống.');
+    } catch (error) {
+      alert(getApiErrorMessage(error, 'Lỗi khi tải nhật ký hệ thống.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterAction, filterFromDate, filterTableName, filterToDate, filterUserId, page, pageSize]);
 
   useEffect(() => {
     fetchLogs();
-  }, [page]);
+  }, [fetchLogs]);
 
   const handleSearch = () => {
     setPage(1);
@@ -81,32 +82,32 @@ export default function AdminAuditLogs() {
           label="User ID" 
           type="number" 
           value={filterUserId} 
-          onChange={(e: any) => setFilterUserId(e.target.value)} 
+          onChange={e => setFilterUserId(e.target.value)}
           placeholder="Ví dụ: 12"
         />
         <Input 
           label="Thao tác" 
           value={filterAction} 
-          onChange={(e: any) => setFilterAction(e.target.value)} 
+          onChange={e => setFilterAction(e.target.value)}
           placeholder="CREATE, UPDATE..."
         />
         <Input 
           label="Bảng (Entity)" 
           value={filterTableName} 
-          onChange={(e: any) => setFilterTableName(e.target.value)} 
+          onChange={e => setFilterTableName(e.target.value)}
           placeholder="Products..."
         />
         <Input 
           label="Từ ngày" 
           type="date" 
           value={filterFromDate} 
-          onChange={(e: any) => setFilterFromDate(e.target.value)} 
+          onChange={e => setFilterFromDate(e.target.value)}
         />
         <Input 
           label="Đến ngày" 
           type="date" 
           value={filterToDate} 
-          onChange={(e: any) => setFilterToDate(e.target.value)} 
+          onChange={e => setFilterToDate(e.target.value)}
         />
         <div className="md:col-span-5 flex justify-end gap-2">
           <Button variant="secondary" onClick={handleReset}>Khôi phục</Button>
@@ -116,11 +117,11 @@ export default function AdminAuditLogs() {
 
       <DataTable
         columns={[
-          { key: 'logid', header: 'ID', render: (l: any) => <span className="font-mono text-xs text-slate-500">#{l.logid}</span> },
+          { key: 'logid', header: 'ID', render: (l: AuditLog) => <span className="font-mono text-xs text-slate-500">#{l.logid}</span> },
           { 
             key: 'user', 
             header: 'Người dùng', 
-            render: (l: any) => (
+            render: (l: AuditLog) => (
               <div className="flex flex-col">
                 <span className="font-bold text-slate-800">{l.fullName || 'Hệ thống'}</span>
                 {l.userid && <span className="text-xs text-slate-500">ID: {l.userid}</span>}
@@ -130,15 +131,15 @@ export default function AdminAuditLogs() {
           { 
             key: 'action', 
             header: 'Thao tác', 
-            render: (l: any) => (
+            render: (l: AuditLog) => (
               <span className={`px-2 py-1 rounded text-xs font-bold ${getActionColor(l.action)}`}>
                 {l.action}
               </span>
             )
           },
-          { key: 'tablename', header: 'Bảng / Đối tượng', render: (l: any) => <span className="font-mono text-xs">{l.tablename || '-'}</span> },
-          { key: 'recordid', header: 'Record ID', render: (l: any) => <span className="font-mono text-xs">{l.recordid || '-'}</span> },
-          { key: 'createdat', header: 'Thời gian', render: (l: any) => <span className="text-sm">{formatDateTime(l.createdat)}</span> },
+          { key: 'tablename', header: 'Bảng / Đối tượng', render: (l: AuditLog) => <span className="font-mono text-xs">{l.tablename || '-'}</span> },
+          { key: 'recordid', header: 'Record ID', render: (l: AuditLog) => <span className="font-mono text-xs">{l.recordid || '-'}</span> },
+          { key: 'createdat', header: 'Thời gian', render: (l: AuditLog) => <span className="text-sm">{formatDateTime(l.createdat)}</span> },
         ]}
         data={logs}
         keyField="logid"

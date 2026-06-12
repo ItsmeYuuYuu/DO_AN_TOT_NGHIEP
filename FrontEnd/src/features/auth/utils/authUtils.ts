@@ -75,5 +75,4 @@ export function hasRole(role: string): boolean {
 }
 
 export function isAdmin(): boolean   { return hasRole('Admin'); }
-export function isStaff(): boolean   { return hasRole('Staff'); }
 export function isCustomer(): boolean { return hasRole('Customer'); }

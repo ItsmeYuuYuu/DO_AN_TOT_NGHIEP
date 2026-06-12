@@ -58,6 +58,7 @@ public sealed class ProductConsultationService : IProductConsultationService
         var requiresStock = ContainsAny(normalizedQuery, "con hang", "san hang", "ton kho", "mua ngay");
         var requestedRam = ExtractCapacity(normalizedQuery, "ram");
         var requestedStorage = ExtractStorage(normalizedQuery);
+        var usageProfile = DetectUsageProfile(normalizedQuery);
 
         var products = await _context.Products
             .AsNoTracking()
@@ -137,6 +138,7 @@ public sealed class ProductConsultationService : IProductConsultationService
                     score += 2;
                 if (variant.Saleprice.HasValue && variant.Saleprice < variant.Baseprice)
                     score += 1;
+                score += ScoreUsageProfile(searchableText, specifications, usageProfile);
 
                 if (queryTokens.Length > 0 && score == 0 &&
                     !priceRange.Min.HasValue && !priceRange.Max.HasValue)
@@ -298,6 +300,71 @@ public sealed class ProductConsultationService : IProductConsultationService
         return searchableText.Contains(storage) &&
                ContainsAny(searchableText, "bo nho", "dung luong", "rom", "storage");
     }
+
+    private static string? DetectUsageProfile(string query)
+    {
+        if (ContainsAny(query, "choi game", "gaming", "game nang", "fps", "moba"))
+            return "gaming";
+        if (ContainsAny(query, "chup anh", "quay phim", "camera dep", "song ao", "zoom"))
+            return "camera";
+        if (ContainsAny(query, "pin trau", "pin tot", "dung lau", "sac nhanh", "thoi luong pin"))
+            return "battery";
+        if (ContainsAny(query, "hoc tap", "sinh vien", "van phong", "hoc online", "lam viec"))
+            return "study";
+        return null;
+    }
+
+    private static int ScoreUsageProfile(
+        string searchableText,
+        IReadOnlyDictionary<string, string> specifications,
+        string? usageProfile)
+    {
+        if (string.IsNullOrEmpty(usageProfile))
+            return 0;
+
+        var specificationText = Normalize(string.Join(
+            " ",
+            specifications.Select(item => $"{item.Key} {item.Value}")));
+        var text = $"{searchableText} {specificationText}";
+        return usageProfile switch
+        {
+            "gaming" => ScoreTerms(
+                text,
+                ("chipset", 5),
+                ("gpu", 5),
+                ("ram", 4),
+                ("tan nhiet", 4),
+                ("120hz", 3),
+                ("144hz", 3),
+                ("pin", 2)),
+            "camera" => ScoreTerms(
+                text,
+                ("camera sau", 6),
+                ("quay video", 5),
+                ("chong rung", 4),
+                ("ois", 4),
+                ("zoom", 3),
+                ("camera truoc", 2)),
+            "battery" => ScoreTerms(
+                text,
+                ("pin", 6),
+                ("mah", 5),
+                ("sac nhanh", 5),
+                ("cong nghe sac", 4),
+                ("usb-c", 2)),
+            "study" => ScoreTerms(
+                text,
+                ("pin", 4),
+                ("trong luong", 4),
+                ("man hinh", 3),
+                ("ram", 3),
+                ("wifi", 2)),
+            _ => 0
+        };
+    }
+
+    private static int ScoreTerms(string text, params (string Term, int Score)[] terms) =>
+        terms.Sum(item => text.Contains(item.Term) ? item.Score : 0);
 
     private static IReadOnlyDictionary<string, string> ParseSpecifications(string? json)
     {

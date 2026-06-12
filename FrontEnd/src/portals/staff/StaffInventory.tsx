@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import apiClient from '@/api/apiClient';
 import { Package, Plus, Filter, Edit2, History, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
@@ -47,9 +47,7 @@ const StaffInventory: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [lowStockVariants, setLowStockVariants] = useState<LowStockVariant[]>([]);
 
-  useEffect(() => { fetchItems(); }, [statusFilter]);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       const url = statusFilter ? `/Inventory/status/${statusFilter}` : '/Inventory';
@@ -65,7 +63,9 @@ const StaffInventory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => { fetchItems(); }, [fetchItems]);
 
   const openAddModal = () => {
     setEditingItem(null);
@@ -120,7 +120,7 @@ const StaffInventory: React.FC = () => {
       }
       fetchItems();
       closeModal();
-    } catch (err) {
+    } catch {
       alert(editingItem ? 'Không thể cập nhật IMEI này.' : 'Không thể lưu dữ liệu. Có thể IMEI đã tồn tại.');
     } finally {
       setSaving(false);

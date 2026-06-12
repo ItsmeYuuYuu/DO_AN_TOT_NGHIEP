@@ -3,6 +3,7 @@ import { promotionsApi, type PromotionalContent } from '@/features/content/api/p
 import { productsApi } from '@/features/products/api/productsApi';
 import { Button } from '@/components/Button';
 import { Edit2, Trash2, Sliders, Image, Check, X, Upload, LoaderCircle } from 'lucide-react';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 export const AdminPromotionalContents: React.FC = () => {
   const [contents, setContents] = useState<PromotionalContent[]>([]);
@@ -77,8 +78,8 @@ export const AdminPromotionalContents: React.FC = () => {
       const uploaded = response.data[0];
       setImageurl(uploaded.url);
       setUploadedFileName(uploaded.fileName);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Không thể tải ảnh lên.');
+    } catch (error) {
+      alert(getApiErrorMessage(error, 'Không thể tải ảnh lên.'));
     } finally {
       setUploadingImage(false);
     }
@@ -90,7 +91,7 @@ export const AdminPromotionalContents: React.FC = () => {
       await promotionsApi.delete(id);
       setContents(prev => prev.filter(c => c.contentid !== id));
       alert('Đã xóa thành công.');
-    } catch (err) {
+    } catch {
       alert('Không thể xóa nội dung quảng cáo.');
     }
   };
@@ -106,7 +107,7 @@ export const AdminPromotionalContents: React.FC = () => {
         isactive: !c.isactive
       });
       setContents(prev => prev.map(item => item.contentid === c.contentid ? updated : item));
-    } catch (err) {
+    } catch {
       alert('Không thể thay đổi trạng thái.');
     }
   };
@@ -139,7 +140,7 @@ export const AdminPromotionalContents: React.FC = () => {
       }
       setUploadedFileName(null);
       resetForm(false);
-    } catch (err) {
+    } catch {
       alert('Có lỗi xảy ra khi lưu nội dung.');
     }
   };

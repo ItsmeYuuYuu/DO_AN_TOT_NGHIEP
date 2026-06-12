@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { MessageSquare, Plus, Send, Trash2, Bot, User, Headphones } from 'lucide-react';
 import { formatDateTime } from '../../utils/formatters';
 import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 export default function CustomerChat() {
   const [searchParams] = useSearchParams();
@@ -22,10 +23,8 @@ export default function CustomerChat() {
       if (data.length > 0 && !activeSession) {
         selectSession(data[0]);
       }
-    } catch (err: any) {
-      if (err.response?.status === 401 || err.response?.status === 404) {
-        // Maybe no sessions yet for this token
-      }
+    } catch {
+      // A new account may not have any chat sessions yet.
     }
   };
 
@@ -126,8 +125,8 @@ export default function CustomerChat() {
         setMessages(prev => [...prev, responseMessage]);
       }
       scrollToBottom();
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.response?.data?.Message || 'Lỗi khi gửi tin nhắn');
+    } catch (error: unknown) {
+      alert(getApiErrorMessage(error, 'Lỗi khi gửi tin nhắn'));
       // Remove temp message
       setMessages(prev => prev.filter(m => m.messageid !== tempMsg.messageid));
     } finally {
@@ -143,8 +142,8 @@ export default function CustomerChat() {
       setSessions(prev => prev.map(item => item.sessionid === updated.sessionid ? updated : item));
       setMessages(await chatSessionsApi.getMessages(activeSession.sessionid));
       scrollToBottom();
-    } catch (err: any) {
-      alert(err.response?.data?.message ?? 'Không thể chuyển cuộc trò chuyện cho nhân viên.');
+    } catch (error: unknown) {
+      alert(getApiErrorMessage(error, 'Không thể chuyển cuộc trò chuyện cho nhân viên.'));
     }
   };
 

@@ -18,7 +18,13 @@ public class Chatproductrecommendation
 
     public DateTime? Addedtocartat { get; set; }
 
+    public DateTime? Orderedat { get; set; }
+
+    public int? Orderid { get; set; }
+
     public virtual Chatmessage Message { get; set; } = null!;
+
+    public virtual Order? Order { get; set; }
 
     public virtual Product Product { get; set; } = null!;
 

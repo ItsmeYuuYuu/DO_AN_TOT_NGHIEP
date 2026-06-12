@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Star, Trash2, Pen } from 'lucide-react';
 import { reviewsApi } from '@/features/products/api/reviewsApi';
 import type { Review } from '@/features/products/api/reviewsApi';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 export const MyReviews: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -50,8 +51,8 @@ export const MyReviews: React.FC = () => {
       await reviewsApi.update(editingId, { rating, comment });
       setEditingId(null);
       fetchReviews();
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.response?.data?.Message || 'Có lỗi xảy ra khi cập nhật đánh giá.');
+    } catch (error: unknown) {
+      alert(getApiErrorMessage(error, 'Có lỗi xảy ra khi cập nhật đánh giá.'));
     } finally {
       setSubmitting(false);
     }
@@ -62,8 +63,8 @@ export const MyReviews: React.FC = () => {
     try {
       await reviewsApi.delete(id);
       fetchReviews();
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.response?.data?.Message || 'Không thể xóa đánh giá.');
+    } catch (error: unknown) {
+      alert(getApiErrorMessage(error, 'Không thể xóa đánh giá.'));
     }
   };
 

@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 
 namespace ECommerceBackend.Services.Chat;
@@ -31,6 +32,16 @@ public sealed class GroundedAiProvider : IAiProvider
         AiConversationRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (NeedsClarification(request))
+        {
+            return new AiAssistantResponse(
+                "Để tư vấn chính xác hơn, bạn cho tôi thêm 2 thông tin nhé:\n" +
+                "1. Ngân sách khoảng bao nhiêu?\n" +
+                "2. Nhu cầu chính là chơi game, chụp ảnh, pin lâu, học tập hay làm việc?\n" +
+                "Bạn cũng có thể nêu hãng, RAM hoặc bộ nhớ mong muốn.",
+                Array.Empty<ProductConsultationResult>());
+        }
+
         var recentUserContext = request.History
             .Where(message => message.Role == "user")
             .TakeLast(2)
@@ -234,6 +245,10 @@ public sealed class GroundedAiProvider : IAiProvider
         var variantCount = productGroups.Sum(group =>
             Math.Min(group.Count(), MaxDisplayedVariantsPerProduct));
         var comparison = normalized.Contains("so sanh");
+        if (comparison && productGroups.Count >= 2)
+        {
+            return BuildComparisonResponse(productGroups);
+        }
         var heading = comparison
             ? $"Dưới đây là {productCount} sản phẩm với {variantCount} phiên bản để bạn so sánh:"
             : $"Tôi tìm thấy {productCount} sản phẩm với {variantCount} phiên bản phù hợp:";
@@ -273,6 +288,109 @@ public sealed class GroundedAiProvider : IAiProvider
                "\n\nTôi chỉ hiển thị tối đa 3 sản phẩm phù hợp nhất mỗi lần. " +
                "Bạn có thể bổ sung ngân sách, thương hiệu, RAM, bộ nhớ hoặc nhu cầu sử dụng để lọc chính xác hơn.";
     }
+
+    private static bool NeedsClarification(AiConversationRequest request)
+    {
+        var normalized = ProductConsultationService.Normalize(request.UserMessage);
+        if (normalized.Contains("so sanh"))
+            return false;
+
+        var hasConcreteConstraint =
+            Regex.IsMatch(normalized, @"\d+\s*(trieu|tr|gb|tb|k|vnd)") ||
+            ContainsAny(
+                normalized,
+                "choi game",
+                "gaming",
+                "chup anh",
+                "camera",
+                "pin",
+                "sac",
+                "hoc tap",
+                "sinh vien",
+                "van phong",
+                "ram",
+                "bo nho",
+                "con hang",
+                "new seal",
+                "likenew");
+        if (hasConcreteConstraint)
+            return false;
+
+        var hasPriorSpecificRequest = request.History
+            .Where(message => message.Role == "user")
+            .TakeLast(2)
+            .Select(message => ProductConsultationService.Normalize(message.Content))
+            .Any(message =>
+                Regex.IsMatch(message, @"\d+\s*(trieu|tr|gb|tb|k|vnd)") ||
+                ContainsAny(message, "choi game", "chup anh", "camera", "pin", "ram", "bo nho"));
+        if (hasPriorSpecificRequest &&
+            ContainsAny(normalized, "con may nao", "may khac", "lua chon khac", "khac khong"))
+        {
+            return false;
+        }
+
+        var genericWords = new HashSet<string>
+        {
+            "toi", "minh", "can", "muon", "mua", "tu", "van", "giup", "dien", "thoai",
+            "san", "pham", "may", "nao", "tot", "phu", "hop", "co", "khong", "cho",
+            "mot", "chiec"
+        };
+        var meaningfulTokens = Regex.Matches(normalized, @"[\p{L}\p{N}]+")
+            .Select(match => match.Value)
+            .Where(token => token.Length >= 2 && !genericWords.Contains(token))
+            .ToList();
+        return meaningfulTokens.Count == 0 &&
+               ContainsAny(normalized, "tu van", "mua", "dien thoai", "san pham", "may nao");
+    }
+
+    private static string BuildComparisonResponse(
+        IReadOnlyList<IGrouping<int, ProductConsultationResult>> productGroups)
+    {
+        var compared = productGroups.Take(3).Select(group => group.First()).ToList();
+        var sections = compared.Select((product, index) =>
+        {
+            var ram = FindSpecification(product, "ram") ?? "Chưa có dữ liệu";
+            var storage = FindSpecification(product, "bo nho trong", "storage", "rom") ?? "Chưa có dữ liệu";
+            var chipset = FindSpecification(product, "chipset", "cpu") ?? "Chưa có dữ liệu";
+            var camera = FindSpecification(product, "camera sau", "camera") ?? "Chưa có dữ liệu";
+            var battery = FindSpecification(product, "pin") ?? "Chưa có dữ liệu";
+            var stock = product.Stock > 0 ? $"Còn {product.Stock} máy" : "Tạm hết hàng";
+
+            return $"{index + 1}. {product.ProductName} ({product.Condition})\n" +
+                   $"   Giá: {FormatCurrency(product.Price)} | {stock}\n" +
+                   $"   Chip: {chipset}\n" +
+                   $"   RAM / Bộ nhớ: {ram} / {storage}\n" +
+                   $"   Camera: {camera}\n" +
+                   $"   Pin: {battery}\n" +
+                   $"   Chi tiết: /products/{product.ProductId}";
+        });
+
+        var cheapest = compared.OrderBy(product => product.Price).First();
+        var available = compared.Where(product => product.Stock > 0).ToList();
+        var availabilityNote = available.Count > 0
+            ? $"Có thể mua ngay: {string.Join(", ", available.Select(product => product.ProductName).Distinct())}."
+            : "Các lựa chọn trên hiện đều tạm hết hàng.";
+        return $"So sánh nhanh {compared.Count} sản phẩm:\n\n" +
+               string.Join("\n\n", sections) +
+               $"\n\nGiá thấp nhất: {cheapest.ProductName} - {FormatCurrency(cheapest.Price)}.\n" +
+               availabilityNote +
+               "\nBạn ưu tiên camera, hiệu năng hay pin để tôi chốt một lựa chọn phù hợp nhất?";
+    }
+
+    private static string? FindSpecification(
+        ProductConsultationResult product,
+        params string[] terms)
+    {
+        var match = product.Specifications.FirstOrDefault(item =>
+        {
+            var key = ProductConsultationService.Normalize(item.Key);
+            return terms.Any(term => key.Contains(term));
+        });
+        return string.IsNullOrWhiteSpace(match.Key) ? null : match.Value;
+    }
+
+    private static bool ContainsAny(string value, params string[] terms) =>
+        terms.Any(value.Contains);
 
     private static string FormatCurrency(decimal value) =>
         $"{value:N0}đ".Replace(",", ".");

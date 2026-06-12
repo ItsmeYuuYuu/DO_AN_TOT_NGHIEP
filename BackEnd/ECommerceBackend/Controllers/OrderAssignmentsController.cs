@@ -38,7 +38,6 @@ public class OrderAssignmentsController : ControllerBase
     private bool CanWorkDepartment(string department) =>
         User.IsInRole("Admin") ||
         User.IsInRole("Manager") ||
-        User.IsInRole("Staff") ||
         department == SalesDepartment && User.IsInRole("Sales") ||
         department == WarehouseDepartment && User.IsInRole("Warehouse");
 
@@ -136,7 +135,7 @@ public class OrderAssignmentsController : ControllerBase
             .Where(user =>
                 user.Isactive == true &&
                 user.Role != null &&
-                (user.Role.Rolename == department || user.Role.Rolename == "Staff"))
+                user.Role.Rolename == department)
             .OrderBy(user => user.Fullname)
             .Select(user => new AssignmentEmployeeDto(
                 user.Userid,
@@ -229,7 +228,7 @@ public class OrderAssignmentsController : ControllerBase
             .FirstOrDefaultAsync(user => user.Userid == dto.Assigneduserid);
         if (target == null || target.Isactive != true)
             return BadRequest(new ApiErrorDto("Nhan vien duoc chon khong hoat dong.", null));
-        if (target.Role?.Rolename != department && target.Role?.Rolename != "Staff")
+        if (target.Role?.Rolename != department)
             return BadRequest(new ApiErrorDto("Nhan vien khong thuoc bo phan duoc phan cong.", null));
 
         var order = await _context.Orders
@@ -267,7 +266,7 @@ public class OrderAssignmentsController : ControllerBase
     }
 
     [HttpPost("{orderId}/handoff-to-warehouse")]
-    [Authorize(Roles = "Admin,Manager,Sales,Staff")]
+    [Authorize(Roles = "Admin,Manager,Sales")]
     public async Task<ActionResult<OrderWorkflowItemDto>> HandoffToWarehouse(
         int orderId,
         [FromBody] HandoffOrderRequestDto dto)
@@ -334,7 +333,7 @@ public class OrderAssignmentsController : ControllerBase
     }
 
     [HttpPost("{orderId}/mark-shipped")]
-    [Authorize(Roles = "Admin,Manager,Warehouse,Staff")]
+    [Authorize(Roles = "Admin,Manager,Warehouse")]
     public async Task<ActionResult<OrderWorkflowItemDto>> MarkShipped(
         int orderId,
         [FromBody] MarkOrderShippedRequestDto dto)

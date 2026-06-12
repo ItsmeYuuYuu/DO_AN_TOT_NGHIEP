@@ -36,7 +36,6 @@ public static class DbInitializer
         var requiredRoles = new[]
         {
             new Role { Roleid = 1, Rolename = "Admin" },
-            new Role { Roleid = 2, Rolename = "Staff" },
             new Role { Roleid = 3, Rolename = "Customer" },
             new Role { Roleid = 4, Rolename = "Manager" },
             new Role { Roleid = 5, Rolename = "Sales" },
@@ -75,6 +74,8 @@ public static class DbInitializer
         }
 
         // ── 2. ADMIN USER (email @gmail.com + BCrypt hash) ───────────────────
+        await SeedAdditionalDemoUsersAsync(context);
+
         var adminUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "admin300475@gmail.com");
         if (adminUser == null)
         {
@@ -97,27 +98,28 @@ public static class DbInitializer
             adminUser.Passwordhash = BCrypt.Net.BCrypt.HashPassword("Admin@300475!");
         }
 
-        // Staff user
-        var staffUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "staff01@gmail.com");
-        if (staffUser == null)
+        var warehouseUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "staff01@gmail.com");
+        if (warehouseUser == null)
         {
-            string staffRaw = "Staff@123456!";
-            staffUser = new User
+            const string warehousePassword = "Warehouse@123456!";
+            warehouseUser = new User
             {
-                Roleid = 2,
+                Roleid = 6,
                 Username = "staff01@gmail.com",
-                Passwordhash = BCrypt.Net.BCrypt.HashPassword(staffRaw),
+                Passwordhash = BCrypt.Net.BCrypt.HashPassword(warehousePassword),
                 Fullname = "Nhân viên kho",
                 Email = "staff01@gmail.com",
                 Phone = "0911111111",
                 Createdat = DateTime.Now,
                 Isactive = true,
             };
-            context.Users.Add(staffUser);
+            context.Users.Add(warehouseUser);
         }
         else
         {
-            staffUser.Passwordhash = BCrypt.Net.BCrypt.HashPassword("Staff@123456!");
+            warehouseUser.Roleid = 6;
+            warehouseUser.Fullname = "Nhân viên kho";
+            warehouseUser.Passwordhash = BCrypt.Net.BCrypt.HashPassword("Warehouse@123456!");
         }
 
         await context.SaveChangesAsync();
@@ -603,4 +605,85 @@ public static class DbInitializer
             END $$;
             """);
     }
+
+    private static async Task SeedAdditionalDemoUsersAsync(ECommerceContext context)
+    {
+        var demoUsers = new[]
+        {
+            new DemoUserSeed(1, "admin02@gmail.com", "Admin@123456!", "Quản trị viên dự phòng", "0900000001"),
+            new DemoUserSeed(3, "customer01@gmail.com", "Customer@123456!", "Khách hàng Demo 01", "0900000003"),
+            new DemoUserSeed(3, "customer02@gmail.com", "Customer@123456!", "Khách hàng Demo 02", "0900000004"),
+            new DemoUserSeed(4, "manager01@gmail.com", "Manager@123456!", "Quản lý Demo 01", "0900000005"),
+            new DemoUserSeed(4, "manager02@gmail.com", "Manager@123456!", "Quản lý Demo 02", "0900000006"),
+            new DemoUserSeed(5, "sales01@gmail.com", "Sales@123456!", "Nhân viên Sales 01", "0900000007"),
+            new DemoUserSeed(5, "sales02@gmail.com", "Sales@123456!", "Nhân viên Sales 02", "0900000008"),
+            new DemoUserSeed(6, "warehouse02@gmail.com", "Warehouse@123456!", "Nhân viên kho 02", "0900000010"),
+            new DemoUserSeed(7, "warranty01@gmail.com", "Warranty@123456!", "Kỹ thuật bảo hành 01", "0900000011"),
+            new DemoUserSeed(7, "warranty02@gmail.com", "Warranty@123456!", "Kỹ thuật bảo hành 02", "0900000012"),
+            new DemoUserSeed(8, "content01@gmail.com", "Content@123456!", "Nhân viên nội dung 01", "0900000013"),
+            new DemoUserSeed(8, "content02@gmail.com", "Content@123456!", "Nhân viên nội dung 02", "0900000014"),
+            new DemoUserSeed(9, "consultant01@gmail.com", "Consultant@123456!", "Tư vấn viên 01", "0900000015"),
+            new DemoUserSeed(9, "consultant02@gmail.com", "Consultant@123456!", "Tư vấn viên 02", "0900000016")
+        };
+
+        var usernames = demoUsers.Select(item => item.Username).ToList();
+        var existingUsers = await context.Users
+            .Where(user => usernames.Contains(user.Username))
+            .ToDictionaryAsync(user => user.Username);
+
+        foreach (var seed in demoUsers)
+        {
+            if (!existingUsers.TryGetValue(seed.Username, out var user))
+            {
+                user = new User
+                {
+                    Username = seed.Username,
+                    Createdat = DateTime.Now
+                };
+                context.Users.Add(user);
+            }
+
+            user.Roleid = seed.Roleid;
+            user.Passwordhash = BCrypt.Net.BCrypt.HashPassword(seed.Password);
+            user.Fullname = seed.Fullname;
+            user.Email = seed.Username;
+            user.Phone = seed.Phone;
+            user.Isactive = true;
+        }
+
+        await context.SaveChangesAsync();
+
+        foreach (var seed in demoUsers.Where(item => item.Roleid == 3))
+        {
+            var customer = await context.Customers.FirstOrDefaultAsync(item =>
+                item.Email == seed.Username || item.Phone == seed.Phone);
+            if (customer == null)
+            {
+                context.Customers.Add(new Customer
+                {
+                    Fullname = seed.Fullname,
+                    Email = seed.Username,
+                    Phone = seed.Phone,
+                    Address = "Địa chỉ khách hàng demo",
+                    Createdat = DateTime.Now
+                });
+            }
+            else
+            {
+                customer.Fullname = seed.Fullname;
+                customer.Email = seed.Username;
+                customer.Phone = seed.Phone;
+                customer.Address ??= "Địa chỉ khách hàng demo";
+            }
+        }
+
+        await context.SaveChangesAsync();
+    }
+
+    private sealed record DemoUserSeed(
+        int Roleid,
+        string Username,
+        string Password,
+        string Fullname,
+        string Phone);
 }

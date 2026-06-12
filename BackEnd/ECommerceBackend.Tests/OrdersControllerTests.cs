@@ -23,9 +23,11 @@ namespace ECommerceBackend.Tests
     // Dummy authentication handler for testing
     public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
-        public TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, 
-            ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock)
-            : base(options, logger, encoder, clock)
+        public TestAuthHandler(
+            IOptionsMonitor<AuthenticationSchemeOptions> options,
+            ILoggerFactory logger,
+            UrlEncoder encoder)
+            : base(options, logger, encoder)
         {
         }
 
@@ -40,11 +42,11 @@ namespace ECommerceBackend.Tests
             
             if (Context.Request.Headers.TryGetValue("X-Test-Role", out var testRole))
             {
-                claims[2] = new Claim(ClaimTypes.Role, testRole);
+                claims[2] = new Claim(ClaimTypes.Role, testRole.ToString());
             }
             if (Context.Request.Headers.TryGetValue("X-Test-UserId", out var testUserId))
             {
-                claims[1] = new Claim("userid", testUserId);
+                claims[1] = new Claim("userid", testUserId.ToString());
             }
 
             var identity = new ClaimsIdentity(claims, "Test");
@@ -286,6 +288,74 @@ namespace ECommerceBackend.Tests
         }
 
         [Fact]
+        public async Task PostOrder_FromChatRecommendation_RecordsOrderAttribution()
+        {
+            await SeedDataAsync();
+            int recommendationId;
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+                var product = new Product
+                {
+                    Productid = 1,
+                    Productname = "Attributed Phone",
+                    Createdat = DateTime.UtcNow
+                };
+                var variant = db.Productvariants.Single(item => item.Variantid == 10);
+                variant.Productid = product.Productid;
+                var session = new Chatsession
+                {
+                    Customerid = 1,
+                    Starttime = DateTime.UtcNow,
+                    Status = "Attributed chat"
+                };
+                var message = new Chatmessage
+                {
+                    Session = session,
+                    Sendertype = "assistant",
+                    Messagecontent = "Recommended product",
+                    Sentat = DateTime.UtcNow
+                };
+                var createdRecommendation = new Chatproductrecommendation
+                {
+                    Message = message,
+                    Productid = product.Productid,
+                    Variantid = variant.Variantid,
+                    Rank = 1,
+                    Createdat = DateTime.UtcNow,
+                    Addedtocartat = DateTime.UtcNow
+                };
+                db.Products.Add(product);
+                db.Chatproductrecommendations.Add(createdRecommendation);
+                await db.SaveChangesAsync();
+                recommendationId = createdRecommendation.Recommendationid;
+            }
+
+            _client.DefaultRequestHeaders.Add("X-Test-UserId", "1");
+            var response = await _client.PostAsJsonAsync("/api/Orders", new CreateOrderRequestDto(
+                null,
+                "COD",
+                null,
+                new List<CreateOrderItemRequestDto> { new(10, 1) },
+                "123 Street",
+                "Chat-attributed order",
+                Customername: "Test User",
+                Customerphone: "123",
+                Customeremail: "test@test.com"));
+            var order = await response.Content.ReadFromJsonAsync<OrderDetailDto>();
+
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            Assert.NotNull(order);
+
+            using var verifyScope = _factory.Services.CreateScope();
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ECommerceContext>();
+            var attributedRecommendation = verifyDb.Chatproductrecommendations
+                .Single(item => item.Recommendationid == recommendationId);
+            Assert.Equal(order.Orderid, attributedRecommendation.Orderid);
+            Assert.NotNull(attributedRecommendation.Orderedat);
+        }
+
+        [Fact]
         public async Task PostOrder_Fail_NotEnoughStock()
         {
             await SeedDataAsync();
@@ -304,7 +374,7 @@ namespace ECommerceBackend.Tests
             
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var err = await response.Content.ReadFromJsonAsync<ApiErrorDto>();
-            Assert.Contains("khong du ton kho", err.Message);
+            Assert.Contains("khong du ton kho", err!.Message);
         }
 
         [Fact]
@@ -435,6 +505,43 @@ namespace ECommerceBackend.Tests
         }
 
         [Fact]
+        public async Task SimulatePayment_GuestFullPayment_MarksOrderPaid()
+        {
+            await SeedDataAsync();
+            using var anonymousClient = _factory.CreateClient();
+            anonymousClient.DefaultRequestHeaders.Add("x-guest-session-token", "guest-full-payment");
+
+            var createResponse = await anonymousClient.PostAsJsonAsync("/api/Orders", new CreateOrderRequestDto(
+                null,
+                "VNPAY",
+                null,
+                new List<CreateOrderItemRequestDto> { new CreateOrderItemRequestDto(10, 1) },
+                "123 Street",
+                "Guest full payment",
+                Paymentoption: "Full",
+                Customername: "Guest Buyer",
+                Customerphone: "0961212121",
+                Customeremail: "guest-full@test.com"
+            ));
+            var order = await createResponse.Content.ReadFromJsonAsync<OrderDetailDto>();
+            Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+            Assert.NotNull(order);
+            Assert.Equal("AwaitingFullPayment", order.Paymentstatus);
+            Assert.Equal(order.Finalamount, order.Requiredpayment);
+
+            var paymentResponse = await anonymousClient.PostAsJsonAsync(
+                $"/api/Orders/{order.Orderid}/simulate-payment",
+                new SimulatePaymentRequestDto(order.Paymenttoken!, true));
+            var payment = await paymentResponse.Content.ReadFromJsonAsync<PaymentActionResultDto>();
+
+            Assert.Equal(HttpStatusCode.OK, paymentResponse.StatusCode);
+            Assert.NotNull(payment);
+            Assert.Equal("Paid", payment.Paymentstatus);
+            Assert.Equal(order.Finalamount, payment.Paidamount);
+            Assert.Equal(0, payment.Remainingamount);
+        }
+
+        [Fact]
         public async Task PatchOrderStatus_UnpaidOnlineOrder_RejectsProcessing()
         {
             await SeedDataAsync();
@@ -541,6 +648,40 @@ namespace ECommerceBackend.Tests
         }
 
         [Fact]
+        public async Task PatchOrderStatus_ShippedOrderCannotBeCancelledOrRestocked()
+        {
+            await SeedDataAsync();
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+                db.Orders.Add(new Order
+                {
+                    Orderid = 101,
+                    Orderstatus = "Shipped",
+                    Paymentmethod = "COD",
+                    Paymentstatus = "CODPending",
+                    Checkouttype = "Registered",
+                    Orderitems = new List<Orderitem> { new Orderitem { Imei = "IMEI1" } }
+                });
+                db.Inventoryitems.Single(item => item.Imei == "IMEI1").Status = "Shipping";
+                await db.SaveChangesAsync();
+            }
+
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+            var response = await _client.PatchAsJsonAsync(
+                "/api/Orders/101/status",
+                new UpdateOrderStatusRequestDto("Cancelled"));
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+            using var verifyScope = _factory.Services.CreateScope();
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ECommerceContext>();
+            Assert.Equal("Shipped", verifyDb.Orders.Single(item => item.Orderid == 101).Orderstatus);
+            Assert.Equal("Shipping", verifyDb.Inventoryitems.Single(item => item.Imei == "IMEI1").Status);
+        }
+
+        [Fact]
         public async Task OrderAssignment_SecondSalesCannotClaimAssignedOrder()
         {
             await SeedDataAsync();
@@ -627,6 +768,87 @@ namespace ECommerceBackend.Tests
                 item.Transactiontype == "Ship" &&
                 item.Fromstatus == "Reserved" &&
                 item.Tostatus == "Shipping");
+        }
+
+        [Fact]
+        public async Task RegisteredCod_FullWorkflow_CompletesSaleAndActivatesWarranty()
+        {
+            await SeedDataAsync();
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Customer");
+            _client.DefaultRequestHeaders.Add("X-Test-UserId", "1");
+
+            var createResponse = await _client.PostAsJsonAsync("/api/Orders", new CreateOrderRequestDto(
+                null,
+                "COD",
+                null,
+                new List<CreateOrderItemRequestDto> { new CreateOrderItemRequestDto(10, 1) },
+                "123 Street",
+                "End-to-end COD order",
+                Customername: "Test User",
+                Customerphone: "0977777777",
+                Customeremail: "test@test.com"
+            ));
+            var order = await createResponse.Content.ReadFromJsonAsync<OrderDetailDto>();
+            Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+            Assert.NotNull(order);
+            var imei = Assert.Single(order.Orderitems!).Imei;
+            Assert.False(string.IsNullOrWhiteSpace(imei));
+
+            _client.DefaultRequestHeaders.Remove("X-Test-Role");
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Sales");
+            var claimSales = await _client.PostAsJsonAsync(
+                $"/api/OrderAssignments/{order.Orderid}/claim",
+                new ClaimOrderRequestDto("Sales"));
+            Assert.Equal(HttpStatusCode.OK, claimSales.StatusCode);
+
+            var handoff = await _client.PostAsJsonAsync(
+                $"/api/OrderAssignments/{order.Orderid}/handoff-to-warehouse",
+                new HandoffOrderRequestDto("Sales confirmed the COD order."));
+            Assert.Equal(HttpStatusCode.OK, handoff.StatusCode);
+
+            _client.DefaultRequestHeaders.Remove("X-Test-Role");
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Warehouse");
+            _client.DefaultRequestHeaders.Remove("X-Test-UserId");
+            _client.DefaultRequestHeaders.Add("X-Test-UserId", "2");
+            var claimWarehouse = await _client.PostAsJsonAsync(
+                $"/api/OrderAssignments/{order.Orderid}/claim",
+                new ClaimOrderRequestDto("Warehouse"));
+            Assert.Equal(HttpStatusCode.OK, claimWarehouse.StatusCode);
+
+            var shipped = await _client.PostAsJsonAsync(
+                $"/api/OrderAssignments/{order.Orderid}/mark-shipped",
+                new MarkOrderShippedRequestDto(new List<string> { imei! }, "IMEI verified."));
+            Assert.Equal(HttpStatusCode.OK, shipped.StatusCode);
+
+            _client.DefaultRequestHeaders.Remove("X-Test-Role");
+            _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
+            var completed = await _client.PatchAsJsonAsync(
+                $"/api/Orders/{order.Orderid}/status",
+                new UpdateOrderStatusRequestDto("Completed"));
+            Assert.Equal(HttpStatusCode.OK, completed.StatusCode);
+
+            using var verifyScope = _factory.Services.CreateScope();
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ECommerceContext>();
+            var storedOrder = verifyDb.Orders.Single(item => item.Orderid == order.Orderid);
+            var inventory = verifyDb.Inventoryitems.Single(item => item.Imei == imei);
+
+            Assert.Equal("Completed", storedOrder.Orderstatus);
+            Assert.Equal("Paid", storedOrder.Paymentstatus);
+            Assert.Equal(storedOrder.Finalamount, storedOrder.Paidamount);
+            Assert.Equal("Sold", inventory.Status);
+            Assert.Equal("Active", inventory.Warrantystatus);
+            Assert.NotNull(inventory.Warrantystartdate);
+            Assert.NotNull(inventory.Warrantyenddate);
+            Assert.InRange(
+                (inventory.Warrantyenddate!.Value - inventory.Warrantystartdate!.Value).TotalDays,
+                364,
+                367);
+            Assert.Contains(verifyDb.Inventorytransactions, item =>
+                item.Orderid == order.Orderid &&
+                item.Imei == imei &&
+                item.Transactiontype == "CompleteSale" &&
+                item.Fromstatus == "Shipping" &&
+                item.Tostatus == "Sold");
         }
     }
 }

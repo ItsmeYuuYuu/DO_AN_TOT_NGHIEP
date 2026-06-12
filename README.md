@@ -63,6 +63,32 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 - Hệ thống ngăn hai nhân viên cùng nhận một công việc trong cùng công đoạn.
 - Admin và Manager có thể theo dõi hoặc phân công đơn cho nhân viên.
 - Hủy đơn hoặc hết hạn thanh toán sẽ trả IMEI về trạng thái còn hàng.
+- Đơn đã chuyển sang giao hàng không thể hủy thẳng và hoàn kho sai nghiệp vụ.
+
+### Bảo hành
+
+- Kích hoạt thời hạn bảo hành theo đúng IMEI khi đơn hoàn tất.
+- Tạo phiếu tiếp nhận từ IMEI đã bán; khách hàng và thời hạn được tra tự động.
+- Upload tối đa 6 ảnh tình trạng thiết bị từ máy.
+- Phân công hoặc cho nhân viên Warranty tự nhận phiếu, có chống nhận trùng.
+- Luồng xử lý: tiếp nhận, kiểm tra, chờ linh kiện, sửa chữa, hoàn tất và trả khách.
+- Lưu chi phí dự kiến, chi phí thực tế, kết luận và toàn bộ lịch sử thao tác.
+- Ảnh bảo hành được lưu tại
+  `BackEnd/ECommerceBackend/wwwroot/uploads/warranties`.
+
+### Đổi trả và hoàn tiền
+
+- Khách hàng tạo yêu cầu đổi hoặc trả từ đơn đã hoàn tất trong vòng 30 ngày.
+- Mỗi yêu cầu gắn với đúng sản phẩm, biến thể và IMEI đã bán.
+- Upload tối đa 6 ảnh tình trạng thiết bị từ máy.
+- Sales tiếp nhận, duyệt hoặc từ chối; Admin và Manager có thể phân công xử lý.
+- Warehouse kiểm tra máy và phân loại về kho, chuyển bảo hành hoặc đánh dấu hư hỏng.
+- Đổi máy chỉ sử dụng IMEI còn hàng thuộc đúng biến thể.
+- Hoàn tiền hỗ trợ nhiều lần cho tới đủ số tiền, đồng thời cập nhật trạng thái
+  thanh toán và đơn hàng.
+- Lưu toàn bộ lịch sử trạng thái, nhân viên xử lý và giao dịch hoàn tiền.
+- Ảnh đổi trả được lưu tại
+  `BackEnd/ECommerceBackend/wwwroot/uploads/returns`.
 
 ### Chatbot và Consultant
 
@@ -70,6 +96,10 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 - Kết quả tư vấn hiển thị sản phẩm có cấu trúc và cho phép thêm biến thể vào
   giỏ hàng ngay trong cuộc trò chuyện.
 - Lưu lại sản phẩm chatbot đã đề xuất và thời điểm khách thêm vào giỏ.
+- Chatbot hỏi lại ngân sách và nhu cầu khi câu hỏi còn quá chung chung.
+- Có thể so sánh nhanh 2-3 sản phẩm theo giá, cấu hình, camera, pin và tồn kho.
+- Chấm điểm gợi ý theo nhu cầu chơi game, chụp ảnh, pin lâu, học tập hoặc làm việc.
+- Theo dõi funnel từ lượt đề xuất, thêm giỏ tới tạo đơn hàng.
 - Khách có thể yêu cầu gặp nhân viên tư vấn.
 - Consultant tiếp nhận cuộc trò chuyện cùng toàn bộ lịch sử và các sản phẩm AI
   đã đề xuất.
@@ -105,13 +135,12 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 | Vai trò | Phạm vi chính |
 | --- | --- |
 | `Admin` | Toàn quyền hệ thống, nhân viên, nội dung, sản phẩm, đơn và audit log |
-| `Manager` | Dashboard và giám sát các bộ phận |
+| `Manager` | Trung tâm điều phối, dashboard và giám sát các bộ phận |
 | `Sales` | Nhận đơn, xác nhận thanh toán và bàn giao kho |
 | `Warehouse` | Quản lý tồn kho, IMEI và xuất giao |
 | `Warranty` | Tiếp nhận và xử lý bảo hành |
-| `Content` | Sản phẩm, tin tức, slider và banner; không sửa giá hoặc tồn kho |
-| `Consultant` | Tiếp nhận hội thoại do chatbot chuyển giao |
-| `Staff` | Vai trò nhân viên tổng hợp dùng cho demo |
+| `Content` | Workspace nội dung, tin tức, slider và banner; không sửa giá hoặc tồn kho |
+| `Consultant` | Tiếp nhận hội thoại và theo dõi hiệu quả đề xuất của chatbot |
 | `Customer` | Tài khoản mua hàng |
 
 Backend kiểm tra quyền tại API và frontend tiếp tục giới hạn route, menu và thao
@@ -225,10 +254,24 @@ VITE_API_URL=https://localhost:7035/api
 | Vai trò | Email | Mật khẩu |
 | --- | --- | --- |
 | Admin | `admin300475@gmail.com` | `Admin@300475!` |
-| Staff | `staff01@gmail.com` | `Staff@123456!` |
+| Admin | `admin02@gmail.com` | `Admin@123456!` |
+| Manager | `manager01@gmail.com` | `Manager@123456!` |
+| Manager | `manager02@gmail.com` | `Manager@123456!` |
+| Sales | `sales01@gmail.com` | `Sales@123456!` |
+| Sales | `sales02@gmail.com` | `Sales@123456!` |
+| Warehouse | `staff01@gmail.com` | `Warehouse@123456!` |
+| Warehouse | `warehouse02@gmail.com` | `Warehouse@123456!` |
+| Warranty | `warranty01@gmail.com` | `Warranty@123456!` |
+| Warranty | `warranty02@gmail.com` | `Warranty@123456!` |
+| Content | `content01@gmail.com` | `Content@123456!` |
+| Content | `content02@gmail.com` | `Content@123456!` |
+| Consultant | `consultant01@gmail.com` | `Consultant@123456!` |
+| Consultant | `consultant02@gmail.com` | `Consultant@123456!` |
+| Customer | `customer01@gmail.com` | `Customer@123456!` |
+| Customer | `customer02@gmail.com` | `Customer@123456!` |
 
-Các tài khoản Manager, Sales, Warehouse, Warranty, Content và Consultant có thể
-được Admin tạo tại màn hình quản lý nhân viên.
+Các tài khoản này được seed tự động và có thể dùng ngay sau khi backend khởi
+động.
 
 ## Cấu hình Redis
 
@@ -294,8 +337,12 @@ npm run lint
 ```
 
 Frontend hiện build production thành công. Tuy nhiên, cấu hình ESLint 10 vẫn
-đang báo một số lỗi kỹ thuật tồn đọng, chủ yếu liên quan tới quy tắc React Hooks,
-`no-explicit-any` và Fast Refresh.
+được chạy trong quy trình kiểm tra và hiện đạt `0 lỗi, 0 cảnh báo`.
+
+Backend hiện có `58/58` integration test chạy qua, bao phủ đăng ký/đăng nhập,
+chatbot, tranh chấp nhận tư vấn, checkout thành viên và khách vãng lai, thanh
+toán/cọc, hoàn kho, Sales/Warehouse, phân quyền API, attribution chatbot và
+nghiệp vụ bảo hành, đổi trả và hoàn tiền.
 
 ## Trạng thái và giới hạn hiện tại
 
@@ -306,9 +353,8 @@ Frontend hiện build production thành công. Tuy nhiên, cấu hình ESLint 10
 - Forgot password chưa gửi email khôi phục thật.
 - Redis và Ollama đều là thành phần tùy chọn khi chạy local.
 - Dự án chưa cấu hình quy trình deploy production.
-- Frontend chưa đạt trạng thái ESLint sạch hoàn toàn.
-- Dashboard và KPI riêng cho từng role vẫn còn có thể hoàn thiện thêm.
-- Cần tiếp tục kiểm thử toàn bộ ma trận phân quyền trước khi triển khai thật.
+- Giao hàng vẫn cập nhật thủ công, chưa kết nối đơn vị vận chuyển thật.
+- KPI chuyên sâu cho từng bộ phận vẫn có thể mở rộng thêm.
 
 Kế hoạch tiếp theo được theo dõi tại [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
 Hướng dẫn migration chi tiết nằm tại

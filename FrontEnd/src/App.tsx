@@ -36,6 +36,7 @@ const CheckoutPage      = lazy(() => import('@/portals/customer/CheckoutPage'));
 const PaymentSimulationPage = lazy(() => import('@/portals/customer/PaymentSimulationPage'));
 const ProfilePage       = lazy(() => import('@/portals/customer/ProfilePage'));
 const CustomerChat      = lazy(() => import('@/portals/customer/CustomerChat'));
+const CustomerReturns   = lazy(() => import('@/portals/customer/CustomerReturns'));
 // Batch 2 — Auth (wired after Batch 2 is done)
 const RegisterPage      = lazy(() => import('@/portals/customer/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/portals/customer/ForgotPasswordPage'));
@@ -53,13 +54,16 @@ const AdminNews          = lazy(() => import('@/portals/admin/AdminNews'));
 const AdminPromotionalContents = lazy(() => import('@/portals/admin/AdminPromotionalContents').then(m => ({ default: m.AdminPromotionalContents })));
 const AdminAuditLogs     = lazy(() => import('@/portals/admin/AdminAuditLogs'));
 
-// ── Staff pages ───────────────────────────────────────────────────────────────
+// ── Employee portal pages ────────────────────────────────────────────────────
 const StaffOrders         = lazy(() => import('@/portals/staff/StaffOrders'));
 const SalesOrders         = lazy(() => import('@/portals/staff/SalesOrders'));
 const WarehouseOrders     = lazy(() => import('@/portals/staff/WarehouseOrders'));
 const StaffInventory      = lazy(() => import('@/portals/staff/StaffInventory'));
 const StaffWarranties     = lazy(() => import('@/portals/staff/StaffWarranties'));
 const ConsultantChats     = lazy(() => import('@/portals/staff/ConsultantChats'));
+const ManagerWorkspace    = lazy(() => import('@/portals/staff/ManagerWorkspace'));
+const ContentWorkspace    = lazy(() => import('@/portals/staff/ContentWorkspace'));
+const StaffReturns         = lazy(() => import('@/portals/staff/StaffReturns'));
 
 // ── Misc ─────────────────────────────────────────────────────────────────────
 const UnauthorizedPage = lazy(() => import('@/portals/UnauthorizedPage'));
@@ -67,12 +71,11 @@ const UnauthorizedPage = lazy(() => import('@/portals/UnauthorizedPage'));
 const StaffHomeRedirect = () => {
   const { user } = useAuth();
   const destinations: Record<string, string> = {
-    Staff: '/staff/orders',
-    Manager: '/staff/dashboard',
+    Manager: '/staff/manager',
     Sales: '/staff/sales-orders',
     Warehouse: '/staff/warehouse-orders',
     Warranty: '/staff/warranties',
-    Content: '/staff/products',
+    Content: '/staff/content',
     Consultant: '/staff/consultations',
   };
   return <Navigate to={destinations[user?.rolename ?? ''] ?? '/unauthorized'} replace />;
@@ -101,6 +104,9 @@ const App: React.FC = () => {
           <Route path="payment/:orderId"  element={<PaymentSimulationPage />} />
           <Route path="profile"           element={<ProfilePage />} />
           <Route path="order-lookup"      element={<OrderLookupPage />} />
+          <Route element={<AuthGuard allowedRoles={['Customer']} />}>
+            <Route path="returns"         element={<CustomerReturns />} />
+          </Route>
         </Route>
 
         {/* ═══ PROTECTED — Admin ═══════════════════════════════════════════ */}
@@ -113,6 +119,7 @@ const App: React.FC = () => {
             <Route path="warehouse-orders" element={<WarehouseOrders />} />
             <Route path="inventory"       element={<StaffInventory />} />
             <Route path="warranties"      element={<StaffWarranties />} />
+            <Route path="returns"         element={<StaffReturns />} />
             <Route path="users"           element={<AdminUsers />} />
             <Route path="customers"       element={<AdminCustomers />} />
             <Route path="categories"      element={<AdminCategoryBrand />} />
@@ -126,30 +133,37 @@ const App: React.FC = () => {
           </Route>
         </Route>
 
-        {/* ═══ PROTECTED — Staff ═══════════════════════════════════════════ */}
-        <Route element={<AuthGuard allowedRoles={['Admin', 'Staff', 'Manager', 'Sales', 'Warehouse', 'Warranty', 'Content', 'Consultant']} />}>
+        {/* ═══ PROTECTED — Employee portal ═════════════════════════════════ */}
+        <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Warehouse', 'Warranty', 'Content', 'Consultant']} />}>
           <Route path="/staff" element={<StaffLayout />}>
             <Route index element={<StaffHomeRedirect />} />
 
             <Route element={<AuthGuard allowedRoles={['Admin', 'Manager']} />}>
+              <Route path="manager" element={<ManagerWorkspace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
+            </Route>
+            <Route element={<AuthGuard allowedRoles={['Admin', 'Content']} />}>
+              <Route path="content" element={<ContentWorkspace />} />
             </Route>
             <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warehouse', 'Content']} />}>
               <Route path="products" element={<AdminProducts />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Staff']} />}>
+            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales']} />}>
               <Route path="orders" element={<StaffOrders />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Staff']} />}>
+            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales']} />}>
               <Route path="sales-orders" element={<SalesOrders />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warehouse', 'Staff']} />}>
+            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warehouse']} />}>
               <Route path="warehouse-orders" element={<WarehouseOrders />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warehouse', 'Staff']} />}>
+            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warehouse']} />}>
               <Route path="inventory" element={<StaffInventory />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warranty', 'Staff']} />}>
+            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Warehouse']} />}>
+              <Route path="returns" element={<StaffReturns />} />
+            </Route>
+            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warranty']} />}>
               <Route path="warranties" element={<StaffWarranties />} />
             </Route>
             <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Warranty', 'Consultant']} />}>

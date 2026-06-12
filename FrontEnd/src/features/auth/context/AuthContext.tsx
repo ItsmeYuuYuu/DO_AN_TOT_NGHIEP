@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
-    } catch (error) {
+    } catch {
       console.warn('Logout API failed or endpoint missing, clearing local session anyway.');
     }
     const role = user?.rolename;

@@ -6,7 +6,7 @@ Cap nhat: 2026-06-10
 
 ### Da co
 
-- Database co cac role: `Admin`, `Staff`, `Manager`, `Sales`, `Warehouse`,
+- Database co cac role: `Admin`, `Manager`, `Sales`, `Warehouse`,
   `Warranty`, `Content`, `Consultant` va `Customer`.
 - Moi tai khoan nhan vien dung chung bang `users` va lien ket bang `roles`
   qua `roleid`.
@@ -21,7 +21,6 @@ Cap nhat: 2026-06-10
   - Warranty: bao hanh va khach hang.
   - Content: san pham, tin tuc, banner va slider.
   - Consultant: tiep nhan va tu van cac cuoc chat do AI chuyen giao.
-  - Staff: don hang, kho va bao hanh.
 - Da co bang `orderassignments` luu nguoi phu trach theo tung bo phan,
   nguoi phan cong, thoi gian nhan va thoi gian hoan tat.
 - Da co unique index tren `(orderid, department)` de ngan hai nhan vien
@@ -141,10 +140,6 @@ Thuc hien sau khi vong doi thanh toan va ton kho da kin.
    - Dashboard tong hop.
    - Theo doi KPI va tien do cua cac bo phan.
    - Khong thay the cac thao tac chi danh cho Admin.
-
-7. `Staff`
-   - Giu vai tro nhan vien tong hop cho demo.
-   - Ve sau co the han che hoac loai bo khi cac role chuyen mon da day du.
 
 ## 4. Giao dich kho va dong goi
 

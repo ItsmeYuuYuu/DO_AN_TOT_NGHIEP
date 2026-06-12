@@ -38,12 +38,34 @@ export interface ChatRecommendation {
   condition: string;
   rank: number;
   addedtocartat?: string | null;
+  orderedat?: string | null;
+  orderid?: number | null;
 }
 
-const GUEST_TOKEN_KEY = 'guest_chat_token';
+export interface ChatRecommendationMetrics {
+  totalrecommendations: number;
+  addedtocart: number;
+  ordered: number;
+  addtocartrate: number;
+  orderrate: number;
+  topproducts: Array<{
+    productid: number;
+    productname: string;
+    recommended: number;
+    addedtocart: number;
+    ordered: number;
+  }>;
+}
 
-export const getGuestToken = () => localStorage.getItem(GUEST_TOKEN_KEY);
-export const setGuestToken = (token: string) => localStorage.setItem(GUEST_TOKEN_KEY, token);
+const GUEST_TOKEN_KEY = 'ec_guest_checkout_token';
+const LEGACY_GUEST_TOKEN_KEY = 'guest_chat_token';
+
+export const getGuestToken = () =>
+  localStorage.getItem(GUEST_TOKEN_KEY) ?? localStorage.getItem(LEGACY_GUEST_TOKEN_KEY);
+export const setGuestToken = (token: string) => {
+  localStorage.setItem(GUEST_TOKEN_KEY, token);
+  localStorage.removeItem(LEGACY_GUEST_TOKEN_KEY);
+};
 
 const getHeaders = () => {
   const token = getGuestToken();
@@ -108,6 +130,13 @@ export const chatSessionsApi = {
 
   closeHandoff: async (id: number): Promise<ChatSession> => {
     const response = await apiClient.post(`/chatsessions/${id}/close-handoff`);
+    return response.data;
+  },
+
+  getRecommendationMetrics: async (days = 30): Promise<ChatRecommendationMetrics> => {
+    const response = await apiClient.get('/chatsessions/recommendation-metrics', {
+      params: { days },
+    });
     return response.data;
   },
 

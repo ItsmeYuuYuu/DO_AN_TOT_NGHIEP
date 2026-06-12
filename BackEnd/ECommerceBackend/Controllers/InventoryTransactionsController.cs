@@ -8,7 +8,7 @@ namespace ECommerceBackend.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Admin,Manager,Warehouse,Staff")]
+[Authorize(Roles = "Admin,Manager,Warehouse")]
 public class InventoryTransactionsController : ControllerBase
 {
     private readonly ECommerceContext _context;

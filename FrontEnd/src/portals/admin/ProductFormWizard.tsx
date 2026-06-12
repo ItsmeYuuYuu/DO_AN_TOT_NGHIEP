@@ -19,6 +19,7 @@ import {
   Upload,
   Trash2
 } from 'lucide-react';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 interface ProductFormWizardProps {
   isOpen: boolean;
@@ -242,8 +243,8 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
       const response = await productsApi.uploadImages(files);
       setDescriptionImages(current => [...current, ...response.data]);
       insertDescriptionImageMarkdown(response.data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Không thể tải ảnh mô tả lên.');
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Không thể tải ảnh mô tả lên.'));
     } finally {
       setUploadingDescriptionImages(false);
       if (descriptionImageInputRef.current) {
@@ -308,8 +309,8 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
           uploadedFileName: image.fileName,
         })),
       ]);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Không thể tải hình ảnh lên máy chủ.');
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Không thể tải hình ảnh lên máy chủ.'));
     } finally {
       setUploadingImages(false);
     }
@@ -513,9 +514,9 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
       await onSubmit(payload);
       onClose();
       resetForm();
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.response?.data?.message || 'Có lỗi phát sinh khi tạo sản phẩm.');
+    } catch (error) {
+      console.error(error);
+      setError(getApiErrorMessage(error, 'Có lỗi phát sinh khi tạo sản phẩm.'));
     } finally {
       setSubmitting(false);
     }

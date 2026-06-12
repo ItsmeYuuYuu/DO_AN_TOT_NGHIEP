@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { formatCurrency, generateOrderCode } from '@/utils/formatters';
 import { Package, Clock, Truck } from 'lucide-react';
 import { ordersApi } from '@/features/orders/api/ordersApi';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   Pending:    { label: 'Chờ xử lý', cls: 'bg-amber-100 text-amber-700 border border-amber-200' },
@@ -24,8 +25,8 @@ const StaffOrders: React.FC = () => {
     setActionError('');
     try {
       await updateStatus(orderId, status);
-    } catch (err: any) {
-      setActionError(err?.response?.data?.message ?? 'Không thể cập nhật trạng thái đơn hàng.');
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, 'Không thể cập nhật trạng thái đơn hàng.'));
     } finally {
       setUpdatingId(null);
     }
@@ -37,8 +38,8 @@ const StaffOrders: React.FC = () => {
     try {
       await ordersApi.confirmPayment(orderId);
       await refetch();
-    } catch (err: any) {
-      setActionError(err?.response?.data?.message ?? 'Không thể xác nhận thanh toán.');
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, 'Không thể xác nhận thanh toán.'));
     } finally {
       setUpdatingId(null);
     }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Package, LogOut, ChevronRight, Clock, LayoutDashboard, ClipboardList, Star } from 'lucide-react';
+import { User, Package, LogOut, ChevronRight, Clock, LayoutDashboard, ClipboardList, RotateCcw, Star } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import apiClient from '@/api/apiClient';
 import { formatCurrency } from '@/utils/formatters';
@@ -75,7 +75,6 @@ const ProfilePage: React.FC = () => {
             <p className="text-slate-400 text-sm mt-1">{user.email}</p>
             <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold ${
               user.rolename === 'Admin' ? 'bg-purple-100 text-purple-700' :
-              user.rolename === 'Staff' ? 'bg-blue-100 text-blue-700' :
               'bg-slate-100 text-slate-600'
             }`}>
               {user.rolename}
@@ -84,6 +83,16 @@ const ProfilePage: React.FC = () => {
 
           {/* Nav */}
           <div className="bg-white rounded-2xl border border-slate-100 p-2 shadow-sm">
+            <Link
+              to="/returns"
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors mb-1"
+            >
+              <span className="flex items-center gap-2">
+                <RotateCcw size={16} />
+                Đổi trả & hoàn tiền
+              </span>
+              <ChevronRight size={14} />
+            </Link>
             {[
               { icon: <User size={16} />, label: 'Thông tin cá nhân', active: true },
               { icon: <Package size={16} />, label: 'Đơn hàng của tôi', active: false },
@@ -95,7 +104,7 @@ const ProfilePage: React.FC = () => {
               </button>
             ))}
 
-            {/* Portal shortcut for Admin/Staff */}
+            {/* Portal shortcut for Admin */}
             {user.rolename === 'Admin' && (
               <Link
                 to="/admin"

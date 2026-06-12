@@ -27,7 +27,7 @@ namespace ECommerceBackend.Controllers
 
         // GET: api/Customers
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant")]
         public async Task<ActionResult<IEnumerable<CustomerDto>>> GetCustomers()
         {
             var customers = await _context.Customers.ToListAsync();
@@ -42,14 +42,13 @@ namespace ECommerceBackend.Controllers
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null) return NotFound();
 
-            var isAdminOrStaff =
+            var isPrivilegedEmployee =
                 User.IsInRole("Admin") ||
                 User.IsInRole("Manager") ||
                 User.IsInRole("Sales") ||
                 User.IsInRole("Warranty") ||
-                User.IsInRole("Consultant") ||
-                User.IsInRole("Staff");
-            if (!isAdminOrStaff)
+                User.IsInRole("Consultant");
+            if (!isPrivilegedEmployee)
             {
                 var claimUserId = User.FindFirst("userid")?.Value;
                 if (string.IsNullOrEmpty(claimUserId)) return Forbid();
@@ -71,7 +70,7 @@ namespace ECommerceBackend.Controllers
 
         // POST: api/Customers
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager,Sales,Staff")]
+        [Authorize(Roles = "Admin,Manager,Sales")]
         public async Task<ActionResult<CustomerDto>> PostCustomer([FromBody] CreateCustomerRequestDto dto)
         {
             var customer = new Customer
@@ -97,12 +96,11 @@ namespace ECommerceBackend.Controllers
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null) return NotFound();
 
-            var isAdminOrStaff =
+            var isPrivilegedEmployee =
                 User.IsInRole("Admin") ||
                 User.IsInRole("Manager") ||
-                User.IsInRole("Sales") ||
-                User.IsInRole("Staff");
-            if (!isAdminOrStaff)
+                User.IsInRole("Sales");
+            if (!isPrivilegedEmployee)
             {
                 var claimUserId = User.FindFirst("userid")?.Value;
                 if (string.IsNullOrEmpty(claimUserId)) return Forbid();

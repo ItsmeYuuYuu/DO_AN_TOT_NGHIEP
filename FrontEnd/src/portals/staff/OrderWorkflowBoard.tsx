@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2,
   CircleDollarSign,
@@ -21,6 +21,7 @@ import {
   type WorkflowDepartment,
 } from '@/features/orders/api/orderAssignmentsApi';
 import { formatCurrency, formatDateTime } from '@/utils/formatters';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 interface OrderWorkflowBoardProps {
   department: WorkflowDepartment;
@@ -50,18 +51,18 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
   const canAssign = user?.rolename === 'Admin' || user?.rolename === 'Manager';
   const currentUserId = Number(user?.userid);
 
-  const loadQueue = async () => {
+  const loadQueue = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const response = await orderAssignmentsApi.getQueue(department);
       setItems(response.data);
-    } catch (requestError: any) {
-      setError(requestError?.response?.data?.message ?? 'Không thể tải hàng đợi công việc.');
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, 'Không thể tải hàng đợi công việc.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [department]);
 
   useEffect(() => {
     loadQueue();
@@ -70,7 +71,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
         .then(response => setEmployees(response.data))
         .catch(() => setEmployees([]));
     }
-  }, [department, canAssign]);
+  }, [department, canAssign, loadQueue]);
 
   const stats = useMemo(() => ({
     total: items.length,
@@ -84,8 +85,8 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
     try {
       await action();
       await loadQueue();
-    } catch (requestError: any) {
-      setError(requestError?.response?.data?.message ?? 'Không thể thực hiện thao tác.');
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, 'Không thể thực hiện thao tác.'));
     } finally {
       setWorkingId(null);
     }
@@ -188,7 +189,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
               {items.map(item => {
                 const assignment = item.assignment;
                 const isMine = assignment?.assigneduserid === currentUserId;
-                const canOperate = isMine || canAssign || user?.rolename === 'Staff';
+                const canOperate = isMine || canAssign;
                 const ready = isPaymentReady(item);
                 return (
                   <tr key={item.orderid} className="align-top hover:bg-slate-50/70">

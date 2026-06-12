@@ -22,4 +22,6 @@ public partial class Orderitem
     public virtual Order? Order { get; set; }
 
     public virtual Warrantypackage? Package { get; set; }
+
+    public virtual ICollection<Returnitem> Returnitems { get; set; } = new List<Returnitem>();
 }

@@ -7,6 +7,7 @@ import { ordersApi } from '@/features/orders/api/ordersApi';
 import { formatCurrency, formatDateTime } from '@/utils/formatters';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 const PAGE_SIZE = 10;
 
@@ -71,8 +72,8 @@ const AdminOrders: React.FC = () => {
     setUpdatingId(id);
     try {
       await updateStatus(id, status);
-    } catch (err: any) {
-      alert(err?.response?.data?.message ?? 'Không thể cập nhật trạng thái đơn hàng.');
+    } catch (error) {
+      alert(getApiErrorMessage(error, 'Không thể cập nhật trạng thái đơn hàng.'));
     }
     finally { setUpdatingId(null); }
   };
@@ -85,8 +86,8 @@ const AdminOrders: React.FC = () => {
       const refreshed = await ordersApi.getById(viewOrder.orderid);
       setViewOrder(refreshed.data);
       await refetch();
-    } catch (err: any) {
-      alert(err?.response?.data?.message ?? 'Không thể xác nhận thanh toán.');
+    } catch (error) {
+      alert(getApiErrorMessage(error, 'Không thể xác nhận thanh toán.'));
     } finally {
       setPaymentUpdating(false);
     }
@@ -108,7 +109,7 @@ const AdminOrders: React.FC = () => {
       } else {
         setBulkStatus('');
       }
-    } catch (err) {
+    } catch {
       alert("Lỗi hệ thống khi cập nhật trạng thái");
     } finally {
       setUpdatingId(null);

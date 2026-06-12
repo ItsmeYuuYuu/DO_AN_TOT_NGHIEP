@@ -252,6 +252,14 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("messageid");
 
+                    b.Property<DateTime?>("Orderedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("orderedat");
+
+                    b.Property<int?>("Orderid")
+                        .HasColumnType("integer")
+                        .HasColumnName("orderid");
+
                     b.Property<int>("Productid")
                         .HasColumnType("integer")
                         .HasColumnName("productid");
@@ -271,6 +279,10 @@ namespace ECommerceBackend.Migrations
                         .IsUnique();
 
                     b.HasIndex(new[] { "Addedtocartat" }, "ix_chatproductrecommendations_addedtocartat");
+
+                    b.HasIndex(new[] { "Orderedat" }, "ix_chatproductrecommendations_orderedat");
+
+                    b.HasIndex(new[] { "Orderid" }, "ix_chatproductrecommendations_orderid");
 
                     b.HasIndex(new[] { "Productid" }, "ix_chatproductrecommendations_productid");
 
@@ -1127,6 +1139,299 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("promotionalcontents", (string)null);
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Refundtransaction", b =>
+                {
+                    b.Property<int>("Refundtransactionid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("refundtransactionid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Refundtransactionid"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime?>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("note");
+
+                    b.Property<int>("Orderid")
+                        .HasColumnType("integer")
+                        .HasColumnName("orderid");
+
+                    b.Property<DateTime?>("Processedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("processedat");
+
+                    b.Property<int?>("Processedbyuserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("processedbyuserid");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("provider");
+
+                    b.Property<int>("Returnrequestid")
+                        .HasColumnType("integer")
+                        .HasColumnName("returnrequestid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Transactionref")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("transactionref");
+
+                    b.HasKey("Refundtransactionid")
+                        .HasName("refundtransactions_pkey");
+
+                    b.HasIndex("Processedbyuserid");
+
+                    b.HasIndex(new[] { "Orderid" }, "ix_refundtransactions_orderid");
+
+                    b.HasIndex(new[] { "Returnrequestid" }, "ix_refundtransactions_requestid");
+
+                    b.ToTable("refundtransactions", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Returnitem", b =>
+                {
+                    b.Property<int>("Returnitemid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("returnitemid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Returnitemid"));
+
+                    b.Property<string>("Condition")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("condition");
+
+                    b.Property<string>("Disposition")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("disposition");
+
+                    b.Property<string>("Imei")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("imei");
+
+                    b.Property<int>("Orderitemid")
+                        .HasColumnType("integer")
+                        .HasColumnName("orderitemid");
+
+                    b.Property<decimal>("Refundamount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("refundamount");
+
+                    b.Property<string>("Replacementimei")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("replacementimei");
+
+                    b.Property<int>("Returnrequestid")
+                        .HasColumnType("integer")
+                        .HasColumnName("returnrequestid");
+
+                    b.HasKey("Returnitemid")
+                        .HasName("returnitems_pkey");
+
+                    b.HasIndex("Orderitemid");
+
+                    b.HasIndex(new[] { "Imei" }, "ix_returnitems_imei");
+
+                    b.HasIndex(new[] { "Replacementimei" }, "ix_returnitems_replacementimei");
+
+                    b.HasIndex(new[] { "Returnrequestid", "Orderitemid" }, "ux_returnitems_request_orderitem")
+                        .IsUnique();
+
+                    b.ToTable("returnitems", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Returnrequest", b =>
+                {
+                    b.Property<int>("Returnrequestid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("returnrequestid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Returnrequestid"));
+
+                    b.Property<int?>("Assigneduserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("assigneduserid");
+
+                    b.Property<DateTime?>("Completedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("completedat");
+
+                    b.Property<int?>("Customerid")
+                        .HasColumnType("integer")
+                        .HasColumnName("customerid");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Imageurls")
+                        .HasColumnType("text")
+                        .HasColumnName("imageurls");
+
+                    b.Property<int>("Orderid")
+                        .HasColumnType("integer")
+                        .HasColumnName("orderid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTime?>("Receivedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("receivedat");
+
+                    b.Property<decimal?>("Refundamount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("refundamount");
+
+                    b.Property<string>("Refundstatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("refundstatus");
+
+                    b.Property<DateTime?>("Requestedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("requestedat");
+
+                    b.Property<int?>("Requestedbyuserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("requestedbyuserid");
+
+                    b.Property<decimal>("Requestedrefundamount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("requestedrefundamount");
+
+                    b.Property<string>("Requesttype")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("requesttype");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("resolution");
+
+                    b.Property<DateTime?>("Reviewedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("reviewedat");
+
+                    b.Property<string>("Reviewnote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reviewnote");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("Updatedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updatedat");
+
+                    b.HasKey("Returnrequestid")
+                        .HasName("returnrequests_pkey");
+
+                    b.HasIndex("Requestedbyuserid");
+
+                    b.HasIndex(new[] { "Assigneduserid" }, "ix_returnrequests_assigneduserid");
+
+                    b.HasIndex(new[] { "Customerid" }, "ix_returnrequests_customerid");
+
+                    b.HasIndex(new[] { "Orderid" }, "ix_returnrequests_orderid");
+
+                    b.HasIndex(new[] { "Status", "Updatedat" }, "ix_returnrequests_status_updatedat");
+
+                    b.ToTable("returnrequests", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Returnrequesthistory", b =>
+                {
+                    b.Property<int>("Historyid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("historyid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Historyid"));
+
+                    b.Property<DateTime?>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Fromstatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("fromstatus");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("note");
+
+                    b.Property<int>("Returnrequestid")
+                        .HasColumnType("integer")
+                        .HasColumnName("returnrequestid");
+
+                    b.Property<string>("Tostatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("tostatus");
+
+                    b.Property<int?>("Userid")
+                        .HasColumnType("integer")
+                        .HasColumnName("userid");
+
+                    b.HasKey("Historyid")
+                        .HasName("returnrequesthistories_pkey");
+
+                    b.HasIndex("Userid");
+
+                    b.HasIndex(new[] { "Createdat" }, "ix_returnrequesthistories_createdat");
+
+                    b.HasIndex(new[] { "Returnrequestid" }, "ix_returnrequesthistories_requestid");
+
+                    b.ToTable("returnrequesthistories", (string)null);
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Review", b =>
                 {
                     b.Property<int>("Reviewid")
@@ -1304,6 +1609,153 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("vouchers", (string)null);
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Warrantyclaim", b =>
+                {
+                    b.Property<int>("Claimid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("claimid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Claimid"));
+
+                    b.Property<int?>("Assigneduserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("assigneduserid");
+
+                    b.Property<DateTime?>("Completedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("completedat");
+
+                    b.Property<string>("Conclusion")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("conclusion");
+
+                    b.Property<string>("Coverage")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("coverage");
+
+                    b.Property<DateTime>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("Customerid")
+                        .HasColumnType("integer")
+                        .HasColumnName("customerid");
+
+                    b.Property<decimal?>("Estimatedcost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("estimatedcost");
+
+                    b.Property<string>("Faultdescription")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("faultdescription");
+
+                    b.Property<decimal?>("Finalcost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("finalcost");
+
+                    b.Property<string>("Imageurls")
+                        .HasColumnType("text")
+                        .HasColumnName("imageurls");
+
+                    b.Property<string>("Imei")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("imei");
+
+                    b.Property<DateTime>("Receivedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("receivedat");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Received")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("Updatedat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updatedat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Claimid")
+                        .HasName("warrantyclaims_pkey");
+
+                    b.HasIndex(new[] { "Assigneduserid" }, "ix_warrantyclaims_assigneduserid");
+
+                    b.HasIndex(new[] { "Customerid" }, "ix_warrantyclaims_customerid");
+
+                    b.HasIndex(new[] { "Imei" }, "ix_warrantyclaims_imei");
+
+                    b.HasIndex(new[] { "Status" }, "ix_warrantyclaims_status");
+
+                    b.ToTable("warrantyclaims", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Warrantyclaimhistory", b =>
+                {
+                    b.Property<int>("Historyid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("historyid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Historyid"));
+
+                    b.Property<int>("Claimid")
+                        .HasColumnType("integer")
+                        .HasColumnName("claimid");
+
+                    b.Property<DateTime>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Fromstatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("fromstatus");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("Tostatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("tostatus");
+
+                    b.Property<int?>("Userid")
+                        .HasColumnType("integer")
+                        .HasColumnName("userid");
+
+                    b.HasKey("Historyid")
+                        .HasName("warrantyclaimhistories_pkey");
+
+                    b.HasIndex("Userid");
+
+                    b.HasIndex(new[] { "Claimid" }, "ix_warrantyclaimhistories_claimid");
+
+                    b.HasIndex(new[] { "Createdat" }, "ix_warrantyclaimhistories_createdat");
+
+                    b.ToTable("warrantyclaimhistories", (string)null);
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Warrantypackage", b =>
                 {
                     b.Property<int>("Packageid")
@@ -1396,6 +1848,12 @@ namespace ECommerceBackend.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_chatproductrecommendations_messages");
 
+                    b.HasOne("ECommerceBackend.Models.Order", "Order")
+                        .WithMany("Chatproductrecommendations")
+                        .HasForeignKey("Orderid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_chatproductrecommendations_orders");
+
                     b.HasOne("ECommerceBackend.Models.Product", "Product")
                         .WithMany("Chatproductrecommendations")
                         .HasForeignKey("Productid")
@@ -1411,6 +1869,8 @@ namespace ECommerceBackend.Migrations
                         .HasConstraintName("fk_chatproductrecommendations_variants");
 
                     b.Navigation("Message");
+
+                    b.Navigation("Order");
 
                     b.Navigation("Product");
 
@@ -1620,6 +2080,129 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Refundtransaction", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Order", "Order")
+                        .WithMany("Refundtransactions")
+                        .HasForeignKey("Orderid")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_refundtransactions_orders");
+
+                    b.HasOne("ECommerceBackend.Models.User", "Processedbyuser")
+                        .WithMany("Refundtransactions")
+                        .HasForeignKey("Processedbyuserid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_refundtransactions_users");
+
+                    b.HasOne("ECommerceBackend.Models.Returnrequest", "Returnrequest")
+                        .WithMany("Refundtransactions")
+                        .HasForeignKey("Returnrequestid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_refundtransactions_requests");
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Processedbyuser");
+
+                    b.Navigation("Returnrequest");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Returnitem", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Inventoryitem", "Inventoryitem")
+                        .WithMany("Returnitems")
+                        .HasForeignKey("Imei")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_returnitems_inventory");
+
+                    b.HasOne("ECommerceBackend.Models.Orderitem", "Orderitem")
+                        .WithMany("Returnitems")
+                        .HasForeignKey("Orderitemid")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_returnitems_orderitems");
+
+                    b.HasOne("ECommerceBackend.Models.Inventoryitem", "Replacementinventoryitem")
+                        .WithMany("ReplacementReturnitems")
+                        .HasForeignKey("Replacementimei")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_returnitems_replacement_inventory");
+
+                    b.HasOne("ECommerceBackend.Models.Returnrequest", "Returnrequest")
+                        .WithMany("Returnitems")
+                        .HasForeignKey("Returnrequestid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_returnitems_requests");
+
+                    b.Navigation("Inventoryitem");
+
+                    b.Navigation("Orderitem");
+
+                    b.Navigation("Replacementinventoryitem");
+
+                    b.Navigation("Returnrequest");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Returnrequest", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.User", "Assigneduser")
+                        .WithMany("AssignedReturnrequests")
+                        .HasForeignKey("Assigneduserid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_returnrequests_assigned_users");
+
+                    b.HasOne("ECommerceBackend.Models.Customer", "Customer")
+                        .WithMany("Returnrequests")
+                        .HasForeignKey("Customerid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_returnrequests_customers");
+
+                    b.HasOne("ECommerceBackend.Models.Order", "Order")
+                        .WithMany("Returnrequests")
+                        .HasForeignKey("Orderid")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_returnrequests_orders");
+
+                    b.HasOne("ECommerceBackend.Models.User", "Requestedbyuser")
+                        .WithMany("RequestedReturnrequests")
+                        .HasForeignKey("Requestedbyuserid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_returnrequests_requested_users");
+
+                    b.Navigation("Assigneduser");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Requestedbyuser");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Returnrequesthistory", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Returnrequest", "Returnrequest")
+                        .WithMany("Histories")
+                        .HasForeignKey("Returnrequestid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_returnrequesthistories_requests");
+
+                    b.HasOne("ECommerceBackend.Models.User", "User")
+                        .WithMany("Returnrequesthistories")
+                        .HasForeignKey("Userid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_returnrequesthistories_users");
+
+                    b.Navigation("Returnrequest");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Review", b =>
                 {
                     b.HasOne("ECommerceBackend.Models.Customer", "Customer")
@@ -1645,6 +2228,55 @@ namespace ECommerceBackend.Migrations
                         .HasConstraintName("fk_users_roles");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Warrantyclaim", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.User", "Assigneduser")
+                        .WithMany("AssignedWarrantyclaims")
+                        .HasForeignKey("Assigneduserid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_warrantyclaims_users");
+
+                    b.HasOne("ECommerceBackend.Models.Customer", "Customer")
+                        .WithMany("Warrantyclaims")
+                        .HasForeignKey("Customerid")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_warrantyclaims_customers");
+
+                    b.HasOne("ECommerceBackend.Models.Inventoryitem", "Inventoryitem")
+                        .WithMany("Warrantyclaims")
+                        .HasForeignKey("Imei")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_warrantyclaims_inventoryitems");
+
+                    b.Navigation("Assigneduser");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Inventoryitem");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Warrantyclaimhistory", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Warrantyclaim", "Claim")
+                        .WithMany("Histories")
+                        .HasForeignKey("Claimid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_warrantyclaimhistories_claims");
+
+                    b.HasOne("ECommerceBackend.Models.User", "User")
+                        .WithMany("Warrantyclaimhistories")
+                        .HasForeignKey("Userid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_warrantyclaimhistories_users");
+
+                    b.Navigation("Claim");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Brand", b =>
@@ -1680,7 +2312,11 @@ namespace ECommerceBackend.Migrations
 
                     b.Navigation("Orders");
 
+                    b.Navigation("Returnrequests");
+
                     b.Navigation("Reviews");
+
+                    b.Navigation("Warrantyclaims");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Inventoryitem", b =>
@@ -1688,10 +2324,18 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Inventorytransactions");
 
                     b.Navigation("Orderitems");
+
+                    b.Navigation("ReplacementReturnitems");
+
+                    b.Navigation("Returnitems");
+
+                    b.Navigation("Warrantyclaims");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Order", b =>
                 {
+                    b.Navigation("Chatproductrecommendations");
+
                     b.Navigation("Inventorytransactions");
 
                     b.Navigation("Orderassignments");
@@ -1699,6 +2343,15 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Orderitems");
 
                     b.Navigation("Orderpayments");
+
+                    b.Navigation("Refundtransactions");
+
+                    b.Navigation("Returnrequests");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Orderitem", b =>
+                {
+                    b.Navigation("Returnitems");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Product", b =>
@@ -1726,6 +2379,15 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Reviews");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Returnrequest", b =>
+                {
+                    b.Navigation("Histories");
+
+                    b.Navigation("Refundtransactions");
+
+                    b.Navigation("Returnitems");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Role", b =>
                 {
                     b.Navigation("Users");
@@ -1734,6 +2396,10 @@ namespace ECommerceBackend.Migrations
             modelBuilder.Entity("ECommerceBackend.Models.User", b =>
                 {
                     b.Navigation("AssignedOrderassignments");
+
+                    b.Navigation("AssignedReturnrequests");
+
+                    b.Navigation("AssignedWarrantyclaims");
 
                     b.Navigation("Auditlogs");
 
@@ -1746,11 +2412,24 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("News");
 
                     b.Navigation("Orders");
+
+                    b.Navigation("Refundtransactions");
+
+                    b.Navigation("RequestedReturnrequests");
+
+                    b.Navigation("Returnrequesthistories");
+
+                    b.Navigation("Warrantyclaimhistories");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Voucher", b =>
                 {
                     b.Navigation("Orders");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Warrantyclaim", b =>
+                {
+                    b.Navigation("Histories");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Warrantypackage", b =>

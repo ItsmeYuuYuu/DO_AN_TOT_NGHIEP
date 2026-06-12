@@ -23,5 +23,11 @@ public partial class Inventoryitem
 
     public virtual ICollection<Inventorytransaction> Inventorytransactions { get; set; } = new List<Inventorytransaction>();
 
+    public virtual ICollection<Warrantyclaim> Warrantyclaims { get; set; } = new List<Warrantyclaim>();
+
+    public virtual ICollection<Returnitem> Returnitems { get; set; } = new List<Returnitem>();
+
+    public virtual ICollection<Returnitem> ReplacementReturnitems { get; set; } = new List<Returnitem>();
+
     public virtual Productvariant? Variant { get; set; }
 }

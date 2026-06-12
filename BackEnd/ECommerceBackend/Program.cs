@@ -15,6 +15,10 @@ using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
 using System.Threading.RateLimiting;
 
+// The existing PostgreSQL schema stores application timestamps without a time-zone.
+// Keep UTC DateTime values compatible until those columns are migrated to timestamptz.
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, services, configuration) => configuration

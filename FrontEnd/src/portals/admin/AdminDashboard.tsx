@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { formatCurrency } from '@/utils/formatters';
 import { dashboardApi } from '@/features/dashboard/api/dashboardApi';
 import type { 
@@ -160,92 +160,92 @@ const AdminDashboard: React.FC = () => {
   };
 
   // Fetch functions
-  const fetchTodayResults = async () => {
+  const fetchTodayResults = useCallback(async () => {
     setTodayLoading(true);
     setTodayError(null);
     try {
       const res = await dashboardApi.getTodayResults();
       setTodayResults(res.data);
-    } catch (err) {
+    } catch {
       setTodayError('Không tải được kết quả bán hàng hôm nay');
     } finally {
       setTodayLoading(false);
     }
-  };
+  }, []);
 
-  const fetchRevenueBreakdown = async () => {
+  const fetchRevenueBreakdown = useCallback(async () => {
     setRevenueLoading(true);
     setRevenueError(null);
     try {
       const res = await dashboardApi.getRevenueBreakdown(revenuePeriod, revenueGroupBy);
       setRevenueData(res.data);
-    } catch (err) {
+    } catch {
       setRevenueError('Không tải được biểu đồ doanh thu');
     } finally {
       setRevenueLoading(false);
     }
-  };
+  }, [revenueGroupBy, revenuePeriod]);
 
-  const fetchRecentActivities = async () => {
+  const fetchRecentActivities = useCallback(async () => {
     setActivitiesLoading(true);
     setActivitiesError(null);
     try {
       const res = await dashboardApi.getRecentActivities(activityType, debouncedQuery, 15);
       setActivities(res.data);
-    } catch (err) {
+    } catch {
       setActivitiesError('Không tải được hoạt động gần đây');
     } finally {
       setActivitiesLoading(false);
     }
-  };
+  }, [activityType, debouncedQuery]);
 
-  const fetchTopProducts = async () => {
+  const fetchTopProducts = useCallback(async () => {
     setTopProductsLoading(true);
     setTopProductsError(null);
     try {
       const res = await dashboardApi.getTopProductsV2(topProductsPeriod, 10);
       setTopProducts(res.data);
-    } catch (err) {
+    } catch {
       setTopProductsError('Không tải được sản phẩm bán chạy');
     } finally {
       setTopProductsLoading(false);
     }
-  };
+  }, [topProductsPeriod]);
 
-  const fetchTopCustomers = async () => {
+  const fetchTopCustomers = useCallback(async () => {
     setTopCustomersLoading(true);
     setTopCustomersError(null);
     try {
       const res = await dashboardApi.getTopCustomers(topCustomersPeriod, 10);
       setTopCustomers(res.data);
-    } catch (err) {
+    } catch {
       setTopCustomersError('Không tải được top khách hàng');
     } finally {
       setTopCustomersLoading(false);
     }
-  };
+  }, [topCustomersPeriod]);
 
   // Triggers
   useEffect(() => {
     fetchTodayResults();
     setLastUpdated(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-  }, [refreshKey]);
+  }, [fetchTodayResults, refreshKey]);
 
   useEffect(() => {
     fetchRevenueBreakdown();
-  }, [revenuePeriod, revenueGroupBy, refreshKey]);
+  }, [fetchRevenueBreakdown, refreshKey]);
 
   useEffect(() => {
     fetchRecentActivities();
-  }, [activityType, debouncedQuery, refreshKey]);
+  }, [fetchRecentActivities, refreshKey]);
 
   useEffect(() => {
     fetchTopProducts();
-  }, [topProductsPeriod, refreshKey]);
+  }, [fetchTopProducts, refreshKey]);
 
   useEffect(() => {
     fetchTopCustomers();
-  }, [topCustomersPeriod, refreshKey]);
+  }, [fetchTopCustomers, refreshKey]);
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);

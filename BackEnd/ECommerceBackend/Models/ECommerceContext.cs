@@ -55,6 +55,14 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Review> Reviews { get; set; }
 
+    public virtual DbSet<Returnrequest> Returnrequests { get; set; }
+
+    public virtual DbSet<Returnitem> Returnitems { get; set; }
+
+    public virtual DbSet<Returnrequesthistory> Returnrequesthistories { get; set; }
+
+    public virtual DbSet<Refundtransaction> Refundtransactions { get; set; }
+
     public virtual DbSet<Role> Roles { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
@@ -62,6 +70,10 @@ public partial class ECommerceContext : DbContext
     public virtual DbSet<Voucher> Vouchers { get; set; }
 
     public virtual DbSet<Warrantypackage> Warrantypackages { get; set; }
+
+    public virtual DbSet<Warrantyclaim> Warrantyclaims { get; set; }
+
+    public virtual DbSet<Warrantyclaimhistory> Warrantyclaimhistories { get; set; }
 
     public virtual DbSet<Cart> Carts { get; set; }
 
@@ -166,6 +178,8 @@ public partial class ECommerceContext : DbContext
             entity.HasIndex(e => e.Productid, "ix_chatproductrecommendations_productid");
             entity.HasIndex(e => e.Variantid, "ix_chatproductrecommendations_variantid");
             entity.HasIndex(e => e.Addedtocartat, "ix_chatproductrecommendations_addedtocartat");
+            entity.HasIndex(e => e.Orderedat, "ix_chatproductrecommendations_orderedat");
+            entity.HasIndex(e => e.Orderid, "ix_chatproductrecommendations_orderid");
 
             entity.Property(e => e.Recommendationid).HasColumnName("recommendationid");
             entity.Property(e => e.Messageid).HasColumnName("messageid");
@@ -179,6 +193,10 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Addedtocartat)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("addedtocartat");
+            entity.Property(e => e.Orderedat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("orderedat");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
 
             entity.HasOne(e => e.Message)
                 .WithMany(e => e.Chatproductrecommendations)
@@ -195,6 +213,11 @@ public partial class ECommerceContext : DbContext
                 .HasForeignKey(e => e.Variantid)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_chatproductrecommendations_variants");
+            entity.HasOne(e => e.Order)
+                .WithMany(e => e.Chatproductrecommendations)
+                .HasForeignKey(e => e.Orderid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_chatproductrecommendations_orders");
         });
 
         modelBuilder.Entity<Chatsession>(entity =>
@@ -340,6 +363,113 @@ public partial class ECommerceContext : DbContext
                 .HasForeignKey(d => d.Userid)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("fk_inventorytransactions_users");
+        });
+
+        modelBuilder.Entity<Warrantyclaim>(entity =>
+        {
+            entity.HasKey(e => e.Claimid).HasName("warrantyclaims_pkey");
+
+            entity.ToTable("warrantyclaims");
+
+            entity.HasIndex(e => e.Imei, "ix_warrantyclaims_imei");
+            entity.HasIndex(e => e.Customerid, "ix_warrantyclaims_customerid");
+            entity.HasIndex(e => e.Assigneduserid, "ix_warrantyclaims_assigneduserid");
+            entity.HasIndex(e => e.Status, "ix_warrantyclaims_status");
+
+            entity.Property(e => e.Claimid).HasColumnName("claimid");
+            entity.Property(e => e.Imei)
+                .HasMaxLength(50)
+                .HasColumnName("imei");
+            entity.Property(e => e.Customerid).HasColumnName("customerid");
+            entity.Property(e => e.Assigneduserid).HasColumnName("assigneduserid");
+            entity.Property(e => e.Faultdescription)
+                .HasMaxLength(2000)
+                .HasColumnName("faultdescription");
+            entity.Property(e => e.Status)
+                .HasMaxLength(30)
+                .HasDefaultValue("Received")
+                .HasColumnName("status");
+            entity.Property(e => e.Coverage)
+                .HasMaxLength(30)
+                .HasColumnName("coverage");
+            entity.Property(e => e.Imageurls)
+                .HasColumnType("text")
+                .HasColumnName("imageurls");
+            entity.Property(e => e.Estimatedcost)
+                .HasPrecision(18, 2)
+                .HasColumnName("estimatedcost");
+            entity.Property(e => e.Finalcost)
+                .HasPrecision(18, 2)
+                .HasColumnName("finalcost");
+            entity.Property(e => e.Conclusion)
+                .HasMaxLength(2000)
+                .HasColumnName("conclusion");
+            entity.Property(e => e.Receivedat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("receivedat");
+            entity.Property(e => e.Completedat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("completedat");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+            entity.Property(e => e.Updatedat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("updatedat");
+
+            entity.HasOne(e => e.Inventoryitem).WithMany(e => e.Warrantyclaims)
+                .HasForeignKey(e => e.Imei)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_warrantyclaims_inventoryitems");
+
+            entity.HasOne(e => e.Customer).WithMany(e => e.Warrantyclaims)
+                .HasForeignKey(e => e.Customerid)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_warrantyclaims_customers");
+
+            entity.HasOne(e => e.Assigneduser).WithMany(e => e.AssignedWarrantyclaims)
+                .HasForeignKey(e => e.Assigneduserid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_warrantyclaims_users");
+        });
+
+        modelBuilder.Entity<Warrantyclaimhistory>(entity =>
+        {
+            entity.HasKey(e => e.Historyid).HasName("warrantyclaimhistories_pkey");
+
+            entity.ToTable("warrantyclaimhistories");
+
+            entity.HasIndex(e => e.Claimid, "ix_warrantyclaimhistories_claimid");
+            entity.HasIndex(e => e.Createdat, "ix_warrantyclaimhistories_createdat");
+
+            entity.Property(e => e.Historyid).HasColumnName("historyid");
+            entity.Property(e => e.Claimid).HasColumnName("claimid");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+            entity.Property(e => e.Fromstatus)
+                .HasMaxLength(30)
+                .HasColumnName("fromstatus");
+            entity.Property(e => e.Tostatus)
+                .HasMaxLength(30)
+                .HasColumnName("tostatus");
+            entity.Property(e => e.Note)
+                .HasMaxLength(1000)
+                .HasColumnName("note");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+
+            entity.HasOne(e => e.Claim).WithMany(e => e.Histories)
+                .HasForeignKey(e => e.Claimid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_warrantyclaimhistories_claims");
+
+            entity.HasOne(e => e.User).WithMany(e => e.Warrantyclaimhistories)
+                .HasForeignKey(e => e.Userid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_warrantyclaimhistories_users");
         });
 
         modelBuilder.Entity<News>(entity =>
@@ -500,6 +630,160 @@ public partial class ECommerceContext : DbContext
                 .HasForeignKey(d => d.Orderid)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_orderpayments_orders");
+        });
+
+        modelBuilder.Entity<Returnrequest>(entity =>
+        {
+            entity.HasKey(e => e.Returnrequestid).HasName("returnrequests_pkey");
+            entity.ToTable("returnrequests");
+
+            entity.HasIndex(e => e.Orderid, "ix_returnrequests_orderid");
+            entity.HasIndex(e => e.Customerid, "ix_returnrequests_customerid");
+            entity.HasIndex(e => e.Assigneduserid, "ix_returnrequests_assigneduserid");
+            entity.HasIndex(e => new { e.Status, e.Updatedat }, "ix_returnrequests_status_updatedat");
+
+            entity.Property(e => e.Returnrequestid).HasColumnName("returnrequestid");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
+            entity.Property(e => e.Customerid).HasColumnName("customerid");
+            entity.Property(e => e.Requestedbyuserid).HasColumnName("requestedbyuserid");
+            entity.Property(e => e.Assigneduserid).HasColumnName("assigneduserid");
+            entity.Property(e => e.Requesttype).HasMaxLength(20).HasColumnName("requesttype");
+            entity.Property(e => e.Reason).HasMaxLength(200).HasColumnName("reason");
+            entity.Property(e => e.Description).HasMaxLength(2000).HasColumnName("description");
+            entity.Property(e => e.Status).HasMaxLength(30).HasColumnName("status");
+            entity.Property(e => e.Imageurls).HasColumnType("text").HasColumnName("imageurls");
+            entity.Property(e => e.Reviewnote).HasMaxLength(1000).HasColumnName("reviewnote");
+            entity.Property(e => e.Resolution).HasMaxLength(2000).HasColumnName("resolution");
+            entity.Property(e => e.Requestedrefundamount).HasPrecision(18, 2).HasColumnName("requestedrefundamount");
+            entity.Property(e => e.Refundamount).HasPrecision(18, 2).HasColumnName("refundamount");
+            entity.Property(e => e.Refundstatus).HasMaxLength(30).HasColumnName("refundstatus");
+            entity.Property(e => e.Requestedat).HasColumnType("timestamp without time zone").HasColumnName("requestedat");
+            entity.Property(e => e.Reviewedat).HasColumnType("timestamp without time zone").HasColumnName("reviewedat");
+            entity.Property(e => e.Receivedat).HasColumnType("timestamp without time zone").HasColumnName("receivedat");
+            entity.Property(e => e.Completedat).HasColumnType("timestamp without time zone").HasColumnName("completedat");
+            entity.Property(e => e.Updatedat).HasColumnType("timestamp without time zone").HasColumnName("updatedat");
+
+            entity.HasOne(e => e.Order).WithMany(e => e.Returnrequests)
+                .HasForeignKey(e => e.Orderid)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_returnrequests_orders");
+            entity.HasOne(e => e.Customer).WithMany(e => e.Returnrequests)
+                .HasForeignKey(e => e.Customerid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_returnrequests_customers");
+            entity.HasOne(e => e.Requestedbyuser).WithMany(e => e.RequestedReturnrequests)
+                .HasForeignKey(e => e.Requestedbyuserid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_returnrequests_requested_users");
+            entity.HasOne(e => e.Assigneduser).WithMany(e => e.AssignedReturnrequests)
+                .HasForeignKey(e => e.Assigneduserid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_returnrequests_assigned_users");
+        });
+
+        modelBuilder.Entity<Returnitem>(entity =>
+        {
+            entity.HasKey(e => e.Returnitemid).HasName("returnitems_pkey");
+            entity.ToTable("returnitems");
+
+            entity.HasIndex(e => new { e.Returnrequestid, e.Orderitemid }, "ux_returnitems_request_orderitem")
+                .IsUnique();
+            entity.HasIndex(e => e.Imei, "ix_returnitems_imei");
+            entity.HasIndex(e => e.Replacementimei, "ix_returnitems_replacementimei");
+
+            entity.Property(e => e.Returnitemid).HasColumnName("returnitemid");
+            entity.Property(e => e.Returnrequestid).HasColumnName("returnrequestid");
+            entity.Property(e => e.Orderitemid).HasColumnName("orderitemid");
+            entity.Property(e => e.Imei).HasMaxLength(50).HasColumnName("imei");
+            entity.Property(e => e.Condition).HasMaxLength(1000).HasColumnName("condition");
+            entity.Property(e => e.Disposition).HasMaxLength(30).HasColumnName("disposition");
+            entity.Property(e => e.Replacementimei).HasMaxLength(50).HasColumnName("replacementimei");
+            entity.Property(e => e.Refundamount).HasPrecision(18, 2).HasColumnName("refundamount");
+
+            entity.HasOne(e => e.Returnrequest).WithMany(e => e.Returnitems)
+                .HasForeignKey(e => e.Returnrequestid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_returnitems_requests");
+            entity.HasOne(e => e.Orderitem).WithMany(e => e.Returnitems)
+                .HasForeignKey(e => e.Orderitemid)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_returnitems_orderitems");
+            entity.HasOne(e => e.Inventoryitem).WithMany(e => e.Returnitems)
+                .HasForeignKey(e => e.Imei)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_returnitems_inventory");
+            entity.HasOne(e => e.Replacementinventoryitem).WithMany(e => e.ReplacementReturnitems)
+                .HasForeignKey(e => e.Replacementimei)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_returnitems_replacement_inventory");
+        });
+
+        modelBuilder.Entity<Returnrequesthistory>(entity =>
+        {
+            entity.HasKey(e => e.Historyid).HasName("returnrequesthistories_pkey");
+            entity.ToTable("returnrequesthistories");
+
+            entity.HasIndex(e => e.Returnrequestid, "ix_returnrequesthistories_requestid");
+            entity.HasIndex(e => e.Createdat, "ix_returnrequesthistories_createdat");
+
+            entity.Property(e => e.Historyid).HasColumnName("historyid");
+            entity.Property(e => e.Returnrequestid).HasColumnName("returnrequestid");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+            entity.Property(e => e.Fromstatus).HasMaxLength(30).HasColumnName("fromstatus");
+            entity.Property(e => e.Tostatus).HasMaxLength(30).HasColumnName("tostatus");
+            entity.Property(e => e.Note).HasMaxLength(1000).HasColumnName("note");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+
+            entity.HasOne(e => e.Returnrequest).WithMany(e => e.Histories)
+                .HasForeignKey(e => e.Returnrequestid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_returnrequesthistories_requests");
+            entity.HasOne(e => e.User).WithMany(e => e.Returnrequesthistories)
+                .HasForeignKey(e => e.Userid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_returnrequesthistories_users");
+        });
+
+        modelBuilder.Entity<Refundtransaction>(entity =>
+        {
+            entity.HasKey(e => e.Refundtransactionid).HasName("refundtransactions_pkey");
+            entity.ToTable("refundtransactions");
+
+            entity.HasIndex(e => e.Returnrequestid, "ix_refundtransactions_requestid");
+            entity.HasIndex(e => e.Orderid, "ix_refundtransactions_orderid");
+
+            entity.Property(e => e.Refundtransactionid).HasColumnName("refundtransactionid");
+            entity.Property(e => e.Returnrequestid).HasColumnName("returnrequestid");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
+            entity.Property(e => e.Processedbyuserid).HasColumnName("processedbyuserid");
+            entity.Property(e => e.Amount).HasPrecision(18, 2).HasColumnName("amount");
+            entity.Property(e => e.Provider).HasMaxLength(50).HasColumnName("provider");
+            entity.Property(e => e.Status).HasMaxLength(30).HasColumnName("status");
+            entity.Property(e => e.Transactionref).HasMaxLength(100).HasColumnName("transactionref");
+            entity.Property(e => e.Note).HasMaxLength(1000).HasColumnName("note");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+            entity.Property(e => e.Processedat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("processedat");
+
+            entity.HasOne(e => e.Returnrequest).WithMany(e => e.Refundtransactions)
+                .HasForeignKey(e => e.Returnrequestid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_refundtransactions_requests");
+            entity.HasOne(e => e.Order).WithMany(e => e.Refundtransactions)
+                .HasForeignKey(e => e.Orderid)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_refundtransactions_orders");
+            entity.HasOne(e => e.Processedbyuser).WithMany(e => e.Refundtransactions)
+                .HasForeignKey(e => e.Processedbyuserid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_refundtransactions_users");
         });
 
         modelBuilder.Entity<Orderassignment>(entity =>

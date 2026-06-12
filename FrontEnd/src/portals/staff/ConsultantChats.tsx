@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bot, CheckCircle2, Headphones, MessageSquare, Send, User } from 'lucide-react';
+import { Bot, CheckCircle2, Headphones, MessageSquare, Send, ShoppingCart, TrendingUp, User } from 'lucide-react';
 import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
-import type { ChatMessage, ChatSession } from '@/features/chat/api/chatSessionsApi';
+import type { ChatMessage, ChatRecommendationMetrics, ChatSession } from '@/features/chat/api/chatSessionsApi';
 import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
 
 const ConsultantChats = () => {
@@ -10,6 +10,7 @@ const ConsultantChats = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [metrics, setMetrics] = useState<ChatRecommendationMetrics | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadQueue = async () => {
@@ -29,6 +30,12 @@ const ConsultantChats = () => {
       setMessages([]);
     }
   };
+
+  useEffect(() => {
+    chatSessionsApi.getRecommendationMetrics()
+      .then(setMetrics)
+      .catch(() => setMetrics(null));
+  }, []);
 
   useEffect(() => {
     loadQueue().catch(() => setSessions([]));
@@ -95,6 +102,34 @@ const ConsultantChats = () => {
         <h1 className="text-xl font-black text-slate-800">Tư vấn trực tiếp</h1>
         <p className="text-sm text-slate-500">Tiếp nhận cuộc trò chuyện được chuyển từ trợ lý AI.</p>
       </div>
+
+      {metrics && (
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Lượt đề xuất</p>
+              <Bot size={18} className="text-violet-500" />
+            </div>
+            <p className="mt-2 text-2xl font-black text-slate-900">{metrics.totalrecommendations}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Thêm vào giỏ</p>
+              <ShoppingCart size={18} className="text-blue-500" />
+            </div>
+            <p className="mt-2 text-2xl font-black text-slate-900">{metrics.addtocartrate}%</p>
+            <p className="text-xs text-slate-400">{metrics.addedtocart} lượt</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Tạo đơn hàng</p>
+              <TrendingUp size={18} className="text-emerald-500" />
+            </div>
+            <p className="mt-2 text-2xl font-black text-slate-900">{metrics.orderrate}%</p>
+            <p className="text-xs text-slate-400">{metrics.ordered} đơn từ đề xuất</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid min-h-[650px] grid-cols-[320px_1fr] overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <aside className="border-r border-slate-200 bg-slate-50">

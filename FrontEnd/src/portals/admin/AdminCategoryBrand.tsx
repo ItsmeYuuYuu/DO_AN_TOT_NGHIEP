@@ -8,6 +8,7 @@ import { brandsApi } from '@/features/brands/api/brandsApi';
 import { productSeriesApi, type ProductSeries } from '@/features/productSeries/api/productSeriesApi';
 import type { Category } from '@/features/categories/api/categoriesApi';
 import type { Brand } from '@/features/brands/api/brandsApi';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 const PAGE_SIZE = 8;
 
@@ -288,8 +289,8 @@ const SeriesSection: React.FC = () => {
       if (editing.seriesid) await productSeriesApi.update(editing.seriesid, payload);
       else await productSeriesApi.create(payload);
       await fetchAll(); closeModal();
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.response?.data?.Message || 'Lỗi khi lưu dòng máy.');
+    } catch (error: unknown) {
+      alert(getApiErrorMessage(error, 'Lỗi khi lưu dòng máy.'));
     } finally { setSaving(false); }
   };
 

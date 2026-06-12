@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Star, Trash2, Pen } from 'lucide-react';
 import { reviewsApi } from '@/features/products/api/reviewsApi';
 import type { Review } from '@/features/products/api/reviewsApi';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { Button } from '@/components/Button';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 interface Props {
   productId?: number;
@@ -26,23 +27,16 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
   // Edit state
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetchReviews();
-    if (isLoggedIn) {
-      fetchMyReviews();
-    }
-  }, [productId, variantId, filterType, isLoggedIn]);
-
-  const fetchMyReviews = async () => {
+  const fetchMyReviews = useCallback(async () => {
     try {
       const data = await reviewsApi.getMyReviews();
       setMyReviewIds(data.map(r => r.reviewid));
     } catch {
       // ignore
     }
-  };
+  }, []);
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
       if (filterType === 'all' && productId) {
@@ -59,7 +53,14 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterType, productId, variantId]);
+
+  useEffect(() => {
+    fetchReviews();
+    if (isLoggedIn) {
+      fetchMyReviews();
+    }
+  }, [fetchMyReviews, fetchReviews, isLoggedIn]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,8 +79,8 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
       setComment('');
       fetchReviews();
       fetchMyReviews();
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.Message || 'Có lỗi xảy ra.');
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, 'Có lỗi xảy ra.'));
     } finally {
       setSubmitting(false);
     }
@@ -90,8 +91,8 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
     try {
       await reviewsApi.delete(id);
       fetchReviews();
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.response?.data?.Message || 'Không thể xóa đánh giá.');
+    } catch (requestError: unknown) {
+      alert(getApiErrorMessage(requestError, 'Không thể xóa đánh giá.'));
     }
   };
 
@@ -185,7 +186,7 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
           </p>
         ) : (
           reviews.map(rev => {
-            const canManage = user?.rolename === 'Admin' || user?.rolename === 'Staff' || myReviewIds.includes(rev.reviewid);
+            const canManage = user?.rolename === 'Admin' || myReviewIds.includes(rev.reviewid);
 
             return (
               <div key={rev.reviewid} className="bg-white border border-slate-100 rounded-2xl p-5 hover:border-slate-200 transition-colors shadow-sm">

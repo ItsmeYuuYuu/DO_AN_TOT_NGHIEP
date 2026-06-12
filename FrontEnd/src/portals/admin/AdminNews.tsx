@@ -7,6 +7,7 @@ import { Modal } from '@/components/Modal';
 import { DataTable } from '@/components/DataTable';
 import { productsApi } from '@/features/products/api/productsApi';
 import { LoaderCircle, Upload } from 'lucide-react';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 const AdminNews: React.FC = () => {
   const [news, setNews] = useState<News[]>([]);
@@ -76,8 +77,8 @@ const AdminNews: React.FC = () => {
       const uploaded = response.data[0];
       setEditing(current => current ? { ...current, thumbnail: uploaded.url } : current);
       setUploadedThumbnailFileName(uploaded.fileName);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Không thể tải ảnh thumbnail lên.');
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Không thể tải ảnh thumbnail lên.'));
     } finally {
       setUploadingThumbnail(false);
     }
@@ -106,8 +107,8 @@ const AdminNews: React.FC = () => {
       }
       await fetchNews();
       closeModal(false);
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.Message || 'Lỗi khi lưu thông tin. Vui lòng thử lại.');
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Lỗi khi lưu thông tin. Vui lòng thử lại.'));
     } finally {
       setSaving(false);
     }
@@ -118,8 +119,8 @@ const AdminNews: React.FC = () => {
     try {
       await newsApi.delete(id);
       setNews(prev => prev.filter(n => n.postid !== id));
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.response?.data?.Message || 'Không thể xóa tin tức.');
+    } catch (error) {
+      alert(getApiErrorMessage(error, 'Không thể xóa tin tức.'));
     }
   };
 
@@ -133,8 +134,8 @@ const AdminNews: React.FC = () => {
         isactive: !n.isactive,
       });
       await fetchNews();
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.response?.data?.Message || 'Không thể cập nhật trạng thái.');
+    } catch (error) {
+      alert(getApiErrorMessage(error, 'Không thể cập nhật trạng thái.'));
     }
   };
 
@@ -150,18 +151,18 @@ const AdminNews: React.FC = () => {
 
       <DataTable
         columns={[
-          { key: 'postid', header: 'ID', render: (n: any) => <span>{n.postid}</span> },
+          { key: 'postid', header: 'ID', render: (n: News) => <span>{n.postid}</span> },
           { 
             key: 'thumbnail',
             header: 'Thumbnail', 
-            render: (n: any) => n.thumbnail ? <img src={n.thumbnail} alt={n.title} className="h-10 w-16 object-cover rounded" /> : <div className="h-10 w-16 bg-slate-100 rounded" />
+            render: (n: News) => n.thumbnail ? <img src={n.thumbnail} alt={n.title} className="h-10 w-16 object-cover rounded" /> : <div className="h-10 w-16 bg-slate-100 rounded" />
           },
-          { key: 'title', header: 'Tiêu đề', render: (n: any) => <span className="font-bold text-slate-800">{n.title}</span> },
-          { key: 'authorName', header: 'Tác giả', render: (n: any) => <span>{n.authorName}</span> },
+          { key: 'title', header: 'Tiêu đề', render: (n: News) => <span className="font-bold text-slate-800">{n.title}</span> },
+          { key: 'authorName', header: 'Tác giả', render: (n: News) => <span>{n.authorName}</span> },
           { 
             key: 'isactive',
             header: 'Trạng thái', 
-            render: (n: any) => (
+            render: (n: News) => (
               <button 
                 onClick={() => toggleActive(n)}
                 className={`px-3 py-1 rounded-full text-xs font-bold ${n.isactive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}
@@ -173,7 +174,7 @@ const AdminNews: React.FC = () => {
           {
             key: 'actions',
             header: 'Thao tác',
-            render: (n: any) => (
+            render: (n: News) => (
               <div className="flex gap-2">
                 <button onClick={() => openEdit(n)} className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-xs font-bold">Sửa</button>
                 <button onClick={() => handleDelete(n.postid)} className="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 text-xs font-bold">Xóa</button>

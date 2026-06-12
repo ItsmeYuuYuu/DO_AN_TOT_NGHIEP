@@ -204,7 +204,9 @@ namespace ECommerceBackend.Controllers
                 variant.Inventoryitems.Count(item => item.Status == "InStock"),
                 variant.Condition,
                 recommendation.Rank,
-                recommendation.Addedtocartat);
+                recommendation.Addedtocartat,
+                recommendation.Orderedat,
+                recommendation.Orderid);
         }
 
         private static ChatMessageDto MapMessageToDto(Chatmessage m) => new(
@@ -403,6 +405,45 @@ namespace ECommerceBackend.Controllers
             recommendation.Addedtocartat ??= DateTime.Now;
             await _context.SaveChangesAsync();
             return Ok(MapRecommendationToDto(recommendation));
+        }
+
+        [HttpGet("recommendation-metrics")]
+        [Authorize(Roles = "Admin,Manager,Consultant")]
+        public async Task<ActionResult<ChatRecommendationMetricsDto>> GetRecommendationMetrics(
+            [FromQuery] int days = 30)
+        {
+            days = Math.Clamp(days, 1, 365);
+            var fromDate = DateTime.Now.AddDays(-days);
+            var recommendations = await _context.Chatproductrecommendations
+                .AsNoTracking()
+                .Include(item => item.Product)
+                .Where(item => item.Createdat >= fromDate)
+                .ToListAsync();
+
+            var total = recommendations.Count;
+            var addedToCart = recommendations.Count(item => item.Addedtocartat.HasValue);
+            var ordered = recommendations.Count(item => item.Orderedat.HasValue);
+            var topProducts = recommendations
+                .GroupBy(item => new { item.Productid, item.Product.Productname })
+                .Select(group => new ChatRecommendationProductMetricDto(
+                    group.Key.Productid,
+                    group.Key.Productname,
+                    group.Count(),
+                    group.Count(item => item.Addedtocartat.HasValue),
+                    group.Count(item => item.Orderedat.HasValue)))
+                .OrderByDescending(item => item.Ordered)
+                .ThenByDescending(item => item.Addedtocart)
+                .ThenByDescending(item => item.Recommended)
+                .Take(5)
+                .ToList();
+
+            return Ok(new ChatRecommendationMetricsDto(
+                total,
+                addedToCart,
+                ordered,
+                total == 0 ? 0 : Math.Round(addedToCart * 100m / total, 2),
+                total == 0 ? 0 : Math.Round(ordered * 100m / total, 2),
+                topProducts));
         }
 
         [HttpPost("{id}/handoff")]

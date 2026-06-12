@@ -40,8 +40,25 @@ namespace ECommerceBackend.DTOs.Chats
         int Stock,
         string Condition,
         int Rank,
-        DateTime? Addedtocartat
+        DateTime? Addedtocartat,
+        DateTime? Orderedat,
+        int? Orderid
     );
+
+    public record ChatRecommendationProductMetricDto(
+        int Productid,
+        string Productname,
+        int Recommended,
+        int Addedtocart,
+        int Ordered);
+
+    public record ChatRecommendationMetricsDto(
+        int Totalrecommendations,
+        int Addedtocart,
+        int Ordered,
+        decimal Addtocartrate,
+        decimal Orderrate,
+        IReadOnlyList<ChatRecommendationProductMetricDto> Topproducts);
 
     public class CreateChatSessionRequestDto
     {

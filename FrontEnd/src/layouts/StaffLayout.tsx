@@ -11,6 +11,7 @@ import {
   LogOut,
   Newspaper,
   Package,
+  RotateCcw,
   ShieldCheck,
   Truck,
   UserCheck,
@@ -27,13 +28,9 @@ interface StaffNavItem {
 }
 
 const navigationByRole: Record<string, StaffNavItem[]> = {
-  Staff: [
-    { label: 'Đơn hàng', to: '/staff/orders', icon: <ClipboardList size={18} /> },
-    { label: 'Kho hàng', to: '/staff/inventory', icon: <Box size={18} /> },
-    { label: 'Bảo hành', to: '/staff/warranties', icon: <ShieldCheck size={18} /> },
-  ],
   Manager: [
-    { label: 'Tổng quan', to: '/staff/dashboard', icon: <BarChart3 size={18} /> },
+    { label: 'Đổi trả & hoàn tiền', to: '/staff/returns', icon: <RotateCcw size={18} /> },
+    { label: 'Trung tâm điều phối', to: '/staff/manager', icon: <BarChart3 size={18} /> },
     { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={18} /> },
     { label: 'Đơn hàng', to: '/staff/orders', icon: <ClipboardList size={18} /> },
     { label: 'Hàng đợi Sales', to: '/staff/sales-orders', icon: <UserCheck size={18} /> },
@@ -44,11 +41,13 @@ const navigationByRole: Record<string, StaffNavItem[]> = {
     { label: 'Tư vấn AI', to: '/staff/consultations', icon: <Headphones size={18} /> },
   ],
   Sales: [
+    { label: 'Đổi trả & hoàn tiền', to: '/staff/returns', icon: <RotateCcw size={18} /> },
     { label: 'Đơn cần xác nhận', to: '/staff/sales-orders', icon: <ClipboardList size={18} /> },
     { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={18} /> },
     { label: 'Voucher', to: '/staff/vouchers', icon: <Gift size={18} /> },
   ],
   Warehouse: [
+    { label: 'Hàng hoàn / đổi máy', to: '/staff/returns', icon: <RotateCcw size={18} /> },
     { label: 'Đơn cần xuất kho', to: '/staff/warehouse-orders', icon: <Truck size={18} /> },
     { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={18} /> },
     { label: 'Kho & IMEI', to: '/staff/inventory', icon: <Box size={18} /> },
@@ -58,6 +57,7 @@ const navigationByRole: Record<string, StaffNavItem[]> = {
     { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={18} /> },
   ],
   Content: [
+    { label: 'Tổng quan nội dung', to: '/staff/content', icon: <BarChart3 size={18} /> },
     { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={18} /> },
     { label: 'Tin tức', to: '/staff/news', icon: <Newspaper size={18} /> },
     { label: 'Banner & slider', to: '/staff/promotional-contents', icon: <Image size={18} /> },
@@ -70,7 +70,7 @@ const navigationByRole: Record<string, StaffNavItem[]> = {
 
 export const StaffLayout: React.FC = () => {
   const { user, logout } = useAuth();
-  const staffNav = navigationByRole[user?.rolename ?? ''] ?? navigationByRole.Staff;
+  const staffNav = navigationByRole[user?.rolename ?? ''] ?? [];
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100">

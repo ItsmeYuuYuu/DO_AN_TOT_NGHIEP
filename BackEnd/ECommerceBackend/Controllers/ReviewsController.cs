@@ -56,7 +56,7 @@ namespace ECommerceBackend.Controllers
             {
                 Fullname = dbUser.Fullname,
                 Email = dbUser.Email,
-                Phone = dbUser.Phone,
+                Phone = dbUser.Phone ?? $"USER-{dbUser.Userid}",
                 Createdat = DateTime.UtcNow
             };
             _context.Customers.Add(newCustomer);
@@ -66,7 +66,7 @@ namespace ECommerceBackend.Controllers
 
         private async Task<bool> IsOwnerOrAdminAsync(int customerId)
         {
-            if (User.IsInRole("Admin") || User.IsInRole("Staff")) return true;
+            if (User.IsInRole("Admin")) return true;
             var cust = await GetCurrentCustomerAsync();
             return cust != null && cust.Customerid == customerId;
         }

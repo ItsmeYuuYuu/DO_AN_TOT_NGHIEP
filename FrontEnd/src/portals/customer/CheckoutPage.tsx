@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth/context/AuthContext';
 import { formatCurrency } from '@/utils/formatters';
 import { warrantyPackagesApi } from '@/features/orders/api/warrantyPackagesApi';
 import type { WarrantyPackage } from '@/features/orders/api/warrantyPackagesApi';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 interface CheckoutForm {
   fullname: string;
@@ -165,8 +166,8 @@ const CheckoutPage: React.FC = () => {
       });
       await clearCart();
       setCreatedOrder(response.data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Đặt hàng thất bại. Vui lòng thử lại.');
+    } catch (error: unknown) {
+      setError(getApiErrorMessage(error, 'Đặt hàng thất bại. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }

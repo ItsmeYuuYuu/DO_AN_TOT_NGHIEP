@@ -12,7 +12,7 @@ namespace ECommerceBackend.Tests
 {
     public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
-        private SqliteConnection _connection;
+        private SqliteConnection? _connection;
 
         protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
         {

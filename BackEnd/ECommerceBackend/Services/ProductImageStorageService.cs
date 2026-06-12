@@ -10,7 +10,9 @@ public sealed class ProductImageStorageService
     private static readonly HashSet<string> AllowedExtensions =
         new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
 
-    private readonly string _uploadDirectory;
+    private readonly string _productUploadDirectory;
+    private readonly string _warrantyUploadDirectory;
+    private readonly string _returnUploadDirectory;
 
     public ProductImageStorageService(IWebHostEnvironment environment)
     {
@@ -20,10 +22,25 @@ public sealed class ProductImageStorageService
             webRoot = Path.Combine(environment.ContentRootPath, "wwwroot");
         }
 
-        _uploadDirectory = Path.Combine(webRoot, "uploads", "products");
+        _productUploadDirectory = Path.Combine(webRoot, "uploads", "products");
+        _warrantyUploadDirectory = Path.Combine(webRoot, "uploads", "warranties");
+        _returnUploadDirectory = Path.Combine(webRoot, "uploads", "returns");
     }
 
-    public async Task<StoredProductImage> SaveAsync(IFormFile file, CancellationToken cancellationToken)
+    public Task<StoredProductImage> SaveAsync(IFormFile file, CancellationToken cancellationToken) =>
+        SaveAsync(file, _productUploadDirectory, "/uploads/products", cancellationToken);
+
+    public Task<StoredProductImage> SaveWarrantyAsync(IFormFile file, CancellationToken cancellationToken) =>
+        SaveAsync(file, _warrantyUploadDirectory, "/uploads/warranties", cancellationToken);
+
+    public Task<StoredProductImage> SaveReturnAsync(IFormFile file, CancellationToken cancellationToken) =>
+        SaveAsync(file, _returnUploadDirectory, "/uploads/returns", cancellationToken);
+
+    private static async Task<StoredProductImage> SaveAsync(
+        IFormFile file,
+        string uploadDirectory,
+        string relativeDirectory,
+        CancellationToken cancellationToken)
     {
         if (file.Length == 0)
             throw new InvalidDataException("Tệp ảnh không được để trống.");
@@ -43,9 +60,9 @@ public sealed class ProductImageStorageService
                 throw new InvalidDataException("Nội dung tệp không đúng định dạng ảnh đã khai báo.");
         }
 
-        Directory.CreateDirectory(_uploadDirectory);
+        Directory.CreateDirectory(uploadDirectory);
         var fileName = $"{Guid.NewGuid():N}{extension}";
-        var destinationPath = Path.Combine(_uploadDirectory, fileName);
+        var destinationPath = Path.Combine(uploadDirectory, fileName);
 
         await using var destination = new FileStream(
             destinationPath,
@@ -58,11 +75,20 @@ public sealed class ProductImageStorageService
 
         return new StoredProductImage(
             fileName,
-            $"/uploads/products/{fileName}",
+            $"{relativeDirectory}/{fileName}",
             file.Length);
     }
 
-    public bool DeleteByFileName(string fileName)
+    public bool DeleteByFileName(string fileName) =>
+        DeleteByFileName(fileName, _productUploadDirectory);
+
+    public bool DeleteWarrantyByFileName(string fileName) =>
+        DeleteByFileName(fileName, _warrantyUploadDirectory);
+
+    public bool DeleteReturnByFileName(string fileName) =>
+        DeleteByFileName(fileName, _returnUploadDirectory);
+
+    private static bool DeleteByFileName(string fileName, string uploadDirectory)
     {
         var safeFileName = Path.GetFileName(fileName);
         if (!string.Equals(fileName, safeFileName, StringComparison.Ordinal) ||
@@ -71,7 +97,7 @@ public sealed class ProductImageStorageService
             return false;
         }
 
-        var path = Path.Combine(_uploadDirectory, safeFileName);
+        var path = Path.Combine(uploadDirectory, safeFileName);
         if (!File.Exists(path))
         {
             return false;

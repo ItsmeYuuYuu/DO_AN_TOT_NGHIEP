@@ -35,6 +35,18 @@ public partial class User
 
     public virtual ICollection<Inventorytransaction> Inventorytransactions { get; set; } = new List<Inventorytransaction>();
 
+    public virtual ICollection<Warrantyclaim> AssignedWarrantyclaims { get; set; } = new List<Warrantyclaim>();
+
+    public virtual ICollection<Warrantyclaimhistory> Warrantyclaimhistories { get; set; } = new List<Warrantyclaimhistory>();
+
+    public virtual ICollection<Returnrequest> RequestedReturnrequests { get; set; } = new List<Returnrequest>();
+
+    public virtual ICollection<Returnrequest> AssignedReturnrequests { get; set; } = new List<Returnrequest>();
+
+    public virtual ICollection<Returnrequesthistory> Returnrequesthistories { get; set; } = new List<Returnrequesthistory>();
+
+    public virtual ICollection<Refundtransaction> Refundtransactions { get; set; } = new List<Refundtransaction>();
+
     public virtual Role? Role { get; set; }
 
     public virtual Cart? Cart { get; set; }

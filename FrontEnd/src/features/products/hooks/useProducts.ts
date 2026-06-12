@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { productsApi } from '../api/productsApi';
-import type { Product } from '../api/productsApi';
+import type { CreateFullProduct, Product } from '../api/productsApi';
 
 export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -27,7 +27,7 @@ export const useProducts = () => {
     setProducts((prev) => prev.filter((p) => p.productid !== id));
   };
 
-  const createFullProduct = async (data: any) => {
+  const createFullProduct = async (data: CreateFullProduct) => {
     await productsApi.createFull(data);
     await fetchProducts();
   };

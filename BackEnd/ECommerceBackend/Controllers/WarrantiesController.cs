@@ -36,26 +36,26 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager,Warranty,Consultant,Staff")]
+        [Authorize(Roles = "Admin,Manager,Warranty,Consultant")]
         public async Task<ActionResult<IEnumerable<WarrantyDto>>> GetWarranties()
         {
             var items = await _context.Inventoryitems
                 .Include(i => i.Orderitems)
                     .ThenInclude(oi => oi.Order)
-                        .ThenInclude(o => o.Customer)
+                        .ThenInclude(o => o!.Customer)
                 .Where(i => i.Warrantystartdate != null)
                 .ToListAsync();
             return Ok(items.Select(MapToDto));
         }
 
         [HttpGet("{imei}")]
-        [Authorize(Roles = "Admin,Manager,Warranty,Consultant,Staff")]
+        [Authorize(Roles = "Admin,Manager,Warranty,Consultant")]
         public async Task<ActionResult<WarrantyDto>> GetWarranty(string imei)
         {
             var item = await _context.Inventoryitems
                 .Include(i => i.Orderitems)
                     .ThenInclude(oi => oi.Order)
-                        .ThenInclude(o => o.Customer)
+                        .ThenInclude(o => o!.Customer)
                 .FirstOrDefaultAsync(i => i.Imei == imei);
             
             if (item == null) return NotFound();
@@ -63,20 +63,20 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("customer/{customerId}")]
-        [Authorize(Roles = "Admin,Manager,Warranty,Consultant,Staff")]
+        [Authorize(Roles = "Admin,Manager,Warranty,Consultant")]
         public async Task<ActionResult<IEnumerable<WarrantyDto>>> GetWarrantiesByCustomer(int customerId)
         {
             var items = await _context.Inventoryitems
                 .Include(i => i.Orderitems)
                     .ThenInclude(oi => oi.Order)
-                        .ThenInclude(o => o.Customer)
+                        .ThenInclude(o => o!.Customer)
                 .Where(i => i.Warrantystartdate != null && i.Orderitems.Any(oi => oi.Order != null && oi.Order.Customerid == customerId))
                 .ToListAsync();
             return Ok(items.Select(MapToDto));
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Warranty,Staff")]
+        [Authorize(Roles = "Admin,Warranty")]
         public async Task<ActionResult<WarrantyDto>> PostWarranty([FromBody] CreateWarrantyRequestDto dto)
         {
             if (string.IsNullOrEmpty(dto.Imei))
@@ -99,14 +99,14 @@ namespace ECommerceBackend.Controllers
             var updated = await _context.Inventoryitems
                 .Include(i => i.Orderitems)
                     .ThenInclude(oi => oi.Order)
-                        .ThenInclude(o => o.Customer)
+                        .ThenInclude(o => o!.Customer)
                 .FirstAsync(i => i.Imei == item.Imei);
 
             return CreatedAtAction(nameof(GetWarranty), new { imei = item.Imei }, MapToDto(updated));
         }
 
         [HttpPut("{imei}")]
-        [Authorize(Roles = "Admin,Warranty,Staff")]
+        [Authorize(Roles = "Admin,Warranty")]
         public async Task<IActionResult> PutWarranty(string imei, [FromBody] UpdateWarrantyRequestDto dto)
         {
             var item = await _context.Inventoryitems.FindAsync(imei);
@@ -129,7 +129,7 @@ namespace ECommerceBackend.Controllers
             var updated = await _context.Inventoryitems
                 .Include(i => i.Orderitems)
                     .ThenInclude(oi => oi.Order)
-                        .ThenInclude(o => o.Customer)
+                        .ThenInclude(o => o!.Customer)
                 .FirstAsync(i => i.Imei == imei);
 
             return Ok(MapToDto(updated));

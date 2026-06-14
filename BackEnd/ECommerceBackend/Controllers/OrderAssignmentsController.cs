@@ -14,6 +14,8 @@ public class OrderAssignmentsController : ControllerBase
 {
     private const string SalesDepartment = "Sales";
     private const string WarehouseDepartment = "Warehouse";
+    private static readonly HashSet<string> DemoCarriers =
+        new(["GHN", "GHTK", "VIETTELPOST", "J&T"], StringComparer.OrdinalIgnoreCase);
     private readonly ECommerceContext _context;
 
     public OrderAssignmentsController(ECommerceContext context)
@@ -350,6 +352,16 @@ public class OrderAssignmentsController : ControllerBase
         if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
         if (order.Orderstatus != "Processing")
             return BadRequest(new ApiErrorDto("Don hang khong o trang thai dang xu ly.", null));
+        if (await _context.Shipments.AnyAsync(item => item.Orderid == orderId))
+            return Conflict(new ApiErrorDto("Đơn hàng đã có vận đơn.", null));
+
+        if (string.IsNullOrWhiteSpace(dto.Carrier))
+            return BadRequest(new ApiErrorDto("Vui lòng chọn đơn vị vận chuyển.", null));
+        var carrier = dto.Carrier.Trim().ToUpperInvariant();
+        if (!DemoCarriers.Contains(carrier))
+            return BadRequest(new ApiErrorDto("Đơn vị vận chuyển không hợp lệ.", null));
+        if (dto.Estimateddeliveryat.HasValue && dto.Estimateddeliveryat.Value.Date < DateTime.UtcNow.Date)
+            return BadRequest(new ApiErrorDto("Ngày giao dự kiến không được ở trong quá khứ.", null));
 
         var assignment = order.Orderassignments
             .FirstOrDefault(item => item.Department == WarehouseDepartment);
@@ -413,6 +425,29 @@ public class OrderAssignmentsController : ControllerBase
         assignment.Status = "Completed";
         assignment.Completedat = DateTime.UtcNow;
         order.Orderstatus = "Shipped";
+        var now = DateTime.UtcNow;
+        var shipment = new Shipment
+        {
+            Orderid = order.Orderid,
+            Carrier = carrier,
+            Trackingcode = $"{carrier.Replace("&", string.Empty)}-DEMO-{now:yyyyMMdd}-{order.Orderid:D6}",
+            Shippingfee = dto.Shippingfee,
+            Status = "AwaitingPickup",
+            Estimateddeliveryat = dto.Estimateddeliveryat,
+            Createdbyuserid = userId,
+            Createdat = now,
+            Updatedat = now
+        };
+        shipment.Histories.Add(new Shipmenthistory
+        {
+            Userid = userId,
+            Tostatus = "AwaitingPickup",
+            Note = string.IsNullOrWhiteSpace(dto.Note)
+                ? "Warehouse created the demo shipment."
+                : dto.Note.Trim(),
+            Createdat = now
+        });
+        _context.Shipments.Add(shipment);
         await _context.SaveChangesAsync();
         return Ok(MapWorkflow(order, WarehouseDepartment));
     }

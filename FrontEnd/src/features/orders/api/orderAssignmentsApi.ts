@@ -62,6 +62,19 @@ export const orderAssignmentsApi = {
     }),
   handoffToWarehouse: (orderId: number, note?: string) =>
     apiClient.post<OrderWorkflowItem>(`/OrderAssignments/${orderId}/handoff-to-warehouse`, { note }),
-  markShipped: (orderId: number, imeis: string[], note?: string) =>
-    apiClient.post<OrderWorkflowItem>(`/OrderAssignments/${orderId}/mark-shipped`, { imeis, note }),
+  markShipped: (
+    orderId: number,
+    imeis: string[],
+    note: string | undefined,
+    carrier: string,
+    shippingfee: number,
+    estimateddeliveryat?: string,
+  ) =>
+    apiClient.post<OrderWorkflowItem>(`/OrderAssignments/${orderId}/mark-shipped`, {
+      imeis,
+      note,
+      carrier,
+      shippingfee,
+      estimateddeliveryat,
+    }),
 };

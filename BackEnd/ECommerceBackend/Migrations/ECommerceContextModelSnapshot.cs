@@ -205,6 +205,15 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("text")
                         .HasColumnName("messagecontent");
 
+                    b.Property<string>("Quickreplies")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("quickreplies");
+
+                    b.Property<string>("Responsetype")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("responsetype");
+
                     b.Property<string>("Sendertype")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1496,6 +1505,143 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("roles", (string)null);
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Shipment", b =>
+                {
+                    b.Property<int>("Shipmentid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("shipmentid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Shipmentid"));
+
+                    b.Property<string>("Carrier")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("carrier");
+
+                    b.Property<DateTime?>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int?>("Createdbyuserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("createdbyuserid");
+
+                    b.Property<DateTime?>("Deliveredat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("deliveredat");
+
+                    b.Property<int>("Deliveryattempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("deliveryattempts");
+
+                    b.Property<DateTime?>("Estimateddeliveryat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("estimateddeliveryat");
+
+                    b.Property<int>("Orderid")
+                        .HasColumnType("integer")
+                        .HasColumnName("orderid");
+
+                    b.Property<DateTime?>("Pickedupat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("pickedupat");
+
+                    b.Property<DateTime?>("Returnedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("returnedat");
+
+                    b.Property<decimal>("Shippingfee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("shippingfee");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Trackingcode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("trackingcode");
+
+                    b.Property<DateTime?>("Updatedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updatedat");
+
+                    b.HasKey("Shipmentid")
+                        .HasName("shipments_pkey");
+
+                    b.HasIndex("Createdbyuserid");
+
+                    b.HasIndex(new[] { "Status", "Updatedat" }, "ix_shipments_status_updatedat");
+
+                    b.HasIndex(new[] { "Orderid" }, "ux_shipments_orderid")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "Trackingcode" }, "ux_shipments_trackingcode")
+                        .IsUnique();
+
+                    b.ToTable("shipments", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Shipmenthistory", b =>
+                {
+                    b.Property<int>("Historyid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("historyid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Historyid"));
+
+                    b.Property<DateTime?>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Fromstatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("fromstatus");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("note");
+
+                    b.Property<int>("Shipmentid")
+                        .HasColumnType("integer")
+                        .HasColumnName("shipmentid");
+
+                    b.Property<string>("Tostatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("tostatus");
+
+                    b.Property<int?>("Userid")
+                        .HasColumnType("integer")
+                        .HasColumnName("userid");
+
+                    b.HasKey("Historyid")
+                        .HasName("shipmenthistories_pkey");
+
+                    b.HasIndex("Userid");
+
+                    b.HasIndex(new[] { "Shipmentid", "Createdat" }, "ix_shipmenthistories_shipment_createdat");
+
+                    b.ToTable("shipmenthistories", (string)null);
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.User", b =>
                 {
                     b.Property<int>("Userid")
@@ -2220,6 +2366,46 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Variant");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Shipment", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.User", "Createdbyuser")
+                        .WithMany("CreatedShipments")
+                        .HasForeignKey("Createdbyuserid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_shipments_users");
+
+                    b.HasOne("ECommerceBackend.Models.Order", "Order")
+                        .WithOne("Shipment")
+                        .HasForeignKey("ECommerceBackend.Models.Shipment", "Orderid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_shipments_orders");
+
+                    b.Navigation("Createdbyuser");
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Shipmenthistory", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Shipment", "Shipment")
+                        .WithMany("Histories")
+                        .HasForeignKey("Shipmentid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_shipmenthistories_shipments");
+
+                    b.HasOne("ECommerceBackend.Models.User", "User")
+                        .WithMany("Shipmenthistories")
+                        .HasForeignKey("Userid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_shipmenthistories_users");
+
+                    b.Navigation("Shipment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.User", b =>
                 {
                     b.HasOne("ECommerceBackend.Models.Role", "Role")
@@ -2347,6 +2533,8 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Refundtransactions");
 
                     b.Navigation("Returnrequests");
+
+                    b.Navigation("Shipment");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Orderitem", b =>
@@ -2393,6 +2581,11 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Users");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Shipment", b =>
+                {
+                    b.Navigation("Histories");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.User", b =>
                 {
                     b.Navigation("AssignedOrderassignments");
@@ -2407,6 +2600,8 @@ namespace ECommerceBackend.Migrations
 
                     b.Navigation("CreatedOrderassignments");
 
+                    b.Navigation("CreatedShipments");
+
                     b.Navigation("Inventorytransactions");
 
                     b.Navigation("News");
@@ -2418,6 +2613,8 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("RequestedReturnrequests");
 
                     b.Navigation("Returnrequesthistories");
+
+                    b.Navigation("Shipmenthistories");
 
                     b.Navigation("Warrantyclaimhistories");
                 });

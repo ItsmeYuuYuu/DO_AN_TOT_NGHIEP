@@ -1,6 +1,6 @@
 # Ke hoach phat trien du an
 
-Cap nhat: 2026-06-10
+Cap nhat: 2026-06-12
 
 ## 1. Trang thai phan quyen nhan vien
 
@@ -34,7 +34,11 @@ Cap nhat: 2026-06-10
   - Xac nhan xuat giao va chuyen don sang `Shipped`.
 - Admin/Manager co the xem hai hang doi va chon nhan vien de phan cong.
 - Da co test cho truong hop hai Sales cung nhan mot don va luong
-  Sales -> Warehouse -> Shipped.
+  Sales -> Warehouse -> Shipped -> Delivered.
+- Da co van don gia lap, ma van don, phi giao hang, ngay giao du kien va lich
+  su trang thai.
+- Giao thanh cong tu dong hoan tat don, thu tien con lai va kich hoat bao hanh.
+- Giao that bai co the giao lai hoac hoan ve kho dung IMEI.
 
 ### Chua hoan thien
 
@@ -158,11 +162,20 @@ Thuc hien sau khi vong doi thanh toan va ton kho da kin.
 5. Man kho co lich su theo tung IMEI va canh bao ton kho thap theo bien
    the.
 
-### Uu tien tiep theo
+## 5. Van chuyen gia lap
 
-Chuyen sang hoan thien luong mua hang tu chatbot tai muc 5.
+### Da hoan thanh
 
-## 5. Chatbot AI sau luong mua hang
+1. Da co bang `shipments` va `shipmenthistories`.
+2. Warehouse tao van don khi doi chieu du IMEI.
+3. Ho tro GHN, GHTK, Viettel Post va J&T o che do demo.
+4. Co luong lay hang, dang van chuyen, dang giao, giao that bai, giao lai,
+   giao thanh cong va hoan ve kho.
+5. `Delivered` tu dong chuyen don sang `Completed`, thu COD/phan con lai va
+   kich hoat bao hanh.
+6. `ReturnedToWarehouse` tra IMEI ve `InStock` va hoan tien gia lap.
+
+## 6. Chatbot AI sau luong mua hang
 
 ### Da hoan thanh
 
@@ -173,15 +186,20 @@ Chuyen sang hoan thien luong mua hang tu chatbot tai muc 5.
    thu tu xep hang va thoi diem khach them vao gio.
 5. Consultant xem duoc toan bo lich su chat va cac the san pham AI da
    de xuat truoc khi tiep nhan.
+6. Chatbot hoi lai theo tung buoc neu thieu ngan sach hoac nhu cau, kem
+   cac lua chon tra loi nhanh.
+7. Phan hoi hoi lai duoc luu co cau truc va giu nguyen khi tai lai lich su.
+8. So sanh 2-3 san pham bang bang gia, chipset, RAM, bo nho, camera, pin
+   va ton kho.
+9. Khach co the tiep tuc loc sau so sanh theo camera, hieu nang, pin hoac
+   gia; Consultant cung xem duoc bang so sanh trong lich su.
+10. Da co cham diem theo nhu cau va bao cao de xuat -> them gio -> dat hang.
 
 ### Uu tien tiep theo
 
-1. Hoi lai khi nhu cau con mo ho, vi du chua co ngan sach hoac muc dich
-   su dung.
-2. So sanh 2-3 san pham theo gia, camera, pin va cau hinh bang du lieu
-   co cau truc.
-3. Cai thien xep hang theo nhu cau choi game, chup anh, hoc tap va pin.
-4. Them bao cao ty le de xuat -> them gio -> dat hang.
+1. Bo sung bo du lieu danh gia de do do chinh xac cua xep hang theo nhu cau.
+2. Cho Consultant tao gio hang hoac don nhap tu san pham da tu van.
+3. Mo rong bao cao theo tung nhom nhu cau va tung Consultant.
 
 ## 6. Truoc khi bao ve
 

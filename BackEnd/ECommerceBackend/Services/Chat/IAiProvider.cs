@@ -4,7 +4,9 @@ namespace ECommerceBackend.Services.Chat
 {
     public sealed record AiAssistantResponse(
         string Text,
-        IReadOnlyList<ProductConsultationResult> Recommendations);
+        IReadOnlyList<ProductConsultationResult> Recommendations,
+        string ResponseType = ChatResponseTypes.Text,
+        IReadOnlyList<string>? QuickReplies = null);
 
     public interface IAiProvider
     {

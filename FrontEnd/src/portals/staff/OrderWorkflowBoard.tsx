@@ -47,6 +47,9 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
   const [verificationOrder, setVerificationOrder] = useState<OrderWorkflowItem | null>(null);
   const [confirmedImeis, setConfirmedImeis] = useState<Set<string>>(new Set());
   const [shippingNote, setShippingNote] = useState('');
+  const [carrier, setCarrier] = useState('GHN');
+  const [shippingFee, setShippingFee] = useState(30000);
+  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
 
   const canAssign = user?.rolename === 'Admin' || user?.rolename === 'Manager';
   const currentUserId = Number(user?.userid);
@@ -101,6 +104,9 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
     setVerificationOrder(item);
     setConfirmedImeis(new Set());
     setShippingNote('');
+    setCarrier('GHN');
+    setShippingFee(30000);
+    setEstimatedDeliveryDate('');
   };
 
   const closeImeiVerification = () => {
@@ -108,6 +114,9 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
     setVerificationOrder(null);
     setConfirmedImeis(new Set());
     setShippingNote('');
+    setCarrier('GHN');
+    setShippingFee(30000);
+    setEstimatedDeliveryDate('');
   };
 
   const toggleImei = (imei: string) => {
@@ -123,7 +132,14 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
     if (!verificationOrder) return;
     const orderId = verificationOrder.orderid;
     await runAction(orderId, () =>
-      orderAssignmentsApi.markShipped(orderId, Array.from(confirmedImeis), shippingNote));
+      orderAssignmentsApi.markShipped(
+        orderId,
+        Array.from(confirmedImeis),
+        shippingNote,
+        carrier,
+        shippingFee,
+        estimatedDeliveryDate ? `${estimatedDeliveryDate}T17:00:00` : undefined,
+      ));
     setVerificationOrder(null);
     setConfirmedImeis(new Set());
     setShippingNote('');
@@ -401,6 +417,26 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                   className="min-h-24 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
                 />
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="text-xs font-black uppercase text-slate-500">
+                  Đơn vị vận chuyển
+                  <select value={carrier} onChange={event => setCarrier(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold normal-case text-slate-700">
+                    <option value="GHN">GHN</option>
+                    <option value="GHTK">GHTK</option>
+                    <option value="VIETTELPOST">Viettel Post</option>
+                    <option value="J&T">J&T</option>
+                  </select>
+                </label>
+                <label className="text-xs font-black uppercase text-slate-500">
+                  Phí vận chuyển
+                  <input type="number" min={0} value={shippingFee} onChange={event => setShippingFee(Number(event.target.value))} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold normal-case text-slate-700" />
+                </label>
+                <label className="text-xs font-black uppercase text-slate-500">
+                  Ngày giao dự kiến
+                  <input type="date" value={estimatedDeliveryDate} onChange={event => setEstimatedDeliveryDate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold normal-case text-slate-700" />
+                </label>
+              </div>
             </div>
 
             <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
@@ -420,7 +456,9 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                   disabled={
                     workingId === verificationOrder.orderid ||
                     verificationOrder.devices.length === 0 ||
-                    confirmedImeis.size !== verificationOrder.devices.length
+                    confirmedImeis.size !== verificationOrder.devices.length ||
+                    !carrier ||
+                    shippingFee < 0
                   }
                   onClick={confirmShipment}
                   className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"

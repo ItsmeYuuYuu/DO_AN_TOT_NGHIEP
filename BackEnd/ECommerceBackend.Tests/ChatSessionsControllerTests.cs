@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
 using ECommerceBackend.Services.Chat;
 
@@ -290,6 +292,9 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.All(message!.Recommendations!, item => Assert.Equal(200, item.Productid));
         Assert.Equal(2001, message.Recommendations![0].Variantid);
         Assert.Equal("/uploads/products/xiaomi-14t.jpg", message.Recommendations[0].Imageurl);
+        Assert.Equal(ChatResponseTypes.Recommendation, message.Responsetype);
+        Assert.Equal("Xiaomi", message.Recommendations[0].Brand);
+        Assert.Contains("5000 mAh", message.Recommendations[0].Specifications);
 
         using var trackRequest = CreatePost(
             $"/api/chatsessions/{sessionId}/recommendations/{message.Recommendations[0].Recommendationid}/added-to-cart",
@@ -308,7 +313,7 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
     }
 
     [Fact]
-    public async Task PostMessage_WithVagueRequest_AsksForBudgetAndUsage()
+    public async Task PostMessage_WithVagueRequest_AsksForMissingCriteriaInSteps()
     {
         var sessionId = await SeedSessionAsync();
         using var request = CreatePost(
@@ -326,9 +331,39 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("assistant", message?.Sendertype);
-        Assert.Contains("Ngân sách", message?.Messagecontent);
-        Assert.Contains("chơi game", message?.Messagecontent);
+        Assert.Contains("ngân sách", message?.Messagecontent, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ChatResponseTypes.Clarification, message?.Responsetype);
+        Assert.Contains("Dưới 10 triệu", message?.Quickreplies ?? []);
         Assert.Empty(message?.Recommendations ?? []);
+
+        using var budgetRequest = CreatePost(
+            $"/api/chatsessions/{sessionId}/messages",
+            "Customer",
+            1,
+            new CreateChatMessageRequestDto { Messagecontent = "Từ 10 đến 20 triệu" },
+            includeGuestToken: true);
+        var budgetResponse = await _client.SendAsync(budgetRequest);
+        var usageMessage = await budgetResponse.Content.ReadFromJsonAsync<ChatMessageDto>();
+
+        Assert.Equal(HttpStatusCode.OK, budgetResponse.StatusCode);
+        Assert.Contains("nhu cầu", usageMessage?.Messagecontent, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Chơi game", usageMessage?.Quickreplies ?? []);
+
+        using var messagesRequest = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/chatsessions/{sessionId}/messages");
+        messagesRequest.Headers.Add("X-Test-Role", "Customer");
+        messagesRequest.Headers.Add("X-Test-UserId", "1");
+        messagesRequest.Headers.Add("x-guest-session-token", GuestToken);
+        var messagesResponse = await _client.SendAsync(messagesRequest);
+        var history = await messagesResponse.Content.ReadFromJsonAsync<List<ChatMessageDto>>();
+
+        Assert.Equal(HttpStatusCode.OK, messagesResponse.StatusCode);
+        Assert.Equal(2, history?.Count(item =>
+            item.Responsetype == ChatResponseTypes.Clarification));
+        Assert.All(
+            history!.Where(item => item.Responsetype == ChatResponseTypes.Clarification),
+            item => Assert.NotEmpty(item.Quickreplies ?? []));
     }
 
     [Fact]
@@ -398,6 +433,366 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.Contains("Test Phone 3", response);
         Assert.DoesNotContain("Test Phone 4", response);
         Assert.Contains("chỉ hiển thị tối đa 3 sản phẩm", response);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WhenComparing_ReturnsStructuredComparisonMetadata()
+    {
+        var products = new[]
+        {
+            new ProductConsultationResult(
+                1, 11, "Camera Phone", "Brand A", "Điện thoại", "New Seal", "A-1",
+                15_000_000, 16_000_000, 2, string.Empty,
+                new Dictionary<string, string> { ["Camera sau"] = "50MP OIS" }),
+            new ProductConsultationResult(
+                2, 22, "Gaming Phone", "Brand B", "Điện thoại", "New Seal", "B-1",
+                14_000_000, 14_000_000, 1, string.Empty,
+                new Dictionary<string, string> { ["Chipset"] = "Chip B" })
+        };
+        var consultationService = new StubProductConsultationService(products);
+        var provider = new GroundedAiProvider(
+            consultationService,
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions
+            {
+                Provider = "OpenAICompatible",
+                BaseUrl = "http://language-model-should-not-be-called",
+                Model = "test-model"
+            }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "So sánh Camera Phone và Gaming Phone",
+            new[]
+            {
+                new AiConversationMessage("user", "Tìm điện thoại từ 10 đến 20 triệu"),
+                new AiConversationMessage(
+                    "assistant",
+                    "Tôi đã tìm thấy một sản phẩm trong khoảng giá.",
+                    ChatResponseTypes.Recommendation)
+            }));
+
+        Assert.Equal(ChatResponseTypes.Comparison, response.ResponseType);
+        Assert.Equal(2, response.Recommendations.Count);
+        Assert.Contains("Ưu tiên camera", response.QuickReplies ?? []);
+        Assert.Contains("So sánh nhanh 2 sản phẩm", response.Text);
+        Assert.Equal(
+            "So sánh Camera Phone và Gaming Phone",
+            consultationService.LastQuery);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithNewCompleteRequest_DoesNotMixPreviousIntent()
+    {
+        var consultationService = new StubProductConsultationService(
+            new[] { CreateConsultationResult(1, "Camera Phone") });
+        var provider = new GroundedAiProvider(
+            consultationService,
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+        const string currentRequest =
+            "Tim dien thoai chup anh dep tu 15 den 30 trieu";
+
+        await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            currentRequest,
+            new[]
+            {
+                new AiConversationMessage(
+                    "user",
+                    "Tim dien thoai choi game duoi 15 trieu"),
+                new AiConversationMessage(
+                    "assistant",
+                    "Day la cac may gaming phu hop.",
+                    ChatResponseTypes.Recommendation)
+            }));
+
+        Assert.Equal(currentRequest, consultationService.LastQuery);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithThreeProductsReference_UsesPreviousRecommendationScope()
+    {
+        var products = new[]
+        {
+            CreateConsultationResult(1, "iQOO Neo 10"),
+            CreateConsultationResult(2, "vivo V40 5G"),
+            CreateConsultationResult(3, "Honor 400 Pro"),
+            CreateConsultationResult(4, "Unrelated Camera Phone")
+        };
+        var consultationService = new StubProductConsultationService(products);
+        var provider = new GroundedAiProvider(
+            consultationService,
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "Trong 3 may do co may nao chup anh dep khong",
+            new[]
+            {
+                new AiConversationMessage(
+                    "assistant",
+                    "Toi tim thay 3 san pham phu hop.",
+                    ChatResponseTypes.Recommendation,
+                    new[] { 1, 2, 3 })
+            }));
+
+        Assert.Equal(new[] { 1, 2, 3 }, consultationService.LastProductIds);
+        Assert.DoesNotContain(
+            response.Recommendations,
+            product => product.ProductId == 4);
+        Assert.Equal(ChatResponseTypes.Recommendation, response.ResponseType);
+        Assert.Contains("iQOO Neo 10", response.Text);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithShortCameraFollowUp_UsesPreviousRecommendationScope()
+    {
+        var products = new[]
+        {
+            CreateConsultationResult(1, "iQOO Neo 10"),
+            CreateConsultationResult(2, "vivo V40 5G"),
+            CreateConsultationResult(3, "Honor 400 Pro")
+        };
+        var consultationService = new StubProductConsultationService(products);
+        var provider = new GroundedAiProvider(
+            consultationService,
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "May chup anh dep",
+            new[]
+            {
+                new AiConversationMessage(
+                    "assistant",
+                    "Toi tim thay 3 san pham phu hop.",
+                    ChatResponseTypes.Recommendation,
+                    new[] { 1, 2, 3 })
+            }));
+
+        Assert.Equal(new[] { 1, 2, 3 }, consultationService.LastProductIds);
+    }
+
+    [Fact]
+    public async Task ProductSearch_WithExplicitModelNames_PrioritizesExactModels()
+    {
+        using var scope = _application.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+        await db.Database.EnsureDeletedAsync();
+        await db.Database.EnsureCreatedAsync();
+
+        var category = new Category { Categoryid = 1, Categoryname = "Điện thoại" };
+        var brands = new[]
+        {
+            new Brand { Brandid = 1, Brandname = "Google Pixel" },
+            new Brand { Brandid = 2, Brandname = "iPhone" },
+            new Brand { Brandid = 3, Brandname = "Samsung" }
+        };
+        var products = new[]
+        {
+            new Product { Productid = 1, Categoryid = 1, Brandid = 1, Productname = "Google Pixel 10 Pro" },
+            new Product { Productid = 2, Categoryid = 1, Brandid = 1, Productname = "Google Pixel 8 Pro" },
+            new Product { Productid = 3, Categoryid = 1, Brandid = 2, Productname = "iPhone 15 Pro Max" },
+            new Product { Productid = 4, Categoryid = 1, Brandid = 3, Productname = "Samsung Galaxy S24 Ultra" }
+        };
+        var variants = products.Select(product => new Productvariant
+        {
+            Variantid = product.Productid * 10,
+            Productid = product.Productid,
+            Condition = "New Seal",
+            Baseprice = 20_000_000 + product.Productid,
+            Specifications = "{}"
+        }).ToList();
+
+        db.Categories.Add(category);
+        db.Brands.AddRange(brands);
+        db.Products.AddRange(products);
+        db.Productvariants.AddRange(variants);
+        db.Inventoryitems.AddRange(variants.Select(variant => new Inventoryitem
+        {
+            Imei = $"COMPARE-{variant.Variantid}",
+            Variantid = variant.Variantid,
+            Status = "InStock"
+        }));
+        await db.SaveChangesAsync();
+
+        var service = new ProductConsultationService(
+            db,
+            Options.Create(new AiAssistantOptions { MaxRetrievedVariants = 5 }));
+        var results = await service.SearchAsync(
+            "So sánh Google Pixel 8 Pro, iPhone 15 Pro Max và Samsung Galaxy S24 Ultra");
+        var firstThreeProducts = results
+            .Select(item => item.ProductId)
+            .Distinct()
+            .Take(3)
+            .ToList();
+
+        Assert.DoesNotContain(1, firstThreeProducts);
+        Assert.Contains(2, firstThreeProducts);
+        Assert.Contains(3, firstThreeProducts);
+        Assert.Contains(4, firstThreeProducts);
+    }
+
+    [Fact]
+    public async Task ProductSearch_WithGamingBudget_PrioritizesGamingSpecifications()
+    {
+        using var scope = _application.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+        await db.Database.EnsureDeletedAsync();
+        await db.Database.EnsureCreatedAsync();
+
+        db.Categories.Add(new Category { Categoryid = 1, Categoryname = "Dien thoai" });
+        db.Brands.Add(new Brand { Brandid = 1, Brandname = "Demo" });
+        db.Products.AddRange(
+            new Product
+            {
+                Productid = 1,
+                Categoryid = 1,
+                Brandid = 1,
+                Productname = "Demo Gaming Phone",
+                Description = "Dien thoai choi game co tan nhiet tot."
+            },
+            new Product
+            {
+                Productid = 2,
+                Categoryid = 1,
+                Brandid = 1,
+                Productname = "Demo Camera Phone",
+                Description = "Dien thoai chup anh va quay video."
+            });
+        db.Productvariants.AddRange(
+            new Productvariant
+            {
+                Variantid = 11,
+                Productid = 1,
+                Condition = "New Seal",
+                Baseprice = 14_000_000,
+                Specifications = JsonSerializer.Serialize(new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 8 Gen 3",
+                    ["GPU"] = "Adreno",
+                    ["Dung luong RAM"] = "16GB",
+                    ["Man hinh"] = "144Hz",
+                    ["Pin"] = "6000mAh"
+                })
+            },
+            new Productvariant
+            {
+                Variantid = 22,
+                Productid = 2,
+                Condition = "New Seal",
+                Baseprice = 13_000_000,
+                Specifications = JsonSerializer.Serialize(new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 7 Gen 3",
+                    ["Dung luong RAM"] = "8GB",
+                    ["Camera sau"] = "200MP OIS",
+                    ["Pin"] = "5000mAh"
+                })
+            });
+        db.Inventoryitems.AddRange(
+            new Inventoryitem { Imei = "GAME-01", Variantid = 11, Status = "InStock" },
+            new Inventoryitem { Imei = "CAMERA-01", Variantid = 22, Status = "InStock" });
+        await db.SaveChangesAsync();
+
+        var service = new ProductConsultationService(
+            db,
+            Options.Create(new AiAssistantOptions { MaxRetrievedVariants = 5 }));
+        var results = await service.SearchAsync(
+            "Tim dien thoai choi game duoi 15 trieu");
+
+        Assert.NotEmpty(results);
+        Assert.Equal("Demo Gaming Phone", results[0].ProductName);
+        Assert.All(results, item => Assert.True(item.Price <= 15_000_000));
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_AfterComparison_KeepsComparedProductScope()
+    {
+        var products = new[]
+        {
+            CreateConsultationResult(1, "Google Pixel 10 Pro"),
+            CreateConsultationResult(2, "Google Pixel 8 Pro"),
+            CreateConsultationResult(3, "iPhone 15 Pro Max"),
+            CreateConsultationResult(4, "Samsung Galaxy S24 Ultra")
+        };
+        var provider = new GroundedAiProvider(
+            new StubProductConsultationService(products),
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "Ưu tiên camera",
+            new[]
+            {
+                new AiConversationMessage(
+                    "assistant",
+                    "So sánh Google Pixel 8 Pro, iPhone 15 Pro Max và Samsung Galaxy S24 Ultra",
+                    ChatResponseTypes.Comparison,
+                    new[] { 2, 3, 4 })
+            }));
+
+        Assert.DoesNotContain(
+            response.Recommendations,
+            item => item.ProductName == "Google Pixel 10 Pro");
+        Assert.Equal(
+            new[] { 2, 3, 4 },
+            response.Recommendations.Select(item => item.ProductId));
+    }
+
+    private static ProductConsultationResult CreateConsultationResult(
+        int productId,
+        string productName) =>
+        new(
+            productId,
+            productId * 10,
+            productName,
+            "Test brand",
+            "Điện thoại",
+            "New Seal",
+            $"TEST-{productId}",
+            20_000_000 + productId,
+            20_000_000 + productId,
+            1,
+            string.Empty,
+            new Dictionary<string, string> { ["Camera sau"] = "50MP" });
+
+    private sealed class StubProductConsultationService(
+        IReadOnlyList<ProductConsultationResult> products)
+        : IProductConsultationService
+    {
+        public string? LastQuery { get; private set; }
+        public IReadOnlyCollection<int>? LastProductIds { get; private set; }
+
+        public Task<IReadOnlyList<ProductConsultationResult>> SearchAsync(
+            string userMessage,
+            IReadOnlyCollection<int>? productIds = null,
+            CancellationToken cancellationToken = default)
+        {
+            LastQuery = userMessage;
+            LastProductIds = productIds;
+            var filteredProducts = productIds is { Count: > 0 }
+                ? products.Where(product => productIds.Contains(product.ProductId)).ToList()
+                : products;
+            return Task.FromResult<IReadOnlyList<ProductConsultationResult>>(
+                filteredProducts);
+        }
+    }
+
+    private sealed class StubHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) =>
+            throw new InvalidOperationException(
+                "Language model must not be called for explicit comparisons.");
     }
 
     public void Dispose()

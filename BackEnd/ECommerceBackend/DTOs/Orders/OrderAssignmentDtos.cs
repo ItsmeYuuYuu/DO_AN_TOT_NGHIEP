@@ -56,7 +56,10 @@ public record HandoffOrderRequestDto(string? Note = null);
 
 public record MarkOrderShippedRequestDto(
     [Required, MinLength(1)] List<string> Imeis,
-    string? Note = null
+    string? Note = null,
+    string Carrier = "GHN",
+    [Range(0, 10000000)] decimal Shippingfee = 0,
+    DateTime? Estimateddeliveryat = null
 );
 
 public record AssignmentEmployeeDto(

@@ -69,6 +69,8 @@ public partial class Order
 
     public virtual ICollection<Refundtransaction> Refundtransactions { get; set; } = new List<Refundtransaction>();
 
+    public virtual Shipment? Shipment { get; set; }
+
     public virtual User? User { get; set; }
 
     public virtual Voucher? VouchercodeNavigation { get; set; }

@@ -63,6 +63,10 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Refundtransaction> Refundtransactions { get; set; }
 
+    public virtual DbSet<Shipment> Shipments { get; set; }
+
+    public virtual DbSet<Shipmenthistory> Shipmenthistories { get; set; }
+
     public virtual DbSet<Role> Roles { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
@@ -151,6 +155,12 @@ public partial class ECommerceContext : DbContext
 
             entity.Property(e => e.Messageid).HasColumnName("messageid");
             entity.Property(e => e.Messagecontent).HasColumnName("messagecontent");
+            entity.Property(e => e.Quickreplies)
+                .HasColumnType("jsonb")
+                .HasColumnName("quickreplies");
+            entity.Property(e => e.Responsetype)
+                .HasMaxLength(30)
+                .HasColumnName("responsetype");
             entity.Property(e => e.Sendertype)
                 .HasMaxLength(50)
                 .HasColumnName("sendertype");
@@ -630,6 +640,65 @@ public partial class ECommerceContext : DbContext
                 .HasForeignKey(d => d.Orderid)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_orderpayments_orders");
+        });
+
+        modelBuilder.Entity<Shipment>(entity =>
+        {
+            entity.HasKey(e => e.Shipmentid).HasName("shipments_pkey");
+            entity.ToTable("shipments");
+
+            entity.HasIndex(e => e.Orderid, "ux_shipments_orderid").IsUnique();
+            entity.HasIndex(e => e.Trackingcode, "ux_shipments_trackingcode").IsUnique();
+            entity.HasIndex(e => new { e.Status, e.Updatedat }, "ix_shipments_status_updatedat");
+
+            entity.Property(e => e.Shipmentid).HasColumnName("shipmentid");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
+            entity.Property(e => e.Carrier).HasMaxLength(30).HasColumnName("carrier");
+            entity.Property(e => e.Trackingcode).HasMaxLength(100).HasColumnName("trackingcode");
+            entity.Property(e => e.Shippingfee).HasPrecision(18, 2).HasColumnName("shippingfee");
+            entity.Property(e => e.Status).HasMaxLength(30).HasColumnName("status");
+            entity.Property(e => e.Estimateddeliveryat).HasColumnType("timestamp without time zone").HasColumnName("estimateddeliveryat");
+            entity.Property(e => e.Deliveryattempts).HasDefaultValue(0).HasColumnName("deliveryattempts");
+            entity.Property(e => e.Createdbyuserid).HasColumnName("createdbyuserid");
+            entity.Property(e => e.Createdat).HasDefaultValueSql("CURRENT_TIMESTAMP").HasColumnType("timestamp without time zone").HasColumnName("createdat");
+            entity.Property(e => e.Updatedat).HasColumnType("timestamp without time zone").HasColumnName("updatedat");
+            entity.Property(e => e.Pickedupat).HasColumnType("timestamp without time zone").HasColumnName("pickedupat");
+            entity.Property(e => e.Deliveredat).HasColumnType("timestamp without time zone").HasColumnName("deliveredat");
+            entity.Property(e => e.Returnedat).HasColumnType("timestamp without time zone").HasColumnName("returnedat");
+
+            entity.HasOne(e => e.Order).WithOne(e => e.Shipment)
+                .HasForeignKey<Shipment>(e => e.Orderid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_shipments_orders");
+            entity.HasOne(e => e.Createdbyuser).WithMany(e => e.CreatedShipments)
+                .HasForeignKey(e => e.Createdbyuserid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_shipments_users");
+        });
+
+        modelBuilder.Entity<Shipmenthistory>(entity =>
+        {
+            entity.HasKey(e => e.Historyid).HasName("shipmenthistories_pkey");
+            entity.ToTable("shipmenthistories");
+
+            entity.HasIndex(e => new { e.Shipmentid, e.Createdat }, "ix_shipmenthistories_shipment_createdat");
+
+            entity.Property(e => e.Historyid).HasColumnName("historyid");
+            entity.Property(e => e.Shipmentid).HasColumnName("shipmentid");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+            entity.Property(e => e.Fromstatus).HasMaxLength(30).HasColumnName("fromstatus");
+            entity.Property(e => e.Tostatus).HasMaxLength(30).HasColumnName("tostatus");
+            entity.Property(e => e.Note).HasMaxLength(1000).HasColumnName("note");
+            entity.Property(e => e.Createdat).HasDefaultValueSql("CURRENT_TIMESTAMP").HasColumnType("timestamp without time zone").HasColumnName("createdat");
+
+            entity.HasOne(e => e.Shipment).WithMany(e => e.Histories)
+                .HasForeignKey(e => e.Shipmentid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_shipmenthistories_shipments");
+            entity.HasOne(e => e.User).WithMany(e => e.Shipmenthistories)
+                .HasForeignKey(e => e.Userid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_shipmenthistories_users");
         });
 
         modelBuilder.Entity<Returnrequest>(entity =>

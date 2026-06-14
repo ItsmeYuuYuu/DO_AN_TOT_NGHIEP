@@ -234,8 +234,7 @@ namespace ECommerceBackend.Controllers
         private static Dictionary<string, string[]> ValidTransitions() => new()
         {
             { StatusPending, new[] { StatusProcessing, StatusCancelled } },
-            { StatusProcessing, new[] { StatusShipped, StatusCancelled } },
-            { StatusShipped, new[] { StatusCompleted } }
+            { StatusProcessing, new[] { StatusCancelled } }
         };
 
         private static bool IsPaymentReadyForProcessing(Order order)
@@ -485,6 +484,9 @@ namespace ECommerceBackend.Controllers
 
             var query = _context.Orders
                 .Include(o => o.Customer)
+                .Include(o => o.Orderitems)
+                .Include(o => o.Shipment)
+                    .ThenInclude(shipment => shipment!.Histories)
                 .Where(o => o.Customer != null && o.Customer.Phone == phone);
 
             if (orderid.HasValue)
@@ -504,7 +506,22 @@ namespace ECommerceBackend.Controllers
                 o.Finalamount,
                 o.Paymentmethod,
                 o.Vouchercode,
-                o.Orderitems.Count
+                o.Orderitems.Count,
+                o.Shipment == null
+                    ? null
+                    : new ShipmentLookupDto(
+                        o.Shipment.Carrier,
+                        o.Shipment.Trackingcode,
+                        o.Shipment.Status,
+                        o.Shipment.Estimateddeliveryat,
+                        o.Shipment.Deliveryattempts,
+                        o.Shipment.Histories
+                            .OrderBy(history => history.Createdat)
+                            .Select(history => new ShipmentLookupHistoryDto(
+                                history.Tostatus,
+                                history.Note,
+                                history.Createdat))
+                            .ToList())
             ));
 
             return Ok(result);

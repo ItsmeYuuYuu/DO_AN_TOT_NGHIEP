@@ -1,0 +1,147 @@
+%% Main ERD for the chatbot-focused thesis chapter.
+%% The complete 34-table ERD remains in ecommerce-full-erd.mmd for the appendix.
+%%{init: {"theme": "neutral"}}%%
+
+erDiagram
+    direction LR
+
+    users {
+        int userid PK
+        string username UK
+        string fullname
+        string email
+        bool isactive
+    }
+
+    customers {
+        int customerid PK
+        string fullname
+        string phone UK
+        string email
+    }
+
+    chatsessions {
+        int sessionid PK
+        int customerid FK
+        int assigneduserid
+        string guestsessiontoken
+        string status
+        string handoffstatus
+        datetime starttime
+    }
+
+    chatmessages {
+        int messageid PK
+        int sessionid FK
+        string sendertype
+        text messagecontent
+        string responsetype
+        jsonb quickreplies
+        datetime sentat
+    }
+
+    chatproductrecommendations {
+        int recommendationid PK
+        int messageid FK
+        int productid FK
+        int variantid FK
+        int orderid FK
+        int rank
+        datetime addedtocartat
+        datetime orderedat
+    }
+
+    brands {
+        int brandid PK
+        string brandname
+    }
+
+    productseries {
+        int seriesid PK
+        int brandid FK
+        string seriesname
+        bool isactive
+    }
+
+    categories {
+        int categoryid PK
+        string categoryname
+    }
+
+    products {
+        int productid PK
+        int categoryid FK
+        int brandid FK
+        int seriesid FK
+        string productname
+        text description
+    }
+
+    productvariants {
+        int variantid PK
+        int productid FK
+        string sku UK
+        decimal baseprice
+        decimal saleprice
+        string condition
+        text specifications
+    }
+
+    inventoryitems {
+        string imei PK
+        int variantid FK
+        string status
+    }
+
+    carts {
+        int cartid PK
+        int userid FK, UK
+    }
+
+    cartitems {
+        int cartitemid PK
+        int cartid FK
+        int variantid FK
+        int quantity
+    }
+
+    orders {
+        int orderid PK
+        int customerid FK
+        int userid FK
+        string checkouttype
+        decimal finalamount
+        string paymentstatus
+        string orderstatus
+    }
+
+    orderitems {
+        int orderitemid PK
+        int orderid FK
+        string imei FK
+        decimal sellingprice
+    }
+
+    customers o|--o{ chatsessions : starts
+    chatsessions ||--o{ chatmessages : contains
+    chatmessages ||--o{ chatproductrecommendations : produces
+    users ||--o| carts : owns
+
+    brands ||--o{ productseries : contains
+    brands o|--o{ products : owns
+    productseries o|--o{ products : groups
+    categories o|--o{ products : classifies
+    products ||--o{ productvariants : has
+    productvariants o|--o{ inventoryitems : stocks
+
+    products ||--o{ chatproductrecommendations : recommended_product
+    productvariants ||--o{ chatproductrecommendations : recommended_variant
+
+    carts ||--o{ cartitems : contains
+    productvariants ||--o{ cartitems : added_to_cart
+
+    customers o|--o{ orders : places
+    users o|--o{ orders : account_checkout
+    orders ||--o{ orderitems : contains
+    inventoryitems o|--o{ orderitems : fulfills
+    orders o|--o{ chatproductrecommendations : recommendation_conversion

@@ -30,6 +30,7 @@ interface StaffNavItem {
 const navigationByRole: Record<string, StaffNavItem[]> = {
   Manager: [
     { label: 'Đổi trả & hoàn tiền', to: '/staff/returns', icon: <RotateCcw size={18} /> },
+    { label: 'Vận chuyển', to: '/staff/shipments', icon: <Truck size={18} /> },
     { label: 'Trung tâm điều phối', to: '/staff/manager', icon: <BarChart3 size={18} /> },
     { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={18} /> },
     { label: 'Đơn hàng', to: '/staff/orders', icon: <ClipboardList size={18} /> },
@@ -42,12 +43,14 @@ const navigationByRole: Record<string, StaffNavItem[]> = {
   ],
   Sales: [
     { label: 'Đổi trả & hoàn tiền', to: '/staff/returns', icon: <RotateCcw size={18} /> },
+    { label: 'Theo dõi vận chuyển', to: '/staff/shipments', icon: <Truck size={18} /> },
     { label: 'Đơn cần xác nhận', to: '/staff/sales-orders', icon: <ClipboardList size={18} /> },
     { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={18} /> },
     { label: 'Voucher', to: '/staff/vouchers', icon: <Gift size={18} /> },
   ],
   Warehouse: [
     { label: 'Hàng hoàn / đổi máy', to: '/staff/returns', icon: <RotateCcw size={18} /> },
+    { label: 'Vận chuyển & hàng hoàn', to: '/staff/shipments', icon: <Truck size={18} /> },
     { label: 'Đơn cần xuất kho', to: '/staff/warehouse-orders', icon: <Truck size={18} /> },
     { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={18} /> },
     { label: 'Kho & IMEI', to: '/staff/inventory', icon: <Box size={18} /> },

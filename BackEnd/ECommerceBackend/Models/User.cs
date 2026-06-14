@@ -47,6 +47,10 @@ public partial class User
 
     public virtual ICollection<Refundtransaction> Refundtransactions { get; set; } = new List<Refundtransaction>();
 
+    public virtual ICollection<Shipment> CreatedShipments { get; set; } = new List<Shipment>();
+
+    public virtual ICollection<Shipmenthistory> Shipmenthistories { get; set; } = new List<Shipmenthistory>();
+
     public virtual Role? Role { get; set; }
 
     public virtual Cart? Cart { get; set; }

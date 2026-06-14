@@ -3,6 +3,7 @@ import { Bot, CheckCircle2, Headphones, MessageSquare, Send, ShoppingCart, Trend
 import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatRecommendationMetrics, ChatSession } from '@/features/chat/api/chatSessionsApi';
 import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
+import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 
 const ConsultantChats = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -239,6 +240,9 @@ const ConsultantChats = () => {
                           : 'rounded-tr-none bg-teal-600 text-white'
                       }`}>
                         <p className="whitespace-pre-wrap">{message.messagecontent}</p>
+                        {message.responsetype === 'comparison' && message.recommendations && (
+                          <ChatComparisonTable recommendations={message.recommendations} />
+                        )}
                         {message.recommendations && message.recommendations.length > 0 && (
                           <ChatRecommendationCards
                             sessionId={activeSession.sessionid}

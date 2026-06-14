@@ -65,5 +65,6 @@ out/
 *.db-journal
 *.sqlite
 
-# Runtime-uploaded product images
-BackEnd/ECommerceBackend/wwwroot/uploads/products/
+# Runtime-uploaded product images, except versioned demo assets.
+BackEnd/ECommerceBackend/wwwroot/uploads/products/*
+!BackEnd/ECommerceBackend/wwwroot/uploads/products/demo-*.svg

@@ -24,7 +24,9 @@ namespace ECommerceBackend.DTOs.Chats
         string Sendertype,
         string Messagecontent,
         DateTime? Sentat,
-        IReadOnlyList<ChatRecommendationDto>? Recommendations = null
+        IReadOnlyList<ChatRecommendationDto>? Recommendations = null,
+        string? Responsetype = null,
+        IReadOnlyList<string>? Quickreplies = null
     );
 
     public record ChatRecommendationDto(
@@ -42,7 +44,9 @@ namespace ECommerceBackend.DTOs.Chats
         int Rank,
         DateTime? Addedtocartat,
         DateTime? Orderedat,
-        int? Orderid
+        int? Orderid,
+        string Brand,
+        string Specifications
     );
 
     public record ChatRecommendationProductMetricDto(

@@ -14,12 +14,13 @@ const PAGE_SIZE = 10;
 const statusConfig: Record<string, { label: string; classes: string }> = {
   Completed:  { label: 'Hoàn thành', classes: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
   Shipped:    { label: 'Đang giao',  classes: 'bg-blue-50 text-blue-700 border border-blue-200' },
+  Returned:   { label: 'Hoàn về kho', classes: 'bg-purple-50 text-purple-700 border border-purple-200' },
   Processing: { label: 'Đang xử lý',classes: 'bg-amber-50 text-amber-700 border border-amber-200' },
   Pending:    { label: 'Chờ duyệt',  classes: 'bg-slate-100 text-slate-600 border border-slate-200' },
   Cancelled:  { label: 'Đã hủy',    classes: 'bg-red-50 text-red-600 border border-red-200' },
 };
 
-const statusOptions = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled'];
+const statusOptions = ['Pending', 'Processing', 'Cancelled'];
 const orderProgress = ['Pending', 'Processing', 'Shipped', 'Completed'];
 
 import { useSearchParams } from 'react-router-dom';
@@ -248,9 +249,15 @@ const AdminOrders: React.FC = () => {
         <select
           className="text-xs bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-slate-700 outline-none focus:border-blue-500 disabled:opacity-60 cursor-pointer"
           value={o.orderstatus ?? ''}
-          disabled={updatingId === o.orderid || o.orderstatus === 'Completed' || o.orderstatus === 'Cancelled'}
+          disabled={
+            updatingId === o.orderid ||
+            ['Shipped', 'Completed', 'Cancelled', 'Returned'].includes(o.orderstatus ?? '')
+          }
           onChange={e => handleStatusChange(o.orderid, e.target.value)}
         >
+          {!statusOptions.includes(o.orderstatus ?? '') && o.orderstatus && (
+            <option value={o.orderstatus}>{statusConfig[o.orderstatus]?.label ?? o.orderstatus}</option>
+          )}
           {statusOptions.map(s => (
             <option key={s} value={s}>{statusConfig[s]?.label ?? s}</option>
           ))}
@@ -275,8 +282,6 @@ const AdminOrders: React.FC = () => {
               <select className="text-sm border-slate-300 rounded-md py-1 px-2" value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}>
                 <option value="">-- Đổi trạng thái --</option>
                 <option value="Processing">Đang xử lý</option>
-                <option value="Shipped">Đang giao</option>
-                <option value="Completed">Hoàn thành</option>
                 <option value="Cancelled">Hủy</option>
               </select>
               <Button size="sm" onClick={handleBulkUpdate} isLoading={updatingId === -1} disabled={!bulkStatus}>Lưu</Button>

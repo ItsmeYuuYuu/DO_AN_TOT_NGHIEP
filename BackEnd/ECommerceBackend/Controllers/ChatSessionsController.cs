@@ -206,7 +206,9 @@ namespace ECommerceBackend.Controllers
                 recommendation.Rank,
                 recommendation.Addedtocartat,
                 recommendation.Orderedat,
-                recommendation.Orderid);
+                recommendation.Orderid,
+                recommendation.Product.Brand?.Brandname ?? "Chưa xác định",
+                variant.Specifications ?? "{}");
         }
 
         private static ChatMessageDto MapMessageToDto(Chatmessage m) => new(
@@ -218,7 +220,9 @@ namespace ECommerceBackend.Controllers
             m.Chatproductrecommendations
                 .OrderBy(item => item.Rank)
                 .Select(MapRecommendationToDto)
-                .ToList());
+                .ToList(),
+            m.Responsetype,
+            ChatResponseMetadata.DeserializeQuickReplies(m.Quickreplies));
 
         [HttpGet("my")]
         public async Task<ActionResult<IEnumerable<ChatSessionDto>>> GetMySessions()
@@ -330,6 +334,7 @@ namespace ECommerceBackend.Controllers
                 .AsNoTracking()
                 .Include(message => message.Chatproductrecommendations)
                     .ThenInclude(recommendation => recommendation.Product)
+                        .ThenInclude(product => product.Brand)
                 .Include(message => message.Chatproductrecommendations)
                     .ThenInclude(recommendation => recommendation.Variant)
                         .ThenInclude(variant => variant.Productimages)
@@ -392,6 +397,7 @@ namespace ECommerceBackend.Controllers
             var recommendation = await _context.Chatproductrecommendations
                 .Include(item => item.Message)
                 .Include(item => item.Product)
+                    .ThenInclude(product => product.Brand)
                 .Include(item => item.Variant)
                     .ThenInclude(variant => variant.Productimages)
                 .Include(item => item.Variant)

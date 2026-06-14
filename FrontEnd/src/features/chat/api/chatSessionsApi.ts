@@ -22,6 +22,8 @@ export interface ChatMessage {
   messagecontent: string;
   sentat: string;
   recommendations?: ChatRecommendation[];
+  responsetype?: 'text' | 'clarification' | 'recommendation' | 'comparison' | null;
+  quickreplies?: string[];
 }
 
 export interface ChatRecommendation {
@@ -40,6 +42,8 @@ export interface ChatRecommendation {
   addedtocartat?: string | null;
   orderedat?: string | null;
   orderid?: number | null;
+  brand: string;
+  specifications: string;
 }
 
 export interface ChatRecommendationMetrics {

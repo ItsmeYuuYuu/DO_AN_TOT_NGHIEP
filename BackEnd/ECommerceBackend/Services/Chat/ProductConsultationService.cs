@@ -26,6 +26,7 @@ public interface IProductConsultationService
 {
     Task<IReadOnlyList<ProductConsultationResult>> SearchAsync(
         string userMessage,
+        IReadOnlyCollection<int>? productIds = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -51,6 +52,7 @@ public sealed class ProductConsultationService : IProductConsultationService
 
     public async Task<IReadOnlyList<ProductConsultationResult>> SearchAsync(
         string userMessage,
+        IReadOnlyCollection<int>? productIds = null,
         CancellationToken cancellationToken = default)
     {
         var normalizedQuery = Normalize(userMessage);
@@ -60,7 +62,7 @@ public sealed class ProductConsultationService : IProductConsultationService
         var requestedStorage = ExtractStorage(normalizedQuery);
         var usageProfile = DetectUsageProfile(normalizedQuery);
 
-        var products = await _context.Products
+        var productQuery = _context.Products
             .AsNoTracking()
             .Include(product => product.Brand)
             .Include(product => product.Category)
@@ -68,7 +70,14 @@ public sealed class ProductConsultationService : IProductConsultationService
                 .ThenInclude(variant => variant.Inventoryitems)
             .Include(product => product.Productvariants)
                 .ThenInclude(variant => variant.Productimages)
-            .AsSplitQuery()
+            .AsSplitQuery();
+        if (productIds is { Count: > 0 })
+        {
+            productQuery = productQuery.Where(product =>
+                productIds.Contains(product.Productid));
+        }
+
+        var products = await productQuery
             .OrderByDescending(product => product.Createdat)
             .Take(250)
             .ToListAsync(cancellationToken);
@@ -92,7 +101,9 @@ public sealed class ProductConsultationService : IProductConsultationService
 
         var queryTokens = Regex.Matches(normalizedQuery, @"[\p{L}\p{N}]+")
             .Select(match => match.Value)
-            .Where(token => token.Length >= 2 && !StopWords.Contains(token))
+            .Where(token =>
+                (token.Length >= 2 || token.All(char.IsDigit)) &&
+                !StopWords.Contains(token))
             .Distinct()
             .ToArray();
 
@@ -129,6 +140,20 @@ public sealed class ProductConsultationService : IProductConsultationService
                     continue;
 
                 var score = queryTokens.Sum(token => searchableText.Contains(token) ? 3 : 0);
+                var productNameTokens = Regex.Matches(
+                        Normalize(product.Productname),
+                        @"[\p{L}\p{N}]+")
+                    .Select(match => match.Value)
+                    .Where(token =>
+                        (token.Length >= 2 || token.All(char.IsDigit)) &&
+                        !StopWords.Contains(token))
+                    .Distinct()
+                    .ToArray();
+                if (productNameTokens.Length > 0 &&
+                    productNameTokens.All(normalizedQuery.Contains))
+                {
+                    score += 20 + productNameTokens.Length;
+                }
                 if (Normalize(product.Productname).Contains(normalizedQuery))
                     score += 12;
                 if (!string.IsNullOrWhiteSpace(product.Brand?.Brandname) &&
@@ -210,7 +235,16 @@ public sealed class ProductConsultationService : IProductConsultationService
                 "so sanh",
                 "mua",
                 "camera",
-                "pin"))
+                "pin",
+                "chup anh",
+                "quay phim",
+                "quay video",
+                "choi game",
+                "gaming",
+                "pin lau",
+                "pin trau",
+                "hoc tap",
+                "lam viec"))
         {
             return true;
         }
@@ -330,15 +364,24 @@ public sealed class ProductConsultationService : IProductConsultationService
         {
             "gaming" => ScoreTerms(
                 text,
+                ("choi game", 10),
+                ("gaming", 10),
+                ("snapdragon 8", 6),
+                ("dimensity 9", 6),
                 ("chipset", 5),
                 ("gpu", 5),
                 ("ram", 4),
                 ("tan nhiet", 4),
-                ("120hz", 3),
-                ("144hz", 3),
+                ("144hz", 5),
+                ("120hz", 2),
                 ("pin", 2)),
             "camera" => ScoreTerms(
                 text,
+                ("zeiss", 6),
+                ("leica", 6),
+                ("hasselblad", 6),
+                ("telephoto", 5),
+                ("200mp", 5),
                 ("camera sau", 6),
                 ("quay video", 5),
                 ("chong rung", 4),
@@ -347,6 +390,15 @@ public sealed class ProductConsultationService : IProductConsultationService
                 ("camera truoc", 2)),
             "battery" => ScoreTerms(
                 text,
+                ("6150mah", 8),
+                ("6100mah", 8),
+                ("6000mah", 7),
+                ("5910mah", 6),
+                ("5850mah", 6),
+                ("5600mah", 5),
+                ("5500mah", 5),
+                ("sac nhanh 120w", 6),
+                ("sac nhanh 100w", 5),
                 ("pin", 6),
                 ("mah", 5),
                 ("sac nhanh", 5),

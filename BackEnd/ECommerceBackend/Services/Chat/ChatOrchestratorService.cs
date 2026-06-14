@@ -36,8 +36,9 @@ namespace ECommerceBackend.Services.Chat
             _context.Chatmessages.Add(userMessage);
             await _context.SaveChangesAsync();
 
-            var history = await _context.Chatmessages
+            var historyMessages = await _context.Chatmessages
                 .AsNoTracking()
+                .Include(message => message.Chatproductrecommendations)
                 .Where(message =>
                     message.Sessionid == session.Sessionid &&
                     message.Messageid != userMessage.Messageid &&
@@ -45,10 +46,17 @@ namespace ECommerceBackend.Services.Chat
                 .OrderByDescending(message => message.Sentat)
                 .Take(Math.Clamp(_options.MaxHistoryMessages, 1, 30))
                 .OrderBy(message => message.Sentat)
+                .ToListAsync();
+            var history = historyMessages
                 .Select(message => new AiConversationMessage(
                     message.Sendertype == "assistant" ? "assistant" : "user",
-                    message.Messagecontent))
-                .ToListAsync();
+                    message.Messagecontent,
+                    message.Responsetype,
+                    message.Chatproductrecommendations
+                        .Select(item => item.Productid)
+                        .Distinct()
+                        .ToList()))
+                .ToList();
 
             var aiResponse = await _aiProvider.GetResponseAsync(
                 new AiConversationRequest(
@@ -61,6 +69,8 @@ namespace ECommerceBackend.Services.Chat
                 Sessionid = session.Sessionid,
                 Sendertype = "assistant",
                 Messagecontent = aiResponse.Text,
+                Responsetype = aiResponse.ResponseType,
+                Quickreplies = ChatResponseMetadata.SerializeQuickReplies(aiResponse.QuickReplies),
                 Sentat = DateTime.Now
             };
             var rank = 1;
@@ -110,8 +120,14 @@ namespace ECommerceBackend.Services.Chat
                             item.Rank,
                             item.Addedtocartat,
                             item.Orderedat,
-                            item.Orderid))
-                        .ToList()))
+                            item.Orderid,
+                            item.Product.Brand != null
+                                ? item.Product.Brand.Brandname
+                                : "Chưa xác định",
+                            item.Variant.Specifications ?? "{}"))
+                        .ToList(),
+                    message.Responsetype,
+                    ChatResponseMetadata.DeserializeQuickReplies(message.Quickreplies)))
                 .SingleAsync();
         }
     }

@@ -47,6 +47,7 @@ public class RoleAuthorizationTests : IClassFixture<CustomWebApplicationFactory>
         { "Warranty", HttpMethod.Get, "/api/Warranties", HttpStatusCode.OK },
         { "Content", HttpMethod.Delete, "/api/ProductImages/uploaded/role-matrix-unused.jpg", HttpStatusCode.NoContent },
         { "Consultant", HttpMethod.Get, "/api/ChatSessions/handoffs", HttpStatusCode.OK },
+        { "Warehouse", HttpMethod.Get, "/api/Shipments", HttpStatusCode.OK },
         { "Customer", HttpMethod.Get, "/api/ReturnRequests/mine", HttpStatusCode.OK }
     };
 
@@ -81,7 +82,8 @@ public class RoleAuthorizationTests : IClassFixture<CustomWebApplicationFactory>
         { "Content", HttpMethod.Get, "/api/ReturnRequests" },
         { "Warranty", HttpMethod.Get, "/api/ReturnRequests" },
         { "Consultant", HttpMethod.Get, "/api/ReturnRequests" },
-        { "Content", HttpMethod.Get, "/api/Inventory" }
+        { "Content", HttpMethod.Get, "/api/Inventory" },
+        { "Warranty", HttpMethod.Get, "/api/Shipments" }
     };
 
     [Theory]

@@ -65,6 +65,20 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 - Hủy đơn hoặc hết hạn thanh toán sẽ trả IMEI về trạng thái còn hàng.
 - Đơn đã chuyển sang giao hàng không thể hủy thẳng và hoàn kho sai nghiệp vụ.
 
+### Vận chuyển giả lập
+
+- Hỗ trợ các đơn vị demo: GHN, GHTK, Viettel Post và J&T.
+- Warehouse tạo vận đơn khi xác nhận đủ IMEI, gồm phí vận chuyển và ngày giao
+  dự kiến.
+- Tự sinh mã vận đơn và lưu toàn bộ lịch sử thay đổi trạng thái.
+- Luồng trạng thái gồm chờ lấy hàng, đang vận chuyển, đang giao, giao thất bại,
+  giao lại, hoàn hàng và giao thành công.
+- Giao thành công tự hoàn tất đơn, ghi nhận phần tiền còn lại và kích hoạt bảo
+  hành theo IMEI.
+- Hàng hoàn chỉ được nhập kho khi Warehouse xác nhận; khoản đã thanh toán được
+  hoàn giả lập và lưu trong lịch sử thanh toán.
+- Admin, Manager, Sales và Warehouse có màn hình theo dõi vận chuyển riêng.
+
 ### Bảo hành
 
 - Kích hoạt thời hạn bảo hành theo đúng IMEI khi đơn hoàn tất.
@@ -96,8 +110,12 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 - Kết quả tư vấn hiển thị sản phẩm có cấu trúc và cho phép thêm biến thể vào
   giỏ hàng ngay trong cuộc trò chuyện.
 - Lưu lại sản phẩm chatbot đã đề xuất và thời điểm khách thêm vào giỏ.
-- Chatbot hỏi lại ngân sách và nhu cầu khi câu hỏi còn quá chung chung.
-- Có thể so sánh nhanh 2-3 sản phẩm theo giá, cấu hình, camera, pin và tồn kho.
+- Chatbot hỏi lại theo từng bước khi yêu cầu còn chung chung, kèm lựa chọn nhanh
+  về ngân sách và nhu cầu để khách không phải nhập lại dài dòng.
+- Có thể so sánh 2-3 sản phẩm bằng bảng theo giá, cấu hình, camera, pin và tồn
+  kho; sau đó tiếp tục lọc theo ưu tiên của khách.
+- Loại phản hồi và lựa chọn nhanh được lưu cùng tin nhắn để giữ nguyên khi tải
+  lại lịch sử hoặc chuyển cuộc trò chuyện sang Consultant.
 - Chấm điểm gợi ý theo nhu cầu chơi game, chụp ảnh, pin lâu, học tập hoặc làm việc.
 - Theo dõi funnel từ lượt đề xuất, thêm giỏ tới tạo đơn hàng.
 - Khách có thể yêu cầu gặp nhân viên tư vấn.
@@ -339,10 +357,10 @@ npm run lint
 Frontend hiện build production thành công. Tuy nhiên, cấu hình ESLint 10 vẫn
 được chạy trong quy trình kiểm tra và hiện đạt `0 lỗi, 0 cảnh báo`.
 
-Backend hiện có `58/58` integration test chạy qua, bao phủ đăng ký/đăng nhập,
+Backend hiện có `67/67` integration test chạy qua, bao phủ đăng ký/đăng nhập,
 chatbot, tranh chấp nhận tư vấn, checkout thành viên và khách vãng lai, thanh
 toán/cọc, hoàn kho, Sales/Warehouse, phân quyền API, attribution chatbot và
-nghiệp vụ bảo hành, đổi trả và hoàn tiền.
+nghiệp vụ bảo hành, đổi trả, hoàn tiền, vận chuyển, hỏi lại và so sánh sản phẩm.
 
 ## Trạng thái và giới hạn hiện tại
 
@@ -353,7 +371,7 @@ nghiệp vụ bảo hành, đổi trả và hoàn tiền.
 - Forgot password chưa gửi email khôi phục thật.
 - Redis và Ollama đều là thành phần tùy chọn khi chạy local.
 - Dự án chưa cấu hình quy trình deploy production.
-- Giao hàng vẫn cập nhật thủ công, chưa kết nối đơn vị vận chuyển thật.
+- Vận chuyển đang dùng mô phỏng nội bộ, chưa kết nối API thật của hãng vận chuyển.
 - KPI chuyên sâu cho từng bộ phận vẫn có thể mở rộng thêm.
 
 Kế hoạch tiếp theo được theo dõi tại [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).

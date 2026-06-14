@@ -12,14 +12,39 @@ interface OrderLookup {
   paymentmethod?: string;
   vouchercode?: string;
   itemCount: number;
+  shipment?: {
+    carrier: string;
+    trackingcode: string;
+    status: string;
+    estimateddeliveryat?: string;
+    deliveryattempts: number;
+    histories: Array<{
+      status: string;
+      note?: string;
+      createdat?: string;
+    }>;
+  };
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   Pending:   { label: 'Chờ xác nhận', color: 'bg-yellow-100 text-yellow-700', icon: <Clock size={13} /> },
-  Confirmed: { label: 'Đã xác nhận',  color: 'bg-blue-100 text-blue-700',   icon: <CheckCircle2 size={13} /> },
-  Shipping:  { label: 'Đang giao',    color: 'bg-purple-100 text-purple-700', icon: <Truck size={13} /> },
-  Delivered: { label: 'Đã giao',      color: 'bg-green-100 text-green-700',  icon: <CheckCircle2 size={13} /> },
+  Processing:{ label: 'Đang xử lý',   color: 'bg-blue-100 text-blue-700',   icon: <CheckCircle2 size={13} /> },
+  Shipped:   { label: 'Đang giao',    color: 'bg-purple-100 text-purple-700', icon: <Truck size={13} /> },
+  Completed: { label: 'Đã giao',      color: 'bg-green-100 text-green-700',  icon: <CheckCircle2 size={13} /> },
+  Returned:  { label: 'Đã hoàn hàng', color: 'bg-slate-200 text-slate-700', icon: <Package size={13} /> },
   Cancelled: { label: 'Đã hủy',       color: 'bg-red-100 text-red-600',      icon: <XCircle size={13} /> },
+};
+
+const SHIPMENT_STATUS_LABELS: Record<string, string> = {
+  AwaitingPickup: 'Chờ đơn vị vận chuyển lấy hàng',
+  PickedUp: 'Đơn vị vận chuyển đã lấy hàng',
+  InTransit: 'Đang vận chuyển',
+  OutForDelivery: 'Đang giao đến bạn',
+  DeliveryFailed: 'Giao hàng chưa thành công',
+  RedeliveryScheduled: 'Đã lên lịch giao lại',
+  Returning: 'Đang hoàn về cửa hàng',
+  ReturnedToWarehouse: 'Đã hoàn về kho',
+  Delivered: 'Giao hàng thành công',
 };
 
 const OrderLookupPage: React.FC = () => {
@@ -191,6 +216,36 @@ const OrderLookupPage: React.FC = () => {
                             Phương thức: <span className="text-slate-600 font-bold">{order.paymentmethod}</span>
                             {order.vouchercode && <> · Mã giảm: <span className="text-blue-600 font-bold">{order.vouchercode}</span></>}
                           </p>
+                        )}
+                        {order.shipment && (
+                          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase text-blue-500">Mã vận đơn</p>
+                                <p className="font-black text-blue-800">{order.shipment.trackingcode}</p>
+                              </div>
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700">
+                                {order.shipment.carrier}
+                              </span>
+                            </div>
+                            {order.shipment.estimateddeliveryat && (
+                              <p className="mt-2 text-xs text-slate-500">
+                                Dự kiến giao: <strong>{fmtDate(order.shipment.estimateddeliveryat)}</strong>
+                              </p>
+                            )}
+                            <div className="mt-4 space-y-3 border-l-2 border-blue-200 pl-4">
+                              {order.shipment.histories.map((history, index) => (
+                                <div key={`${history.status}-${history.createdat ?? index}`} className="relative">
+                                  <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-blue-600 ring-2 ring-blue-50" />
+                                  <p className="text-sm font-bold text-slate-700">
+                                    {SHIPMENT_STATUS_LABELS[history.status] ?? history.status}
+                                  </p>
+                                  <p className="text-xs text-slate-400">{fmtDate(history.createdat)}</p>
+                                  {history.note && <p className="mt-0.5 text-xs text-slate-500">{history.note}</p>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
                     )}

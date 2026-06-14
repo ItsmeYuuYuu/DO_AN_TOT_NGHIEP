@@ -168,6 +168,21 @@ namespace ECommerceBackend.DTOs.Orders
     );
 
     /// <summary>Safe limited DTO for public order lookup: no IMEI, no internal fields.</summary>
+    public record ShipmentLookupHistoryDto(
+        string Status,
+        string? Note,
+        DateTime? Createdat
+    );
+
+    public record ShipmentLookupDto(
+        string Carrier,
+        string Trackingcode,
+        string Status,
+        DateTime? Estimateddeliveryat,
+        int Deliveryattempts,
+        List<ShipmentLookupHistoryDto> Histories
+    );
+
     public record OrderLookupDto(
         int Orderid,
         DateTime? Orderdate,
@@ -177,7 +192,8 @@ namespace ECommerceBackend.DTOs.Orders
         decimal Finalamount,
         string? Paymentmethod,
         string? Vouchercode,
-        int ItemCount
+        int ItemCount,
+        ShipmentLookupDto? Shipment
     );
 
     public record BulkUpdateStatusRequestDto(

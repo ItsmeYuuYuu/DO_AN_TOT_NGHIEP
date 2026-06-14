@@ -17,6 +17,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using ECommerceBackend.DTOs.Inventory;
 using ECommerceBackend.DTOs.Cart;
+using ECommerceBackend.DTOs.Shipping;
 
 namespace ECommerceBackend.Tests
 {
@@ -762,6 +763,10 @@ namespace ECommerceBackend.Tests
                 verifyDb.Orderassignments.Single(item =>
                     item.Orderid == 99 && item.Department == "Warehouse").Status);
             Assert.Equal("Shipping", verifyDb.Inventoryitems.Single(item => item.Imei == "IMEI1").Status);
+            var shipment = verifyDb.Shipments.Single(item => item.Orderid == 99);
+            Assert.Equal("GHN", shipment.Carrier);
+            Assert.Equal("AwaitingPickup", shipment.Status);
+            Assert.StartsWith("GHN-DEMO-", shipment.Trackingcode);
             Assert.Contains(verifyDb.Inventorytransactions, item =>
                 item.Orderid == 99 &&
                 item.Imei == "IMEI1" &&
@@ -822,10 +827,19 @@ namespace ECommerceBackend.Tests
 
             _client.DefaultRequestHeaders.Remove("X-Test-Role");
             _client.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
-            var completed = await _client.PatchAsJsonAsync(
-                $"/api/Orders/{order.Orderid}/status",
-                new UpdateOrderStatusRequestDto("Completed"));
-            Assert.Equal(HttpStatusCode.OK, completed.StatusCode);
+            int shipmentId;
+            using (var shipmentScope = _factory.Services.CreateScope())
+            {
+                shipmentId = shipmentScope.ServiceProvider.GetRequiredService<ECommerceContext>()
+                    .Shipments.Single(item => item.Orderid == order.Orderid).Shipmentid;
+            }
+            foreach (var status in new[] { "PickedUp", "InTransit", "OutForDelivery", "Delivered" })
+            {
+                var completed = await _client.PatchAsJsonAsync(
+                    $"/api/Shipments/{shipmentId}/status",
+                    new UpdateShipmentStatusDto(status));
+                Assert.Equal(HttpStatusCode.OK, completed.StatusCode);
+            }
 
             using var verifyScope = _factory.Services.CreateScope();
             var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ECommerceContext>();

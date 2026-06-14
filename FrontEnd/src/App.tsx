@@ -64,6 +64,7 @@ const ConsultantChats     = lazy(() => import('@/portals/staff/ConsultantChats')
 const ManagerWorkspace    = lazy(() => import('@/portals/staff/ManagerWorkspace'));
 const ContentWorkspace    = lazy(() => import('@/portals/staff/ContentWorkspace'));
 const StaffReturns         = lazy(() => import('@/portals/staff/StaffReturns'));
+const StaffShipments       = lazy(() => import('@/portals/staff/StaffShipments'));
 
 // ── Misc ─────────────────────────────────────────────────────────────────────
 const UnauthorizedPage = lazy(() => import('@/portals/UnauthorizedPage'));
@@ -120,6 +121,7 @@ const App: React.FC = () => {
             <Route path="inventory"       element={<StaffInventory />} />
             <Route path="warranties"      element={<StaffWarranties />} />
             <Route path="returns"         element={<StaffReturns />} />
+            <Route path="shipments"       element={<StaffShipments />} />
             <Route path="users"           element={<AdminUsers />} />
             <Route path="customers"       element={<AdminCustomers />} />
             <Route path="categories"      element={<AdminCategoryBrand />} />
@@ -162,6 +164,7 @@ const App: React.FC = () => {
             </Route>
             <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Warehouse']} />}>
               <Route path="returns" element={<StaffReturns />} />
+              <Route path="shipments" element={<StaffShipments />} />
             </Route>
             <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warranty']} />}>
               <Route path="warranties" element={<StaffWarranties />} />

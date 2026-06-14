@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { MessageSquare, Plus, Send, Trash2, Bot, User, Headphones } from 'lucide-react';
 import { formatDateTime } from '../../utils/formatters';
 import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
+import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 import { getApiErrorMessage } from '@/utils/apiError';
 
 export default function CustomerChat() {
@@ -92,9 +93,8 @@ export default function CustomerChat() {
     }
   };
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputMsg.trim()) return;
+  const submitMessage = async (content: string) => {
+    if (!content.trim() || loading) return;
 
     let currentSession = activeSession;
     if (!currentSession) {
@@ -107,18 +107,17 @@ export default function CustomerChat() {
       messageid: Date.now(),
       sessionid: currentSession.sessionid,
       sendertype: 'user',
-      messagecontent: inputMsg,
+      messagecontent: content,
       sentat: new Date().toISOString()
     };
 
     setMessages(prev => [...prev, tempMsg]);
-    const sentContent = inputMsg;
     setInputMsg('');
     setLoading(true);
     scrollToBottom();
 
     try {
-      const responseMessage = await chatSessionsApi.postMessage(currentSession.sessionid, sentContent);
+      const responseMessage = await chatSessionsApi.postMessage(currentSession.sessionid, content.trim());
       if (responseMessage.sendertype === 'user') {
         setMessages(await chatSessionsApi.getMessages(currentSession.sessionid));
       } else {
@@ -132,6 +131,11 @@ export default function CustomerChat() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitMessage(inputMsg);
   };
 
   const requestConsultant = async () => {
@@ -268,13 +272,41 @@ export default function CustomerChat() {
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">
                     {renderMessageContent(msg.messagecontent)}
                   </p>
-                  {msg.recommendations && msg.recommendations.length > 0 && activeSession && (
-                    <ChatRecommendationCards
-                      sessionId={activeSession.sessionid}
-                      recommendations={msg.recommendations}
-                      allowAddToCart
-                    />
+                  {msg.responsetype === 'comparison' && msg.recommendations && (
+                    <ChatComparisonTable recommendations={msg.recommendations} />
                   )}
+                  {msg.recommendations && msg.recommendations.length > 0 && activeSession && (
+                    <>
+                      {msg.responsetype === 'comparison' && (
+                        <p className="mt-4 text-xs font-black uppercase tracking-wide text-slate-400">
+                          Chọn mua nhanh
+                        </p>
+                      )}
+                      <ChatRecommendationCards
+                        sessionId={activeSession.sessionid}
+                        recommendations={msg.recommendations}
+                        allowAddToCart
+                      />
+                    </>
+                  )}
+                  {!isUser &&
+                    idx === messages.length - 1 &&
+                    msg.quickreplies &&
+                    msg.quickreplies.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {msg.quickreplies.map(reply => (
+                          <button
+                            key={reply}
+                            type="button"
+                            disabled={loading}
+                            onClick={() => submitMessage(reply)}
+                            className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:border-blue-400 hover:bg-blue-100 disabled:opacity-50"
+                          >
+                            {reply}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   <span className={`text-[10px] mt-2 block ${isUser ? 'text-blue-200' : 'text-slate-400'}`}>
                     {msg.sentat ? new Date(msg.sentat).toLocaleTimeString() : 'Đang gửi...'}
                   </span>

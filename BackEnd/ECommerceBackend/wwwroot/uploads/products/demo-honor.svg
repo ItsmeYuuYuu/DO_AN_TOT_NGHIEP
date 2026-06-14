@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+  <defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#ede9fe"/><stop offset="1" stop-color="#c4b5fd"/></linearGradient></defs>
+  <rect width="800" height="800" rx="64" fill="url(#g)"/>
+  <rect x="245" y="95" width="310" height="610" rx="52" fill="#2e1065"/>
+  <rect x="265" y="116" width="270" height="568" rx="38" fill="#faf5ff"/>
+  <circle cx="340" cy="190" r="62" fill="#581c87"/><circle cx="340" cy="190" r="27" fill="#111827"/>
+  <text x="400" y="450" text-anchor="middle" font-family="Arial" font-size="50" font-weight="700" fill="#7c3aed">HONOR</text>
+  <text x="400" y="500" text-anchor="middle" font-family="Arial" font-size="24" fill="#6b21a8">Magic camera</text>
+</svg>

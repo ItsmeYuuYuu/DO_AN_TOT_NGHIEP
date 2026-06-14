@@ -70,6 +70,7 @@ const adminNav: NavGroup[] = [
       { label: 'Danh sách đơn hàng', to: '/admin/orders', icon: <ShoppingCart size={16} /> },
       { label: 'Hàng đợi Sales', to: '/admin/sales-orders', icon: <UserCheck size={16} /> },
       { label: 'Hàng đợi kho', to: '/admin/warehouse-orders', icon: <Truck size={16} /> },
+      { label: 'Vận chuyển', to: '/admin/shipments', icon: <Truck size={16} /> },
       { label: 'Quản lý bảo hành', to: '/admin/warranties', icon: <ShieldCheck size={16} /> },
     ],
   },

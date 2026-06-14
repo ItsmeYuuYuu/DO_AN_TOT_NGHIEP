@@ -13,6 +13,10 @@ public partial class Chatmessage
 
     public string Messagecontent { get; set; } = null!;
 
+    public string? Responsetype { get; set; }
+
+    public string? Quickreplies { get; set; }
+
     public DateTime? Sentat { get; set; }
 
     public virtual ICollection<Chatproductrecommendation> Chatproductrecommendations { get; set; } = new List<Chatproductrecommendation>();

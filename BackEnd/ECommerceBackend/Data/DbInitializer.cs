@@ -1,5 +1,6 @@
 using ECommerceBackend.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace ECommerceBackend.Data;
 
@@ -153,8 +154,8 @@ public static class DbInitializer
         {
             context.Brands.AddRange(
                 new Brand { Brandid = 1, Brandname = "Google Pixel" },
-                new Brand { Brandid = 2, Brandname = "vivo" },
-                new Brand { Brandid = 3, Brandname = "iQOO" },
+                new Brand { Brandid = 2, Brandname = "Vivo" },
+                new Brand { Brandid = 3, Brandname = "IQOO" },
                 new Brand { Brandid = 4, Brandname = "Honor" },
                 new Brand { Brandid = 5, Brandname = "OnePlus" },
                 new Brand { Brandid = 6, Brandname = "OPPO" },
@@ -169,48 +170,124 @@ public static class DbInitializer
             );
             await context.SaveChangesAsync();
         }
-
-        // ── 4.1. PRODUCT SERIES ──────────────────────────────────────────────
-        if (!context.Productseries.Any())
+        else
         {
-            var brandIds = context.Brands.ToDictionary(b => b.Brandname, b => b.Brandid);
-            var series = new List<Productseries>();
-
-            void AddSeries(string brandName, params string[] names)
+            var requestedBrandNames = new[]
             {
-                if (!brandIds.TryGetValue(brandName, out var brandId)) return;
-                for (var index = 0; index < names.Length; index++)
+                "Google Pixel", "Xiaomi", "Vivo", "IQOO", "Honor", "OnePlus", "OPPO"
+            };
+            var existingBrands = await context.Brands.ToListAsync();
+            foreach (var brandName in requestedBrandNames)
+            {
+                var brand = existingBrands.FirstOrDefault(item =>
+                    item.Brandname.Equals(brandName, StringComparison.OrdinalIgnoreCase));
+                if (brand == null)
                 {
-                    series.Add(new Productseries
-                    {
-                        Brandid = brandId,
-                        Seriesname = names[index],
-                        Displayorder = index,
-                        Isactive = true,
-                        Createdat = DateTime.Now
-                    });
+                    brand = new Brand { Brandname = brandName };
+                    context.Brands.Add(brand);
+                    existingBrands.Add(brand);
+                }
+                else
+                {
+                    brand.Brandname = brandName;
                 }
             }
 
-            AddSeries("Google Pixel", "Pixel", "Pixel Pro", "Pixel Fold");
-            AddSeries("iPhone", "iPhone", "iPhone Pro", "iPhone Pro Max");
-            AddSeries("Samsung", "Galaxy S", "Galaxy A", "Galaxy Z Fold", "Galaxy Z Flip");
-            AddSeries("Xiaomi", "Xiaomi", "Redmi", "Poco");
-            AddSeries("OPPO", "Find", "Reno", "A Series");
-            AddSeries("vivo", "V Series", "Y Series", "X Series");
-            AddSeries("Realme", "Number Series", "GT Series", "C Series");
-            AddSeries("OnePlus", "OnePlus", "Nord");
-
-            context.Productseries.AddRange(series);
             await context.SaveChangesAsync();
         }
+
+        // ── 4.1. PRODUCT SERIES ──────────────────────────────────────────────
+        var requestedSeries = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Google Pixel"] = new[]
+            {
+                "Pixel 10 series", "Pixel 11 series", "Pixel XL", "Pixel 9 series",
+                "Pixel Fold", "Pixel 8 series"
+            },
+            ["Xiaomi"] = new[]
+            {
+                "POCO", "REDMI", "Xiaomi 11 series", "Xiaomi 12 series",
+                "Xiaomi 13 series", "Xiaomi 14 series", "Xiaomi 15 Series",
+                "Xiaomi 17 Series"
+            },
+            ["Vivo"] = new[]
+            {
+                "S30 Series", "S50 Series", "V Series", "vivo X100 Series",
+                "vivo X200 Series", "vivo X300 Series", "vivo Y300 Pro+",
+                "X Fold 5", "X Series"
+            },
+            ["IQOO"] = new[]
+            {
+                "iQOO 12", "iQOO 12 Pro", "iQOO 13", "iQOO 15",
+                "iQOO 15 Ultra", "iQOO 15T", "iQOO Z9 Turbo",
+                "Neo 10 Series", "Neo11", "Neo9", "Z10 Series",
+                "Z11 Series", "Z9"
+            },
+            ["Honor"] = new[]
+            {
+                "Honor 100 Series", "Honor 200 Series", "Honor 300 Series",
+                "Honor 400 Series", "Honor 500 Series", "Honor 600 Series",
+                "GT Series", "Magic 5 Series", "Magic 6 Series",
+                "Magic 7 Series", "Magic 8 Series", "Magic V2", "Magic V5",
+                "Power Series", "WIN Series", "X Series"
+            },
+            ["OnePlus"] = new[]
+            {
+                "Ace 2 Series", "Ace 3 Series", "Ace 5 Series", "Ace 6 Series",
+                "Nord 4 Series", "Nord 5 Series", "OnePlus 13 Series",
+                "OnePlus 15 Series", "Turbo Series", "Oneplus 10T",
+                "Oneplus 11", "OnePlus 12"
+            },
+            ["OPPO"] = new[]
+            {
+                "A Series", "Find X8 Series", "Find X9 Series", "K Series",
+                "Reno Series", "Find X7 Ultra"
+            },
+            ["iPhone"] = new[] { "iPhone", "iPhone Pro", "iPhone Pro Max" },
+            ["Samsung"] = new[] { "Galaxy S", "Galaxy A", "Galaxy Z Fold", "Galaxy Z Flip" }
+        };
+
+        var brandsByName = await context.Brands.ToDictionaryAsync(
+            brand => brand.Brandname,
+            brand => brand,
+            StringComparer.OrdinalIgnoreCase);
+        var existingSeries = await context.Productseries.ToListAsync();
+        foreach (var (brandName, seriesNames) in requestedSeries)
+        {
+            if (!brandsByName.TryGetValue(brandName, out var brand))
+                continue;
+
+            for (var index = 0; index < seriesNames.Length; index++)
+            {
+                var seriesName = seriesNames[index];
+                var series = existingSeries.FirstOrDefault(item =>
+                    item.Brandid == brand.Brandid &&
+                    item.Seriesname.Equals(seriesName, StringComparison.OrdinalIgnoreCase));
+                if (series == null)
+                {
+                    series = new Productseries
+                    {
+                        Brandid = brand.Brandid,
+                        Seriesname = seriesName,
+                        Createdat = DateTime.Now
+                    };
+                    context.Productseries.Add(series);
+                    existingSeries.Add(series);
+                }
+
+                series.Seriesname = seriesName;
+                series.Displayorder = index;
+                series.Isactive = true;
+            }
+        }
+        await context.SaveChangesAsync();
 
         // ── 5. PRODUCTS & VARIANTS ───────────────────────────────────────────
         if (!context.Products.Any())
         {
             var products = new[]
             {
-                new Product { Productid = 101, Categoryid = 1, Brandid = 1, Seriesid = context.Productseries.FirstOrDefault(s => s.Seriesname == "Pixel Pro" && s.Brand.Brandname == "Google Pixel")?.Seriesid, Productname = "Google Pixel 8 Pro", Description = "Điện thoại Google Pixel cao cấp nhất với chip Tensor G3 và camera AI.", Createdat = DateTime.UtcNow },
+                new Product { Productid = 101, Categoryid = 1, Brandid = 1, Seriesid = context.Productseries.FirstOrDefault(s => s.Seriesname == "Pixel 8 series" && s.Brand.Brandname == "Google Pixel")?.Seriesid, Productname = "Google Pixel 8 Pro", Description = "Điện thoại Google Pixel cao cấp nhất với chip Tensor G3 và camera AI.", Createdat = DateTime.UtcNow },
                 new Product { Productid = 102, Categoryid = 1, Brandid = 11, Seriesid = context.Productseries.FirstOrDefault(s => s.Seriesname == "iPhone Pro Max" && s.Brand.Brandname == "iPhone")?.Seriesid, Productname = "iPhone 15 Pro Max", Description = "Khung Titan, chip A17 Pro, cổng USB-C tiện lợi.", Createdat = DateTime.UtcNow },
                 new Product { Productid = 103, Categoryid = 1, Brandid = 12, Seriesid = context.Productseries.FirstOrDefault(s => s.Seriesname == "Galaxy S" && s.Brand.Brandname == "Samsung")?.Seriesid, Productname = "Samsung Galaxy S24 Ultra", Description = "Thiết kế phẳng, khung Titan chắc chắn, tích hợp các tính năng Galaxy AI.", Createdat = DateTime.UtcNow }
             };
@@ -228,6 +305,8 @@ public static class DbInitializer
             context.Productvariants.AddRange(variants);
             await context.SaveChangesAsync();
         }
+
+        await SeedDemoCatalogAsync(context);
 
         // Attach existing products to a matching series when possible.
         if (context.Products.Any(p => p.Seriesid == null) && context.Productseries.Any())
@@ -252,9 +331,14 @@ public static class DbInitializer
                 var name = product.Productname.ToLowerInvariant();
                 Productseries? matched = null;
 
-                if (name.Contains("redmi")) matched = FindSeries(product, "Redmi");
-                else if (name.Contains("poco")) matched = FindSeries(product, "Poco");
-                else if (name.Contains("xiaomi")) matched = FindSeries(product, "Xiaomi");
+                if (name.Contains("redmi")) matched = FindSeries(product, "REDMI");
+                else if (name.Contains("poco")) matched = FindSeries(product, "POCO");
+                else if (name.Contains("xiaomi 17")) matched = FindSeries(product, "Xiaomi 17 Series");
+                else if (name.Contains("xiaomi 15")) matched = FindSeries(product, "Xiaomi 15 Series");
+                else if (name.Contains("xiaomi 14")) matched = FindSeries(product, "Xiaomi 14 series");
+                else if (name.Contains("xiaomi 13")) matched = FindSeries(product, "Xiaomi 13 series");
+                else if (name.Contains("xiaomi 12")) matched = FindSeries(product, "Xiaomi 12 series");
+                else if (name.Contains("xiaomi 11")) matched = FindSeries(product, "Xiaomi 11 series");
                 else if (name.Contains("fold")) matched = FindSeries(product, "Galaxy Z Fold", "Pixel Fold");
                 else if (name.Contains("flip")) matched = FindSeries(product, "Galaxy Z Flip");
                 else if (name.Contains("galaxy s")) matched = FindSeries(product, "Galaxy S");
@@ -262,8 +346,11 @@ public static class DbInitializer
                 else if (name.Contains("pro max")) matched = FindSeries(product, "iPhone Pro Max");
                 else if (name.Contains("iphone") && name.Contains("pro")) matched = FindSeries(product, "iPhone Pro");
                 else if (name.Contains("iphone")) matched = FindSeries(product, "iPhone");
-                else if (name.Contains("pixel") && name.Contains("pro")) matched = FindSeries(product, "Pixel Pro");
-                else if (name.Contains("pixel")) matched = FindSeries(product, "Pixel");
+                else if (name.Contains("pixel 11")) matched = FindSeries(product, "Pixel 11 series");
+                else if (name.Contains("pixel 10")) matched = FindSeries(product, "Pixel 10 series");
+                else if (name.Contains("pixel 9")) matched = FindSeries(product, "Pixel 9 series");
+                else if (name.Contains("pixel 8")) matched = FindSeries(product, "Pixel 8 series");
+                else if (name.Contains("pixel") && name.Contains("xl")) matched = FindSeries(product, "Pixel XL");
 
                 if (matched != null)
                 {
@@ -679,6 +766,324 @@ public static class DbInitializer
 
         await context.SaveChangesAsync();
     }
+
+    private static async Task SeedDemoCatalogAsync(ECommerceContext context)
+    {
+        await context.Database.ExecuteSqlRawAsync("""
+            SELECT setval(
+                pg_get_serial_sequence('products', 'productid'),
+                COALESCE((SELECT MAX(productid) FROM products), 1),
+                EXISTS (SELECT 1 FROM products));
+            SELECT setval(
+                pg_get_serial_sequence('productvariants', 'variantid'),
+                COALESCE((SELECT MAX(variantid) FROM productvariants), 1),
+                EXISTS (SELECT 1 FROM productvariants));
+            SELECT setval(
+                pg_get_serial_sequence('productimages', 'imageid'),
+                COALESCE((SELECT MAX(imageid) FROM productimages), 1),
+                EXISTS (SELECT 1 FROM productimages));
+            """);
+
+        var demoProducts = new[]
+        {
+            new DemoProductSeed(
+                "Google Pixel", "Pixel 9 series", "Google Pixel 9 Pro",
+                "Điện thoại AI tập trung vào camera, ảnh chân dung và trải nghiệm Android thuần.",
+                "DEMO-PIX9P-256-NEW", 27_990_000, 25_990_000, 2,
+                Specs("6.3 inch LTPO OLED 120Hz", "Google Tensor G4", "16GB", "256GB", "50MP + 48MP + 48MP OIS", "42MP", "4700mAh", "Sạc nhanh 27W", "Android")),
+            new DemoProductSeed(
+                "iPhone", "iPhone", "iPhone 16",
+                "Mẫu iPhone cân bằng cho học tập, làm việc, quay video và sử dụng lâu dài.",
+                "DEMO-IP16-128-NEW", 22_990_000, 21_490_000, 3,
+                Specs("6.1 inch Super Retina XDR OLED", "Apple A18", "8GB", "128GB", "48MP + 12MP", "12MP", "3561mAh", "USB-C, MagSafe", "iOS")),
+            new DemoProductSeed(
+                "iPhone", "iPhone Pro", "iPhone 16 Pro",
+                "Thiết bị cao cấp nhỏ gọn, hiệu năng mạnh và quay video chuyên nghiệp.",
+                "DEMO-IP16P-256-NEW", 31_990_000, 29_990_000, 2,
+                Specs("6.3 inch LTPO Super Retina XDR 120Hz", "Apple A18 Pro", "8GB", "256GB", "48MP + 48MP + 12MP", "12MP", "3582mAh", "USB-C, MagSafe", "iOS")),
+            new DemoProductSeed(
+                "iPhone", "iPhone Pro Max", "iPhone 16 Pro Max",
+                "iPhone màn hình lớn, camera zoom tốt, pin lâu và hiệu năng cao.",
+                "DEMO-IP16PM-256-NEW", 37_990_000, 35_490_000, 2,
+                Specs("6.9 inch LTPO Super Retina XDR 120Hz", "Apple A18 Pro", "8GB", "256GB", "48MP + 48MP + 12MP telephoto", "12MP", "4685mAh", "USB-C, MagSafe", "iOS")),
+            new DemoProductSeed(
+                "Samsung", "Galaxy S", "Samsung Galaxy S24 FE",
+                "Điện thoại Galaxy AI dễ tiếp cận, màn hình đẹp và camera đa dụng.",
+                "DEMO-S24FE-256-NEW", 16_990_000, 14_990_000, 3,
+                Specs("6.7 inch Dynamic AMOLED 2X 120Hz", "Exynos 2400e", "8GB", "256GB", "50MP OIS + 12MP + 8MP", "10MP", "4700mAh", "Sạc nhanh 25W", "Android")),
+            new DemoProductSeed(
+                "Samsung", "Galaxy A", "Samsung Galaxy A55 5G",
+                "Máy tầm trung bền bỉ, chống nước, pin tốt cho học tập và công việc.",
+                "DEMO-A55-256-NEW", 11_490_000, 9_990_000, 3,
+                Specs("6.6 inch Super AMOLED 120Hz", "Exynos 1480", "8GB", "256GB", "50MP OIS + 12MP + 5MP", "32MP", "5000mAh", "Sạc nhanh 25W", "Android")),
+            new DemoProductSeed(
+                "Samsung", "Galaxy Z Fold", "Samsung Galaxy Z Fold6",
+                "Điện thoại gập phục vụ đa nhiệm, đọc tài liệu và làm việc trên màn hình lớn.",
+                "DEMO-ZF6-512-NEW", 47_990_000, 43_990_000, 1,
+                Specs("7.6 inch Dynamic AMOLED 2X 120Hz", "Snapdragon 8 Gen 3 for Galaxy", "12GB", "512GB", "50MP OIS + 12MP + 10MP", "10MP + 4MP", "4400mAh", "Sạc nhanh 25W", "Android")),
+            new DemoProductSeed(
+                "Xiaomi", "Xiaomi 14 series", "Xiaomi 14T Pro",
+                "Máy hiệu năng cao, camera Leica và sạc nhanh phù hợp game lẫn chụp ảnh.",
+                "DEMO-X14TP-512-NEW", 18_990_000, 16_990_000, 3,
+                Specs("6.67 inch AMOLED 144Hz", "MediaTek Dimensity 9300+", "12GB", "512GB", "50MP Leica OIS + 50MP + 12MP", "32MP", "5000mAh", "Sạc nhanh 120W", "Android")),
+            new DemoProductSeed(
+                "Xiaomi", "REDMI", "Redmi Note 13 Pro+ 5G",
+                "Điện thoại tầm trung có camera độ phân giải cao, màn hình đẹp và sạc nhanh.",
+                "DEMO-RN13P-256-NEW", 10_990_000, 9_490_000, 3,
+                Specs("6.67 inch AMOLED 120Hz", "MediaTek Dimensity 7200 Ultra", "8GB", "256GB", "200MP OIS + 8MP + 2MP", "16MP", "5000mAh", "Sạc nhanh 120W", "Android")),
+            new DemoProductSeed(
+                "Xiaomi", "POCO", "POCO F6 Pro",
+                "Điện thoại gaming hiệu năng cao, màn hình 2K và sạc nhanh.",
+                "DEMO-POCOF6P-512-NEW", 14_990_000, 13_490_000, 3,
+                Specs("6.67 inch AMOLED 2K 120Hz", "Snapdragon 8 Gen 2", "12GB", "512GB", "50MP OIS + 8MP + 2MP", "16MP", "5000mAh", "Sạc nhanh 120W", "Android")),
+            new DemoProductSeed(
+                "Vivo", "vivo X200 Series", "vivo X200 Pro",
+                "Flagship thiên về camera chân dung, zoom xa và thời lượng pin cao.",
+                "DEMO-VX200P-512-NEW", 29_990_000, 27_990_000, 2,
+                Specs("6.78 inch LTPO AMOLED 120Hz", "MediaTek Dimensity 9400", "16GB", "512GB", "50MP OIS + 50MP + 200MP telephoto", "32MP", "6000mAh", "Sạc nhanh 90W", "Android")),
+            new DemoProductSeed(
+                "Vivo", "V Series", "vivo V40 5G",
+                "Điện thoại mỏng nhẹ, camera chân dung ZEISS và pin tốt.",
+                "DEMO-VV40-256-NEW", 15_990_000, 13_990_000, 2,
+                Specs("6.78 inch AMOLED 120Hz", "Snapdragon 7 Gen 3", "12GB", "256GB", "50MP OIS + 50MP", "50MP", "5500mAh", "Sạc nhanh 80W", "Android")),
+            new DemoProductSeed(
+                "IQOO", "iQOO 13", "iQOO 13",
+                "Điện thoại gaming cao cấp với chip mạnh, màn hình tần số quét cao và pin lớn.",
+                "DEMO-IQ13-512-NEW", 20_990_000, 18_990_000, 3,
+                Specs("6.82 inch LTPO AMOLED 144Hz", "Snapdragon 8 Elite", "16GB", "512GB", "50MP OIS + 50MP + 50MP", "32MP", "6150mAh", "Sạc nhanh 120W", "Android")),
+            new DemoProductSeed(
+                "IQOO", "Neo 10 Series", "iQOO Neo 10",
+                "Máy gaming cận cao cấp có hiệu năng tốt và sạc nhanh trong tầm giá.",
+                "DEMO-IQNEO10-256-NEW", 13_990_000, 12_490_000, 3,
+                Specs("6.78 inch AMOLED 144Hz", "Snapdragon 8 Gen 3", "12GB", "256GB", "50MP OIS + 8MP", "16MP", "6100mAh", "Sạc nhanh 120W", "Android")),
+            new DemoProductSeed(
+                "Honor", "Magic 7 Series", "Honor Magic7 Pro",
+                "Flagship camera đa dụng, màn hình sáng và pin dung lượng cao.",
+                "DEMO-HM7P-512-NEW", 28_990_000, 26_990_000, 2,
+                Specs("6.8 inch LTPO OLED 120Hz", "Snapdragon 8 Elite", "16GB", "512GB", "50MP OIS + 50MP + 200MP telephoto", "50MP", "5850mAh", "Sạc nhanh 100W", "Android")),
+            new DemoProductSeed(
+                "Honor", "Honor 400 Series", "Honor 400 Pro",
+                "Điện thoại cận cao cấp tập trung camera, pin và thiết kế mỏng.",
+                "DEMO-H400P-512-NEW", 18_490_000, 16_990_000, 2,
+                Specs("6.7 inch AMOLED 120Hz", "Snapdragon 8 Gen 3", "12GB", "512GB", "200MP OIS + 50MP + 12MP", "50MP", "6000mAh", "Sạc nhanh 100W", "Android")),
+            new DemoProductSeed(
+                "OnePlus", "OnePlus 13 Series", "OnePlus 13",
+                "Flagship hiệu năng mạnh, màn hình đẹp, pin lớn và sạc nhanh.",
+                "DEMO-OP13-512-NEW", 24_990_000, 22_990_000, 3,
+                Specs("6.82 inch LTPO AMOLED 120Hz", "Snapdragon 8 Elite", "16GB", "512GB", "50MP OIS + 50MP + 50MP", "32MP", "6000mAh", "Sạc nhanh 100W", "Android")),
+            new DemoProductSeed(
+                "OnePlus", "OnePlus 12", "OnePlus 12",
+                "Flagship cân bằng hiệu năng, camera Hasselblad và sạc nhanh.",
+                "DEMO-OP12-256-NEW", 20_990_000, 18_490_000, 2,
+                Specs("6.82 inch LTPO AMOLED 120Hz", "Snapdragon 8 Gen 3", "12GB", "256GB", "50MP OIS + 64MP + 48MP", "32MP", "5400mAh", "Sạc nhanh 100W", "Android")),
+            new DemoProductSeed(
+                "OPPO", "Find X8 Series", "OPPO Find X8 Pro",
+                "Flagship camera Hasselblad, zoom tốt, pin lớn và thiết kế cao cấp.",
+                "DEMO-FX8P-512-NEW", 29_990_000, 27_490_000, 2,
+                Specs("6.78 inch LTPO AMOLED 120Hz", "MediaTek Dimensity 9400", "16GB", "512GB", "50MP OIS + 50MP + 50MP + 50MP", "32MP", "5910mAh", "Sạc nhanh 80W", "Android")),
+            new DemoProductSeed(
+                "OPPO", "Reno Series", "OPPO Reno13 5G",
+                "Điện thoại tầm trung có thiết kế đẹp, camera chân dung và pin tốt.",
+                "DEMO-RENO13-256-NEW", 15_990_000, 14_490_000, 3,
+                Specs("6.59 inch AMOLED 120Hz", "MediaTek Dimensity 8350", "12GB", "256GB", "50MP OIS + 8MP + 2MP", "50MP", "5600mAh", "Sạc nhanh 80W", "Android"))
+        };
+
+        var phoneCategory = await context.Categories
+            .OrderBy(category => category.Categoryid)
+            .FirstOrDefaultAsync(category => category.Categoryid == 1)
+            ?? await context.Categories.OrderBy(category => category.Categoryid).FirstAsync();
+        var brands = await context.Brands.ToListAsync();
+        var series = await context.Productseries.ToListAsync();
+        var products = await context.Products
+            .Include(product => product.Productvariants)
+            .ToListAsync();
+        var demoSkus = demoProducts.Select(seed => seed.Sku).ToList();
+        var variantsBySku = await context.Productvariants
+            .Where(variant => variant.Sku != null && demoSkus.Contains(variant.Sku))
+            .ToDictionaryAsync(variant => variant.Sku!, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var seed in demoProducts)
+        {
+            var brand = brands.FirstOrDefault(item =>
+                item.Brandname.Equals(seed.Brand, StringComparison.OrdinalIgnoreCase));
+            var productSeries = brand == null
+                ? null
+                : series.FirstOrDefault(item =>
+                    item.Brandid == brand.Brandid &&
+                    item.Seriesname.Equals(seed.Series, StringComparison.OrdinalIgnoreCase));
+            if (brand == null || productSeries == null)
+                continue;
+
+            var product = products.FirstOrDefault(item =>
+                item.Productname.Equals(seed.Name, StringComparison.OrdinalIgnoreCase));
+            var variantExists = variantsBySku.TryGetValue(seed.Sku, out var variant);
+            if (product != null && !variantExists)
+            {
+                // An admin-created product with the same name remains untouched.
+                continue;
+            }
+
+            if (product == null)
+            {
+                product = new Product
+                {
+                    Categoryid = phoneCategory.Categoryid,
+                    Brandid = brand.Brandid,
+                    Seriesid = productSeries.Seriesid,
+                    Productname = seed.Name,
+                    Description = seed.Description,
+                    Createdat = DateTime.Now
+                };
+                context.Products.Add(product);
+                products.Add(product);
+                await context.SaveChangesAsync();
+            }
+            else
+            {
+                product.Categoryid = phoneCategory.Categoryid;
+                product.Brandid = brand.Brandid;
+                product.Seriesid = productSeries.Seriesid;
+                product.Description = seed.Description;
+            }
+
+            if (!variantExists)
+            {
+                variant = new Productvariant
+                {
+                    Productid = product.Productid,
+                    Sku = seed.Sku,
+                    Condition = "New Seal"
+                };
+                context.Productvariants.Add(variant);
+                variantsBySku[seed.Sku] = variant;
+            }
+
+            variant!.Productid = product.Productid;
+            variant.Baseprice = seed.BasePrice;
+            variant.Saleprice = seed.SalePrice;
+            variant.Specifications = seed.Specifications;
+        }
+
+        await context.SaveChangesAsync();
+
+        var demoVariantIds = variantsBySku.Values
+            .Select(variant => variant.Variantid)
+            .ToList();
+        var existingDemoImages = await context.Productimages
+            .Where(image =>
+                image.Variantid.HasValue &&
+                demoVariantIds.Contains(image.Variantid.Value) &&
+                image.Imageurl.Contains("/demo-"))
+            .ToListAsync();
+        var variantsWithImages = (await context.Productimages
+                .Where(image =>
+                    image.Variantid.HasValue &&
+                    demoVariantIds.Contains(image.Variantid.Value))
+                .Select(image => image.Variantid!.Value)
+                .ToListAsync())
+            .ToHashSet();
+        foreach (var seed in demoProducts)
+        {
+            if (!variantsBySku.TryGetValue(seed.Sku, out var variant))
+                continue;
+
+            var expectedUrl =
+                $"http://localhost:5240/uploads/products/demo-{GetBrandImageSlug(seed.Brand)}.svg";
+            var existingDemoImage = existingDemoImages.FirstOrDefault(image =>
+                image.Variantid == variant.Variantid);
+            if (existingDemoImage != null)
+            {
+                existingDemoImage.Imageurl = expectedUrl;
+                existingDemoImage.Ismain = true;
+            }
+            else if (variantsWithImages.Add(variant.Variantid))
+            {
+                context.Productimages.Add(new Productimage
+                {
+                    Variantid = variant.Variantid,
+                    Imageurl = expectedUrl,
+                    Ismain = true
+                });
+            }
+        }
+
+        var existingDemoImeis = (await context.Inventoryitems
+            .Where(item => item.Imei.StartsWith("DEMO-"))
+            .Select(item => item.Imei)
+            .ToListAsync())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var seed in demoProducts)
+        {
+            if (!variantsBySku.TryGetValue(seed.Sku, out var variant))
+                continue;
+
+            for (var index = 1; index <= seed.Stock; index++)
+            {
+                var imei = $"{seed.Sku}-{index:00}";
+                if (existingDemoImeis.Add(imei))
+                {
+                    context.Inventoryitems.Add(new Inventoryitem
+                    {
+                        Imei = imei,
+                        Variantid = variant.Variantid,
+                        Status = "InStock",
+                        Importedat = DateTime.Now
+                    });
+                }
+            }
+        }
+
+        await context.SaveChangesAsync();
+    }
+
+    private static string GetBrandImageSlug(string brand) =>
+        brand.ToLowerInvariant() switch
+        {
+            "google pixel" => "google-pixel",
+            "iphone" => "iphone",
+            "samsung" => "samsung",
+            "xiaomi" => "xiaomi",
+            "vivo" => "vivo",
+            "iqoo" => "iqoo",
+            "honor" => "honor",
+            "oneplus" => "oneplus",
+            "oppo" => "oppo",
+            _ => "phone"
+        };
+
+    private static string Specs(
+        string screen,
+        string chipset,
+        string ram,
+        string storage,
+        string rearCamera,
+        string frontCamera,
+        string battery,
+        string charging,
+        string operatingSystem) =>
+        JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["Kích thước màn hình"] = screen,
+            ["Chipset"] = chipset,
+            ["Dung lượng RAM"] = ram,
+            ["Bộ nhớ trong"] = storage,
+            ["Camera sau"] = rearCamera,
+            ["Camera trước"] = frontCamera,
+            ["Pin"] = battery,
+            ["Công nghệ sạc"] = charging,
+            ["Hệ điều hành"] = operatingSystem
+        });
+
+    private sealed record DemoProductSeed(
+        string Brand,
+        string Series,
+        string Name,
+        string Description,
+        string Sku,
+        decimal BasePrice,
+        decimal? SalePrice,
+        int Stock,
+        string Specifications);
 
     private sealed record DemoUserSeed(
         int Roleid,

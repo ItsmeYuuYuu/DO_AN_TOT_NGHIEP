@@ -401,7 +401,10 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
 
         Assert.Contains("So sánh nhanh 2 sản phẩm", response);
         Assert.Contains("RAM / Bộ nhớ: 12GB / 256GB", response);
-        Assert.Contains("Giá thấp nhất: Gaming Phone", response);
+        Assert.Contains("Chụp ảnh: Camera Phone", response);
+        Assert.Contains("Hiệu năng: Gaming Phone", response);
+        Assert.Contains("Pin và sạc: Gaming Phone", response);
+        Assert.Contains("Giá dễ tiếp cận nhất: Gaming Phone", response);
         Assert.Contains("Bạn ưu tiên camera, hiệu năng hay pin", response);
     }
 
@@ -480,6 +483,103 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.Equal(
             "So sánh Camera Phone và Gaming Phone",
             consultationService.LastQuery);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithNaturalComparisonPhrase_UsesPreviousRecommendationScope()
+    {
+        var products = new[]
+        {
+            CreateConsultationResult(1, "Camera Phone"),
+            CreateConsultationResult(2, "Gaming Phone"),
+            CreateConsultationResult(3, "Unrelated Phone")
+        };
+        var consultationService = new StubProductConsultationService(products);
+        var provider = new GroundedAiProvider(
+            consultationService,
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "Hai máy này khác nhau thế nào",
+            new[]
+            {
+                new AiConversationMessage(
+                    "assistant",
+                    "Tôi vừa đề xuất hai sản phẩm.",
+                    ChatResponseTypes.Recommendation,
+                    new[] { 1, 2 })
+            }));
+
+        Assert.Equal(ChatResponseTypes.Comparison, response.ResponseType);
+        Assert.Equal(new[] { 1, 2 }, consultationService.LastProductIds);
+        Assert.DoesNotContain(
+            response.Recommendations,
+            product => product.ProductId == 3);
+        Assert.Contains("Gợi ý theo từng tiêu chí", response.Text);
+        Assert.Contains("Ưu tiên hiệu năng", response.QuickReplies ?? []);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_AfterComparison_RanksBySelectedPriority()
+    {
+        var products = new[]
+        {
+            new ProductConsultationResult(
+                1, 11, "Camera Phone", "Brand A", "Điện thoại", "New Seal", "A-1",
+                15_000_000, 16_000_000, 2, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 7 Gen 3",
+                    ["Dung lượng RAM"] = "8GB",
+                    ["Camera sau"] = "200MP OIS"
+                },
+                "Điện thoại tập trung camera."),
+            new ProductConsultationResult(
+                2, 22, "Gaming Phone", "Brand B", "Điện thoại", "New Seal", "B-1",
+                16_000_000, 16_000_000, 2, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 8 Gen 3",
+                    ["Dung lượng RAM"] = "16GB",
+                    ["Kích thước màn hình"] = "AMOLED 144Hz"
+                },
+                "Điện thoại gaming có tản nhiệt tốt."),
+            new ProductConsultationResult(
+                3, 33, "Battery Phone", "Brand C", "Điện thoại", "New Seal", "C-1",
+                14_000_000, 14_000_000, 2, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 7 Gen 3",
+                    ["Pin"] = "6100mAh",
+                    ["Công nghệ sạc"] = "Sạc nhanh 120W"
+                })
+        };
+        var consultationService = new StubProductConsultationService(products);
+        var provider = new GroundedAiProvider(
+            consultationService,
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "Ưu tiên hiệu năng",
+            new[]
+            {
+                new AiConversationMessage(
+                    "assistant",
+                    "So sánh ba sản phẩm.",
+                    ChatResponseTypes.Comparison,
+                    new[] { 1, 2, 3 })
+            }));
+
+        Assert.Equal(ChatResponseTypes.Recommendation, response.ResponseType);
+        Assert.Equal("Gaming Phone", response.Recommendations[0].ProductName);
+        Assert.Contains("Gaming Phone phù hợp nhất", response.Text);
+        Assert.Equal(new[] { 1, 2, 3 }, consultationService.LastProductIds);
     }
 
     [Fact]
@@ -711,6 +811,13 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.NotEmpty(results);
         Assert.Equal("Demo Gaming Phone", results[0].ProductName);
         Assert.All(results, item => Assert.True(item.Price <= 15_000_000));
+
+        var scopedResults = await service.SearchAsync(
+            "Ưu tiên hiệu năng",
+            new[] { 1, 2 });
+
+        Assert.NotEmpty(scopedResults);
+        Assert.Equal("Demo Gaming Phone", scopedResults[0].ProductName);
     }
 
     [Fact]

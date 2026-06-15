@@ -30,31 +30,31 @@ export interface UpdateNewsRequest {
 
 export const newsApi = {
   getAll: async (): Promise<News[]> => {
-    const { data } = await apiClient.get('/api/news');
+    const { data } = await apiClient.get<News[]>('/news');
     return data;
   },
 
   getActive: async (): Promise<News[]> => {
-    const { data } = await apiClient.get('/api/news/active');
+    const { data } = await apiClient.get<News[]>('/news/active');
     return data;
   },
 
   getById: async (id: number): Promise<News> => {
-    const { data } = await apiClient.get(`/api/news/${id}`);
+    const { data } = await apiClient.get<News>(`/news/${id}`);
     return data;
   },
 
   create: async (payload: CreateNewsRequest): Promise<News> => {
-    const { data } = await apiClient.post('/api/news', payload);
+    const { data } = await apiClient.post<News>('/news', payload);
     return data;
   },
 
   update: async (id: number, payload: UpdateNewsRequest): Promise<News> => {
-    const { data } = await apiClient.put(`/api/news/${id}`, payload);
+    const { data } = await apiClient.put<News>(`/news/${id}`, payload);
     return data;
   },
 
   delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/api/news/${id}`);
+    await apiClient.delete(`/news/${id}`);
   },
 };

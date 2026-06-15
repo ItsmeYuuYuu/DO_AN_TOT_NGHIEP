@@ -136,7 +136,14 @@ namespace ECommerceBackend.Controllers
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(q))
-                query = query.Where(p => p.Productname.Contains(q) || (p.Description != null && p.Description.Contains(q)));
+            {
+                var searchTerm = q.Trim().ToLower();
+                query = query.Where(p =>
+                    p.Productname.ToLower().Contains(searchTerm) ||
+                    (p.Description != null && p.Description.ToLower().Contains(searchTerm)) ||
+                    (p.Brand != null && p.Brand.Brandname.ToLower().Contains(searchTerm)) ||
+                    (p.Series != null && p.Series.Seriesname.ToLower().Contains(searchTerm)));
+            }
 
             if (categoryId.HasValue)
                 query = query.Where(p => p.Categoryid == categoryId);

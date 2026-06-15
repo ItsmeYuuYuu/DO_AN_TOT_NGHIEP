@@ -200,8 +200,62 @@ Thuc hien sau khi vong doi thanh toan va ton kho da kin.
 1. Bo sung bo du lieu danh gia de do do chinh xac cua xep hang theo nhu cau.
 2. Cho Consultant tao gio hang hoac don nhap tu san pham da tu van.
 3. Mo rong bao cao theo tung nhom nhu cau va tung Consultant.
+4. Hoan thien tracking hanh vi chatbot:
+   - De xuat san pham.
+   - Xem chi tiet.
+   - Them vao gio.
+   - Tao don va thanh toan.
+5. Xay dashboard hieu qua chatbot:
+   - San pham duoc de xuat nhieu nhat.
+   - Ty le de xuat -> them gio -> dat hang.
+   - Nhu cau pho bien: camera, gaming, pin va ngan sach.
+   - Ty le chuyen sang Consultant.
+6. Cho Consultant xem nhu cau da thu thap, tiep tuc dung ngu canh va tao
+   gio hang hoac don nhap cho khach.
 
-## 6. Truoc khi bao ve
+## 7. Nang cap frontend va nhan dien giao dien
+
+### Van de hien tai
+
+- Nhieu man hinh dang dung chung cong thuc nen xam, card trang, bo tron,
+  vien xam va mau xanh duong.
+- Trang khach hang, Admin va Staff chua co ngon ngu giao dien rieng.
+- Cac card, bang, form va header co mat do va nhan manh tuong tu nhau,
+  lam nghiep vu nao cung co cam giac giong nhau.
+- Qua nhieu khoi deu duoc bo tron va dat trong card, lam giam phan cap
+  noi dung va de tao cam giac giao dien sinh tu dong.
+
+### Dinh huong
+
+1. Customer portal
+   - Phong cach ban le cong nghe ro rang, nhieu hinh anh san pham.
+   - Mau thuong hieu co diem nhan am, khong chi dung xanh duong.
+   - Trang chu, danh sach, chi tiet, gio hang va chatbot co bo cuc rieng
+     theo hanh vi mua sam.
+
+2. Admin portal
+   - Phong cach dieu hanh, mat do thong tin cao va it card trang long nhau.
+   - Dung sidebar/topbar co phan cap ro, bang du lieu va bo loc la trung tam.
+   - Mau trang thai duoc dung co he thong, han che gradient va shadow.
+
+3. Staff portal
+   - Moi role co dashboard va mau nhan dien nhe theo nghiep vu.
+   - Sales uu tien hang doi va doanh so.
+   - Warehouse uu tien ton kho, IMEI va dong goi.
+   - Warranty uu tien timeline xu ly.
+   - Content uu tien preview noi dung.
+   - Consultant uu tien hoi thoai va thong tin khach hang.
+
+### Thu tu trien khai
+
+1. Tao design tokens, typography, spacing va component nen tang.
+2. Lam lai Customer Home va Product Detail de chot phong cach cua hang.
+3. Lam lai Admin Layout, page header, filter bar, table va status badge.
+4. Tach trai nghiem Staff theo tung role.
+5. Chuan hoa form, modal, empty state, loading va responsive.
+6. Ra soat tung trang va loai bo cac mau UI lap lai khong can thiet.
+
+## 8. Truoc khi bao ve
 
 - Kiem thu phan quyen toan he thong.
 - Chuan bi tai khoan demo cho moi role.

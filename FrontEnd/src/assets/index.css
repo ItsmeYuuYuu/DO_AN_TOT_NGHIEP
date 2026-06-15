@@ -11,6 +11,13 @@
     --color-text: #1e293b;          /* Slate 800 */
     --color-text-muted: #64748b;    /* Slate 500 */
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --customer-ink: #10233f;
+    --customer-cream: #f4f0e8;
+    --customer-paper: #fffdf8;
+    --customer-orange: #ff5b35;
+    --customer-orange-dark: #db3d1c;
+    --customer-cyan: #75d7dc;
+    --customer-line: #d9d2c5;
   }
 
   html, body, #root {
@@ -30,12 +37,44 @@
 }
 
 @layer utilities {
+  .customer-shell {
+    color: var(--customer-ink);
+    background:
+      radial-gradient(circle at 10% 0%, rgb(117 215 220 / 12%), transparent 24rem),
+      var(--customer-cream);
+  }
+
+  .customer-display {
+    font-family: Georgia, 'Times New Roman', serif;
+    letter-spacing: -0.035em;
+  }
+
+  .customer-grid-pattern {
+    background-image:
+      linear-gradient(rgb(16 35 63 / 6%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(16 35 63 / 6%) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .customer-label {
+    @apply text-[10px] font-black uppercase tracking-[0.22em];
+    color: var(--customer-orange-dark);
+  }
+
+  .customer-rule {
+    border-color: var(--customer-line);
+  }
+
   /* Retail Product Card */
   .product-card {
-    @apply bg-white border border-slate-200 rounded-lg overflow-hidden transition-all duration-300 ease-out;
+    @apply overflow-hidden transition-all duration-300 ease-out;
+    background: var(--customer-paper);
+    border: 1px solid var(--customer-line);
   }
   .product-card:hover {
-    @apply shadow-xl -translate-y-1 border-blue-100;
+    transform: translateY(-4px);
+    border-color: var(--customer-ink);
+    box-shadow: 8px 8px 0 rgb(16 35 63 / 12%);
   }
 
   /* Image scaling on hover */

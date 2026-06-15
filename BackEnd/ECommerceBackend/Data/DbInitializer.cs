@@ -450,6 +450,17 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(
+                "SELECT setval(pg_get_serial_sequence('promotionalcontents', 'contentid'), " +
+                "COALESCE(MAX(contentid), 1), MAX(contentid) IS NOT NULL) FROM promotionalcontents;");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not synchronize the promotional content ID sequence.");
+        }
+
         logger.LogInformation("✅ Seed data completed successfully.");
         try
         {

@@ -87,6 +87,10 @@ public sealed class GroundedAiProvider : IAiProvider
             retrievalQuery,
             scopedProductIds,
             cancellationToken);
+        if (scopedProductIds.Count > 0)
+        {
+            products = RankScopedProducts(request.UserMessage, products);
+        }
         products = RestrictToComparedProducts(request, products);
 
         if (products.Count == 0)
@@ -319,7 +323,7 @@ public sealed class GroundedAiProvider : IAiProvider
         var productCount = productGroups.Count;
         var variantCount = productGroups.Sum(group =>
             Math.Min(group.Count(), MaxDisplayedVariantsPerProduct));
-        var comparison = normalized.Contains("so sanh");
+        var comparison = IsComparisonRequest(normalized);
         if (comparison && productGroups.Count >= 2)
         {
             return BuildComparisonResponse(productGroups);
@@ -461,8 +465,20 @@ public sealed class GroundedAiProvider : IAiProvider
                 !int.TryParse(token, out _));
     }
 
-    private static bool IsComparisonRequest(string message) =>
-        ProductConsultationService.Normalize(message).Contains("so sanh");
+    private static bool IsComparisonRequest(string message)
+    {
+        var normalized = ProductConsultationService.Normalize(message);
+        return ContainsAny(
+            normalized,
+            "so sanh",
+            "khac nhau",
+            "dat len ban can",
+            "doi chieu",
+            "nen chon",
+            "may nao hon",
+            "may nao tot hon",
+            "may nao dang mua hon");
+    }
 
     private static bool IsReferentialComparison(string message)
     {
@@ -470,10 +486,21 @@ public sealed class GroundedAiProvider : IAiProvider
         return ContainsAny(
             normalized,
             "may tren",
+            "may do",
             "hai may nay",
+            "hai may do",
             "2 may nay",
+            "2 may do",
+            "2 may tren",
+            "ba may nay",
+            "ba may do",
+            "3 may nay",
+            "3 may do",
+            "3 may tren",
             "cac may nay",
+            "cac may do",
             "nhung may nay",
+            "nhung may do",
             "san pham tren");
     }
 
@@ -526,6 +553,12 @@ public sealed class GroundedAiProvider : IAiProvider
             "nhung may tren",
             "trong 2 may",
             "trong 3 may",
+            "2 may do",
+            "2 may nay",
+            "2 may tren",
+            "3 may do",
+            "3 may nay",
+            "3 may tren",
             "trong cac may",
             "trong nhung may",
             "san pham do",
@@ -540,7 +573,9 @@ public sealed class GroundedAiProvider : IAiProvider
             "pin trau",
             "hieu nang",
             "gia tot");
-        if (!explicitReference && !shortPreference)
+        var shortComparison = wordCount <= 12 &&
+            IsComparisonRequest(normalized);
+        if (!explicitReference && !shortPreference && !shortComparison)
             return Array.Empty<int>();
 
         var previousRecommendation = request.History.LastOrDefault(message =>
@@ -567,7 +602,11 @@ public sealed class GroundedAiProvider : IAiProvider
             ? "chụp ảnh"
             : ContainsAny(normalized, "choi game", "gaming", "hieu nang")
                 ? "hiệu năng và chơi game"
-                : ContainsAny(normalized, "pin lau", "pin trau", "thoi luong pin")
+                : ContainsAny(
+                        normalized,
+                        "pin",
+                        "sac nhanh",
+                        "dung lau")
                     ? "thời lượng pin"
                     : "nhu cầu này";
         var best = products.First();
@@ -599,6 +638,59 @@ public sealed class GroundedAiProvider : IAiProvider
         return $"Trong các máy vừa đề xuất, {best.ProductName} phù hợp nhất cho {preference}." +
                reason +
                $"\n\nThứ tự gợi ý: {ranking}.";
+    }
+
+    private static IReadOnlyList<ProductConsultationResult> RankScopedProducts(
+        string userMessage,
+        IReadOnlyList<ProductConsultationResult> products)
+    {
+        var normalized = ProductConsultationService.Normalize(userMessage);
+        if (ContainsAny(
+                normalized,
+                "gia tot",
+                "gia re",
+                "gia thap",
+                "tiet kiem"))
+        {
+            return products
+                .OrderByDescending(product => product.Stock > 0)
+                .ThenBy(product => product.Price)
+                .ToList();
+        }
+
+        var usageProfile = ContainsAny(
+                normalized,
+                "chup anh",
+                "chup hinh",
+                "camera",
+                "quay phim",
+                "quay video")
+            ? "camera"
+            : ContainsAny(
+                    normalized,
+                    "choi game",
+                    "gaming",
+                    "hieu nang",
+                    "cau hinh")
+                ? "gaming"
+                : ContainsAny(
+                        normalized,
+                        "pin",
+                        "sac nhanh",
+                        "dung lau")
+                    ? "battery"
+                    : null;
+        if (usageProfile == null)
+            return products;
+
+        return products
+            .OrderByDescending(product =>
+                ProductConsultationService.ScoreForUsageProfile(
+                    product,
+                    usageProfile))
+            .ThenByDescending(product => product.Stock > 0)
+            .ThenBy(product => product.Price)
+            .ToList();
     }
 
     private static IReadOnlyList<ProductConsultationResult> RestrictToComparedProducts(
@@ -667,15 +759,77 @@ public sealed class GroundedAiProvider : IAiProvider
         });
 
         var cheapest = compared.OrderBy(product => product.Price).First();
+        var cameraWinner = SelectUsageWinner(compared, "camera");
+        var performanceWinner = SelectUsageWinner(compared, "gaming");
+        var batteryWinner = SelectUsageWinner(compared, "battery");
+        var balancedWinner = new[]
+            {
+                cameraWinner.ProductId,
+                performanceWinner.ProductId,
+                batteryWinner.ProductId
+            }
+            .GroupBy(productId => productId)
+            .OrderByDescending(group => group.Count())
+            .ThenByDescending(group =>
+                compared.First(product => product.ProductId == group.Key).Stock > 0)
+            .ThenBy(group =>
+                compared.First(product => product.ProductId == group.Key).Price)
+            .Select(group =>
+                compared.First(product => product.ProductId == group.Key))
+            .First();
         var available = compared.Where(product => product.Stock > 0).ToList();
         var availabilityNote = available.Count > 0
             ? $"Có thể mua ngay: {string.Join(", ", available.Select(product => product.ProductName).Distinct())}."
             : "Các lựa chọn trên hiện đều tạm hết hàng.";
+        var highlights =
+            $"- Chụp ảnh: {cameraWinner.ProductName} ({BuildUsageReason(cameraWinner, "camera")}).\n" +
+            $"- Hiệu năng: {performanceWinner.ProductName} ({BuildUsageReason(performanceWinner, "gaming")}).\n" +
+            $"- Pin và sạc: {batteryWinner.ProductName} ({BuildUsageReason(batteryWinner, "battery")}).\n" +
+            $"- Giá dễ tiếp cận nhất: {cheapest.ProductName} - {FormatCurrency(cheapest.Price)}.";
         return $"So sánh nhanh {compared.Count} sản phẩm:\n\n" +
                string.Join("\n\n", sections) +
-               $"\n\nGiá thấp nhất: {cheapest.ProductName} - {FormatCurrency(cheapest.Price)}.\n" +
+               $"\n\nGợi ý theo từng tiêu chí:\n{highlights}\n\n" +
+               $"Nếu chưa có ưu tiên cụ thể, {balancedWinner.ProductName} là lựa chọn cân bằng nhất theo dữ liệu hiện có.\n" +
                availabilityNote +
                "\nBạn ưu tiên camera, hiệu năng hay pin để tôi chốt một lựa chọn phù hợp nhất?";
+    }
+
+    private static ProductConsultationResult SelectUsageWinner(
+        IReadOnlyList<ProductConsultationResult> products,
+        string usageProfile) =>
+        products
+            .OrderByDescending(product =>
+                ProductConsultationService.ScoreForUsageProfile(
+                    product,
+                    usageProfile))
+            .ThenByDescending(product => product.Stock > 0)
+            .ThenBy(product => product.Price)
+            .First();
+
+    private static string BuildUsageReason(
+        ProductConsultationResult product,
+        string usageProfile)
+    {
+        var terms = usageProfile switch
+        {
+            "camera" => new[] { "camera sau", "camera truoc", "quay video" },
+            "gaming" => new[] { "chipset", "gpu", "ram", "man hinh" },
+            "battery" => new[] { "pin", "sac" },
+            _ => Array.Empty<string>()
+        };
+        var specifications = product.Specifications
+            .Where(item =>
+            {
+                var normalizedKey =
+                    ProductConsultationService.Normalize(item.Key);
+                return terms.Any(term => normalizedKey.Contains(term));
+            })
+            .Take(2)
+            .Select(item => $"{item.Key}: {item.Value}")
+            .ToList();
+        return specifications.Count > 0
+            ? string.Join(", ", specifications)
+            : "điểm phù hợp cao nhất trong dữ liệu sản phẩm";
     }
 
     private static string? FindSpecification(

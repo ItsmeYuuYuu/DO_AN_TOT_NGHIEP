@@ -20,7 +20,8 @@ public sealed record ProductConsultationResult(
     decimal BasePrice,
     int Stock,
     string ImageUrl,
-    IReadOnlyDictionary<string, string> Specifications);
+    IReadOnlyDictionary<string, string> Specifications,
+    string Description = "");
 
 public interface IProductConsultationService
 {
@@ -186,7 +187,8 @@ public sealed class ProductConsultationService : IProductConsultationService
                             .ThenBy(image => image.Imageid)
                             .Select(image => image.Imageurl)
                             .FirstOrDefault() ?? string.Empty,
-                        specifications),
+                        specifications,
+                        product.Description ?? string.Empty),
                     score));
             }
         }
@@ -233,6 +235,11 @@ public sealed class ProductConsultationService : IProductConsultationService
                 "con hang",
                 "ton kho",
                 "so sanh",
+                "khac nhau",
+                "nen chon",
+                "may nao hon",
+                "may nao tot hon",
+                "doi chieu",
                 "mua",
                 "camera",
                 "pin",
@@ -241,6 +248,8 @@ public sealed class ProductConsultationService : IProductConsultationService
                 "quay video",
                 "choi game",
                 "gaming",
+                "hieu nang",
+                "cau hinh",
                 "pin lau",
                 "pin trau",
                 "hoc tap",
@@ -337,11 +346,32 @@ public sealed class ProductConsultationService : IProductConsultationService
 
     private static string? DetectUsageProfile(string query)
     {
-        if (ContainsAny(query, "choi game", "gaming", "game nang", "fps", "moba"))
+        if (ContainsAny(
+                query,
+                "choi game",
+                "gaming",
+                "game nang",
+                "fps",
+                "moba",
+                "hieu nang",
+                "cau hinh manh"))
             return "gaming";
-        if (ContainsAny(query, "chup anh", "quay phim", "camera dep", "song ao", "zoom"))
+        if (ContainsAny(
+                query,
+                "chup anh",
+                "chup hinh",
+                "quay phim",
+                "quay video",
+                "camera",
+                "song ao",
+                "zoom"))
             return "camera";
-        if (ContainsAny(query, "pin trau", "pin tot", "dung lau", "sac nhanh", "thoi luong pin"))
+        if (ContainsAny(
+                query,
+                "pin",
+                "dung lau",
+                "sac nhanh",
+                "thoi luong pin"))
             return "battery";
         if (ContainsAny(query, "hoc tap", "sinh vien", "van phong", "hoc online", "lam viec"))
             return "study";
@@ -413,6 +443,26 @@ public sealed class ProductConsultationService : IProductConsultationService
                 ("wifi", 2)),
             _ => 0
         };
+    }
+
+    internal static int ScoreForUsageProfile(
+        ProductConsultationResult product,
+        string usageProfile)
+    {
+        var searchableText = Normalize(string.Join(" ", new[]
+        {
+            product.ProductName,
+            product.Brand,
+            product.Description,
+            product.Condition,
+            string.Join(
+                " ",
+                product.Specifications.Select(item => $"{item.Key} {item.Value}"))
+        }));
+        return ScoreUsageProfile(
+            searchableText,
+            product.Specifications,
+            usageProfile);
     }
 
     private static int ScoreTerms(string text, params (string Term, int Score)[] terms) =>

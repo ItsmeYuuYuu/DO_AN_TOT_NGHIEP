@@ -34,6 +34,36 @@ const findSpecification = (
   return entry?.[1] ?? 'Chưa có dữ liệu';
 };
 
+const largestNumber = (value: string) => {
+  const values = Array.from(value.matchAll(/\d+(?:[.,]\d+)?/g))
+    .map(match => Number(match[0].replace(',', '.')))
+    .filter(Number.isFinite);
+  return values.length > 0 ? Math.max(...values) : null;
+};
+
+const sumNumbers = (value: string) => {
+  const values = Array.from(value.matchAll(/\d+(?:[.,]\d+)?/g))
+    .map(match => Number(match[0].replace(',', '.')))
+    .filter(Number.isFinite);
+  return values.length > 0
+    ? values.reduce((total, current) => total + current, 0)
+    : null;
+};
+
+const storageCapacity = (value: string) => {
+  const capacity = largestNumber(value);
+  if (capacity === null) return null;
+  return /\btb\b/i.test(value) ? capacity * 1024 : capacity;
+};
+
+interface ComparisonRow {
+  label: string;
+  value: (item: ChatRecommendation) => string;
+  metric?: (item: ChatRecommendation) => number | null;
+  lowerIsBetter?: boolean;
+  bestLabel?: string;
+}
+
 export const ChatComparisonTable = ({
   recommendations,
 }: ChatComparisonTableProps) => {
@@ -42,15 +72,40 @@ export const ChatComparisonTable = ({
   ).slice(0, 3);
   if (products.length < 2) return null;
 
-  const lowestPrice = Math.min(...products.map(item => item.price));
-  const rows = [
-    { label: 'Giá bán', value: (item: ChatRecommendation) => formatCurrency(item.price) },
+  const rows: ComparisonRow[] = [
+    {
+      label: 'Giá bán',
+      value: item => formatCurrency(item.price),
+      metric: item => item.price,
+      lowerIsBetter: true,
+      bestLabel: 'Giá thấp nhất',
+    },
     { label: 'Phiên bản', value: (item: ChatRecommendation) => item.condition },
     { label: 'Chipset', value: (item: ChatRecommendation) => findSpecification(item, 'chipset', 'cpu') },
-    { label: 'RAM', value: (item: ChatRecommendation) => findSpecification(item, 'ram') },
-    { label: 'Bộ nhớ', value: (item: ChatRecommendation) => findSpecification(item, 'bo nho', 'storage', 'rom') },
-    { label: 'Camera', value: (item: ChatRecommendation) => findSpecification(item, 'camera sau', 'camera') },
-    { label: 'Pin', value: (item: ChatRecommendation) => findSpecification(item, 'pin') },
+    {
+      label: 'RAM',
+      value: item => findSpecification(item, 'ram'),
+      metric: item => largestNumber(findSpecification(item, 'ram')),
+      bestLabel: 'RAM lớn nhất',
+    },
+    {
+      label: 'Bộ nhớ',
+      value: item => findSpecification(item, 'bo nho', 'storage', 'rom'),
+      metric: item => storageCapacity(findSpecification(item, 'bo nho', 'storage', 'rom')),
+      bestLabel: 'Dung lượng lớn nhất',
+    },
+    {
+      label: 'Camera',
+      value: item => findSpecification(item, 'camera sau', 'camera'),
+      metric: item => sumNumbers(findSpecification(item, 'camera sau', 'camera')),
+      bestLabel: 'Cụm camera nổi bật',
+    },
+    {
+      label: 'Pin',
+      value: item => findSpecification(item, 'pin'),
+      metric: item => largestNumber(findSpecification(item, 'pin')),
+      bestLabel: 'Pin lớn nhất',
+    },
   ];
 
   return (
@@ -92,18 +147,39 @@ export const ChatComparisonTable = ({
               <th className="border-b border-r border-slate-200 p-3 font-bold text-slate-500">
                 {row.label}
               </th>
-              {products.map(product => (
-                <td
-                  key={`${row.label}-${product.productid}`}
-                  className={`border-b border-r border-slate-200 p-3 last:border-r-0 ${
-                    row.label === 'Giá bán' && product.price === lowestPrice
-                      ? 'font-black text-red-600'
-                      : ''
-                  }`}
-                >
-                  {row.value(product)}
-                </td>
-              ))}
+              {products.map(product => {
+                const metrics = row.metric
+                  ? products
+                      .map(item => row.metric?.(item) ?? null)
+                      .filter((value): value is number => value !== null)
+                  : [];
+                const productMetric = row.metric?.(product) ?? null;
+                const bestMetric = metrics.length > 0
+                  ? row.lowerIsBetter
+                    ? Math.min(...metrics)
+                    : Math.max(...metrics)
+                  : null;
+                const isBest = productMetric !== null &&
+                  bestMetric !== null &&
+                  new Set(metrics).size > 1 &&
+                  productMetric === bestMetric;
+
+                return (
+                  <td
+                    key={`${row.label}-${product.productid}`}
+                    className={`border-b border-r border-slate-200 p-3 align-top last:border-r-0 ${
+                      isBest ? 'bg-emerald-50/70 font-bold text-emerald-800' : ''
+                    }`}
+                  >
+                    <span>{row.value(product)}</span>
+                    {isBest && row.bestLabel && (
+                      <span className="mt-1 block w-fit rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+                        {row.bestLabel}
+                      </span>
+                    )}
+                  </td>
+                );
+              })}
             </tr>
           ))}
           <tr>

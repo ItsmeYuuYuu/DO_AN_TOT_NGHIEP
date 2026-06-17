@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Package, LogOut, ChevronRight, Clock, LayoutDashboard, ClipboardList, RotateCcw, Star } from 'lucide-react';
-import { useAuth } from '@/features/auth/context/AuthContext';
+import {
+  ChevronRight,
+  ClipboardList,
+  Clock,
+  LayoutDashboard,
+  LogOut,
+  Package,
+  RotateCcw,
+  ShieldCheck,
+  Star,
+  User,
+} from 'lucide-react';
 import apiClient from '@/api/apiClient';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import { formatCurrency } from '@/utils/formatters';
 import { MyReviews } from './MyReviews';
 
@@ -21,22 +32,28 @@ interface Order {
   }[];
 }
 
-const statusColor = (s: string) => {
-  switch (s?.toLowerCase()) {
-    case 'pending':    return 'bg-amber-100 text-amber-700';
-    case 'confirmed':  return 'bg-blue-100 text-blue-700';
-    case 'shipping':   return 'bg-purple-100 text-purple-700';
-    case 'delivered':  return 'bg-emerald-100 text-emerald-700';
-    case 'cancelled':  return 'bg-red-100 text-red-700';
-    default:           return 'bg-slate-100 text-slate-600';
+const statusColor = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'pending': return 'bg-amber-100 text-amber-800';
+    case 'confirmed': return 'bg-blue-100 text-blue-800';
+    case 'shipping': return 'bg-purple-100 text-purple-800';
+    case 'delivered':
+    case 'completed': return 'bg-emerald-100 text-emerald-800';
+    case 'cancelled': return 'bg-red-100 text-red-700';
+    default: return 'bg-slate-100 text-slate-600';
   }
 };
-const statusLabel = (s: string) => {
+
+const statusLabel = (status: string) => {
   const map: Record<string, string> = {
-    pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận',
-    shipping: 'Đang giao', delivered: 'Đã nhận', cancelled: 'Đã hủy',
+    pending: 'Chờ xác nhận',
+    confirmed: 'Đã xác nhận',
+    shipping: 'Đang giao',
+    delivered: 'Đã nhận',
+    completed: 'Hoàn tất',
+    cancelled: 'Đã hủy',
   };
-  return map[s?.toLowerCase()] ?? s;
+  return map[status?.toLowerCase()] ?? status;
 };
 
 const ProfilePage: React.FC = () => {
@@ -47,10 +64,13 @@ const ProfilePage: React.FC = () => {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isLoggedIn) { navigate('/auth/login'); return; }
+    if (!isLoggedIn) {
+      navigate('/auth/login');
+      return;
+    }
     setLoadingOrders(true);
     apiClient.get<Order[]>(`/Orders/user/${user?.userid}`)
-      .then(r => setOrders(r.data))
+      .then(response => setOrders(response.data))
       .catch(() => setOrders([]))
       .finally(() => setLoadingOrders(false));
   }, [isLoggedIn, user, navigate]);
@@ -58,173 +78,193 @@ const ProfilePage: React.FC = () => {
   if (!user) return null;
 
   const avatarLetter = user.fullname?.charAt(0).toUpperCase() ?? 'U';
+  const completedOrders = orders.filter(order => ['completed', 'delivered'].includes(order.orderstatus?.toLowerCase())).length;
+  const pendingOrders = orders.filter(order => ['pending', 'confirmed', 'shipping'].includes(order.orderstatus?.toLowerCase())).length;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-black text-slate-900 mb-8">Tài khoản của tôi</h1>
+    <div className="customer-shell min-h-screen pb-16">
+      <section className="border-b customer-rule bg-[#fffdf8] px-4 py-8">
+        <div className="customer-container">
+          <p className="customer-label">Member account</p>
+          <div className="mt-2 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <h1 className="customer-display text-4xl font-bold text-[#10233f] md:text-5xl">
+                Tài khoản của tôi
+              </h1>
+              <p className="mt-3 text-sm text-slate-500">
+                Theo dõi đơn hàng, đổi trả, bảo hành và đánh giá sau mua.
+              </p>
+            </div>
+            <Link to="/products" className="customer-button-outline">
+              Tiếp tục mua sắm <ChevronRight size={15} />
+            </Link>
+          </div>
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Sidebar */}
-        <div className="md:col-span-1 space-y-4">
-          {/* Avatar card */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm text-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white text-3xl font-black mx-auto mb-4 shadow-lg shadow-blue-200">
+      <main className="customer-container grid gap-8 px-4 py-8 lg:grid-cols-[320px_1fr]">
+        <aside className="space-y-5">
+          <div className="customer-panel p-6 text-center">
+            <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center bg-[#10233f] text-4xl font-black text-white shadow-[6px_6px_0_rgba(255,91,53,0.45)]">
               {avatarLetter}
             </div>
-            <h2 className="font-black text-slate-900 text-lg">{user.fullname}</h2>
-            <p className="text-slate-400 text-sm mt-1">{user.email}</p>
-            <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold ${
-              user.rolename === 'Admin' ? 'bg-purple-100 text-purple-700' :
-              'bg-slate-100 text-slate-600'
-            }`}>
+            <h2 className="text-xl font-black text-[#10233f]">{user.fullname}</h2>
+            <p className="mt-1 text-sm text-slate-500">{user.email}</p>
+            <span className="mt-3 inline-flex bg-[#75d7dc]/25 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#10233f]">
               {user.rolename}
             </span>
           </div>
 
-          {/* Nav */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-2 shadow-sm">
-            <Link
-              to="/returns"
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors mb-1"
-            >
-              <span className="flex items-center gap-2">
-                <RotateCcw size={16} />
-                Đổi trả & hoàn tiền
-              </span>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="customer-panel p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Đơn hàng</p>
+              <p className="mt-1 text-2xl font-black text-[#10233f]">{orders.length}</p>
+            </div>
+            <div className="customer-panel p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Đang xử lý</p>
+              <p className="mt-1 text-2xl font-black text-[#db3d1c]">{pendingOrders}</p>
+            </div>
+          </div>
+
+          <div className="customer-panel p-2">
+            <Link to="/returns" className="flex items-center justify-between gap-3 p-3 text-sm font-black text-[#10233f] hover:bg-[#f4f0e8]">
+              <span className="flex items-center gap-2"><RotateCcw size={16} /> Đổi trả & hoàn tiền</span>
               <ChevronRight size={14} />
             </Link>
-            {[
-              { icon: <User size={16} />, label: 'Thông tin cá nhân', active: true },
-              { icon: <Package size={16} />, label: 'Đơn hàng của tôi', active: false },
-              { icon: <Star size={16} />, label: 'Đánh giá của tôi', active: false },
-            ].map((item, i) => (
-              <button key={i} className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${item.active ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}>
-                <span className="flex items-center gap-2">{item.icon}{item.label}</span>
-                <ChevronRight size={14} />
-              </button>
-            ))}
+            <Link to="/order-lookup" className="flex items-center justify-between gap-3 p-3 text-sm font-black text-[#10233f] hover:bg-[#f4f0e8]">
+              <span className="flex items-center gap-2"><ClipboardList size={16} /> Tra cứu đơn</span>
+              <ChevronRight size={14} />
+            </Link>
+            <button className="flex w-full items-center justify-between gap-3 p-3 text-sm font-black text-[#10233f] hover:bg-[#f4f0e8]">
+              <span className="flex items-center gap-2"><Star size={16} /> Đánh giá của tôi</span>
+              <ChevronRight size={14} />
+            </button>
 
-            {/* Portal shortcut for Admin */}
             {user.rolename === 'Admin' && (
-              <Link
-                to="/admin"
-                className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors mt-1"
-              >
-                <span className="flex items-center gap-2">
-                  <LayoutDashboard size={16} />
-                  Vào trang Quản trị
-                </span>
+              <Link to="/admin" className="flex items-center justify-between gap-3 p-3 text-sm font-black text-purple-700 hover:bg-purple-50">
+                <span className="flex items-center gap-2"><LayoutDashboard size={16} /> Vào trang quản trị</span>
                 <ChevronRight size={14} />
               </Link>
             )}
             {user.rolename !== 'Admin' && user.rolename !== 'Customer' && (
-              <Link
-                to="/staff"
-                className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors mt-1"
-              >
-                <span className="flex items-center gap-2">
-                  <ClipboardList size={16} />
-                  Vào trang vận hành
-                </span>
+              <Link to="/staff" className="flex items-center justify-between gap-3 p-3 text-sm font-black text-emerald-700 hover:bg-emerald-50">
+                <span className="flex items-center gap-2"><ClipboardList size={16} /> Vào trang vận hành</span>
                 <ChevronRight size={14} />
               </Link>
             )}
 
             <button
+              type="button"
               onClick={logout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors mt-1"
+              className="flex w-full items-center gap-2 p-3 text-sm font-black text-red-600 hover:bg-red-50"
             >
               <LogOut size={16} /> Đăng xuất
             </button>
           </div>
-        </div>
+        </aside>
 
-        {/* Main content */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Account info */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-            <h3 className="font-black text-slate-900 mb-4 flex items-center gap-2"><User size={18} className="text-blue-500" /> Thông tin cá nhân</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section className="space-y-6">
+          <div className="customer-panel p-6">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <p className="customer-label">Profile</p>
+                <h2 className="mt-1 text-xl font-black text-[#10233f]">Thông tin cá nhân</h2>
+              </div>
+              <User className="text-[#db3d1c]" size={22} />
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {[
                 { label: 'Họ và tên', value: user.fullname },
                 { label: 'Email', value: user.email },
                 { label: 'Tên đăng nhập', value: user.username },
                 { label: 'Vai trò', value: user.rolename },
-              ].map((f, i) => (
-                <div key={i} className="space-y-1">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{f.label}</p>
-                  <p className="text-sm font-semibold text-slate-900 bg-slate-50 px-3 py-2 rounded-lg">{f.value ?? '—'}</p>
+              ].map(field => (
+                <div key={field.label} className="border border-[#d9d2c5] bg-[#fffdf8] p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{field.label}</p>
+                  <p className="mt-1 text-sm font-black text-[#10233f]">{field.value ?? '—'}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Order history */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-            <h3 className="font-black text-slate-900 mb-4 flex items-center gap-2"><Package size={18} className="text-orange-500" /> Lịch sử đơn hàng</h3>
+          <div className="customer-panel p-6">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <p className="customer-label">Orders</p>
+                <h2 className="mt-1 text-xl font-black text-[#10233f]">Lịch sử đơn hàng</h2>
+              </div>
+              <div className="hidden gap-3 text-xs font-black text-slate-500 sm:flex">
+                <span>{completedOrders} hoàn tất</span>
+                <span>{pendingOrders} đang xử lý</span>
+              </div>
+            </div>
+
             {loadingOrders ? (
               <div className="space-y-3">
-                {[1,2,3].map(i => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />)}
+                {[1, 2, 3].map(item => <div key={item} className="h-20 animate-pulse bg-[#f4f0e8]" />)}
               </div>
             ) : orders.length === 0 ? (
-              <div className="text-center py-10">
-                <Package size={40} className="text-slate-200 mx-auto mb-3" />
-                <p className="text-slate-400 text-sm">Bạn chưa có đơn hàng nào.</p>
-                <Link to="/" className="mt-3 inline-block text-sm text-blue-600 font-semibold hover:underline">Mua sắm ngay →</Link>
+              <div className="border border-dashed border-[#d9d2c5] px-6 py-14 text-center">
+                <Package size={44} className="mx-auto mb-3 text-slate-300" />
+                <p className="font-black text-[#10233f]">Bạn chưa có đơn hàng nào.</p>
+                <Link to="/products" className="mt-4 inline-flex text-sm font-black text-[#db3d1c] hover:underline">
+                  Mua sắm ngay <ChevronRight size={15} />
+                </Link>
               </div>
             ) : (
               <div className="space-y-3">
                 {orders.map(order => (
-                  <div key={order.orderid} className="border border-slate-100 rounded-xl hover:border-slate-200 transition-colors bg-white">
-                    <div 
-                      className="flex items-center gap-4 p-4 cursor-pointer"
+                  <article key={order.orderid} className="border border-[#d9d2c5] bg-[#fffdf8]">
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-4 p-4 text-left"
                       onClick={() => setExpandedId(expandedId === order.orderid ? null : order.orderid)}
                     >
-                      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
-                        <Package size={18} className="text-slate-400" />
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-white text-[#10233f]">
+                        <Package size={19} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-900 text-sm">Đơn #{order.orderid}</p>
-                        <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                          <Clock size={10} /> {new Date(order.orderdate).toLocaleDateString('vi-VN')}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-[#10233f]">Đơn #{order.orderid}</p>
+                        <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
+                          <Clock size={11} /> {new Date(order.orderdate).toLocaleDateString('vi-VN')}
                           {order.shippingaddress && ` · ${order.shippingaddress}`}
                         </p>
                       </div>
-                      <div className="text-right shrink-0 flex items-center gap-4">
-                        <div>
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${statusColor(order.orderstatus)}`}>
-                            {statusLabel(order.orderstatus)}
-                          </span>
-                          <p className="text-sm font-black text-slate-900 mt-1">{formatCurrency(order.totalamount)}</p>
-                        </div>
-                        <ChevronRight size={16} className={`text-slate-400 transition-transform ${expandedId === order.orderid ? 'rotate-90' : ''}`} />
+                      <div className="shrink-0 text-right">
+                        <span className={`px-2.5 py-1 text-xs font-black ${statusColor(order.orderstatus)}`}>
+                          {statusLabel(order.orderstatus)}
+                        </span>
+                        <p className="mt-1 text-sm font-black text-[#db3d1c]">{formatCurrency(order.totalamount)}</p>
                       </div>
-                    </div>
+                      <ChevronRight size={16} className={`text-slate-400 transition-transform ${expandedId === order.orderid ? 'rotate-90' : ''}`} />
+                    </button>
+
                     {expandedId === order.orderid && order.orderitems && (
-                      <div className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-2 bg-slate-50 rounded-b-xl">
+                      <div className="space-y-2 border-t border-[#d9d2c5] bg-white px-4 py-3">
                         {order.orderitems.map(item => (
-                          <div key={item.orderitemid} className="flex justify-between items-center text-sm py-1">
+                          <div key={item.orderitemid} className="flex items-center justify-between gap-4 py-1 text-sm">
                             <div>
-                              <p className="font-semibold text-slate-700">IMEI: {item.imei || 'Đang chờ'}</p>
+                              <p className="font-bold text-[#10233f]">IMEI: {item.imei || 'Đang chờ'}</p>
                               {(item.warrantyprice ?? 0) > 0 && (
-                                <p className="text-xs text-orange-600 font-medium">Kèm bảo hành: {item.packagename} (+{formatCurrency(item.warrantyprice!)})</p>
+                                <p className="mt-1 flex items-center gap-1 text-xs font-bold text-[#db3d1c]">
+                                  <ShieldCheck size={12} /> {item.packagename} (+{formatCurrency(item.warrantyprice!)})
+                                </p>
                               )}
                             </div>
-                            <span className="font-bold text-slate-900">{formatCurrency(item.sellingprice)}</span>
+                            <span className="font-black text-[#10233f]">{formatCurrency(item.sellingprice)}</span>
                           </div>
                         ))}
                       </div>
                     )}
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
           </div>
 
-          {/* My Reviews */}
           <MyReviews />
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 };

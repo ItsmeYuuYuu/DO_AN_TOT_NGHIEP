@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/Button';
-import { useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { AlertCircle, Eye, EyeOff, ShieldCheck, ShoppingBag, Sparkles } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 import { saveSession } from '@/features/auth/utils/authUtils';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import Logo from '@/assets/Logo.png';
 
-// ─── Validation helpers ────────────────────────────────────────────────────────
-const validateEmail = (email: string): string | null => {
-  if (!email.trim()) return 'Tên đăng nhập hoặc email không được để trống.';
+const validateLoginId = (value: string): string | null => {
+  if (!value.trim()) return 'Tên đăng nhập hoặc email không được để trống.';
   return null;
 };
 
@@ -18,7 +17,6 @@ const validatePassword = (password: string): string | null => {
   return null;
 };
 
-// ─── Component ─────────────────────────────────────────────────────────────────
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,43 +28,38 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { refreshAuth } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setFormError('');
 
-    // Client-side validation
-    const eErr = validateEmail(email);
-    const pErr = validatePassword(password);
-    setEmailError(eErr ?? '');
-    setPasswordError(pErr ?? '');
-    if (eErr || pErr) return;
+    const emailValidation = validateLoginId(email);
+    const passwordValidation = validatePassword(password);
+    setEmailError(emailValidation ?? '');
+    setPasswordError(passwordValidation ?? '');
+    if (emailValidation || passwordValidation) return;
 
     setLoading(true);
     try {
       const response = await apiClient.post('/Auth/login', {
         username: email.trim(),
-        password: password,
+        password,
       });
 
       const user = response.data;
-
-      // Lưu JWT vào session store (tự động handle expiry)
       saveSession(
         user.accessToken,
         user.expiresIn,
         {
-          userid:   String(user.userid),
+          userid: String(user.userid),
           username: user.username,
           fullname: user.fullname,
-          email:    user.email ?? user.username,
+          email: user.email ?? user.username,
           rolename: user.rolename,
-        }
+        },
       );
 
-      // Cập nhật AuthContext state ngay lập tức
       refreshAuth();
 
-      // Điều hướng theo Role
       if (user.rolename === 'Admin') navigate('/admin');
       else if (['Manager', 'Sales', 'Warehouse', 'Warranty', 'Content', 'Consultant'].includes(user.rolename)) navigate('/staff');
       else navigate('/');
@@ -79,142 +72,144 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-[960px] bg-white rounded-2xl shadow-xl overflow-hidden flex">
-
-        {/* ── Left Brand Panel ── */}
-        <div className="hidden lg:flex lg:w-[45%] bg-blue-600 p-12 flex-col justify-between relative overflow-hidden">
-          <div className="relative z-10">
-            <Link to="/" className="inline-block group">
-              <img src={Logo} alt="ECOMMERCE" className="h-20 w-auto object-contain group-hover:scale-105 transition-transform" />
-            </Link>
-            <h2 className="mt-20 text-4xl font-black text-white leading-tight">
-              ĐĂNG NHẬP ĐỂ <br /> NHẬN ƯU ĐÃI <br /> ĐỘC QUYỀN.
-            </h2>
-            <p className="mt-6 text-blue-100 text-sm max-w-xs leading-relaxed">
-              Trải nghiệm mua sắm công nghệ tuyệt vời hơn với tài khoản thành viên.
-            </p>
-          </div>
-
-          {/* Security note */}
-          <div className="relative z-10 bg-white/10 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <ShieldCheck size={16} className="text-white" />
-              <p className="text-white text-xs font-bold tracking-wide">BẢO MẬT TUYỆT ĐỐI</p>
-            </div>
-            <p className="text-blue-100 text-xs leading-relaxed">
-              Tài khoản được bảo vệ bằng mã hóa BCrypt. Chúng tôi không bao giờ lưu mật khẩu gốc.
-            </p>
-          </div>
-
-          {/* Decorative circles */}
-          <div className="absolute -top-16 -right-16 w-72 h-72 bg-white/10 rounded-full" />
-          <div className="absolute bottom-24 -left-16 w-48 h-48 bg-white/10 rounded-full" />
-        </div>
-
-        {/* ── Right Form Panel ── */}
-        <div className="flex-1 p-8 md:p-14">
-          <div className="max-w-sm mx-auto">
-            {/* Heading */}
-            <div className="mb-8 text-center lg:text-left">
-              <h1 className="text-3xl font-black text-slate-900 mb-1.5">ĐĂNG NHẬP</h1>
-              <p className="text-sm text-slate-500">Vui lòng nhập thông tin tài khoản của bạn</p>
+    <main className="customer-shell min-h-screen px-4 py-8">
+      <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <div className="grid w-full max-w-6xl overflow-hidden border border-[#d9d2c5] bg-[#fffdf8] shadow-[16px_16px_0_rgb(16_35_63_/_10%)] lg:grid-cols-[0.95fr_1.05fr]">
+          <section className="relative hidden min-h-[620px] overflow-hidden bg-[#10233f] p-10 text-white lg:flex lg:flex-col lg:justify-between">
+            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/10 bg-white/5" />
+            <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full border border-white/10 bg-[#ff5b35]/20" />
+            <div className="relative z-10">
+              <Link to="/" className="inline-flex bg-white px-5 py-3 shadow-[6px_6px_0_rgb(255_91_53_/_55%)]">
+                <img src={Logo} alt="Cuồng Điện Thoại" className="h-16 w-auto object-contain" />
+              </Link>
+              <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#75d7dc]">Member login</p>
+              <h1 className="customer-display mt-3 max-w-md text-5xl font-black leading-[0.95]">
+                Đăng nhập để giữ trọn ưu đãi.
+              </h1>
+              <p className="mt-6 max-w-sm text-sm font-medium leading-7 text-blue-100">
+                Xem lịch sử đơn hàng, nhận gợi ý từ chatbot và lưu lại cấu hình điện thoại bạn đang quan tâm.
+              </p>
             </div>
 
-            {/* Global error */}
-            {formError && (
-              <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm font-medium">
-                <AlertCircle size={16} className="shrink-0" />
-                {formError}
+            <div className="relative z-10 grid gap-3">
+              <div className="border border-white/15 bg-white/10 p-4 backdrop-blur">
+                <div className="mb-2 flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-[#75d7dc]" />
+                  <p className="text-xs font-black uppercase tracking-[0.18em]">Bảo mật tài khoản</p>
+                </div>
+                <p className="text-xs leading-6 text-blue-100">
+                  Mật khẩu được mã hóa bằng BCrypt. Hệ thống không lưu mật khẩu gốc của khách hàng.
+                </p>
               </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-              {/* Email field */}
-              <div>
-                <label className="text-sm font-semibold text-slate-700 block mb-1.5">
-                  Tên đăng nhập hoặc email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Tên đăng nhập hoặc example@gmail.com"
-                  value={email}
-                  onChange={e => { setEmail(e.target.value); setEmailError(''); }}
-                  onBlur={() => setEmailError(validateEmail(email) ?? '')}
-                  className={`w-full bg-white border rounded-xl px-4 py-3 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400
-                    ${emailError
-                      ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-50'
-                      : 'border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50'
-                    }`}
-                  autoComplete="username"
-                />
-                {emailError && (
-                  <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-                    <span>⚠</span> {emailError}
-                  </p>
-                )}
+              <div className="grid grid-cols-2 gap-3 text-xs font-black uppercase tracking-[0.12em]">
+                <div className="border border-white/15 bg-white/10 p-3"><ShoppingBag size={16} /> Lưu đơn hàng</div>
+                <div className="border border-white/15 bg-white/10 p-3"><Sparkles size={16} /> Gợi ý cá nhân</div>
               </div>
+            </div>
+          </section>
 
-              {/* Password field */}
-              <div>
-                <label className="text-sm font-semibold text-slate-700 block mb-1.5">
-                  Mật khẩu <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
+          <section className="p-6 md:p-10 lg:p-14">
+            <div className="mx-auto max-w-md">
+              <Link to="/" className="mb-8 inline-flex lg:hidden">
+                <img src={Logo} alt="Cuồng Điện Thoại" className="h-14 w-auto object-contain" />
+              </Link>
+
+              <p className="customer-label">Tài khoản thành viên</p>
+              <h2 className="customer-display mt-2 text-4xl font-black text-[#10233f]">Đăng nhập</h2>
+              <p className="mt-2 text-sm font-medium text-slate-500">
+                Nhập thông tin tài khoản để tiếp tục mua sắm.
+              </p>
+
+              {formError && (
+                <div className="mt-6 flex items-center gap-2.5 border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                  <AlertCircle size={16} className="shrink-0" />
+                  {formError}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
+                <div>
+                  <label className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-[#10233f]">
+                    Tên đăng nhập hoặc email <span className="text-[#db3d1c]">*</span>
+                  </label>
                   <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Nhập mật khẩu"
-                    value={password}
-                    onChange={e => { setPassword(e.target.value); setPasswordError(''); }}
-                    onBlur={() => setPasswordError(validatePassword(password) ?? '')}
-                    className={`w-full bg-white border rounded-xl px-4 py-3 pr-12 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400
-                      ${passwordError
-                        ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-50'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50'
-                      }`}
-                    autoComplete="current-password"
+                    type="text"
+                    placeholder="Ví dụ: nguyenvana hoặc email@gmail.com"
+                    value={email}
+                    onChange={event => { setEmail(event.target.value); setEmailError(''); }}
+                    onBlur={() => setEmailError(validateLoginId(email) ?? '')}
+                    className={`customer-input ${emailError ? 'border-red-400 focus:border-red-500' : ''}`}
+                    autoComplete="username"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                    tabIndex={-1}
-                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                  {emailError && (
+                    <p className="mt-1.5 flex items-center gap-1 text-xs font-bold text-red-600">
+                      <AlertCircle size={13} /> {emailError}
+                    </p>
+                  )}
                 </div>
 
-                {passwordError && (
-                  <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-                    <span>⚠</span> {passwordError}
-                  </p>
-                )}
+                <div>
+                  <label className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em] text-[#10233f]">
+                    Mật khẩu <span className="text-[#db3d1c]">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Nhập mật khẩu"
+                      value={password}
+                      onChange={event => { setPassword(event.target.value); setPasswordError(''); }}
+                      onBlur={() => setPasswordError(validatePassword(password) ?? '')}
+                      className={`customer-input pr-12 ${passwordError ? 'border-red-400 focus:border-red-500' : ''}`}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(current => !current)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-[#10233f]"
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {passwordError && (
+                    <p className="mt-1.5 flex items-center gap-1 text-xs font-bold text-red-600">
+                      <AlertCircle size={13} /> {passwordError}
+                    </p>
+                  )}
+                </div>
 
-                <div className="text-right mt-2">
-                  <Link to="/forgot-password" className="text-xs font-semibold text-blue-600 hover:underline">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold text-slate-400">Bảo vệ bằng phiên đăng nhập JWT.</span>
+                  <Link to="/forgot-password" className="font-black text-[#db3d1c] hover:underline">
                     Quên mật khẩu?
                   </Link>
                 </div>
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  size="lg"
+                  isLoading={loading}
+                  className="rounded-none bg-[#10233f] text-sm font-black uppercase tracking-[0.14em] hover:bg-[#db3d1c]"
+                >
+                  Đăng nhập ngay
+                </Button>
+              </form>
+
+              <div className="mt-8 border-t border-[#d9d2c5] pt-6 text-center">
+                <p className="text-sm font-medium text-slate-500">
+                  Bạn chưa có tài khoản?{' '}
+                  <Link to="/auth/register" className="font-black text-[#db3d1c] hover:underline">
+                    Đăng ký miễn phí
+                  </Link>
+                </p>
               </div>
-
-              <Button type="submit" fullWidth size="lg" isLoading={loading}>
-                ĐĂNG NHẬP NGAY
-              </Button>
-            </form>
-
-            <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-              <p className="text-sm text-slate-500">
-                Bạn chưa có tài khoản?{' '}
-                <Link to="/auth/register" className="font-bold text-blue-600 hover:underline">
-                  Đăng ký miễn phí
-                </Link>
-              </p>
             </div>
-          </div>
+          </section>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, PackageCheck } from 'lucide-react';
+import { ArrowUpRight, PackageCheck, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Product } from '../api/productsApi';
 import { formatCurrency, getDiscountPercent } from '@/utils/formatters';
@@ -16,27 +16,35 @@ const imageTones = [
   'bg-[#f0ead5]',
 ];
 
+const getVariantSummary = (product: Product) => {
+  const variants = product.productvariants ?? [];
+  const hasStockData = variants.some(variant => variant.stockquantity != null);
+  const stock = variants.reduce((total, variant) => total + (variant.stockquantity ?? 0), 0);
+
+  return {
+    firstVariant: variants[0],
+    hasStockData,
+    stock,
+    availabilityLabel: hasStockData
+      ? stock > 0 ? `Còn ${stock} máy` : 'Tạm hết'
+      : `${variants.length} cấu hình`,
+  };
+};
+
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const firstVariant = product.productvariants?.[0];
+  const { firstVariant, hasStockData, stock, availabilityLabel } = getVariantSummary(product);
   const mainImage = firstVariant?.productimages?.find(image => image.ismain)?.imageurl
     ?? firstVariant?.productimages?.[0]?.imageurl;
   const discount = getDiscountPercent(firstVariant?.baseprice, firstVariant?.saleprice);
-  const variants = product.productvariants ?? [];
-  const hasStockData = variants.some(variant => variant.stockquantity != null);
-  const stock = variants.reduce(
-    (total, variant) => total + (variant.stockquantity ?? 0),
-    0,
-  );
-  const availabilityLabel = hasStockData
-    ? stock > 0 ? `${stock} máy` : 'Tạm hết'
-    : `${variants.length} cấu hình`;
   const imageTone = imageTones[product.productid % imageTones.length];
+  const price = firstVariant ? firstVariant.saleprice ?? firstVariant.baseprice : undefined;
+  const isAvailable = !hasStockData || stock > 0;
 
   return (
     <article className="product-card group flex h-full flex-col">
       <Link
         to={`/products/${product.productid}`}
-        className={`card-img-container relative block aspect-[4/4.4] overflow-hidden ${imageTone}`}
+        className={`card-img-container relative block aspect-[4/4.45] overflow-hidden ${imageTone}`}
       >
         <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between p-3">
           <span className="border border-[#10233f]/15 bg-[#fffdf8]/90 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-[#10233f] backdrop-blur">
@@ -47,7 +55,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               -{discount}%
             </span>
           ) : (
-            <span className="h-2 w-2 bg-[#75d7dc]" aria-hidden="true" />
+            <span className="flex h-7 w-7 items-center justify-center border border-[#10233f]/10 bg-[#fffdf8]/80 text-[#db3d1c]">
+              <Sparkles size={13} />
+            </span>
           )}
         </div>
 
@@ -76,7 +86,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {product.brand?.name ?? 'Chính hãng'}
           </span>
           <span className={`flex shrink-0 items-center gap-1 text-[10px] font-bold ${
-            !hasStockData || stock > 0 ? 'text-emerald-700' : 'text-slate-400'
+            isAvailable ? 'text-emerald-700' : 'text-slate-400'
           }`}>
             <PackageCheck size={13} />
             {availabilityLabel}
@@ -89,14 +99,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </h3>
         </Link>
 
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {product.category?.name && (
+            <span className="bg-[#10233f]/5 px-2 py-1 text-[10px] font-bold text-[#10233f]/70">
+              {product.category.name}
+            </span>
+          )}
+          {product.series?.name && (
+            <span className="bg-[#ff5b35]/10 px-2 py-1 text-[10px] font-bold text-[#db3d1c]">
+              {product.series.name}
+            </span>
+          )}
+        </div>
+
         <div className="mt-auto flex items-end justify-between gap-3 border-t border-[#d9d2c5] pt-4">
-          {firstVariant ? (
+          {firstVariant && price != null ? (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Giá từ
               </p>
               <p className="mt-0.5 text-lg font-black tracking-tight text-[#db3d1c]">
-                {formatCurrency(firstVariant.saleprice ?? firstVariant.baseprice)}
+                {formatCurrency(price)}
               </p>
               {firstVariant.saleprice && firstVariant.saleprice < firstVariant.baseprice && (
                 <p className="text-[11px] text-slate-400 line-through">
@@ -109,7 +132,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
           <Link
             to={`/products/${product.productid}`}
-            className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#10233f] underline decoration-[#ff5b35] decoration-2 underline-offset-4"
+            className="mb-1 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.16em] text-[#10233f] underline decoration-[#ff5b35] decoration-2 underline-offset-4"
           >
             Xem máy
           </Link>

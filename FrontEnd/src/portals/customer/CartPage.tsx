@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Tag } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Minus, Plus, ShieldCheck, ShoppingBag, Tag, Trash2, Truck } from 'lucide-react';
 import { useCart } from '@/features/orders/context/CartContext';
 import { formatCurrency } from '@/utils/formatters';
 
@@ -10,15 +10,27 @@ const CartPage: React.FC = () => {
 
   if (items.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-        <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <ShoppingBag size={40} className="text-slate-300" />
+      <div className="customer-shell min-h-screen px-4 py-16">
+        <div className="customer-panel-soft mx-auto max-w-2xl px-6 py-20 text-center">
+          <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center bg-[#10233f] text-white">
+            <ShoppingBag size={42} />
+          </div>
+          <p className="customer-label">Cart</p>
+          <h2 className="customer-display mt-2 text-4xl font-bold text-[#10233f]">
+            Giỏ hàng đang trống
+          </h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+            Bạn chưa thêm sản phẩm nào. Hãy xem danh sách máy hoặc hỏi AI để được gợi ý nhanh hơn.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link to="/products" className="customer-button-dark">
+              Xem sản phẩm <ArrowRight size={15} />
+            </Link>
+            <Link to="/chat" className="customer-button-outline">
+              Hỏi AI tư vấn
+            </Link>
+          </div>
         </div>
-        <h2 className="text-2xl font-black text-slate-800 mb-2">Giỏ hàng trống</h2>
-        <p className="text-slate-500 mb-8">Bạn chưa thêm sản phẩm nào vào giỏ hàng.</p>
-        <Link to="/" className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
-          <ArrowLeft size={18} /> Tiếp tục mua sắm
-        </Link>
       </div>
     );
   }
@@ -27,87 +39,146 @@ const CartPage: React.FC = () => {
   const grandTotal = totalPrice + shipping;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">Giỏ hàng của bạn</h1>
-          <p className="text-slate-500 text-sm mt-1">{totalItems} sản phẩm</p>
+    <div className="customer-shell min-h-screen pb-16">
+      <section className="border-b customer-rule bg-[#fffdf8] px-4 py-8">
+        <div className="customer-container flex flex-col justify-between gap-5 md:flex-row md:items-end">
+          <div>
+            <p className="customer-label">Shopping cart</p>
+            <h1 className="customer-display mt-2 text-4xl font-bold text-[#10233f]">
+              Giỏ hàng của bạn
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              {totalItems} sản phẩm đang chờ thanh toán.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={clearCart}
+            className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[#db3d1c]"
+          >
+            <Trash2 size={14} /> Xóa tất cả
+          </button>
         </div>
-        <button onClick={clearCart} className="text-sm text-red-500 hover:text-red-600 font-semibold flex items-center gap-1.5">
-          <Trash2 size={14} /> Xóa tất cả
-        </button>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Items */}
-        <div className="lg:col-span-2 space-y-4">
+      <main className="customer-container grid gap-8 px-4 py-8 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-4">
           {items.map(item => (
-            <div key={item.variantId} className="bg-white rounded-2xl border border-slate-100 p-4 flex gap-4 shadow-sm hover:shadow-md transition-shadow">
+            <article key={item.variantId} className="customer-panel flex gap-4 p-4 transition hover:-translate-y-0.5 hover:shadow-xl">
               <Link to={`/products/${item.productId}`} className="shrink-0">
-                <img src={item.imageUrl} alt={item.productName} className="w-20 h-20 object-contain rounded-xl bg-slate-50 border border-slate-100 p-1"
-                  onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/80x80?text=SP'; }} />
+                <img
+                  src={item.imageUrl}
+                  alt={item.productName}
+                  className="h-24 w-24 border border-[#d9d2c5] bg-[#f4f0e8] object-contain p-2"
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
               </Link>
-              <div className="flex-1 min-w-0">
+
+              <div className="min-w-0 flex-1">
                 <Link to={`/products/${item.productId}`}>
-                  <h3 className="font-bold text-slate-900 hover:text-blue-600 transition-colors line-clamp-2">{item.productName}</h3>
+                  <h3 className="line-clamp-2 font-black leading-6 text-[#10233f] transition hover:text-[#db3d1c]">
+                    {item.productName}
+                  </h3>
                 </Link>
                 {item.variantName && (
-                  <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><Tag size={10} /> {item.variantName}</p>
+                  <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-slate-500">
+                    <Tag size={11} /> {item.variantName}
+                  </p>
                 )}
-                <p className="text-orange-500 font-black text-lg mt-2">{formatCurrency(item.price)}</p>
+                <p className="mt-3 text-xl font-black tracking-tight text-[#db3d1c]">
+                  {formatCurrency(item.price)}
+                </p>
               </div>
-              <div className="flex flex-col items-end justify-between shrink-0">
-                <button onClick={() => removeFromCart(item.variantId)} className="text-slate-300 hover:text-red-500 transition-colors p-1">
+
+              <div className="flex shrink-0 flex-col items-end justify-between">
+                <button
+                  type="button"
+                  onClick={() => removeFromCart(item.variantId)}
+                  className="p-1 text-slate-300 transition hover:text-[#db3d1c]"
+                  aria-label="Xóa khỏi giỏ"
+                >
                   <Trash2 size={16} />
                 </button>
-                <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden">
-                  <button onClick={() => updateQuantity(item.variantId, item.quantity - 1)} className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50"><Minus size={14} /></button>
-                  <span className="px-3 py-1.5 font-bold text-sm text-slate-900 border-x-2 border-slate-200">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.variantId, item.quantity + 1)} className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50"><Plus size={14} /></button>
+
+                <div className="flex border border-[#d9d2c5] bg-white">
+                  <button
+                    type="button"
+                    onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
+                    className="flex h-9 w-9 items-center justify-center text-slate-500 hover:bg-[#f4f0e8]"
+                    aria-label="Giảm số lượng"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span className="flex h-9 min-w-10 items-center justify-center border-x border-[#d9d2c5] text-sm font-black text-[#10233f]">
+                    {item.quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
+                    className="flex h-9 w-9 items-center justify-center text-slate-500 hover:bg-[#f4f0e8]"
+                    aria-label="Tăng số lượng"
+                  >
+                    <Plus size={14} />
+                  </button>
                 </div>
               </div>
-            </div>
+            </article>
           ))}
-          <Link to="/" className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-semibold mt-2">
-            <ArrowLeft size={16} /> Tiếp tục mua sắm
+
+          <Link to="/products" className="customer-button-outline">
+            <ArrowLeft size={15} /> Tiếp tục mua sắm
           </Link>
         </div>
 
-        {/* Summary */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm sticky top-24">
-            <h2 className="font-black text-slate-900 text-lg mb-5">Tóm tắt đơn hàng</h2>
-            <div className="space-y-3 text-sm">
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <div className="customer-panel p-6">
+            <p className="customer-label">Order summary</p>
+            <h2 className="customer-display mt-2 text-3xl font-bold text-[#10233f]">
+              Tạm tính đơn hàng
+            </h2>
+
+            <div className="mt-6 space-y-3 text-sm">
               <div className="flex justify-between text-slate-600">
                 <span>Tạm tính ({totalItems} sp)</span>
-                <span className="font-semibold">{formatCurrency(totalPrice)}</span>
+                <span className="font-bold text-[#10233f]">{formatCurrency(totalPrice)}</span>
               </div>
               <div className="flex justify-between text-slate-600">
                 <span>Phí vận chuyển</span>
-                <span className={`font-semibold ${shipping === 0 ? 'text-emerald-600' : ''}`}>
+                <span className={`font-bold ${shipping === 0 ? 'text-emerald-700' : 'text-[#10233f]'}`}>
                   {shipping === 0 ? 'Miễn phí' : formatCurrency(shipping)}
                 </span>
               </div>
               {shipping > 0 && (
-                <p className="text-xs text-slate-400">Mua thêm {formatCurrency(2_000_000 - totalPrice)} để được miễn phí ship.</p>
+                <div className="flex gap-2 border border-[#d9d2c5] bg-[#fffdf8] p-3 text-xs leading-5 text-slate-500">
+                  <Truck className="mt-0.5 shrink-0 text-[#db3d1c]" size={15} />
+                  <span>Mua thêm {formatCurrency(2_000_000 - totalPrice)} để được miễn phí vận chuyển.</span>
+                </div>
               )}
-              <div className="border-t border-slate-100 pt-3 flex justify-between font-black text-slate-900 text-base">
-                <span>Tổng cộng</span>
-                <span className="text-orange-500 text-xl">{formatCurrency(grandTotal)}</span>
+              <div className="border-t border-[#d9d2c5] pt-4">
+                <div className="flex justify-between">
+                  <span className="font-black text-[#10233f]">Tổng cộng</span>
+                  <span className="text-2xl font-black text-[#db3d1c]">{formatCurrency(grandTotal)}</span>
+                </div>
               </div>
             </div>
-            <button onClick={() => navigate('/checkout')}
-              className="w-full mt-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-200 hover:-translate-y-0.5">
-              Tiến hành thanh toán →
+
+            <button
+              type="button"
+              onClick={() => navigate('/checkout')}
+              className="customer-button-dark mt-6 w-full"
+            >
+              Tiến hành thanh toán <ArrowRight size={15} />
             </button>
-            <div className="flex items-center justify-center gap-2 mt-4">
-              {['VISA', 'MC', 'COD', 'VNPAY'].map(p => (
-                <span key={p} className="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold rounded">{p}</span>
-              ))}
+
+            <div className="mt-5 flex items-start gap-3 border-t border-[#d9d2c5] pt-5">
+              <ShieldCheck className="mt-0.5 shrink-0 text-emerald-700" size={19} />
+              <p className="text-xs leading-5 text-slate-500">
+                Khách vãng lai cần đặt cọc hoặc thanh toán trước. Thành viên có thể chọn thêm COD.
+              </p>
             </div>
           </div>
-        </div>
-      </div>
+        </aside>
+      </main>
     </div>
   );
 };

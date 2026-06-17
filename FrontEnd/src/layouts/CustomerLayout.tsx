@@ -405,9 +405,6 @@ export const CustomerLayout: React.FC = () => {
             <p className="mt-5 max-w-sm text-sm leading-6 text-white/55">
               Cửa hàng thiết bị công nghệ tập trung vào dữ liệu sản phẩm rõ ràng, tư vấn đúng nhu cầu và quy trình hậu mãi có thể theo dõi.
             </p>
-            <div className="mt-6 inline-flex border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#75d7dc]">
-              AI assisted retail
-            </div>
           </div>
 
           <div>
@@ -452,9 +449,8 @@ export const CustomerLayout: React.FC = () => {
         </div>
 
         <div className="border-t border-white/10 px-4 py-5">
-          <div className="mx-auto flex max-w-7xl flex-col justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/35 sm:flex-row">
-            <span>© 2026 Cường Điện Thoại</span>
-            <span>GPKD số 0123456789</span>
+          <div className="mx-auto flex max-w-7xl justify-center text-[10px] font-bold uppercase tracking-[0.12em] text-white/35">
+            <span>© 2026 Cuồng Điện Thoại</span>
           </div>
         </div>
       </footer>

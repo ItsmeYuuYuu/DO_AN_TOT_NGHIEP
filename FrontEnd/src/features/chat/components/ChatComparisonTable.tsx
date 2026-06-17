@@ -80,8 +80,8 @@ export const ChatComparisonTable = ({
       lowerIsBetter: true,
       bestLabel: 'Giá thấp nhất',
     },
-    { label: 'Phiên bản', value: (item: ChatRecommendation) => item.condition },
-    { label: 'Chipset', value: (item: ChatRecommendation) => findSpecification(item, 'chipset', 'cpu') },
+    { label: 'Phiên bản', value: item => item.condition },
+    { label: 'Chipset', value: item => findSpecification(item, 'chipset', 'cpu') },
     {
       label: 'RAM',
       value: item => findSpecification(item, 'ram'),
@@ -109,29 +109,29 @@ export const ChatComparisonTable = ({
   ];
 
   return (
-    <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-      <table className="min-w-[620px] w-full border-collapse text-left text-xs text-slate-700">
+    <div className="mt-4 overflow-x-auto border border-[#d9d2c5] bg-white shadow-[5px_5px_0_rgba(16,35,63,0.08)]">
+      <table className="w-full min-w-[620px] border-collapse text-left text-xs text-slate-700">
         <thead>
-          <tr className="bg-slate-50">
-            <th className="w-28 border-b border-r border-slate-200 p-3 font-black text-slate-500">
+          <tr className="bg-[#fffdf8]">
+            <th className="w-28 border-b border-r border-[#d9d2c5] p-3 font-black uppercase tracking-[0.12em] text-slate-500">
               Tiêu chí
             </th>
             {products.map(product => (
               <th
                 key={product.productid}
-                className="min-w-40 border-b border-r border-slate-200 p-3 align-top last:border-r-0"
+                className="min-w-40 border-b border-r border-[#d9d2c5] p-3 align-top last:border-r-0"
               >
                 <Link
                   to={`/products/${product.productid}`}
-                  className="flex items-start gap-2 hover:text-blue-600"
+                  className="flex items-start gap-2 hover:text-[#db3d1c]"
                 >
                   <img
                     src={product.imageurl || `https://placehold.co/120x120?text=${encodeURIComponent(product.productname)}`}
                     alt={product.productname}
-                    className="h-12 w-12 rounded-lg bg-white object-contain"
+                    className="h-12 w-12 border border-[#d9d2c5] bg-white object-contain"
                   />
                   <span>
-                    <span className="line-clamp-2 font-black text-slate-900">
+                    <span className="line-clamp-2 font-black text-[#10233f]">
                       {product.productname}
                     </span>
                     <span className="mt-1 block font-medium text-slate-400">{product.brand}</span>
@@ -143,15 +143,15 @@ export const ChatComparisonTable = ({
         </thead>
         <tbody>
           {rows.map(row => (
-            <tr key={row.label} className="even:bg-slate-50/70">
-              <th className="border-b border-r border-slate-200 p-3 font-bold text-slate-500">
+            <tr key={row.label} className="even:bg-[#fffdf8]">
+              <th className="border-b border-r border-[#d9d2c5] p-3 font-bold text-slate-500">
                 {row.label}
               </th>
               {products.map(product => {
                 const metrics = row.metric
                   ? products
-                      .map(item => row.metric?.(item) ?? null)
-                      .filter((value): value is number => value !== null)
+                    .map(item => row.metric?.(item) ?? null)
+                    .filter((value): value is number => value !== null)
                   : [];
                 const productMetric = row.metric?.(product) ?? null;
                 const bestMetric = metrics.length > 0
@@ -167,13 +167,13 @@ export const ChatComparisonTable = ({
                 return (
                   <td
                     key={`${row.label}-${product.productid}`}
-                    className={`border-b border-r border-slate-200 p-3 align-top last:border-r-0 ${
+                    className={`border-b border-r border-[#d9d2c5] p-3 align-top last:border-r-0 ${
                       isBest ? 'bg-emerald-50/70 font-bold text-emerald-800' : ''
                     }`}
                   >
                     <span>{row.value(product)}</span>
                     {isBest && row.bestLabel && (
-                      <span className="mt-1 block w-fit rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+                      <span className="mt-1 block w-fit bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
                         {row.bestLabel}
                       </span>
                     )}
@@ -183,9 +183,9 @@ export const ChatComparisonTable = ({
             </tr>
           ))}
           <tr>
-            <th className="border-r border-slate-200 p-3 font-bold text-slate-500">Tồn kho</th>
+            <th className="border-r border-[#d9d2c5] p-3 font-bold text-slate-500">Tồn kho</th>
             {products.map(product => (
-              <td key={`stock-${product.productid}`} className="border-r border-slate-200 p-3 last:border-r-0">
+              <td key={`stock-${product.productid}`} className="border-r border-[#d9d2c5] p-3 last:border-r-0">
                 <span className={`inline-flex items-center gap-1 font-bold ${
                   product.stock > 0 ? 'text-emerald-600' : 'text-red-500'
                 }`}>

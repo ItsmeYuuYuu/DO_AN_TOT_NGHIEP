@@ -24,23 +24,26 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   if (loading) {
     return (
-      <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-200">
+          <thead className="border-b border-slate-200 bg-slate-50">
             <tr>
-              {columns.map((col) => (
-                <th key={col.key} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              {columns.map(col => (
+                <th
+                  key={col.key}
+                  className="px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-slate-500"
+                >
                   {col.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-100">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <tr key={i}>
-                {columns.map((col) => (
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <tr key={index}>
+                {columns.map(col => (
                   <td key={col.key} className="px-4 py-3">
-                    <div className="skeleton h-4 rounded w-3/4" />
+                    <div className="skeleton h-4 w-3/4 rounded" />
                   </td>
                 ))}
               </tr>
@@ -52,34 +55,31 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <table className="w-full text-sm">
-        <thead className="bg-slate-50 border-b border-slate-200">
+        <thead className="border-b border-slate-200 bg-slate-50">
           <tr>
-            {columns.map((col) => (
+            {columns.map(col => (
               <th
                 key={col.key}
-                className={`px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider ${col.className ?? ''}`}
+                className={`px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-slate-500 ${col.className ?? ''}`}
               >
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-slate-100">
+        <tbody className="divide-y divide-slate-100 bg-white">
           {data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-400 text-sm">
+              <td colSpan={columns.length} className="px-4 py-14 text-center text-sm font-semibold text-slate-400">
                 {emptyMessage}
               </td>
             </tr>
           ) : (
-            data.map((row) => (
-              <tr
-                key={String(row[keyField])}
-                className="hover:bg-slate-50 transition-colors"
-              >
-                {columns.map((col) => (
+            data.map(row => (
+              <tr key={String(row[keyField])} className="transition-colors hover:bg-slate-50">
+                {columns.map(col => (
                   <td key={col.key} className={`px-4 py-3 text-slate-700 ${col.className ?? ''}`}>
                     {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '—')}
                   </td>

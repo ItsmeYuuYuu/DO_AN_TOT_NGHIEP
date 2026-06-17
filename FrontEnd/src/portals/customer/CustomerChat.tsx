@@ -1,12 +1,31 @@
-import { useState, useEffect, useRef } from 'react';
-import { chatSessionsApi } from '../../features/chat/api/chatSessionsApi';
-import type { ChatSession, ChatMessage } from '../../features/chat/api/chatSessionsApi';
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { MessageSquare, Plus, Send, Trash2, Bot, User, Headphones } from 'lucide-react';
-import { formatDateTime } from '../../utils/formatters';
-import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
+import {
+  Bot,
+  Camera,
+  Headphones,
+  MessageSquare,
+  Plus,
+  Search,
+  Send,
+  Sparkles,
+  Trash2,
+  User,
+  Zap,
+} from 'lucide-react';
+import { chatSessionsApi } from '../../features/chat/api/chatSessionsApi';
+import type { ChatMessage, ChatSession } from '../../features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
+import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
+import { formatDateTime } from '../../utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
+
+const quickPrompts = [
+  { label: 'Chụp ảnh đẹp', prompt: 'Tôi cần điện thoại chụp ảnh đẹp trong tầm giá hợp lý', icon: Camera },
+  { label: 'Pin dùng lâu', prompt: 'Gợi ý điện thoại pin lâu, sạc nhanh, dùng cả ngày', icon: Zap },
+  { label: 'Chơi game', prompt: 'Tôi cần điện thoại chơi game mượt, máy mát, RAM tốt', icon: Sparkles },
+  { label: 'So sánh 3 máy', prompt: 'So sánh 3 điện thoại đáng mua theo giá, camera, pin và cấu hình', icon: Search },
+];
 
 export default function CustomerChat() {
   const [searchParams] = useSearchParams();
@@ -17,12 +36,32 @@ export default function CustomerChat() {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const scrollToBottom = () => {
+    window.setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const selectSession = async (session: ChatSession) => {
+    setActiveSession(session);
+    setLoading(true);
+    try {
+      const msgs = await chatSessionsApi.getMessages(session.sessionid);
+      setMessages(msgs);
+      scrollToBottom();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchSessions = async () => {
     try {
       const data = await chatSessionsApi.getMySessions();
       setSessions(data);
       if (data.length > 0 && !activeSession) {
-        selectSession(data[0]);
+        await selectSession(data[0]);
       }
     } catch {
       // A new account may not have any chat sessions yet.
@@ -30,7 +69,7 @@ export default function CustomerChat() {
   };
 
   useEffect(() => {
-    fetchSessions();
+    void fetchSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -54,42 +93,29 @@ export default function CustomerChat() {
     return () => window.clearInterval(timer);
   }, [activeSession?.sessionid, activeSession?.handoffstatus]);
 
-  const selectSession = async (session: ChatSession) => {
-    setActiveSession(session);
-    setLoading(true);
-    try {
-      const msgs = await chatSessionsApi.getMessages(session.sessionid);
-      setMessages(msgs);
-      scrollToBottom();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const createSession = async () => {
     try {
       const newSession = await chatSessionsApi.createSession('Cuộc hội thoại mới');
       setSessions([newSession, ...sessions]);
-      selectSession(newSession);
+      await selectSession(newSession);
     } catch (err) {
       console.error(err);
     }
   };
 
-  const deleteSession = async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const deleteSession = async (id: number, event: MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
     if (!confirm('Bạn có chắc muốn xóa cuộc hội thoại này?')) return;
     try {
       await chatSessionsApi.deleteSession(id);
-      setSessions(sessions.filter(s => s.sessionid !== id));
+      setSessions(current => current.filter(session => session.sessionid !== id));
       if (activeSession?.sessionid === id) {
         setActiveSession(null);
         setMessages([]);
       }
     } catch (err) {
       console.error(err);
+      alert(getApiErrorMessage(err, 'Không thể xóa cuộc hội thoại này.'));
     }
   };
 
@@ -108,7 +134,7 @@ export default function CustomerChat() {
       sessionid: currentSession.sessionid,
       sendertype: 'user',
       messagecontent: content,
-      sentat: new Date().toISOString()
+      sentat: new Date().toISOString(),
     };
 
     setMessages(prev => [...prev, tempMsg]);
@@ -126,15 +152,14 @@ export default function CustomerChat() {
       scrollToBottom();
     } catch (error: unknown) {
       alert(getApiErrorMessage(error, 'Lỗi khi gửi tin nhắn'));
-      // Remove temp message
-      setMessages(prev => prev.filter(m => m.messageid !== tempMsg.messageid));
+      setMessages(prev => prev.filter(message => message.messageid !== tempMsg.messageid));
     } finally {
       setLoading(false);
     }
   };
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const sendMessage = async (event: FormEvent) => {
+    event.preventDefault();
     await submitMessage(inputMsg);
   };
 
@@ -151,203 +176,262 @@ export default function CustomerChat() {
     }
   };
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
   const renderMessageContent = (content: string) =>
     content.split(/(\/products\/\d+)/g).map((part, index) =>
       /^\/products\/\d+$/.test(part) ? (
         <Link
           key={`${part}-${index}`}
           to={part}
-          className="font-semibold text-blue-600 underline underline-offset-2"
+          className="font-black text-[#db3d1c] underline underline-offset-2"
         >
           {part}
         </Link>
       ) : (
         part
-      )
+      ),
     );
 
   return (
-    <div className="max-w-6xl mx-auto h-[80vh] flex bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-      {/* Sidebar */}
-      <div className="w-1/3 bg-slate-50 border-r border-slate-200 flex flex-col">
-        <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between">
-          <h2 className="font-bold text-slate-800 flex items-center gap-2">
-            <MessageSquare size={20} className="text-blue-600" /> Lịch sử Chat
-          </h2>
-          <button 
-            onClick={createSession}
-            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
-            title="Tạo hội thoại mới"
-          >
-            <Plus size={20} />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {sessions.length === 0 ? (
-            <p className="text-center text-sm text-slate-400 mt-10">Chưa có cuộc hội thoại nào.</p>
-          ) : (
-            sessions.map(s => (
-              <div 
-                key={s.sessionid}
-                onClick={() => selectSession(s)}
-                className={`p-3 rounded-xl cursor-pointer transition flex items-start justify-between group
-                  ${activeSession?.sessionid === s.sessionid ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-slate-200 text-slate-700'}`}
-              >
-                <div>
-                  <p className="font-semibold text-sm truncate w-48">{s.title}</p>
-                  <p className={`text-xs mt-1 ${activeSession?.sessionid === s.sessionid ? 'text-blue-100' : 'text-slate-400'}`}>
-                    {formatDateTime(s.starttime)}
-                  </p>
-                </div>
-                <button 
-                  onClick={(e) => deleteSession(s.sessionid, e)}
-                  className={`opacity-0 group-hover:opacity-100 p-1.5 rounded transition
-                    ${activeSession?.sessionid === s.sessionid ? 'hover:bg-blue-700 text-blue-200 hover:text-white' : 'hover:bg-red-100 text-slate-400 hover:text-red-600'}`}
-                >
-                  <Trash2 size={16} />
-                </button>
+    <div className="customer-shell min-h-screen px-4 py-6">
+      <div className="customer-container grid h-[calc(100vh-9rem)] min-h-[680px] overflow-hidden border border-[#d9d2c5] bg-[#fffdf8] lg:grid-cols-[320px_1fr]">
+        <aside className="hidden border-r border-[#d9d2c5] bg-white lg:flex lg:flex-col">
+          <div className="border-b border-[#d9d2c5] p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="customer-label">AI history</p>
+                <h2 className="mt-1 flex items-center gap-2 text-xl font-black text-[#10233f]">
+                  <MessageSquare size={19} /> Lịch sử chat
+                </h2>
               </div>
-            ))
-          )}
-        </div>
-      </div>
+              <button
+                type="button"
+                onClick={createSession}
+                className="flex h-10 w-10 items-center justify-center bg-[#10233f] text-white hover:bg-[#db3d1c]"
+                title="Tạo hội thoại mới"
+              >
+                <Plus size={19} />
+              </button>
+            </div>
+          </div>
 
-      {/* Main Chat Area */}
-      <div className="w-2/3 flex flex-col bg-slate-50/50">
-        <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between gap-3">
-          <div>
-            <h3 className="font-bold text-slate-800">{activeSession ? activeSession.title : 'Chọn hoặc tạo hội thoại'}</h3>
-            {activeSession && (
-              <span className="text-xs text-slate-500">
-                ID: {activeSession.sessionid}
-                {activeSession.handoffstatus === 'Waiting' && ' · Đang chờ nhân viên tư vấn'}
-                {activeSession.handoffstatus === 'InProgress' && ` · Đang tư vấn${activeSession.assignedname ? ` bởi ${activeSession.assignedname}` : ''}`}
-                {activeSession.handoffstatus === 'Closed' && ' · Phiên tư vấn đã kết thúc'}
-              </span>
+          <div className="flex-1 space-y-2 overflow-y-auto p-3">
+            {sessions.length === 0 ? (
+              <div className="border border-dashed border-[#d9d2c5] px-4 py-10 text-center text-sm text-slate-400">
+                Chưa có cuộc hội thoại nào.
+              </div>
+            ) : (
+              sessions.map(session => (
+                <div
+                  key={session.sessionid}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => selectSession(session)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      void selectSession(session);
+                    }
+                  }}
+                  className={`group flex w-full items-start justify-between gap-3 border p-3 text-left transition ${
+                    activeSession?.sessionid === session.sessionid
+                      ? 'border-[#10233f] bg-[#10233f] text-white shadow-[4px_4px_0_rgba(255,91,53,0.35)]'
+                      : 'border-[#d9d2c5] bg-[#fffdf8] text-[#10233f] hover:border-[#10233f]'
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-black">{session.title}</span>
+                    <span className={`mt-1 block text-xs ${
+                      activeSession?.sessionid === session.sessionid ? 'text-white/55' : 'text-slate-400'
+                    }`}>
+                      {formatDateTime(session.starttime)}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={event => deleteSession(session.sessionid, event)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.stopPropagation();
+                      }
+                    }}
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center opacity-0 transition group-hover:opacity-100 focus:opacity-100 ${
+                      activeSession?.sessionid === session.sessionid ? 'text-white/60 hover:text-white' : 'text-slate-300 hover:text-red-600'
+                    }`}
+                    title="Xóa cuộc hội thoại"
+                    aria-label="Xóa cuộc hội thoại"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))
             )}
           </div>
-          {activeSession && !activeSession.handoffstatus && (
-            <button
-              type="button"
-              onClick={requestConsultant}
-              className="inline-flex items-center gap-2 rounded-lg bg-teal-50 px-3 py-2 text-sm font-bold text-teal-700 hover:bg-teal-100"
-            >
-              <Headphones size={17} />
-              Gặp nhân viên tư vấn
-            </button>
-          )}
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {!activeSession && sessions.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
-              <Bot size={64} className="text-slate-200" />
-              <p>Trợ lý ảo đang sẵn sàng hỗ trợ bạn.</p>
-            </div>
-          )}
+        </aside>
 
-          {messages.map((msg, idx) => {
-            const isUser = msg.sendertype === 'user';
-            if (msg.sendertype === 'system') {
+        <section className="flex min-w-0 flex-col">
+          <header className="border-b border-[#d9d2c5] bg-white p-5">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+              <div>
+                <p className="customer-label">AI consultation</p>
+                <h1 className="customer-display mt-1 text-3xl font-bold text-[#10233f]">
+                  {activeSession ? activeSession.title : 'Tư vấn chọn điện thoại'}
+                </h1>
+                {activeSession && (
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    ID: {activeSession.sessionid}
+                    {activeSession.handoffstatus === 'Waiting' && ' · Đang chờ nhân viên tư vấn'}
+                    {activeSession.handoffstatus === 'InProgress' && ` · Đang tư vấn${activeSession.assignedname ? ` bởi ${activeSession.assignedname}` : ''}`}
+                    {activeSession.handoffstatus === 'Closed' && ' · Phiên tư vấn đã kết thúc'}
+                  </p>
+                )}
+              </div>
+              {activeSession && !activeSession.handoffstatus && (
+                <button
+                  type="button"
+                  onClick={requestConsultant}
+                  className="customer-button-outline"
+                >
+                  <Headphones size={16} /> Gặp nhân viên tư vấn
+                </button>
+              )}
+            </div>
+
+            <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+              {quickPrompts.map(({ label, prompt, icon: Icon }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => submitMessage(prompt)}
+                  disabled={loading}
+                  className="inline-flex shrink-0 items-center gap-2 border border-[#d9d2c5] bg-[#fffdf8] px-3 py-2 text-xs font-black text-[#10233f] hover:border-[#10233f] disabled:opacity-50"
+                >
+                  <Icon size={14} /> {label}
+                </button>
+              ))}
+            </div>
+          </header>
+
+          <div className="flex-1 space-y-6 overflow-y-auto bg-[#f4f0e8] p-4 md:p-6">
+            {!activeSession && sessions.length === 0 && (
+              <div className="flex h-full flex-col items-center justify-center text-center">
+                <div className="mb-5 flex h-20 w-20 items-center justify-center bg-[#10233f] text-[#75d7dc]">
+                  <Bot size={42} />
+                </div>
+                <h2 className="customer-display text-3xl font-bold text-[#10233f]">
+                  Trợ lý mua sắm đã sẵn sàng
+                </h2>
+                <p className="mt-3 max-w-md text-sm leading-6 text-slate-500">
+                  Hỏi theo nhu cầu, ngân sách hoặc sản phẩm bạn đang phân vân. AI sẽ lọc từ dữ liệu thật của cửa hàng.
+                </p>
+              </div>
+            )}
+
+            {messages.map((message, index) => {
+              const isUser = message.sendertype === 'user';
+              if (message.sendertype === 'system') {
+                return (
+                  <div key={message.messageid || index} className="text-center text-xs font-bold text-slate-400">
+                    {message.messagecontent}
+                  </div>
+                );
+              }
+
               return (
-                <div key={msg.messageid || idx} className="text-center text-xs font-medium text-slate-400">
-                  {msg.messagecontent}
+                <div key={message.messageid || index} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center ${
+                    isUser ? 'bg-[#ff5b35] text-white' : 'bg-[#10233f] text-[#75d7dc]'
+                  }`}>
+                    {isUser ? <User size={16} /> : message.sendertype === 'consultant' ? <Headphones size={16} /> : <Bot size={16} />}
+                  </div>
+                  <div className={`${message.recommendations?.length ? 'max-w-[92%]' : 'max-w-[76%]'} border p-4 ${
+                    isUser
+                      ? 'border-[#ff5b35] bg-[#ff5b35] text-white'
+                      : 'border-[#d9d2c5] bg-white text-slate-700 shadow-[5px_5px_0_rgba(16,35,63,0.06)]'
+                  }`}>
+                    <p className="whitespace-pre-wrap text-sm leading-7">
+                      {renderMessageContent(message.messagecontent)}
+                    </p>
+
+                    {message.responsetype === 'comparison' && message.recommendations && (
+                      <ChatComparisonTable recommendations={message.recommendations} />
+                    )}
+
+                    {message.recommendations && message.recommendations.length > 0 && activeSession && (
+                      <>
+                        {message.responsetype === 'comparison' && (
+                          <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                            Chọn mua nhanh
+                          </p>
+                        )}
+                        <ChatRecommendationCards
+                          sessionId={activeSession.sessionid}
+                          recommendations={message.recommendations}
+                          allowAddToCart
+                        />
+                      </>
+                    )}
+
+                    {!isUser &&
+                      index === messages.length - 1 &&
+                      message.quickreplies &&
+                      message.quickreplies.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {message.quickreplies.map(reply => (
+                            <button
+                              key={reply}
+                              type="button"
+                              disabled={loading}
+                              onClick={() => submitMessage(reply)}
+                              className="border border-[#75d7dc] bg-[#75d7dc]/20 px-3 py-1.5 text-xs font-black text-[#10233f] transition hover:bg-[#75d7dc] disabled:opacity-50"
+                            >
+                              {reply}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                    <span className={`mt-2 block text-[10px] ${isUser ? 'text-white/60' : 'text-slate-400'}`}>
+                      {message.sentat ? new Date(message.sentat).toLocaleTimeString() : 'Đang gửi...'}
+                    </span>
+                  </div>
                 </div>
               );
-            }
-            return (
-              <div key={msg.messageid || idx} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm
-                  ${isUser ? 'bg-blue-600 text-white' : 'bg-emerald-500 text-white'}`}>
-                  {isUser ? <User size={16} /> : msg.sendertype === 'consultant' ? <Headphones size={16} /> : <Bot size={16} />}
-                </div>
-                <div className={`${msg.recommendations?.length ? 'max-w-[85%]' : 'max-w-[70%]'} p-4 rounded-2xl shadow-sm
-                  ${isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'}`}>
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                    {renderMessageContent(msg.messagecontent)}
-                  </p>
-                  {msg.responsetype === 'comparison' && msg.recommendations && (
-                    <ChatComparisonTable recommendations={msg.recommendations} />
-                  )}
-                  {msg.recommendations && msg.recommendations.length > 0 && activeSession && (
-                    <>
-                      {msg.responsetype === 'comparison' && (
-                        <p className="mt-4 text-xs font-black uppercase tracking-wide text-slate-400">
-                          Chọn mua nhanh
-                        </p>
-                      )}
-                      <ChatRecommendationCards
-                        sessionId={activeSession.sessionid}
-                        recommendations={msg.recommendations}
-                        allowAddToCart
-                      />
-                    </>
-                  )}
-                  {!isUser &&
-                    idx === messages.length - 1 &&
-                    msg.quickreplies &&
-                    msg.quickreplies.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {msg.quickreplies.map(reply => (
-                          <button
-                            key={reply}
-                            type="button"
-                            disabled={loading}
-                            onClick={() => submitMessage(reply)}
-                            className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:border-blue-400 hover:bg-blue-100 disabled:opacity-50"
-                          >
-                            {reply}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  <span className={`text-[10px] mt-2 block ${isUser ? 'text-blue-200' : 'text-slate-400'}`}>
-                    {msg.sentat ? new Date(msg.sentat).toLocaleTimeString() : 'Đang gửi...'}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-          
-          {loading && activeSession && (
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Bot size={16} />
-              </div>
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+            })}
 
-        <form onSubmit={sendMessage} className="p-4 bg-white border-t border-slate-200 flex gap-3 items-center">
-          <input
-            type="text"
-            value={inputMsg}
-            onChange={(e) => setInputMsg(e.target.value)}
-            placeholder="Nhập câu hỏi của bạn..."
-            maxLength={500}
-            className="flex-1 bg-slate-100 border-transparent rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition text-sm"
-            disabled={loading}
-          />
-          <button 
-            type="submit" 
-            disabled={loading || !inputMsg.trim()}
-            className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-md shadow-blue-600/20"
-          >
-            <Send size={20} />
-          </button>
-        </form>
+            {loading && activeSession && (
+              <div className="flex gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#10233f] text-[#75d7dc]">
+                  <Bot size={16} />
+                </div>
+                <div className="flex items-center gap-2 border border-[#d9d2c5] bg-white p-4 shadow-[5px_5px_0_rgba(16,35,63,0.06)]">
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#10233f]" style={{ animationDelay: '0ms' }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#10233f]" style={{ animationDelay: '150ms' }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#10233f]" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <form onSubmit={sendMessage} className="flex items-center gap-3 border-t border-[#d9d2c5] bg-white p-4">
+            <input
+              type="text"
+              value={inputMsg}
+              onChange={event => setInputMsg(event.target.value)}
+              placeholder="Nhập nhu cầu, ngân sách hoặc tên máy bạn muốn so sánh..."
+              maxLength={500}
+              className="customer-input"
+              disabled={loading}
+            />
+            <button
+              type="submit"
+              disabled={loading || !inputMsg.trim()}
+              className="flex h-12 w-12 shrink-0 items-center justify-center bg-[#10233f] text-white transition hover:bg-[#db3d1c] disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <Send size={20} />
+            </button>
+          </form>
+        </section>
       </div>
     </div>
   );

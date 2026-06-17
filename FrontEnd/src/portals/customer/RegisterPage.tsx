@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '@/features/auth/api/authApi';
-import { User, Mail, Phone, Lock, ChevronRight, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronRight, Lock, Mail, Phone, ShieldCheck, User, UserPlus } from 'lucide-react';
+import Logo from '@/assets/Logo.png';
 
 const isStrongPassword = (password: string) =>
   password.length >= 8 &&
@@ -10,6 +11,22 @@ const isStrongPassword = (password: string) =>
   /[A-Z]/.test(password) &&
   /\d/.test(password) &&
   /[^A-Za-z0-9]/.test(password);
+
+interface AuthInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  icon: React.ReactNode;
+}
+
+const AuthInput = ({ icon, className = '', ...props }: AuthInputProps) => (
+  <div className="relative">
+    <span className="pointer-events-none absolute left-4 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-slate-400">
+      {icon}
+    </span>
+    <input
+      {...props}
+      className={`customer-input !pl-14 ${className}`}
+    />
+  </div>
+);
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,20 +42,20 @@ const RegisterPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [event.target.name]: event.target.value });
     if (error) setError(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
 
     if (!isStrongPassword(formData.password)) {
       setError('Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.');
       return;
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
       setError('Mật khẩu nhập lại không khớp.');
       return;
@@ -51,15 +68,15 @@ const RegisterPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const res = await authApi.register({
+      const response = await authApi.register({
         username: formData.username.trim(),
         password: formData.password,
         fullname: formData.fullname.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
       });
-      setSuccess(res.data.message || 'Đăng ký thành công!');
-      setTimeout(() => {
+      setSuccess(response.data.message || 'Đăng ký thành công!');
+      window.setTimeout(() => {
         navigate('/auth/login', { state: { username: formData.username } });
       }, 2000);
     } catch (err: unknown) {
@@ -76,88 +93,156 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 max-w-md w-full">
-        <h1 className="text-2xl font-black text-slate-800 mb-2">Đăng ký tài khoản</h1>
-        <p className="text-slate-500 text-sm mb-8">Trở thành thành viên để nhận nhiều ưu đãi.</p>
+    <main className="customer-shell min-h-screen px-4 py-8">
+      <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <div className="grid w-full max-w-6xl overflow-hidden border border-[#d9d2c5] bg-[#fffdf8] shadow-[16px_16px_0_rgb(16_35_63_/_10%)] lg:grid-cols-[0.95fr_1.05fr]">
+          <section className="relative hidden overflow-hidden bg-[#10233f] p-10 text-white lg:flex lg:flex-col lg:justify-between">
+            <div className="absolute -right-24 top-20 h-72 w-72 rounded-full border border-white/10 bg-[#75d7dc]/10" />
+            <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-[#ff5b35]/20" />
 
-        {error && (
-          <div className="mb-6 flex items-center gap-2 text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-sm">
-            <XCircle size={15} /> {error}
-          </div>
-        )}
-
-        {success ? (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">✓</div>
-            <p className="text-green-600 font-bold">{success}</p>
-            <p className="text-slate-400 text-sm mt-2">Đang chuyển hướng đến trang đăng nhập...</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="text" name="username" placeholder="Tên đăng nhập *" required
-                value={formData.username} onChange={handleChange}
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-medium outline-none transition-colors"
-              />
-            </div>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="text" name="fullname" placeholder="Họ và tên *" required
-                value={formData.fullname} onChange={handleChange}
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-medium outline-none transition-colors"
-              />
-            </div>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="email" name="email" placeholder="Email *" required maxLength={100}
-                value={formData.email} onChange={handleChange}
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-medium outline-none transition-colors"
-              />
-            </div>
-            <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="tel" name="phone" placeholder="Số điện thoại *" required
-                inputMode="numeric" pattern="0[0-9]{9}" maxLength={10}
-                value={formData.phone} onChange={handleChange}
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-medium outline-none transition-colors"
-              />
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="password" name="password" placeholder="Mật khẩu *" required minLength={8}
-                value={formData.password} onChange={handleChange}
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-medium outline-none transition-colors"
-              />
-            </div>
-            <p className="-mt-2 text-xs text-slate-500">
-              Ít nhất 8 ký tự, có chữ hoa, chữ thường, chữ số và ký tự đặc biệt.
-            </p>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="password" name="confirmPassword" placeholder="Nhập lại mật khẩu *" required minLength={8}
-                value={formData.confirmPassword} onChange={handleChange}
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-medium outline-none transition-colors"
-              />
+            <div className="relative z-10">
+              <Link to="/" className="inline-flex bg-white px-5 py-3 shadow-[6px_6px_0_rgb(255_91_53_/_55%)]">
+                <img src={Logo} alt="Cuồng Điện Thoại" className="h-16 w-auto object-contain" />
+              </Link>
+              <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#75d7dc]">Create account</p>
+              <h1 className="customer-display mt-3 max-w-md text-5xl font-black leading-[0.95]">
+                Thành viên mới, ưu đãi mới.
+              </h1>
+              <p className="mt-6 max-w-sm text-sm font-medium leading-7 text-blue-100">
+                Tạo tài khoản để lưu lịch sử mua hàng, bảo hành và nhận tư vấn sản phẩm sát nhu cầu hơn.
+              </p>
             </div>
 
-            <button type="submit" disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 disabled:opacity-60 transition-colors mt-2"
-            >
-              {loading ? 'Đang đăng ký...' : 'Đăng ký ngay'}
-            </button>
-          </form>
-        )}
+            <div className="relative z-10 border border-white/15 bg-white/10 p-4 backdrop-blur">
+              <div className="mb-2 flex items-center gap-2">
+                <ShieldCheck size={18} className="text-[#75d7dc]" />
+                <p className="text-xs font-black uppercase tracking-[0.18em]">Quy tắc an toàn</p>
+              </div>
+              <p className="text-xs leading-6 text-blue-100">
+                Mật khẩu cần đủ mạnh ngay từ đầu để tránh lỗi đăng nhập và bảo vệ tài khoản khách hàng.
+              </p>
+            </div>
+          </section>
 
-        <div className="mt-8 text-center">
-          <p className="text-slate-500 text-sm">Đã có tài khoản?</p>
-          <Link to="/auth/login" className="inline-flex items-center gap-1 text-blue-600 font-bold hover:underline mt-1">
-            Đăng nhập <ChevronRight size={14} />
-          </Link>
+          <section className="p-6 md:p-10 lg:p-14">
+            <div className="mx-auto max-w-md">
+              <Link to="/" className="mb-8 inline-flex lg:hidden">
+                <img src={Logo} alt="Cuồng Điện Thoại" className="h-14 w-auto object-contain" />
+              </Link>
+
+              <p className="customer-label">Tạo tài khoản</p>
+              <h2 className="customer-display mt-2 text-4xl font-black text-[#10233f]">Đăng ký</h2>
+              <p className="mt-2 text-sm font-medium text-slate-500">
+                Điền thông tin để trở thành thành viên Cuồng Điện Thoại.
+              </p>
+
+              {error && (
+                <div className="mt-6 flex items-center gap-2 border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                  <AlertCircle size={16} className="shrink-0" /> {error}
+                </div>
+              )}
+
+              {success ? (
+                <div className="mt-8 border border-emerald-200 bg-emerald-50 p-8 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <CheckCircle2 size={34} />
+                  </div>
+                  <p className="font-black text-emerald-700">{success}</p>
+                  <p className="mt-2 text-sm font-medium text-slate-500">Đang chuyển hướng đến trang đăng nhập...</p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+                  <AuthInput
+                    icon={<User size={18} />}
+                    type="text"
+                    name="username"
+                    placeholder="Tên đăng nhập *"
+                    required
+                    value={formData.username}
+                    onChange={handleChange}
+                    autoComplete="username"
+                  />
+                  <AuthInput
+                    icon={<UserPlus size={18} />}
+                    type="text"
+                    name="fullname"
+                    placeholder="Họ và tên *"
+                    required
+                    value={formData.fullname}
+                    onChange={handleChange}
+                    autoComplete="name"
+                  />
+                  <AuthInput
+                    icon={<Mail size={18} />}
+                    type="email"
+                    name="email"
+                    placeholder="Email *"
+                    required
+                    maxLength={100}
+                    value={formData.email}
+                    onChange={handleChange}
+                    autoComplete="email"
+                  />
+                  <AuthInput
+                    icon={<Phone size={18} />}
+                    type="tel"
+                    name="phone"
+                    placeholder="Số điện thoại *"
+                    required
+                    inputMode="numeric"
+                    pattern="0[0-9]{9}"
+                    maxLength={10}
+                    value={formData.phone}
+                    onChange={handleChange}
+                    autoComplete="tel"
+                  />
+                  <AuthInput
+                    icon={<Lock size={18} />}
+                    type="password"
+                    name="password"
+                    placeholder="Mật khẩu *"
+                    required
+                    minLength={8}
+                    value={formData.password}
+                    onChange={handleChange}
+                    autoComplete="new-password"
+                  />
+                  <p className="-mt-1 text-xs font-semibold leading-5 text-slate-500">
+                    Ít nhất 8 ký tự, có chữ hoa, chữ thường, chữ số và ký tự đặc biệt.
+                  </p>
+                  <AuthInput
+                    icon={<Lock size={18} />}
+                    type="password"
+                    name="confirmPassword"
+                    placeholder="Nhập lại mật khẩu *"
+                    required
+                    minLength={8}
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    autoComplete="new-password"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="mt-2 flex w-full items-center justify-center gap-2 bg-[#10233f] py-3.5 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#db3d1c] disabled:opacity-60"
+                  >
+                    {loading ? 'Đang đăng ký...' : 'Đăng ký ngay'}
+                  </button>
+                </form>
+              )}
+
+              <div className="mt-8 border-t border-[#d9d2c5] pt-6 text-center">
+                <p className="text-sm font-medium text-slate-500">Đã có tài khoản?</p>
+                <Link to="/auth/login" className="mt-1 inline-flex items-center gap-1 font-black text-[#db3d1c] hover:underline">
+                  Đăng nhập <ChevronRight size={14} />
+                </Link>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

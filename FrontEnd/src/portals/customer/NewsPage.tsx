@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Calendar, ChevronRight, Newspaper, User, X } from 'lucide-react';
 import { newsApi } from '@/features/content/api/newsApi';
 import type { News as NewsItem } from '@/features/content/api/newsApi';
-import { Calendar, User, ChevronRight, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 
 const NewsPage: React.FC = () => {
@@ -11,143 +11,168 @@ const NewsPage: React.FC = () => {
 
   useEffect(() => {
     newsApi.getActive()
-      .then(res => setNewsList(res))
+      .then(response => setNewsList(response))
       .catch(() => setNewsList([]))
       .finally(() => setLoading(false));
   }, []);
 
-  const formatDate = (d?: string) =>
-    d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+  const formatDate = (date?: string) =>
+    date ? new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+
+  const featured = newsList[0];
+  const secondary = newsList.slice(1);
 
   return (
-    <div className="bg-slate-50 min-h-screen">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-100 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-8 text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <span className="w-8 h-1 bg-blue-600 rounded-full" />
-            <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Tin tức & Công nghệ</h1>
-            <span className="w-8 h-1 bg-blue-600 rounded-full" />
+    <div className="customer-shell min-h-screen pb-16">
+      <section className="border-b customer-rule bg-[#fffdf8] px-4 py-10">
+        <div className="customer-container grid gap-6 md:grid-cols-[1.2fr_0.8fr] md:items-end">
+          <div>
+            <p className="customer-label">Tech journal</p>
+            <h1 className="customer-display mt-2 text-4xl font-bold text-[#10233f] md:text-5xl">
+              Tin tức & công nghệ
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+              Cập nhật sản phẩm, xu hướng smartphone và các nội dung giúp bạn chọn máy tỉnh táo hơn.
+            </p>
           </div>
-          <p className="text-slate-400 text-sm">Cập nhật những tin tức công nghệ mới nhất</p>
+          <div className="customer-panel-soft p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center bg-[#10233f] text-[#75d7dc]">
+                <Newspaper size={24} />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#db3d1c]">Đang có</p>
+                <p className="customer-display text-3xl font-bold text-[#10233f]">{newsList.length} bài viết</p>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="max-w-5xl mx-auto px-4 py-10">
+      <main className="customer-container px-4 py-10">
         {loading ? (
-          <div className="grid md:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
-                <Skeleton className="w-full aspect-video" />
-                <div className="p-4">
-                  <Skeleton className="w-3/4 h-5 mb-3" />
-                  <Skeleton className="w-full h-3 mb-1.5" />
-                  <Skeleton className="w-2/3 h-3" />
-                </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="customer-panel p-4">
+                <Skeleton className="mb-4 aspect-video w-full" />
+                <Skeleton className="mb-3 h-5 w-3/4" />
+                <Skeleton className="mb-2 h-3 w-full" />
+                <Skeleton className="h-3 w-2/3" />
               </div>
             ))}
           </div>
         ) : newsList.length === 0 ? (
-          <div className="text-center py-24">
-            <div className="text-6xl mb-4">📰</div>
-            <h2 className="text-xl font-bold text-slate-600 mb-2">Chưa có bài viết nào</h2>
-            <p className="text-slate-400 text-sm">Hãy quay lại sau nhé!</p>
+          <div className="customer-panel-soft px-6 py-20 text-center">
+            <Newspaper className="mx-auto mb-5 text-[#10233f]/25" size={54} />
+            <h2 className="customer-display text-3xl font-bold text-[#10233f]">Chưa có bài viết nào</h2>
+            <p className="mt-3 text-sm text-slate-500">Hãy quay lại sau để đọc thêm nội dung mới.</p>
           </div>
         ) : (
           <>
-            {/* Featured post */}
-            {newsList[0] && (
-              <div
-                className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden mb-8 cursor-pointer hover:shadow-lg transition-shadow group"
-                onClick={() => setSelectedPost(newsList[0])}
+            {featured && (
+              <article
+                className="customer-panel mb-8 grid cursor-pointer overflow-hidden transition hover:-translate-y-0.5 hover:shadow-xl md:grid-cols-[1fr_1fr]"
+                onClick={() => setSelectedPost(featured)}
               >
-                <div className="md:flex">
-                  {newsList[0].thumbnail ? (
-                    <img
-                      src={newsList[0].thumbnail}
-                      alt={newsList[0].title}
-                      className="w-full md:w-2/5 aspect-video object-cover"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  ) : (
-                    <div className="w-full md:w-2/5 aspect-video bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
-                      <span className="text-white text-5xl">📰</span>
-                    </div>
-                  )}
-                  <div className="p-6 flex flex-col justify-center">
-                    <span className="inline-block bg-blue-100 text-blue-700 text-[10px] font-black uppercase px-2 py-1 rounded-full mb-3 w-fit">
-                      Nổi bật
-                    </span>
-                    <h2 className="text-xl font-black text-slate-800 mb-3 group-hover:text-blue-600 transition-colors leading-snug">
-                      {newsList[0].title}
-                    </h2>
-                    <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-3">{newsList[0].summary}</p>
-                    <div className="flex items-center gap-4 text-xs text-slate-400">
-                      <span className="flex items-center gap-1"><Calendar size={12} />{formatDate(newsList[0].createdat)}</span>
-                      {newsList[0].authorName && <span className="flex items-center gap-1"><User size={12} />{newsList[0].authorName}</span>}
-                    </div>
+                {featured.thumbnail ? (
+                  <img
+                    src={featured.thumbnail}
+                    alt={featured.title}
+                    className="aspect-video h-full w-full object-cover md:aspect-auto"
+                    onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="customer-grid-pattern flex min-h-72 items-center justify-center bg-[#10233f] text-[#75d7dc]">
+                    <Newspaper size={68} />
+                  </div>
+                )}
+                <div className="flex flex-col justify-center p-6 md:p-8">
+                  <span className="mb-4 w-fit bg-[#ff5b35] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white">
+                    Nổi bật
+                  </span>
+                  <h2 className="customer-display text-3xl font-bold leading-tight text-[#10233f] md:text-4xl">
+                    {featured.title}
+                  </h2>
+                  <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-500">{featured.summary}</p>
+                  <div className="mt-6 flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400">
+                    <span className="flex items-center gap-1"><Calendar size={12} />{formatDate(featured.createdat)}</span>
+                    {featured.authorName && <span className="flex items-center gap-1"><User size={12} />{featured.authorName}</span>}
                   </div>
                 </div>
-              </div>
+              </article>
             )}
 
-            {/* Grid */}
-            <div className="grid md:grid-cols-3 gap-6">
-              {newsList.slice(1).map(post => (
-                <div
+            <div className="grid gap-5 md:grid-cols-3">
+              {secondary.map(post => (
+                <article
                   key={post.postid}
-                  className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5 group"
+                  className="product-card cursor-pointer bg-[#fffdf8]"
                   onClick={() => setSelectedPost(post)}
                 >
                   {post.thumbnail ? (
-                    <img src={post.thumbnail} alt={post.title} className="w-full aspect-video object-cover"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <img
+                      src={post.thumbnail}
+                      alt={post.title}
+                      className="aspect-video w-full object-cover"
+                      onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
+                    />
                   ) : (
-                    <div className="w-full aspect-video bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                      <span className="text-slate-400 text-3xl">📄</span>
+                    <div className="customer-grid-pattern flex aspect-video items-center justify-center bg-[#f4f0e8] text-[#10233f]/25">
+                      <Newspaper size={36} />
                     </div>
                   )}
                   <div className="p-4">
-                    <h3 className="font-black text-slate-800 mb-2 text-sm leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">
+                    <h3 className="line-clamp-2 text-base font-black leading-snug text-[#10233f] group-hover:text-[#db3d1c]">
                       {post.title}
                     </h3>
-                    <p className="text-slate-400 text-xs line-clamp-2 mb-3">{post.summary}</p>
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">{post.summary}</p>
+                    <div className="mt-4 flex items-center justify-between text-[11px] font-bold text-slate-400">
                       <span className="flex items-center gap-1"><Calendar size={11} />{formatDate(post.createdat)}</span>
-                      <span className="text-blue-500 font-bold flex items-center gap-0.5">Đọc thêm<ChevronRight size={12} /></span>
+                      <span className="flex items-center gap-0.5 text-[#db3d1c]">Đọc thêm<ChevronRight size={12} /></span>
                     </div>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           </>
         )}
-      </div>
+      </main>
 
-      {/* Detail Modal */}
       {selectedPost && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto"
-          onClick={() => setSelectedPost(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mt-8 mb-8 overflow-hidden"
-            onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#10233f]/70 p-4 backdrop-blur-sm"
+          onClick={() => setSelectedPost(null)}
+        >
+          <article
+            className="customer-panel my-8 w-full max-w-3xl overflow-hidden"
+            onClick={event => event.stopPropagation()}
+          >
             {selectedPost.thumbnail && (
-              <img src={selectedPost.thumbnail} alt={selectedPost.title} className="w-full aspect-video object-cover"
-                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              <img
+                src={selectedPost.thumbnail}
+                alt={selectedPost.title}
+                className="aspect-video w-full object-cover"
+                onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
+              />
             )}
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <h2 className="text-xl font-black text-slate-800 leading-snug pr-4">{selectedPost.title}</h2>
-                <button onClick={() => setSelectedPost(null)} className="text-slate-400 hover:text-slate-600 shrink-0"><X size={20} /></button>
+            <div className="p-6 md:p-8">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <h2 className="customer-display text-3xl font-bold leading-tight text-[#10233f]">
+                  {selectedPost.title}
+                </h2>
+                <button type="button" onClick={() => setSelectedPost(null)} className="text-slate-400 hover:text-[#10233f]">
+                  <X size={22} />
+                </button>
               </div>
-              <div className="flex items-center gap-4 text-xs text-slate-400 mb-5">
+              <div className="mb-6 flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400">
                 <span className="flex items-center gap-1"><Calendar size={12} />{formatDate(selectedPost.createdat)}</span>
                 {selectedPost.authorName && <span className="flex items-center gap-1"><User size={12} />{selectedPost.authorName}</span>}
               </div>
-              <div className="prose prose-sm max-w-none text-slate-600 leading-relaxed whitespace-pre-wrap">
+              <div className="whitespace-pre-wrap text-sm leading-8 text-slate-700">
                 {selectedPost.content || selectedPost.summary}
               </div>
             </div>
-          </div>
+          </article>
         </div>
       )}
     </div>

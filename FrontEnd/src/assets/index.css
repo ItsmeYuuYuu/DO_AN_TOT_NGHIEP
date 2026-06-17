@@ -45,8 +45,8 @@
   }
 
   .customer-display {
-    font-family: Georgia, 'Times New Roman', serif;
-    letter-spacing: -0.035em;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.045em;
   }
 
   .customer-grid-pattern {
@@ -63,6 +63,76 @@
 
   .customer-rule {
     border-color: var(--customer-line);
+  }
+
+  .customer-section {
+    @apply border-b px-4 py-10 md:py-14;
+    border-color: var(--customer-line);
+    background: var(--customer-cream);
+  }
+
+  .customer-container {
+    @apply mx-auto max-w-7xl;
+  }
+
+  .customer-panel {
+    background: var(--customer-paper);
+    border: 1px solid var(--customer-line);
+    box-shadow: 0 14px 40px rgb(16 35 63 / 6%);
+  }
+
+  .customer-panel-soft {
+    background:
+      radial-gradient(circle at top right, rgb(117 215 220 / 16%), transparent 18rem),
+      var(--customer-paper);
+    border: 1px solid var(--customer-line);
+  }
+
+  .customer-button-dark {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition;
+    background: var(--customer-ink);
+  }
+
+  .customer-button-dark:hover {
+    background: var(--customer-orange-dark);
+  }
+
+  .customer-button-outline {
+    @apply inline-flex items-center justify-center gap-2 border px-5 py-3 text-xs font-black uppercase tracking-[0.14em] transition;
+    border-color: var(--customer-line);
+    color: var(--customer-ink);
+    background: var(--customer-paper);
+  }
+
+  .customer-button-outline:hover {
+    border-color: var(--customer-ink);
+    box-shadow: 4px 4px 0 rgb(16 35 63 / 12%);
+  }
+
+  .customer-input {
+    @apply w-full border bg-white px-4 py-3 text-sm font-semibold outline-none transition;
+    border-color: var(--customer-line);
+    color: var(--customer-ink);
+  }
+
+  .customer-input:focus {
+    border-color: var(--customer-ink);
+    box-shadow: 4px 4px 0 rgb(16 35 63 / 10%);
+  }
+
+  .ops-shell {
+    background:
+      radial-gradient(circle at top left, rgb(37 99 235 / 8%), transparent 24rem),
+      #eef2f7;
+    color: #10233f;
+  }
+
+  .ops-card {
+    @apply border border-slate-200 bg-white shadow-sm;
+  }
+
+  .ops-label {
+    @apply text-[10px] font-black uppercase tracking-[0.18em] text-slate-400;
   }
 
   /* Retail Product Card */

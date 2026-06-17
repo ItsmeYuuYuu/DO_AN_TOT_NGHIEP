@@ -316,8 +316,21 @@ namespace ECommerceBackend.Controllers
             if (session == null) return NotFound(new ApiErrorDto("Session không tồn tại.", null));
             if (!await IsOwnerAsync(session)) return StatusCode(403, new ApiErrorDto("Bạn không có quyền xóa session này.", null));
 
-            _context.Chatsessions.Remove(session);
-            await _context.SaveChangesAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            await _context.Chatproductrecommendations
+                .Where(recommendation => recommendation.Message.Sessionid == id)
+                .ExecuteDeleteAsync();
+
+            await _context.Chatmessages
+                .Where(message => message.Sessionid == id)
+                .ExecuteDeleteAsync();
+
+            await _context.Chatsessions
+                .Where(chatSession => chatSession.Sessionid == id)
+                .ExecuteDeleteAsync();
+
+            await transaction.CommitAsync();
 
             return NoContent();
         }

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowRight, Filter, Search, SlidersHorizontal, X } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { Skeleton } from '@/components/Skeleton';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
 
 interface Category { categoryid: number; categoryname: string; }
 interface Brand { brandid: number; brandname: string; }
@@ -15,7 +15,7 @@ const ProductsListPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showFilter, setShowFilter] = useState(false);
+  const [showFilter, setShowFilter] = useState(true);
 
   const categoryId = searchParams.get('categoryId') ? Number(searchParams.get('categoryId')) : undefined;
   const brandId = searchParams.get('brandId') ? Number(searchParams.get('brandId')) : undefined;
@@ -52,11 +52,21 @@ const ProductsListPage: React.FC = () => {
     fetchProducts();
   }, [categoryId, brandId, seriesId]);
 
+  const activeCategory = useMemo(
+    () => categories.find(category => category.categoryid === categoryId),
+    [categories, categoryId],
+  );
+  const activeBrand = useMemo(
+    () => brands.find(brand => brand.brandid === brandId),
+    [brands, brandId],
+  );
+
   const setFilter = (key: string, value: string | undefined) => {
     setSearchParams(prev => {
-      if (value) prev.set(key, value);
-      else prev.delete(key);
-      return prev;
+      const next = new URLSearchParams(prev);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      return next;
     });
   };
 
@@ -64,100 +74,164 @@ const ProductsListPage: React.FC = () => {
   const hasFilter = !!(categoryId || brandId || seriesId);
 
   return (
-    <div className="bg-slate-50 min-h-screen">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-100 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-black text-slate-800 uppercase tracking-tight">Tất cả sản phẩm</h1>
-            <p className="text-xs text-slate-400">{loading ? '...' : `${products.length} sản phẩm`}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/search"
-              className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-medium transition-colors"
-            >
-              <Search size={15} /> Tìm kiếm
-            </Link>
-            <button
-              onClick={() => setShowFilter(!showFilter)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                showFilter || hasFilter ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              <SlidersHorizontal size={15} /> Lọc
-              {hasFilter && <span className="bg-white text-blue-600 text-[10px] font-black px-1.5 rounded-full">!</span>}
-            </button>
-          </div>
-        </div>
-
-        {/* Filter Panel */}
-        {showFilter && (
-          <div className="max-w-7xl mx-auto px-4 pb-4 flex flex-wrap items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500 uppercase">Danh mục:</span>
-              <select
-                value={categoryId ?? ''}
-                onChange={e => setFilter('categoryId', e.target.value || undefined)}
-                className="border border-slate-200 rounded-lg text-sm px-3 py-1.5 bg-white focus:outline-none focus:border-blue-400"
-              >
-                <option value="">Tất cả</option>
-                {categories.map(c => (
-                  <option key={c.categoryid} value={c.categoryid}>{c.categoryname}</option>
-                ))}
-              </select>
+    <div className="customer-shell min-h-screen pb-16">
+      <section className="border-b customer-rule bg-[#fffdf8] px-4 py-8 md:py-10">
+        <div className="customer-container">
+          <div className="grid gap-6 lg:grid-cols-[1.5fr_0.8fr] lg:items-end">
+            <div>
+              <p className="customer-label">Catalog</p>
+              <h1 className="customer-display mt-2 text-4xl font-bold leading-tight text-[#10233f] md:text-5xl">
+                Tất cả sản phẩm
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+                Lọc theo danh mục, thương hiệu hoặc dòng máy để tìm nhanh thiết bị phù hợp với nhu cầu.
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500 uppercase">Thương hiệu:</span>
-              <select
-                value={brandId ?? ''}
-                onChange={e => setFilter('brandId', e.target.value || undefined)}
-                className="border border-slate-200 rounded-lg text-sm px-3 py-1.5 bg-white focus:outline-none focus:border-blue-400"
-              >
-                <option value="">Tất cả</option>
-                {brands.map(b => (
-                  <option key={b.brandid} value={b.brandid}>{b.brandname}</option>
-                ))}
-              </select>
-            </div>
-            {hasFilter && (
-              <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-red-500 font-bold hover:text-red-700">
-                <X size={12} /> Xóa bộ lọc
-              </button>
-            )}
-          </div>
-        )}
-      </div>
 
-      {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-                <Skeleton className="w-full aspect-square mb-3" />
-                <Skeleton className="w-3/4 h-4 mb-2" />
-                <Skeleton className="w-1/2 h-5" />
+            <div className="customer-panel-soft p-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#db3d1c]">
+                    Đang hiển thị
+                  </p>
+                  <p className="customer-display mt-1 text-3xl font-bold text-[#10233f]">
+                    {loading ? '...' : products.length}
+                    <span className="ml-2 text-base font-black">sản phẩm</span>
+                  </p>
+                </div>
+                <Link to="/search" className="customer-button-dark">
+                  <Search size={15} /> Tìm máy
+                </Link>
               </div>
-            ))}
+            </div>
           </div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-24">
-            <div className="text-6xl mb-4">📦</div>
-            <h2 className="text-xl font-bold text-slate-600 mb-2">Không tìm thấy sản phẩm</h2>
-            <p className="text-slate-400 text-sm mb-6">Hãy thử thay đổi bộ lọc hoặc xem tất cả sản phẩm</p>
-            <button onClick={clearFilters} className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
-              Xem tất cả
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {products.map(p => (
-              <ProductCard key={p.productid} product={p} />
-            ))}
-          </div>
-        )}
-      </div>
+
+          {(activeCategory || activeBrand || seriesId) && (
+            <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-bold">
+              <span className="text-slate-500">Bộ lọc:</span>
+              {activeCategory && (
+                <span className="border border-[#d9d2c5] bg-white px-3 py-1.5 text-[#10233f]">
+                  {activeCategory.categoryname}
+                </span>
+              )}
+              {activeBrand && (
+                <span className="border border-[#d9d2c5] bg-white px-3 py-1.5 text-[#10233f]">
+                  {activeBrand.brandname}
+                </span>
+              )}
+              {seriesId && (
+                <span className="border border-[#d9d2c5] bg-white px-3 py-1.5 text-[#10233f]">
+                  Dòng #{seriesId}
+                </span>
+              )}
+              <button type="button" onClick={clearFilters} className="ml-1 inline-flex items-center gap-1 text-[#db3d1c]">
+                <X size={13} /> Xóa lọc
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="customer-container grid gap-6 px-4 py-8 lg:grid-cols-[280px_1fr]">
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <button
+            type="button"
+            onClick={() => setShowFilter(prev => !prev)}
+            className="customer-button-outline mb-3 w-full lg:hidden"
+          >
+            <SlidersHorizontal size={15} /> Bộ lọc
+          </button>
+
+          {showFilter && (
+            <div className="customer-panel p-5">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <p className="customer-label">Filter</p>
+                  <h2 className="mt-1 text-lg font-black text-[#10233f]">Tinh chỉnh kết quả</h2>
+                </div>
+                <Filter className="text-[#db3d1c]" size={20} />
+              </div>
+
+              <div className="space-y-5">
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                    Danh mục
+                  </span>
+                  <select
+                    value={categoryId ?? ''}
+                    onChange={e => setFilter('categoryId', e.target.value || undefined)}
+                    className="customer-input"
+                  >
+                    <option value="">Tất cả danh mục</option>
+                    {categories.map(category => (
+                      <option key={category.categoryid} value={category.categoryid}>
+                        {category.categoryname}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                    Thương hiệu
+                  </span>
+                  <select
+                    value={brandId ?? ''}
+                    onChange={e => setFilter('brandId', e.target.value || undefined)}
+                    className="customer-input"
+                  >
+                    <option value="">Tất cả thương hiệu</option>
+                    {brands.map(brand => (
+                      <option key={brand.brandid} value={brand.brandid}>
+                        {brand.brandname}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {hasFilter && (
+                  <button type="button" onClick={clearFilters} className="customer-button-outline w-full">
+                    <X size={14} /> Xóa tất cả bộ lọc
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </aside>
+
+        <div>
+          {loading ? (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="customer-panel p-4">
+                  <Skeleton className="mb-3 aspect-square w-full" />
+                  <Skeleton className="mb-2 h-4 w-3/4" />
+                  <Skeleton className="h-5 w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="customer-panel-soft px-6 py-20 text-center">
+              <Search className="mx-auto mb-5 text-[#10233f]/25" size={54} />
+              <h2 className="customer-display text-3xl font-bold text-[#10233f]">
+                Chưa có sản phẩm phù hợp
+              </h2>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+                Hãy thử bỏ bớt bộ lọc hoặc quay về toàn bộ danh mục để xem thêm lựa chọn.
+              </p>
+              <button type="button" onClick={clearFilters} className="customer-button-dark mt-6">
+                Xem tất cả <ArrowRight size={15} />
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+              {products.map(product => (
+                <ProductCard key={product.productid} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 };

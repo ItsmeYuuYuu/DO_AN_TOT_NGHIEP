@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowRight, SearchCheck, SearchX } from 'lucide-react';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { Skeleton } from '@/components/Skeleton';
-import { ArrowRight, SearchX } from 'lucide-react';
 
 const SearchPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -13,52 +13,76 @@ const SearchPage: React.FC = () => {
   const query = searchParams.get('q')?.trim() ?? '';
 
   useEffect(() => {
+    const doSearch = async (q: string) => {
+      setLoading(true);
+      setSearched(true);
+      try {
+        const res = await productsApi.search({ q });
+        setResults(res.data);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (query.length >= 2) {
-      doSearch(query);
+      void doSearch(query);
     } else {
       setResults([]);
       setSearched(false);
     }
   }, [query]);
 
-  const doSearch = async (q: string) => {
-    setLoading(true);
-    setSearched(true);
-    try {
-      const res = await productsApi.search({ q });
-      setResults(res.data);
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#f4f0e8]">
-      <div className="border-b border-[#d9d2c5] bg-[#fffdf8]">
-        <div className="mx-auto max-w-7xl px-4 py-6">
-          <p className="customer-label">Danh mục sản phẩm</p>
-          <div className="mt-2 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-            <h1 className="customer-display text-3xl font-bold text-[#10233f]">
-              Kết quả tìm kiếm
-            </h1>
-            {query && !loading && (
-              <p className="text-sm font-medium text-slate-500">
-                <span className="font-black text-[#db3d1c]">{results.length}</span> sản phẩm cho “{query}”
+    <div className="customer-shell min-h-screen pb-16">
+      <section className="border-b customer-rule bg-[#fffdf8] px-4 py-8 md:py-10">
+        <div className="customer-container">
+          <div className="grid gap-6 lg:grid-cols-[1.45fr_0.75fr] lg:items-end">
+            <div>
+              <p className="customer-label">Search desk</p>
+              <h1 className="customer-display mt-2 text-4xl font-bold leading-tight text-[#10233f] md:text-5xl">
+                Kết quả tìm kiếm
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+                Từ khóa được lấy trực tiếp từ ô tìm kiếm phía trên để trang không bị lặp thao tác.
               </p>
-            )}
-          </div>
-        </div>
-      </div>
+            </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8">
+            <div className="customer-panel-soft p-5">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-[#10233f] text-white">
+                  <SearchCheck size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#db3d1c]">
+                    Đang tìm
+                  </p>
+                  <p className="mt-1 line-clamp-1 text-lg font-black text-[#10233f]">
+                    {query || 'Chưa có từ khóa'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {query && !loading && (
+            <p className="mt-6 text-sm font-medium text-slate-500">
+              Tìm thấy <span className="font-black text-[#db3d1c]">{results.length}</span> sản phẩm cho “{query}”.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <main className="customer-container px-4 py-8">
         {loading ? (
           <>
-            <p className="mb-4 text-sm font-medium text-slate-500">Đang tìm kiếm...</p>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="border border-[#d9d2c5] bg-[#fffdf8] p-4">
+            <p className="mb-4 text-sm font-bold uppercase tracking-[0.16em] text-slate-500">
+              Đang lọc dữ liệu sản phẩm...
+            </p>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="customer-panel p-4">
                   <Skeleton className="mb-3 aspect-square w-full" />
                   <Skeleton className="mb-2 h-4 w-3/4" />
                   <Skeleton className="h-5 w-1/2" />
@@ -67,33 +91,41 @@ const SearchPage: React.FC = () => {
             </div>
           </>
         ) : searched && results.length === 0 ? (
-          <div className="border border-[#d9d2c5] bg-[#fffdf8] py-20 text-center">
-            <SearchX className="mx-auto mb-5 text-[#10233f]/30" size={52} />
-            <h2 className="customer-display mb-2 text-2xl font-bold text-[#10233f]">
+          <div className="customer-panel-soft px-6 py-20 text-center">
+            <SearchX className="mx-auto mb-5 text-[#10233f]/30" size={54} />
+            <h2 className="customer-display text-3xl font-bold text-[#10233f]">
               Không tìm thấy “{query}”
             </h2>
-            <p className="mb-6 text-sm text-slate-500">
-              Hãy sửa từ khóa ở ô tìm kiếm phía trên hoặc xem toàn bộ sản phẩm.
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+              Hãy sửa từ khóa ở ô tìm kiếm phía trên, thử tên hãng hoặc để AI tư vấn theo nhu cầu sử dụng.
             </p>
-            <Link to="/products"
-              className="inline-flex items-center gap-2 bg-[#10233f] px-6 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-[#db3d1c]">
-              Xem tất cả sản phẩm <ArrowRight size={16} />
-            </Link>
+            <div className="mt-7 flex flex-wrap justify-center gap-3">
+              <Link to="/products" className="customer-button-dark">
+                Xem tất cả sản phẩm <ArrowRight size={15} />
+              </Link>
+              <Link to="/chat" className="customer-button-outline">
+                Hỏi AI tư vấn
+              </Link>
+            </div>
           </div>
         ) : results.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
-            {results.map(p => (
-              <ProductCard key={p.productid} product={p} />
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+            {results.map(product => (
+              <ProductCard key={product.productid} product={product} />
             ))}
           </div>
         ) : (
-          <div className="border border-[#d9d2c5] bg-[#fffdf8] py-20 text-center">
-            <p className="font-medium text-slate-500">
-              Nhập tên sản phẩm, thương hiệu hoặc dòng máy ở ô tìm kiếm phía trên.
+          <div className="customer-panel-soft px-6 py-20 text-center">
+            <SearchCheck className="mx-auto mb-5 text-[#10233f]/25" size={54} />
+            <h2 className="customer-display text-3xl font-bold text-[#10233f]">
+              Sẵn sàng tìm máy
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+              Nhập tên sản phẩm, thương hiệu hoặc dòng máy ở ô tìm kiếm phía trên để bắt đầu.
             </p>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };

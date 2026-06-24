@@ -9,6 +9,8 @@ import { productSeriesApi, type ProductSeries } from '@/features/productSeries/a
 import type { Category } from '@/features/categories/api/categoriesApi';
 import type { Brand } from '@/features/brands/api/brandsApi';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { confirmAction, notifyError } from '@/utils/notifications';
+
 
 const PAGE_SIZE = 8;
 
@@ -50,14 +52,14 @@ const CategorySection: React.FC = () => {
         await categoriesApi.create({ categoryname: editing.categoryname, description: editing.description });
       }
       await fetchAll(); closeModal();
-    } catch { alert('Lỗi khi lưu.'); }
+    } catch { notifyError('Lỗi khi lưu.'); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Xóa danh mục này?')) return;
+    if (!(await confirmAction('Xóa danh mục này?', { danger: true, confirmLabel: 'Xóa' }))) return;
     try { await categoriesApi.delete(id); await fetchAll(); }
-    catch { alert('Không thể xóa danh mục này.'); }
+    catch { notifyError('Không thể xóa danh mục này.'); }
   };
 
   return (
@@ -66,12 +68,12 @@ const CategorySection: React.FC = () => {
         <h3 className="font-bold text-slate-800">Danh mục sản phẩm <span className="text-slate-400 font-normal text-sm">({filtered.length})</span></h3>
         <Button size="sm" onClick={openCreate}>+ Thêm danh mục</Button>
       </div>
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">{error}</div>}
       <div className="max-w-xs">
         <Input placeholder="Tìm danh mục..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
       </div>
 
-      <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="border border-slate-200 rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
@@ -88,15 +90,15 @@ const CategorySection: React.FC = () => {
             ) : paged.length === 0 ? (
               <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400 text-sm">Không có danh mục.</td></tr>
             ) : paged.map(cat => (
-              <tr key={cat.categoryid} className="hover:bg-slate-50 transition-colors">
+              <tr key={cat.categoryid} className="hover:bg-indigo-50/40 transition-colors">
                 <td className="px-4 py-3 font-mono text-xs text-slate-400">#{cat.categoryid}</td>
                 <td className="px-4 py-3 font-semibold text-slate-800">{cat.categoryname}</td>
                 <td className="px-4 py-3 text-sm text-slate-500 max-w-xs"><span className="line-clamp-1">{cat.description ?? '—'}</span></td>
                 <td className="px-4 py-3"><span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">{cat.productcount ?? 0} sp</span></td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openEdit(cat)} className="px-2.5 py-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md font-semibold">Sửa</button>
-                    <button onClick={() => handleDelete(cat.categoryid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-md font-semibold">Xóa</button>
+                    <button onClick={() => openEdit(cat)} className="px-2.5 py-1.5 text-xs text-[#4f46e5] bg-indigo-50 hover:bg-indigo-100 rounded-xl font-semibold">Sửa</button>
+                    <button onClick={() => handleDelete(cat.categoryid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-xl font-semibold">Xóa</button>
                   </div>
                 </td>
               </tr>
@@ -112,7 +114,7 @@ const CategorySection: React.FC = () => {
           <Input label="Tên danh mục *" value={editing?.categoryname ?? ''} onChange={e => setEditing(p => ({ ...p, categoryname: e.target.value }))} placeholder="VD: Điện thoại" />
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1.5">Mô tả</label>
-            <textarea className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 resize-none" rows={3} value={editing?.description ?? ''} onChange={e => setEditing(p => ({ ...p, description: e.target.value }))} placeholder="Mô tả ngắn..." />
+            <textarea className="w-full bg-white border border-slate-300 rounded-2xl px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#4f46e5] resize-none" rows={3} value={editing?.description ?? ''} onChange={e => setEditing(p => ({ ...p, description: e.target.value }))} placeholder="Mô tả ngắn..." />
           </div>
           <div className="flex gap-3 pt-2">
             <Button onClick={handleSave} isLoading={saving} className="flex-1">{editing?.categoryid ? 'Cập nhật' : 'Thêm mới'}</Button>
@@ -159,14 +161,14 @@ const BrandSection: React.FC = () => {
       if (editing.brandid) await brandsApi.update(editing.brandid, editing);
       else await brandsApi.create({ brandname: editing.brandname });
       await fetchAll(); closeModal();
-    } catch { alert('Lỗi khi lưu.'); }
+    } catch { notifyError('Lỗi khi lưu.'); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Xóa thương hiệu này?')) return;
+    if (!(await confirmAction('Xóa thương hiệu này?', { danger: true, confirmLabel: 'Xóa' }))) return;
     try { await brandsApi.delete(id); await fetchAll(); }
-    catch { alert('Không thể xóa thương hiệu này.'); }
+    catch { notifyError('Không thể xóa thương hiệu này.'); }
   };
 
   return (
@@ -175,15 +177,15 @@ const BrandSection: React.FC = () => {
         <h3 className="font-bold text-slate-800">Thương hiệu <span className="text-slate-400 font-normal text-sm">({filtered.length})</span></h3>
         <Button size="sm" onClick={openCreate}>+ Thêm thương hiệu</Button>
       </div>
-      <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-700">
+      <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-xs leading-5 text-[#4338ca]">
         Menu Điện thoại ngoài trang khách được đồng bộ tự động từ danh sách thương hiệu tại đây. Thương hiệu vẫn hiển thị dù chưa có sản phẩm; các dòng máy bên cạnh được lấy từ sản phẩm đã gắn thương hiệu và danh mục Điện thoại.
       </div>
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">{error}</div>}
       <div className="max-w-xs">
         <Input placeholder="Tìm thương hiệu..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
       </div>
 
-      <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="border border-slate-200 rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
@@ -200,11 +202,11 @@ const BrandSection: React.FC = () => {
             ) : paged.length === 0 ? (
               <tr><td colSpan={4} className="px-4 py-10 text-center text-slate-400 text-sm">Không có thương hiệu.</td></tr>
             ) : paged.map(b => (
-              <tr key={b.brandid} className="hover:bg-slate-50 transition-colors">
+              <tr key={b.brandid} className="hover:bg-indigo-50/40 transition-colors">
                 <td className="px-4 py-3 font-mono text-xs text-slate-400">#{b.brandid}</td>
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center gap-2 font-semibold text-slate-800">
-                    <span className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-xs font-black text-slate-600">
+                    <span className="w-7 h-7 rounded-2xl bg-slate-100 flex items-center justify-center text-xs font-black text-slate-600">
                       {b.brandname.charAt(0)}
                     </span>
                     {b.brandname}
@@ -213,8 +215,8 @@ const BrandSection: React.FC = () => {
                 <td className="px-4 py-3"><span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">{b.productcount ?? 0} sp</span></td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openEdit(b)} className="px-2.5 py-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md font-semibold">Sửa</button>
-                    <button onClick={() => handleDelete(b.brandid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-md font-semibold">Xóa</button>
+                    <button onClick={() => openEdit(b)} className="px-2.5 py-1.5 text-xs text-[#4f46e5] bg-indigo-50 hover:bg-indigo-100 rounded-xl font-semibold">Sửa</button>
+                    <button onClick={() => handleDelete(b.brandid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-xl font-semibold">Xóa</button>
                   </div>
                 </td>
               </tr>
@@ -290,14 +292,14 @@ const SeriesSection: React.FC = () => {
       else await productSeriesApi.create(payload);
       await fetchAll(); closeModal();
     } catch (error: unknown) {
-      alert(getApiErrorMessage(error, 'Lỗi khi lưu dòng máy.'));
+      notifyError(getApiErrorMessage(error, 'Lỗi khi lưu dòng máy.'));
     } finally { setSaving(false); }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Xóa dòng máy này? Các sản phẩm đang gắn dòng này sẽ được bỏ liên kết.')) return;
+    if (!(await confirmAction('Xóa dòng máy này? Các sản phẩm đang gắn dòng này sẽ được bỏ liên kết.', { danger: true, confirmLabel: 'Xóa' }))) return;
     try { await productSeriesApi.delete(id); await fetchAll(); }
-    catch { alert('Không thể xóa dòng máy này.'); }
+    catch { notifyError('Không thể xóa dòng máy này.'); }
   };
 
   return (
@@ -306,20 +308,20 @@ const SeriesSection: React.FC = () => {
         <h3 className="font-bold text-slate-800">Dòng máy <span className="text-slate-400 font-normal text-sm">({filtered.length})</span></h3>
         <Button size="sm" onClick={openCreate}>+ Thêm dòng máy</Button>
       </div>
-      <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-700">
+      <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-xs leading-5 text-[#4338ca]">
         Dòng máy nằm dưới thương hiệu, ví dụ Xiaomi có Redmi/Poco, Samsung có Galaxy S/Galaxy Z Fold. Menu khách hàng sẽ hiển thị theo cấp Thương hiệu → Dòng máy.
       </div>
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">{error}</div>}
 
       <div className="flex flex-wrap gap-3">
         <Input placeholder="Tìm dòng máy hoặc thương hiệu..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
-        <select className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" value={brandFilter} onChange={e => { setBrandFilter(e.target.value); setPage(1); }}>
+        <select className="rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm" value={brandFilter} onChange={e => { setBrandFilter(e.target.value); setPage(1); }}>
           <option value="">Tất cả thương hiệu</option>
           {brands.map(brand => <option key={brand.brandid} value={brand.brandid}>{brand.brandname}</option>)}
         </select>
       </div>
 
-      <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="border border-slate-200 rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
@@ -336,7 +338,7 @@ const SeriesSection: React.FC = () => {
             ) : paged.length === 0 ? (
               <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-400 text-sm">Không có dòng máy.</td></tr>
             ) : paged.map(series => (
-              <tr key={series.seriesid} className="hover:bg-slate-50 transition-colors">
+              <tr key={series.seriesid} className="hover:bg-indigo-50/40 transition-colors">
                 <td className="px-4 py-3 font-mono text-xs text-slate-400">#{series.seriesid}</td>
                 <td className="px-4 py-3 font-semibold text-slate-800">{series.seriesname}</td>
                 <td className="px-4 py-3 text-slate-600">{series.brandname}</td>
@@ -349,8 +351,8 @@ const SeriesSection: React.FC = () => {
                 <td className="px-4 py-3"><span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">{series.productcount ?? 0} sp</span></td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openEdit(series)} className="px-2.5 py-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md font-semibold">Sửa</button>
-                    <button onClick={() => handleDelete(series.seriesid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-md font-semibold">Xóa</button>
+                    <button onClick={() => openEdit(series)} className="px-2.5 py-1.5 text-xs text-[#4f46e5] bg-indigo-50 hover:bg-indigo-100 rounded-xl font-semibold">Sửa</button>
+                    <button onClick={() => handleDelete(series.seriesid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-xl font-semibold">Xóa</button>
                   </div>
                 </td>
               </tr>
@@ -365,7 +367,7 @@ const SeriesSection: React.FC = () => {
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1.5">Thương hiệu *</label>
-            <select className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500" value={editing?.brandid ?? ''} onChange={e => setEditing(p => ({ ...p, brandid: Number(e.target.value) }))}>
+            <select className="w-full bg-white border border-slate-300 rounded-2xl px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#4f46e5]" value={editing?.brandid ?? ''} onChange={e => setEditing(p => ({ ...p, brandid: Number(e.target.value) }))}>
               <option value="">Chọn thương hiệu</option>
               {brands.map(brand => <option key={brand.brandid} value={brand.brandid}>{brand.brandname}</option>)}
             </select>
@@ -402,8 +404,8 @@ const AdminCategoryBrand: React.FC = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all ${
-              activeTab === tab ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            className={`px-5 py-2 text-sm font-semibold rounded-2xl transition-all ${
+              activeTab === tab ? 'bg-white text-[#4338ca] shadow-[0_10px_28px_rgba(15,23,42,0.06)]' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             {tab === 'categories' ? '📁 Danh mục' : tab === 'brands' ? '🏷️ Thương hiệu' : '📱 Dòng máy'}

@@ -9,6 +9,7 @@ import { employeeRoles, roleLabels, roleNamesById, usersApi } from '@/features/u
 import type { UserItem } from '@/features/users/api/usersApi';
 import { formatDate } from '@/utils/formatters';
 import { Users, UserCheck } from 'lucide-react';
+import { confirmAction, notifyError } from '@/utils/notifications';
 
 const PAGE_SIZE = 10;
 
@@ -81,7 +82,7 @@ const AdminUsers: React.FC = () => {
         await usersApi.update(editing.userid, editing);
       } else {
         if (!(editing as UserItem & { passwordhash?: string }).passwordhash?.trim()) {
-          alert('Vui lòng nhập mật khẩu cho tài khoản mới.'); setSaving(false); return;
+          notifyError('Vui lòng nhập mật khẩu cho tài khoản mới.'); setSaving(false); return;
         }
         await usersApi.create(editing);
       }
@@ -89,7 +90,7 @@ const AdminUsers: React.FC = () => {
       closeModal();
     } catch (err) {
       const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
-      alert(message ?? 'Lỗi khi lưu tài khoản.');
+      notifyError(message ?? 'Lỗi khi lưu tài khoản.');
     } finally {
       setSaving(false);
     }
@@ -99,16 +100,16 @@ const AdminUsers: React.FC = () => {
     try { await usersApi.toggleActive(id); await fetchUsers(); }
     catch (err) {
       const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
-      alert(message ?? 'Không thể thay đổi trạng thái tài khoản.');
+      notifyError(message ?? 'Không thể thay đổi trạng thái tài khoản.');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Xóa tài khoản này?')) return;
+    if (!(await confirmAction('Xóa tài khoản này?', { danger: true, confirmLabel: 'Xóa' }))) return;
     try { await usersApi.delete(id); await fetchUsers(); }
     catch (err) {
       const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
-      alert(message ?? 'Không thể xóa tài khoản này.');
+      notifyError(message ?? 'Không thể xóa tài khoản này.');
     }
   };
 
@@ -124,7 +125,7 @@ const AdminUsers: React.FC = () => {
       header: 'Họ tên',
       render: (u: UserItem) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
+          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[#4338ca] font-bold text-xs shrink-0">
             {u.fullname.charAt(0).toUpperCase()}
           </div>
           <div>
@@ -187,9 +188,9 @@ const AdminUsers: React.FC = () => {
       className: 'w-28',
       render: (u: UserItem) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(u)} className="px-2.5 py-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md font-semibold">Sửa</button>
+          <button onClick={() => openEdit(u)} className="px-2.5 py-1.5 text-xs text-[#4f46e5] bg-indigo-50 hover:bg-indigo-100 rounded-xl font-semibold">Sửa</button>
           {u.roleid !== 1 && (
-            <button onClick={() => handleDelete(u.userid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-md font-semibold">Xóa</button>
+            <button onClick={() => handleDelete(u.userid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-xl font-semibold">Xóa</button>
           )}
         </div>
       ),
@@ -221,23 +222,23 @@ const AdminUsers: React.FC = () => {
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
         <button
           onClick={() => handleTabChange('staff')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold transition-all ${
             tab === 'staff'
-              ? 'bg-white text-blue-700 shadow-sm'
+              ? 'bg-white text-[#4338ca] shadow-[0_10px_28px_rgba(15,23,42,0.06)]'
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
           <UserCheck size={16} />
           Nhân Viên
-          <span className={`text-xs px-1.5 py-0.5 rounded-full font-black ${tab === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'}`}>
+          <span className={`text-xs px-1.5 py-0.5 rounded-full font-black ${tab === 'staff' ? 'bg-indigo-100 text-[#4338ca]' : 'bg-slate-200 text-slate-500'}`}>
             {staffUsers.length}
           </span>
         </button>
         <button
           onClick={() => handleTabChange('customer')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold transition-all ${
             tab === 'customer'
-              ? 'bg-white text-emerald-700 shadow-sm'
+              ? 'bg-white text-emerald-700 shadow-[0_10px_28px_rgba(15,23,42,0.06)]'
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -249,7 +250,7 @@ const AdminUsers: React.FC = () => {
         </button>
       </div>
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">{error}</div>}
 
       <div className="bg-white rounded-xl border border-slate-200 p-4">
         <div className="max-w-sm">
@@ -279,15 +280,12 @@ const AdminUsers: React.FC = () => {
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1.5">Vai trò</label>
             <select
-              className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500"
+              className="w-full bg-white border border-slate-300 rounded-2xl px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#4f46e5]"
               value={editing?.roleid ?? (tab === 'staff' ? 5 : 3)}
               onChange={e => setEditing(p => ({ ...p, roleid: parseInt(e.target.value) }))}
             >
               {tab === 'staff' ? (
                 <>
-                  {editing?.roleid === 2 && (
-                    <option value={2}>Nhân viên chung (quyền cũ)</option>
-                  )}
                   {employeeRoles.map(role => (
                     <option key={role.id} value={role.id}>{role.label}</option>
                   ))}

@@ -409,6 +409,33 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
     }
 
     [Fact]
+    public void BuildCatalogResponse_WithCameraNeed_ExplainsRecommendationReason()
+    {
+        var products = new[]
+        {
+            new ProductConsultationResult(
+                1, 11, "Demo Leica Phone", "Xiaomi", "Điện thoại", "New Seal", "CAM-1",
+                18_000_000, 20_000_000, 2, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Camera sau"] = "50MP Leica OIS",
+                    ["Công nghệ camera"] = "Leica Summilux, OIS",
+                    ["Quay video sau"] = "4K HDR",
+                    ["Chipset"] = "Snapdragon 8 Gen 3"
+                },
+                "Điện thoại tập trung camera Leica.")
+        };
+
+        var response = GroundedAiProvider.BuildCatalogResponse(
+            "Tư vấn máy chụp ảnh đẹp",
+            products);
+
+        Assert.Contains("Lý do gợi ý", response);
+        Assert.Contains("Leica Summilux", response);
+        Assert.Contains("4K HDR", response);
+    }
+
+    [Fact]
     public void BuildCatalogResponse_WhenManyProducts_ReturnsOnlyTopThree()
     {
         var products = Enumerable.Range(1, 4)
@@ -520,6 +547,83 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
             product => product.ProductId == 3);
         Assert.Contains("Gợi ý theo từng tiêu chí", response.Text);
         Assert.Contains("Ưu tiên hiệu năng", response.QuickReplies ?? []);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithExplicitTwoModelComparison_ReturnsOnlyThoseModels()
+    {
+        var products = new[]
+        {
+            CreateConsultationResult(1, "Google Pixel 8 Pro"),
+            CreateConsultationResult(2, "iPhone 15 Pro Max"),
+            CreateConsultationResult(3, "Samsung Galaxy S24 Ultra")
+        };
+        var provider = new GroundedAiProvider(
+            new StubProductConsultationService(products),
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "So sánh Google Pixel 8 Pro và iPhone 15 Pro Max",
+            Array.Empty<AiConversationMessage>()));
+
+        Assert.Equal(ChatResponseTypes.Comparison, response.ResponseType);
+        Assert.Equal(
+            new[] { "Google Pixel 8 Pro", "iPhone 15 Pro Max" },
+            response.Recommendations.Select(item => item.ProductName));
+        Assert.DoesNotContain(
+            response.Recommendations,
+            item => item.ProductName == "Samsung Galaxy S24 Ultra");
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithVagueFamilyComparison_AsksForSpecificModels()
+    {
+        var products = new[]
+        {
+            CreateConsultationResult(1, "POCO F6 Pro"),
+            CreateConsultationResult(2, "POCO X7 Pro"),
+            CreateConsultationResult(3, "Redmi Note 13 Pro"),
+            CreateConsultationResult(4, "Redmi Note 14 Pro")
+        };
+        var provider = new GroundedAiProvider(
+            new StubProductConsultationService(products),
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "So sánh POCO với Redmi",
+            Array.Empty<AiConversationMessage>()));
+
+        Assert.Equal(ChatResponseTypes.Clarification, response.ResponseType);
+        Assert.Empty(response.Recommendations);
+        Assert.Contains("model cụ thể", response.Text);
+        Assert.Contains("POCO F6 Pro", response.QuickReplies ?? []);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithCameraNeedWithoutBudget_AsksForBudget()
+    {
+        var consultationService = new StubProductConsultationService(
+            new[] { CreateConsultationResult(1, "Camera Phone") });
+        var provider = new GroundedAiProvider(
+            consultationService,
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "Gợi ý máy chụp ảnh đẹp",
+            Array.Empty<AiConversationMessage>()));
+
+        Assert.Equal(ChatResponseTypes.Clarification, response.ResponseType);
+        Assert.Contains("ngân sách", response.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(consultationService.LastQuery);
     }
 
     [Fact]
@@ -818,6 +922,143 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
 
         Assert.NotEmpty(scopedResults);
         Assert.Equal("Demo Gaming Phone", scopedResults[0].ProductName);
+    }
+
+    [Fact]
+    public async Task ProductSearch_WithCameraNeed_PrioritizesCameraTechnologyOverMegapixelsOnly()
+    {
+        using var scope = _application.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+        await db.Database.EnsureDeletedAsync();
+        await db.Database.EnsureCreatedAsync();
+
+        db.Categories.Add(new Category { Categoryid = 1, Categoryname = "Dien thoai" });
+        db.Brands.Add(new Brand { Brandid = 1, Brandname = "Demo" });
+        db.Products.AddRange(
+            new Product
+            {
+                Productid = 1,
+                Categoryid = 1,
+                Brandid = 1,
+                Productname = "Demo Leica Camera",
+                Description = "Dien thoai chup anh voi cong nghe Leica."
+            },
+            new Product
+            {
+                Productid = 2,
+                Categoryid = 1,
+                Brandid = 1,
+                Productname = "Demo Megapixel Phone",
+                Description = "Dien thoai camera do phan giai cao."
+            });
+        db.Productvariants.AddRange(
+            new Productvariant
+            {
+                Variantid = 11,
+                Productid = 1,
+                Condition = "New Seal",
+                Baseprice = 25_000_000,
+                Specifications = JsonSerializer.Serialize(new Dictionary<string, string>
+                {
+                    ["Camera sau"] = "50MP Leica OIS",
+                    ["Quay video sau"] = "4K HDR"
+                })
+            },
+            new Productvariant
+            {
+                Variantid = 22,
+                Productid = 2,
+                Condition = "New Seal",
+                Baseprice = 20_000_000,
+                Specifications = JsonSerializer.Serialize(new Dictionary<string, string>
+                {
+                    ["Camera sau"] = "200MP",
+                    ["Quay video sau"] = "4K"
+                })
+            });
+        db.Inventoryitems.AddRange(
+            new Inventoryitem { Imei = "LEICA-01", Variantid = 11, Status = "InStock" },
+            new Inventoryitem { Imei = "MP-01", Variantid = 22, Status = "InStock" });
+        await db.SaveChangesAsync();
+
+        var service = new ProductConsultationService(
+            db,
+            Options.Create(new AiAssistantOptions { MaxRetrievedVariants = 5 }));
+        var results = await service.SearchAsync(
+            "Tim dien thoai chup anh dep duoi 30 trieu");
+
+        Assert.NotEmpty(results);
+        Assert.Equal("Demo Leica Camera", results[0].ProductName);
+    }
+
+    [Fact]
+    public async Task ProductSearch_WithGamingNeed_PrioritizesChipsetOverRamOnly()
+    {
+        using var scope = _application.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+        await db.Database.EnsureDeletedAsync();
+        await db.Database.EnsureCreatedAsync();
+
+        db.Categories.Add(new Category { Categoryid = 1, Categoryname = "Dien thoai" });
+        db.Brands.Add(new Brand { Brandid = 1, Brandname = "Demo" });
+        db.Products.AddRange(
+            new Product
+            {
+                Productid = 1,
+                Categoryid = 1,
+                Brandid = 1,
+                Productname = "Demo Flagship Chip",
+                Description = "Dien thoai choi game hieu nang cao."
+            },
+            new Product
+            {
+                Productid = 2,
+                Categoryid = 1,
+                Brandid = 1,
+                Productname = "Demo Ram Monster",
+                Description = "Dien thoai RAM lon."
+            });
+        db.Productvariants.AddRange(
+            new Productvariant
+            {
+                Variantid = 11,
+                Productid = 1,
+                Condition = "New Seal",
+                Baseprice = 24_000_000,
+                Specifications = JsonSerializer.Serialize(new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 8 Gen 3",
+                    ["Dung luong RAM"] = "8GB",
+                    ["GPU"] = "Adreno",
+                    ["Man hinh"] = "144Hz"
+                })
+            },
+            new Productvariant
+            {
+                Variantid = 22,
+                Productid = 2,
+                Condition = "New Seal",
+                Baseprice = 22_000_000,
+                Specifications = JsonSerializer.Serialize(new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 7 Gen 3",
+                    ["Dung luong RAM"] = "24GB",
+                    ["Man hinh"] = "120Hz"
+                })
+            });
+        db.Inventoryitems.AddRange(
+            new Inventoryitem { Imei = "CHIP-01", Variantid = 11, Status = "InStock" },
+            new Inventoryitem { Imei = "RAM-01", Variantid = 22, Status = "InStock" });
+        await db.SaveChangesAsync();
+
+        var service = new ProductConsultationService(
+            db,
+            Options.Create(new AiAssistantOptions { MaxRetrievedVariants = 5 }));
+        var results = await service.SearchAsync(
+            "Tim dien thoai choi game duoi 30 trieu");
+
+        Assert.NotEmpty(results);
+        Assert.Equal("Demo Flagship Chip", results[0].ProductName);
     }
 
     [Fact]

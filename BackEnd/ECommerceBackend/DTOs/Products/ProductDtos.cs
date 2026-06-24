@@ -23,6 +23,7 @@ namespace ECommerceBackend.DTOs.Products
 
     public record ProductListItemDto(
         int Productid,
+        string? Slug,
         string Productname,
         string? Description,
         DateTime? Createdat,
@@ -36,6 +37,7 @@ namespace ECommerceBackend.DTOs.Products
     {
         public ProductDetailDto(
             int Productid,
+            string? Slug,
             string Productname,
             string? Description,
             DateTime? Createdat,
@@ -43,7 +45,7 @@ namespace ECommerceBackend.DTOs.Products
             LookupDto? Category,
             LookupDto? Series,
             List<ProductVariantDto>? Productvariants
-        ) : base(Productid, Productname, Description, Createdat, Brand, Category, Series, Productvariants) { }
+        ) : base(Productid, Slug, Productname, Description, Createdat, Brand, Category, Series, Productvariants) { }
     }
 
     public record ReviewSummaryDto(double AvgRating, int TotalReviews, int Star5, int Star4, int Star3, int Star2, int Star1);
@@ -57,6 +59,7 @@ namespace ECommerceBackend.DTOs.Products
 
         public FullProductDetailDto(
             int Productid,
+            string? Slug,
             string Productname,
             string? Description,
             DateTime? Createdat,
@@ -66,7 +69,7 @@ namespace ECommerceBackend.DTOs.Products
             List<ProductVariantDto>? Productvariants,
             ReviewSummaryDto? ReviewSummary = null,
             List<ProductListItemDto>? RelatedProducts = null
-        ) : base(Productid, Productname, Description, Createdat, Brand, Category, Series, Productvariants)
+        ) : base(Productid, Slug, Productname, Description, Createdat, Brand, Category, Series, Productvariants)
         {
             this.ReviewSummary = ReviewSummary;
             this.RelatedProducts = RelatedProducts;

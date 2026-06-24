@@ -30,7 +30,7 @@ const statusLabels: Record<string, string> = {
 
 const statusClasses: Record<string, string> = {
   AwaitingPickup: 'bg-slate-100 text-slate-700',
-  PickedUp: 'bg-blue-50 text-blue-700',
+  PickedUp: 'bg-indigo-50 text-[#4338ca]',
   InTransit: 'bg-indigo-50 text-indigo-700',
   OutForDelivery: 'bg-amber-50 text-amber-700',
   DeliveryFailed: 'bg-red-50 text-red-700',
@@ -120,7 +120,7 @@ const StaffShipments: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-blue-600">Vận chuyển giả lập</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-[#4f46e5]">Vận chuyển giả lập</p>
           <h1 className="mt-1 text-2xl font-black text-slate-900">Theo dõi giao hàng</h1>
           <p className="mt-1 text-sm text-slate-500">
             Mô phỏng trạng thái GHN, GHTK, Viettel Post và J&T; đồng bộ đơn hàng, thanh toán và IMEI.
@@ -135,18 +135,18 @@ const StaffShipments: React.FC = () => {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {statCards.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <Icon size={20} className="mb-3 text-blue-600" />
+          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+            <Icon size={20} className="mb-3 text-[#4f46e5]" />
             <p className="text-xs font-bold uppercase text-slate-400">{label}</p>
             <p className="mt-1 text-2xl font-black text-slate-900">{value}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
           <h2 className="font-black text-slate-900">Danh sách vận đơn</h2>
-          <select value={filter} onChange={event => setFilter(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+          <select value={filter} onChange={event => setFilter(event.target.value)} className="rounded-2xl border border-slate-200 px-3 py-2 text-sm">
             <option value="">Tất cả trạng thái</option>
             {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
@@ -168,7 +168,7 @@ const StaffShipments: React.FC = () => {
               ) : shipments.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400">Chưa có vận đơn phù hợp.</td></tr>
               ) : shipments.map(item => (
-                <tr key={item.shipmentid} className="hover:bg-slate-50">
+                <tr key={item.shipmentid} className="hover:bg-indigo-50/40">
                   <td className="px-4 py-3">
                     <p className="font-black text-slate-900">{item.trackingcode}</p>
                     <p className="text-xs text-slate-400">{item.carrier} · Đơn #{item.orderid}</p>
@@ -186,7 +186,7 @@ const StaffShipments: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <button type="button" onClick={() => { setSelected(item); setNote(''); }} className="font-bold text-blue-600 hover:underline">
+                    <button type="button" onClick={() => { setSelected(item); setNote(''); }} className="font-bold text-[#4f46e5] hover:underline">
                       Chi tiết
                     </button>
                   </td>
@@ -202,11 +202,11 @@ const StaffShipments: React.FC = () => {
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-200 p-6">
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-blue-600">{selected.carrier}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-[#4f46e5]">{selected.carrier}</p>
                 <h2 className="text-xl font-black text-slate-900">{selected.trackingcode}</h2>
                 <p className="mt-1 text-sm text-slate-500">Đơn #{selected.orderid} · {formatCurrency(selected.finalamount)}</p>
               </div>
-              <button type="button" onClick={() => setSelected(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><XCircle size={21} /></button>
+              <button type="button" onClick={() => setSelected(null)} className="rounded-2xl p-2 text-slate-400 hover:bg-slate-100"><XCircle size={21} /></button>
             </div>
 
             <div className="grid gap-4 p-6 md:grid-cols-2">
@@ -229,7 +229,7 @@ const StaffShipments: React.FC = () => {
               <div className="space-y-3 border-l-2 border-slate-200 pl-5">
                 {selected.histories.map(history => (
                   <div key={history.historyid} className="relative rounded-xl border border-slate-200 p-3">
-                    <span className="absolute -left-[27px] top-4 h-3 w-3 rounded-full bg-blue-600 ring-4 ring-white" />
+                    <span className="absolute -left-[27px] top-4 h-3 w-3 rounded-full bg-[#4f46e5] ring-4 ring-white" />
                     <p className="font-bold text-slate-800">{statusLabels[history.tostatus] ?? history.tostatus}</p>
                     <p className="text-xs text-slate-400">
                       {history.createdat ? formatDateTime(history.createdat) : '—'} · {history.user ?? 'Hệ thống'}
@@ -242,7 +242,7 @@ const StaffShipments: React.FC = () => {
 
             {nextStatuses.length > 0 && (
               <div className="border-t border-slate-200 bg-slate-50 p-6">
-                <textarea value={note} onChange={event => setNote(event.target.value)} placeholder="Ghi chú cập nhật trạng thái..." className="mb-3 min-h-20 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500" />
+                <textarea value={note} onChange={event => setNote(event.target.value)} placeholder="Ghi chú cập nhật trạng thái..." className="mb-3 min-h-20 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#4f46e5]" />
                 <div className="flex flex-wrap justify-end gap-2">
                   {nextStatuses.map(status => (
                     <button
@@ -253,7 +253,7 @@ const StaffShipments: React.FC = () => {
                       className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black text-white disabled:opacity-50 ${
                         status === 'Delivered' ? 'bg-emerald-600' :
                         status === 'DeliveryFailed' || status === 'Returning' ? 'bg-red-600' :
-                        status === 'ReturnedToWarehouse' ? 'bg-purple-600' : 'bg-blue-600'
+                        status === 'ReturnedToWarehouse' ? 'bg-purple-600' : 'bg-[#4f46e5]'
                       }`}
                     >
                       {status === 'Delivered' ? <PackageCheck size={16} /> : status.includes('Return') ? <RotateCcw size={16} /> : <Truck size={16} />}

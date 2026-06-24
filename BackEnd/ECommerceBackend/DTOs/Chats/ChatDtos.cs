@@ -32,6 +32,7 @@ namespace ECommerceBackend.DTOs.Chats
     public record ChatRecommendationDto(
         int Recommendationid,
         int Productid,
+        string? Productslug,
         int Variantid,
         string Productname,
         string Variantname,

@@ -65,7 +65,7 @@ const StatCard = ({ title, value, hint, trend, icon, tone, loading }: StatCardPr
         {loading ? (
           <div className="mt-3 h-8 w-32 animate-pulse bg-slate-100" />
         ) : (
-          <p className="mt-2 text-3xl font-black tracking-tight text-[#10233f]">{value}</p>
+          <p className="mt-2 text-3xl font-black tracking-tight text-[#172033]">{value}</p>
         )}
       </div>
       <div className={`flex h-12 w-12 items-center justify-center ${tone}`}>{icon}</div>
@@ -201,18 +201,18 @@ const AdminDashboard: React.FC = () => {
         <div className="grid gap-6 p-6 lg:grid-cols-[1.4fr_0.6fr] lg:items-end">
           <div>
             <p className="ops-label">Business cockpit</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#10233f] md:text-4xl">
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#172033] md:text-4xl">
               Tổng quan vận hành
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
               Theo dõi doanh thu, đơn hàng, hoạt động hệ thống và các sản phẩm đang bán tốt.
-              Cập nhật mới nhất lúc <span className="font-black text-[#10233f]">{lastUpdated || '--:--'}</span>.
+              Cập nhật mới nhất lúc <span className="font-black text-[#172033]">{lastUpdated || '--:--'}</span>.
             </p>
           </div>
           <button
             type="button"
             onClick={() => setRefreshKey(prev => prev + 1)}
-            className="inline-flex items-center justify-center gap-2 bg-[#10233f] px-5 py-3 text-sm font-black text-white transition hover:bg-[#ff5b35]"
+            className="ops-button-primary"
           >
             <RefreshCw size={16} className={`${todayLoading || revenueLoading || activitiesLoading ? 'animate-spin' : ''}`} />
             Tải lại dữ liệu
@@ -232,7 +232,7 @@ const AdminDashboard: React.FC = () => {
           hint="so với hôm qua"
           trend={todayResults?.changeVsYesterdayPercentage}
           icon={<DollarSign size={24} />}
-          tone="bg-blue-50 text-blue-700"
+          tone="bg-indigo-50 text-indigo-700"
           loading={todayLoading}
         />
         <StatCard
@@ -258,7 +258,7 @@ const AdminDashboard: React.FC = () => {
           <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-start">
             <div>
               <p className="ops-label">Revenue analytics</p>
-              <h2 className="mt-1 text-xl font-black text-[#10233f]">Biểu đồ doanh thu</h2>
+              <h2 className="mt-1 text-xl font-black text-[#172033]">Biểu đồ doanh thu</h2>
               <p className="mt-1 text-xs text-slate-400">Tổng trong biểu đồ: {formatCurrency(totalRevenueInChart)}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -269,7 +269,7 @@ const AdminDashboard: React.FC = () => {
                     type="button"
                     onClick={() => setRevenueGroupBy(group)}
                     className={`px-3 py-1 text-xs font-black transition ${
-                      revenueGroupBy === group ? 'bg-[#10233f] text-white' : 'text-slate-500 hover:text-[#10233f]'
+                      revenueGroupBy === group ? 'bg-[#172033] text-white' : 'text-slate-500 hover:text-[#172033]'
                     }`}
                   >
                     {group === 'hour' ? 'Giờ' : group === 'day' ? 'Ngày' : 'Thứ'}
@@ -279,7 +279,7 @@ const AdminDashboard: React.FC = () => {
               <select
                 value={revenuePeriod}
                 onChange={event => setRevenuePeriod(event.target.value)}
-                className="border border-slate-200 bg-white px-3 py-2 text-xs font-black text-[#10233f] outline-none"
+                className="border border-slate-200 bg-white px-3 py-2 text-xs font-black text-[#172033] outline-none"
               >
                 <option value="today">Hôm nay</option>
                 <option value="yesterday">Hôm qua</option>
@@ -313,10 +313,10 @@ const AdminDashboard: React.FC = () => {
                     <div key={`${item.label}-${index}`} className="group flex h-full min-w-10 flex-1 flex-col justify-end gap-2">
                       <div className="relative flex flex-1 items-end">
                         <div
-                          className="w-full bg-gradient-to-t from-[#10233f] to-blue-500 transition group-hover:from-[#ff5b35] group-hover:to-orange-400"
+                          className="w-full bg-gradient-to-t from-[#172033] to-[#818cf8] transition group-hover:from-[#4f46e5] group-hover:to-orange-400"
                           style={{ height: `${Math.max(2, height)}%` }}
                         />
-                        <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 hidden -translate-x-1/2 bg-[#10233f] px-2 py-1 text-[10px] font-bold text-white group-hover:block">
+                        <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 hidden -translate-x-1/2 bg-[#172033] px-2 py-1 text-[10px] font-bold text-white group-hover:block">
                           {formatCurrency(item.revenue)}
                         </div>
                       </div>
@@ -335,7 +335,7 @@ const AdminDashboard: React.FC = () => {
         <section className="ops-card flex h-[460px] flex-col p-5">
           <div className="border-b border-slate-100 pb-3">
             <p className="ops-label">Live feed</p>
-            <h2 className="mt-1 text-xl font-black text-[#10233f]">Nhật ký hoạt động</h2>
+            <h2 className="mt-1 text-xl font-black text-[#172033]">Nhật ký hoạt động</h2>
           </div>
           <div className="relative mt-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -344,7 +344,7 @@ const AdminDashboard: React.FC = () => {
               value={searchQuery}
               onChange={event => setSearchQuery(event.target.value)}
               placeholder="Tìm mã đơn, khách hàng..."
-              className="w-full border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs font-semibold outline-none focus:border-[#10233f] focus:bg-white"
+              className="w-full border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs font-semibold outline-none focus:border-[#172033] focus:bg-white"
             />
           </div>
           <div className="mt-3 flex gap-1 overflow-x-auto border-b border-slate-100 pb-2">
@@ -359,7 +359,7 @@ const AdminDashboard: React.FC = () => {
                 type="button"
                 onClick={() => setActivityType(tab.id)}
                 className={`whitespace-nowrap px-3 py-1 text-[11px] font-black transition ${
-                  activityType === tab.id ? 'bg-[#10233f] text-white' : 'text-slate-500 hover:bg-slate-50'
+                  activityType === tab.id ? 'bg-[#172033] text-white' : 'text-slate-500 hover:bg-indigo-50/40'
                 }`}
               >
                 {tab.label}
@@ -382,21 +382,21 @@ const AdminDashboard: React.FC = () => {
               <div className="py-12 text-center text-xs text-slate-400">Không tìm thấy hoạt động phù hợp.</div>
             ) : (
               activities.map(item => (
-                <div key={item.id} className="flex gap-3 border border-transparent p-2 transition hover:border-slate-100 hover:bg-slate-50">
+                <div key={item.id} className="flex gap-3 border border-transparent p-2 transition hover:border-slate-100 hover:bg-indigo-50/40">
                   <div className={`flex h-9 w-9 shrink-0 items-center justify-center ${
                     item.type === 'invoice' ? 'bg-emerald-50 text-emerald-700' :
-                      item.type === 'order' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'
+                      item.type === 'order' ? 'bg-indigo-50 text-[#4338ca]' : 'bg-amber-50 text-amber-700'
                   }`}>
                     {item.type === 'invoice' ? <FileText size={15} /> : item.type === 'order' ? <ShoppingBag size={15} /> : <History size={15} />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-black text-[#10233f]">{item.title}</p>
+                    <p className="truncate text-xs font-black text-[#172033]">{item.title}</p>
                     <p className="mt-0.5 truncate text-[11px] text-slate-400">{item.subtitle}</p>
                     <p className="mt-1 text-[10px] font-bold text-slate-400">{formatActivityTime(item.timestamp)}</p>
                   </div>
                   <div className="shrink-0 text-right">
                     {item.amount !== null && item.amount !== undefined && (
-                      <p className="text-xs font-black text-[#10233f]">+{formatCurrency(item.amount)}</p>
+                      <p className="text-xs font-black text-[#172033]">+{formatCurrency(item.amount)}</p>
                     )}
                     {item.status && (
                       <span className="mt-1 inline-flex bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">
@@ -416,12 +416,12 @@ const AdminDashboard: React.FC = () => {
           <div className="mb-4 flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
               <p className="ops-label">Top products</p>
-              <h2 className="mt-1 text-xl font-black text-[#10233f]">Sản phẩm bán chạy</h2>
+              <h2 className="mt-1 text-xl font-black text-[#172033]">Sản phẩm bán chạy</h2>
             </div>
             <select
               value={topProductsPeriod}
               onChange={event => setTopProductsPeriod(event.target.value)}
-              className="border border-slate-200 bg-white px-3 py-2 text-xs font-black text-[#10233f]"
+              className="border border-slate-200 bg-white px-3 py-2 text-xs font-black text-[#172033]"
             >
               <option value="7d">7 ngày qua</option>
               <option value="30d">30 ngày qua</option>
@@ -435,13 +435,13 @@ const AdminDashboard: React.FC = () => {
           ) : (
             <div className="space-y-2">
               {topProducts.map((product, index) => (
-                <div key={product.productId} className="grid grid-cols-[42px_1fr_auto] items-center gap-3 border border-slate-100 p-3 hover:bg-slate-50">
-                  <span className="flex h-8 w-8 items-center justify-center bg-[#10233f] text-xs font-black text-white">#{index + 1}</span>
+                <div key={product.productId} className="grid grid-cols-[42px_1fr_auto] items-center gap-3 border border-slate-100 p-3 hover:bg-indigo-50/40">
+                  <span className="flex h-8 w-8 items-center justify-center bg-[#172033] text-xs font-black text-white">#{index + 1}</span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-[#10233f]">{product.productName}</p>
+                    <p className="truncate text-sm font-black text-[#172033]">{product.productName}</p>
                     <p className="text-xs text-slate-400">{product.unitsSold} máy đã bán</p>
                   </div>
-                  <span className="text-sm font-black text-[#db3d1c]">{formatCurrency(product.revenue)}</span>
+                  <span className="text-sm font-black text-[#4338ca]">{formatCurrency(product.revenue)}</span>
                 </div>
               ))}
             </div>
@@ -452,12 +452,12 @@ const AdminDashboard: React.FC = () => {
           <div className="mb-4 flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
               <p className="ops-label">Top customers</p>
-              <h2 className="mt-1 text-xl font-black text-[#10233f]">Khách hàng thân thiết</h2>
+              <h2 className="mt-1 text-xl font-black text-[#172033]">Khách hàng thân thiết</h2>
             </div>
             <select
               value={topCustomersPeriod}
               onChange={event => setTopCustomersPeriod(event.target.value)}
-              className="border border-slate-200 bg-white px-3 py-2 text-xs font-black text-[#10233f]"
+              className="border border-slate-200 bg-white px-3 py-2 text-xs font-black text-[#172033]"
             >
               <option value="7d">7 ngày qua</option>
               <option value="30d">30 ngày qua</option>
@@ -471,13 +471,13 @@ const AdminDashboard: React.FC = () => {
           ) : (
             <div className="space-y-2">
               {topCustomers.map((customer, index) => (
-                <div key={customer.customerId} className="grid grid-cols-[42px_1fr_auto] items-center gap-3 border border-slate-100 p-3 hover:bg-slate-50">
-                  <span className="flex h-8 w-8 items-center justify-center bg-[#75d7dc] text-xs font-black text-[#10233f]">#{index + 1}</span>
+                <div key={customer.customerId} className="grid grid-cols-[42px_1fr_auto] items-center gap-3 border border-slate-100 p-3 hover:bg-indigo-50/40">
+                  <span className="flex h-8 w-8 items-center justify-center bg-[#ffd166] text-xs font-black text-[#172033]">#{index + 1}</span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-[#10233f]">{customer.fullName}</p>
+                    <p className="truncate text-sm font-black text-[#172033]">{customer.fullName}</p>
                     <p className="text-xs text-slate-400">{customer.phone || 'Không có SĐT'} · {customer.ordersCount} đơn</p>
                   </div>
-                  <span className="text-sm font-black text-[#db3d1c]">{formatCurrency(customer.totalSpent)}</span>
+                  <span className="text-sm font-black text-[#4338ca]">{formatCurrency(customer.totalSpent)}</span>
                 </div>
               ))}
             </div>

@@ -194,6 +194,7 @@ namespace ECommerceBackend.Controllers
             return new ChatRecommendationDto(
                 recommendation.Recommendationid,
                 recommendation.Productid,
+                recommendation.Product.Slug,
                 recommendation.Variantid,
                 recommendation.Product.Productname,
                 GetVariantName(variant),

@@ -28,7 +28,7 @@ interface OrderLookup {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   Pending:   { label: 'Chờ xác nhận', color: 'bg-yellow-100 text-yellow-700', icon: <Clock size={13} /> },
-  Processing:{ label: 'Đang xử lý',   color: 'bg-blue-100 text-blue-700',   icon: <CheckCircle2 size={13} /> },
+  Processing:{ label: 'Đang xử lý',   color: 'bg-red-100 text-[#c4000b]',   icon: <CheckCircle2 size={13} /> },
   Shipped:   { label: 'Đang giao',    color: 'bg-purple-100 text-purple-700', icon: <Truck size={13} /> },
   Completed: { label: 'Đã giao',      color: 'bg-green-100 text-green-700',  icon: <CheckCircle2 size={13} /> },
   Returned:  { label: 'Đã hoàn hàng', color: 'bg-slate-200 text-slate-700', icon: <Package size={13} /> },
@@ -82,12 +82,12 @@ const OrderLookupPage: React.FC = () => {
     STATUS_CONFIG[status ?? ''] ?? { label: status ?? 'Không rõ', color: 'bg-slate-100 text-slate-600', icon: <Package size={13} /> };
 
   return (
-    <div className="bg-slate-50 min-h-screen">
+    <div className="customer-shell min-h-screen">
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 shadow-sm">
+      <div className="border-b customer-rule bg-white">
         <div className="max-w-2xl mx-auto px-4 py-8 text-center">
-          <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Search className="text-blue-600" size={24} />
+          <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Search className="text-[#e30613]" size={24} />
           </div>
           <h1 className="text-2xl font-black text-slate-800 mb-2">Tra cứu đơn hàng</h1>
           <p className="text-slate-400 text-sm">Nhập số điện thoại đặt hàng để kiểm tra tình trạng đơn</p>
@@ -96,7 +96,7 @@ const OrderLookupPage: React.FC = () => {
 
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Search Form */}
-        <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+        <form onSubmit={handleSearch} className="customer-panel mb-6 p-6">
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5" htmlFor="lookup-phone">
@@ -108,7 +108,7 @@ const OrderLookupPage: React.FC = () => {
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
                 placeholder="VD: 0901234567"
-                className="w-full border-2 border-slate-200 focus:border-blue-500 rounded-xl px-4 py-3 text-sm font-medium outline-none transition-colors"
+                className="w-full border border-slate-200 focus:border-[#e30613] rounded-2xl px-4 py-3 text-sm font-medium outline-none transition-colors"
               />
             </div>
             <div>
@@ -121,12 +121,12 @@ const OrderLookupPage: React.FC = () => {
                 value={orderId}
                 onChange={e => setOrderId(e.target.value)}
                 placeholder="VD: 12345"
-                className="w-full border-2 border-slate-200 focus:border-blue-500 rounded-xl px-4 py-3 text-sm font-medium outline-none transition-colors"
+                className="w-full border border-slate-200 focus:border-[#e30613] rounded-2xl px-4 py-3 text-sm font-medium outline-none transition-colors"
               />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-sm">
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-sm">
                 <XCircle size={15} />
                 {error}
               </div>
@@ -136,7 +136,7 @@ const OrderLookupPage: React.FC = () => {
               type="submit"
               disabled={loading}
               id="lookup-submit"
-              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 disabled:opacity-60 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-[#e30613] text-white font-black rounded-2xl hover:bg-[#c4000b] disabled:opacity-60 transition-colors"
             >
               {loading ? (
                 <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Đang tra cứu...</>
@@ -158,7 +158,7 @@ const OrderLookupPage: React.FC = () => {
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-slate-500 font-medium">
-                Tìm thấy <span className="text-blue-600 font-black">{results.length}</span> đơn hàng
+                Tìm thấy <span className="text-[#e30613] font-black">{results.length}</span> đơn hàng
               </p>
               {results.map(order => {
                 const st = getStatus(order.orderstatus);
@@ -172,8 +172,8 @@ const OrderLookupPage: React.FC = () => {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Package size={18} className="text-blue-600" />
+                          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                            <Package size={18} className="text-[#e30613]" />
                           </div>
                           <div>
                             <p className="font-black text-slate-800">Đơn #{order.orderid}</p>
@@ -192,21 +192,21 @@ const OrderLookupPage: React.FC = () => {
                     {isExpanded && (
                       <div className="border-t border-slate-100 px-5 pb-5 pt-4 animate-in fade-in duration-200">
                         <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div className="bg-slate-50 rounded-xl p-3">
+                          <div className="bg-slate-50 rounded-2xl p-3">
                             <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Tổng tiền</p>
                             <p className="font-black text-slate-700">{fmtMoney(order.totalamount)}</p>
                           </div>
                           {(order.discountamount ?? 0) > 0 && (
-                            <div className="bg-green-50 rounded-xl p-3">
+                            <div className="bg-green-50 rounded-2xl p-3">
                               <p className="text-[10px] font-bold text-green-500 uppercase mb-1">Giảm giá</p>
                               <p className="font-black text-green-700">-{fmtMoney(order.discountamount ?? 0)}</p>
                             </div>
                           )}
-                          <div className="bg-blue-50 rounded-xl p-3">
-                            <p className="text-[10px] font-bold text-blue-500 uppercase mb-1">Thanh toán</p>
-                            <p className="font-black text-blue-700">{fmtMoney(order.finalamount)}</p>
+                          <div className="bg-red-50 rounded-2xl p-3">
+                            <p className="text-[10px] font-bold text-[#e30613] uppercase mb-1">Thanh toán</p>
+                            <p className="font-black text-[#c4000b]">{fmtMoney(order.finalamount)}</p>
                           </div>
-                          <div className="bg-slate-50 rounded-xl p-3">
+                          <div className="bg-slate-50 rounded-2xl p-3">
                             <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Số sản phẩm</p>
                             <p className="font-black text-slate-700">{order.itemCount} sản phẩm</p>
                           </div>
@@ -214,17 +214,17 @@ const OrderLookupPage: React.FC = () => {
                         {order.paymentmethod && (
                           <p className="text-xs text-slate-400 mt-3">
                             Phương thức: <span className="text-slate-600 font-bold">{order.paymentmethod}</span>
-                            {order.vouchercode && <> · Mã giảm: <span className="text-blue-600 font-bold">{order.vouchercode}</span></>}
+                            {order.vouchercode && <> · Mã giảm: <span className="text-[#e30613] font-bold">{order.vouchercode}</span></>}
                           </p>
                         )}
                         {order.shipment && (
-                          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+                          <div className="mt-4 rounded-2xl border border-red-100 bg-red-50/60 p-4">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div>
-                                <p className="text-[10px] font-bold uppercase text-blue-500">Mã vận đơn</p>
-                                <p className="font-black text-blue-800">{order.shipment.trackingcode}</p>
+                                <p className="text-[10px] font-bold uppercase text-[#e30613]">Mã vận đơn</p>
+                                <p className="font-black text-[#9f0008]">{order.shipment.trackingcode}</p>
                               </div>
-                              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700">
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#c4000b]">
                                 {order.shipment.carrier}
                               </span>
                             </div>
@@ -233,10 +233,10 @@ const OrderLookupPage: React.FC = () => {
                                 Dự kiến giao: <strong>{fmtDate(order.shipment.estimateddeliveryat)}</strong>
                               </p>
                             )}
-                            <div className="mt-4 space-y-3 border-l-2 border-blue-200 pl-4">
+                            <div className="mt-4 space-y-3 border-l-2 border-red-200 pl-4">
                               {order.shipment.histories.map((history, index) => (
                                 <div key={`${history.status}-${history.createdat ?? index}`} className="relative">
-                                  <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-blue-600 ring-2 ring-blue-50" />
+                                  <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-[#e30613] ring-2 ring-red-50" />
                                   <p className="text-sm font-bold text-slate-700">
                                     {SHIPMENT_STATUS_LABELS[history.status] ?? history.status}
                                   </p>

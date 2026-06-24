@@ -33,7 +33,7 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusClasses: Record<string, string> = {
-  Received: 'bg-blue-50 text-blue-700',
+  Received: 'bg-indigo-50 text-[#4338ca]',
   Inspecting: 'bg-violet-50 text-violet-700',
   WaitingParts: 'bg-amber-50 text-amber-700',
   Repairing: 'bg-orange-50 text-orange-700',
@@ -111,7 +111,7 @@ const StaffWarranties: React.FC = () => {
   }), [claims]);
   const statCards = [
     { label: 'Tổng phiếu', value: stats.total, Icon: FileText, color: 'text-slate-700' },
-    { label: 'Chờ tiếp nhận', value: stats.waiting, Icon: Clock3, color: 'text-blue-600' },
+    { label: 'Chờ tiếp nhận', value: stats.waiting, Icon: Clock3, color: 'text-[#4f46e5]' },
     { label: 'Đang xử lý', value: stats.processing, Icon: Wrench, color: 'text-orange-600' },
     { label: 'Đã hoàn tất', value: stats.completed, Icon: CheckCircle2, color: 'text-emerald-600' },
   ];
@@ -210,7 +210,7 @@ const StaffWarranties: React.FC = () => {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map(({ label, value, Icon, color }) => (
-          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p>
@@ -222,13 +222,13 @@ const StaffWarranties: React.FC = () => {
         ))}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
           <h2 className="font-black text-slate-800">Phiếu tiếp nhận</h2>
           <select
             value={statusFilter}
             onChange={event => setStatusFilter(event.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
           >
             <option value="">Tất cả trạng thái</option>
             {Object.entries(statusLabels).map(([value, label]) => (
@@ -259,7 +259,7 @@ const StaffWarranties: React.FC = () => {
                   </td>
                 </tr>
               ) : claims.map(claim => (
-                <tr key={claim.claimid} className="hover:bg-slate-50/70">
+                <tr key={claim.claimid} className="hover:bg-indigo-50/40/70">
                   <td className="px-4 py-3">
                     <p className="font-black text-slate-800">#{claim.claimid}</p>
                     <p className="text-xs font-medium text-slate-500">{claim.imei}</p>
@@ -301,7 +301,7 @@ const StaffWarranties: React.FC = () => {
               value={imei}
               onChange={event => setImei(event.target.value)}
               placeholder="Quét hoặc nhập IMEI của máy đã bán"
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4f46e5]"
             />
             <p className="mt-1 text-xs text-slate-400">Khách hàng và thời hạn bảo hành được tra tự động từ đơn đã hoàn tất.</p>
           </div>
@@ -313,12 +313,12 @@ const StaffWarranties: React.FC = () => {
               value={faultDescription}
               onChange={event => setFaultDescription(event.target.value)}
               placeholder="Tình trạng máy, lỗi khách phản ánh, phụ kiện bàn giao..."
-              className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+              className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4f46e5]"
             />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-bold text-slate-700">Ảnh thiết bị (tối đa 6 ảnh)</label>
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-5 text-sm font-semibold text-slate-500 hover:border-blue-300 hover:bg-blue-50">
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-5 text-sm font-semibold text-slate-500 hover:border-indigo-300 hover:bg-indigo-50">
               <Camera size={20} />
               Chọn ảnh từ máy
               <input
@@ -332,7 +332,7 @@ const StaffWarranties: React.FC = () => {
             {files.length > 0 && (
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-500 sm:grid-cols-3">
                 {files.map(file => (
-                  <div key={`${file.name}-${file.lastModified}`} className="truncate rounded-lg bg-slate-50 px-3 py-2">
+                  <div key={`${file.name}-${file.lastModified}`} className="truncate rounded-2xl bg-slate-50 px-3 py-2">
                     {file.name}
                   </div>
                 ))}
@@ -401,7 +401,7 @@ const StaffWarranties: React.FC = () => {
                 <div className="space-y-3 border-l-2 border-slate-100 pl-4">
                   {selected.histories.map(history => (
                     <div key={history.historyid} className="relative">
-                      <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-white" />
+                      <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-indigo-500 ring-4 ring-white" />
                       <p className="text-sm font-bold text-slate-700">
                         {statusLabels[history.tostatus] ?? history.tostatus}
                       </p>
@@ -437,7 +437,7 @@ const StaffWarranties: React.FC = () => {
                         runClaimAction(() => warrantyClaimsApi.assign(selected.claimid, employeeId));
                       }
                     }}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   >
                     <option value="">Chọn nhân viên bảo hành</option>
                     {employees.map(employee => (
@@ -455,7 +455,7 @@ const StaffWarranties: React.FC = () => {
                     <select
                       value={nextStatus}
                       onChange={event => setNextStatus(event.target.value)}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                     >
                       {nextStatuses[selected.status].map(status => (
                         <option key={status} value={status}>{statusLabels[status]}</option>
@@ -470,7 +470,7 @@ const StaffWarranties: React.FC = () => {
                         min="0"
                         value={estimatedCost}
                         onChange={event => setEstimatedCost(event.target.value)}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                       />
                     </div>
                     <div>
@@ -480,7 +480,7 @@ const StaffWarranties: React.FC = () => {
                         min="0"
                         value={finalCost}
                         onChange={event => setFinalCost(event.target.value)}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                       />
                     </div>
                   </div>
@@ -491,7 +491,7 @@ const StaffWarranties: React.FC = () => {
                       value={conclusion}
                       onChange={event => setConclusion(event.target.value)}
                       placeholder="Kết luận sửa chữa bắt buộc"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                     />
                   )}
                   <textarea
@@ -499,7 +499,7 @@ const StaffWarranties: React.FC = () => {
                     value={note}
                     onChange={event => setNote(event.target.value)}
                     placeholder="Ghi chú cho lần cập nhật này"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   />
                   <Button type="submit" fullWidth isLoading={working} disabled={!nextStatus}>
                     Cập nhật trạng thái

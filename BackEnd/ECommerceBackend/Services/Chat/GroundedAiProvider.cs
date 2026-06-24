@@ -32,6 +32,15 @@ public sealed class GroundedAiProvider : IAiProvider
         "Chọn máy giá tốt nhất"
     };
 
+    private static readonly HashSet<string> ComparisonNameStopWords = new()
+    {
+        "dien", "thoai", "phone", "smartphone", "may", "series", "dong"
+    };
+    private static readonly HashSet<string> GenericModelQualifiers = new()
+    {
+        "pro", "max", "plus", "ultra", "mini", "new", "seal", "5g", "4g"
+    };
+
     private readonly IProductConsultationService _productConsultation;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AiAssistantOptions _options;
@@ -92,6 +101,23 @@ public sealed class GroundedAiProvider : IAiProvider
             products = RankScopedProducts(request.UserMessage, products);
         }
         products = RestrictToComparedProducts(request, products);
+        if (comparisonRequested && !referentialComparison)
+        {
+            var explicitlyNamedProducts = GetExplicitlyNamedComparedProducts(
+                request.UserMessage,
+                products);
+            if (explicitlyNamedProducts.Count >= 2)
+            {
+                products = explicitlyNamedProducts;
+            }
+            else if (ShouldAskComparisonClarification(
+                         request.UserMessage,
+                         products,
+                         explicitlyNamedProducts.Count))
+            {
+                return BuildComparisonClarification(products);
+            }
+        }
 
         if (products.Count == 0)
         {
@@ -188,6 +214,119 @@ public sealed class GroundedAiProvider : IAiProvider
                 ? ChatResponseTypes.Comparison
                 : ChatResponseTypes.Recommendation,
             isComparison ? ComparisonQuickReplies : Array.Empty<string>());
+    }
+
+    private static IReadOnlyList<ProductConsultationResult> GetExplicitlyNamedComparedProducts(
+        string userMessage,
+        IReadOnlyList<ProductConsultationResult> products)
+    {
+        var normalizedMessage = ProductConsultationService.Normalize(userMessage);
+        var matchedProductIds = products
+            .GroupBy(product => product.ProductId)
+            .Where(group => IsProductNameExplicitlyMentioned(
+                normalizedMessage,
+                group.First().ProductName))
+            .Select(group => group.Key)
+            .Take(MaxDisplayedProducts)
+            .ToHashSet();
+
+        return matchedProductIds.Count == 0
+            ? Array.Empty<ProductConsultationResult>()
+            : products
+                .Where(product => matchedProductIds.Contains(product.ProductId))
+                .ToList();
+    }
+
+    private static bool IsProductNameExplicitlyMentioned(
+        string normalizedMessage,
+        string productName)
+    {
+        var normalizedProductName = ProductConsultationService.Normalize(productName);
+        if (normalizedMessage.Contains(normalizedProductName))
+            return true;
+
+        var tokens = Regex.Matches(normalizedProductName, @"[\p{L}\p{N}]+")
+            .Select(match => match.Value)
+            .Where(token =>
+                token.Length >= 2 &&
+                !ComparisonNameStopWords.Contains(token))
+            .Distinct()
+            .ToList();
+        if (tokens.Count == 0)
+            return false;
+
+        var requiredTokens = tokens
+            .Where(token => !GenericModelQualifiers.Contains(token))
+            .ToList();
+        if (requiredTokens.Count == 0)
+            requiredTokens = tokens;
+
+        return requiredTokens.All(token => normalizedMessage.Contains(token)) &&
+               requiredTokens.Count >= Math.Min(2, tokens.Count);
+    }
+
+    private static bool ShouldAskComparisonClarification(
+        string userMessage,
+        IReadOnlyList<ProductConsultationResult> products,
+        int explicitlyNamedProductCount)
+    {
+        if (explicitlyNamedProductCount >= 2)
+            return false;
+
+        var normalized = ProductConsultationService.Normalize(userMessage);
+        var productCount = products.Select(product => product.ProductId).Distinct().Count();
+        var partialMentionCount = products
+            .GroupBy(product => product.ProductId)
+            .Count(group => HasPartialCatalogMention(
+                normalized,
+                group.First().ProductName,
+                group.First().Brand));
+        if (partialMentionCount >= 2)
+            return true;
+
+        if (productCount <= 2)
+            return false;
+
+        return ContainsAny(normalized, " voi ", " va ", " vs", "versus", "poco", "redmi", "series", "dong");
+    }
+
+    private static bool HasPartialCatalogMention(
+        string normalizedMessage,
+        string productName,
+        string brand)
+    {
+        var tokens = Regex.Matches(
+                ProductConsultationService.Normalize($"{brand} {productName}"),
+                @"[\p{L}\p{N}]+")
+            .Select(match => match.Value)
+            .Where(token =>
+                token.Length >= 3 &&
+                !ComparisonNameStopWords.Contains(token) &&
+                !GenericModelQualifiers.Contains(token) &&
+                !int.TryParse(token, out _))
+            .Distinct();
+        return tokens.Any(normalizedMessage.Contains);
+    }
+
+    private static AiAssistantResponse BuildComparisonClarification(
+        IReadOnlyList<ProductConsultationResult> products)
+    {
+        var examples = products
+            .GroupBy(product => product.ProductId)
+            .Select(group => group.First().ProductName)
+            .Distinct()
+            .Take(4)
+            .ToList();
+        var exampleText = examples.Count > 0
+            ? $" Ví dụ: {string.Join(" / ", examples)}."
+            : string.Empty;
+
+        return new AiAssistantResponse(
+            "Bạn đang muốn so sánh dòng hoặc model cụ thể nào? Mỗi hãng/dòng có nhiều phiên bản nên tôi cần tên máy rõ hơn để so sánh chính xác." +
+            exampleText,
+            Array.Empty<ProductConsultationResult>(),
+            ChatResponseTypes.Clarification,
+            examples);
     }
 
     private async Task<IReadOnlyList<int>> GetLanguageModelSelectionAsync(
@@ -352,15 +491,20 @@ public sealed class GroundedAiProvider : IAiProvider
                 var specsText = string.IsNullOrWhiteSpace(keySpecs)
                     ? string.Empty
                     : $"\n     Thông số: {keySpecs}";
+                var reason = BuildRecommendationReason(variant, normalized);
+                var reasonText = string.IsNullOrWhiteSpace(reason)
+                    ? string.Empty
+                    : $"\n     Lý do gợi ý: {reason}";
 
                 return $"   - {variant.Condition}: {FormatCurrency(variant.Price)}" +
                        $"{saleNote}; {stockText}." +
-                       specsText;
+                       specsText +
+                       reasonText;
             });
 
             return $"{index + 1}. {product.ProductName}\n" +
                    string.Join("\n", variants) +
-                   $"\n   Xem chi tiết: /products/{product.ProductId}";
+                   $"\n   Xem chi tiết: {ProductPath(product)}";
         });
 
         return heading + "\n\n" + string.Join("\n\n", lines) +
@@ -372,6 +516,8 @@ public sealed class GroundedAiProvider : IAiProvider
     {
         var normalizedCurrent = ProductConsultationService.Normalize(request.UserMessage);
         if (IsComparisonRequest(normalizedCurrent))
+            return null;
+        if (IsScopedPreferenceFollowUp(normalizedCurrent, request))
             return null;
 
         var normalized = ProductConsultationService.Normalize(string.Join(
@@ -390,7 +536,12 @@ public sealed class GroundedAiProvider : IAiProvider
                 "san pham",
                 "may nao",
                 "tim may",
-                "chon may"))
+                "chon may",
+                "goi y",
+                "chup anh",
+                "camera",
+                "choi game",
+                "gaming"))
         {
             return null;
         }
@@ -446,6 +597,35 @@ public sealed class GroundedAiProvider : IAiProvider
         return null;
     }
 
+    private static bool IsScopedPreferenceFollowUp(
+        string normalizedCurrent,
+        AiConversationRequest request)
+    {
+        var wordCount = Regex.Matches(normalizedCurrent, @"[\p{L}\p{N}]+").Count;
+        if (wordCount > 8)
+            return false;
+        if (!ContainsAny(
+                normalizedCurrent,
+                "chup anh",
+                "camera",
+                "quay video",
+                "choi game",
+                "gaming",
+                "hieu nang",
+                "pin",
+                "gia tot"))
+        {
+            return false;
+        }
+
+        return request.History.Any(message =>
+            message.Role == "assistant" &&
+            message.ProductIds is { Count: > 0 } &&
+            message.ResponseType is
+                ChatResponseTypes.Recommendation or
+                ChatResponseTypes.Comparison);
+    }
+
     private static bool HasSpecificCatalogTerm(string normalized)
     {
         var genericWords = new HashSet<string>
@@ -455,7 +635,8 @@ public sealed class GroundedAiProvider : IAiProvider
             "mot", "chiec", "khoang", "gia", "duoi", "tren", "tu", "den", "trieu",
             "ngan", "sach", "tim", "chon",
             "choi", "game", "gaming", "chup", "anh", "quay", "video", "camera", "pin",
-            "lau", "trau", "hoc", "tap", "sinh", "vien", "van", "phong", "lam", "viec"
+            "lau", "trau", "hoc", "tap", "sinh", "vien", "van", "phong", "lam", "viec",
+            "goi", "y", "dep", "tot", "muot", "manh"
         };
         return Regex.Matches(normalized, @"[\p{L}\p{N}]+")
             .Select(match => match.Value)
@@ -588,6 +769,110 @@ public sealed class GroundedAiProvider : IAiProvider
             .Distinct()
             .ToList()
             ?? (IReadOnlyList<int>)Array.Empty<int>();
+    }
+
+    private static string BuildRecommendationReason(
+        ProductConsultationResult product,
+        string normalizedUserMessage)
+    {
+        var highlights = FindSpecification(product, "diem noi bat", "highlight");
+        var cameraTechnology = FindSpecification(product, "cong nghe camera", "camera technology");
+        var rearCamera = FindSpecification(product, "camera sau", "camera");
+        var video = FindSpecification(product, "quay video");
+        var chipset = FindSpecification(product, "chipset", "cpu");
+        var gpu = FindSpecification(product, "gpu");
+        var ram = FindSpecification(product, "ram");
+        var screen = FindSpecification(product, "man hinh");
+        var battery = FindSpecification(product, "pin");
+        var charging = FindSpecification(product, "sac");
+
+        var details = new List<string>();
+        if (ContainsAny(
+                normalizedUserMessage,
+                "chup anh",
+                "chup hinh",
+                "camera",
+                "quay phim",
+                "quay video",
+                "song ao",
+                "zoom"))
+        {
+            AddDetail(details, cameraTechnology ?? rearCamera);
+            AddDetail(details, rearCamera);
+            AddDetail(details, video);
+            AddDetail(details, highlights);
+            return BuildReason("phù hợp nhu cầu chụp ảnh/quay video vì", details);
+        }
+
+        if (ContainsAny(
+                normalizedUserMessage,
+                "choi game",
+                "gaming",
+                "hieu nang",
+                "cau hinh",
+                "fps"))
+        {
+            AddDetail(details, chipset);
+            AddDetail(details, gpu);
+            AddDetail(details, screen);
+            AddDetail(details, ram);
+            AddDetail(details, battery);
+            AddDetail(details, highlights);
+            return BuildReason("phù hợp chơi game vì", details);
+        }
+
+        if (ContainsAny(
+                normalizedUserMessage,
+                "pin",
+                "dung lau",
+                "sac nhanh",
+                "thoi luong pin"))
+        {
+            AddDetail(details, battery);
+            AddDetail(details, charging);
+            AddDetail(details, screen);
+            AddDetail(details, highlights);
+            return BuildReason("phù hợp nhu cầu pin lâu vì", details);
+        }
+
+        if (ContainsAny(
+                normalizedUserMessage,
+                "hoc tap",
+                "sinh vien",
+                "van phong",
+                "lam viec"))
+        {
+            AddDetail(details, battery);
+            AddDetail(details, screen);
+            AddDetail(details, chipset);
+            AddDetail(details, highlights);
+            return BuildReason("phù hợp học tập/làm việc vì", details);
+        }
+
+        AddDetail(details, highlights);
+        AddDetail(details, chipset);
+        AddDetail(details, cameraTechnology ?? rearCamera);
+        AddDetail(details, battery);
+        return BuildReason("đáng cân nhắc vì", details);
+    }
+
+    private static string BuildReason(string prefix, IReadOnlyList<string> details)
+    {
+        var compactDetails = details
+            .Where(detail => !string.IsNullOrWhiteSpace(detail))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(3)
+            .ToList();
+        if (compactDetails.Count == 0)
+            return "phù hợp với yêu cầu hiện tại theo dữ liệu sản phẩm và mức giá.";
+
+        return $"{prefix} {string.Join("; ", compactDetails)}.";
+    }
+
+    private static void AddDetail(ICollection<string> details, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            details.Add(value);
     }
 
     private static string BuildScopedRecommendationResponse(
@@ -755,7 +1040,7 @@ public sealed class GroundedAiProvider : IAiProvider
                    $"   RAM / Bộ nhớ: {ram} / {storage}\n" +
                    $"   Camera: {camera}\n" +
                    $"   Pin: {battery}\n" +
-                   $"   Chi tiết: /products/{product.ProductId}";
+                   $"   Chi tiết: {ProductPath(product)}";
         });
 
         var cheapest = compared.OrderBy(product => product.Price).First();
@@ -793,6 +1078,11 @@ public sealed class GroundedAiProvider : IAiProvider
                availabilityNote +
                "\nBạn ưu tiên camera, hiệu năng hay pin để tôi chốt một lựa chọn phù hợp nhất?";
     }
+
+    private static string ProductPath(ProductConsultationResult product) =>
+        string.IsNullOrWhiteSpace(product.ProductSlug)
+            ? $"/products/{product.ProductId}"
+            : $"/products/{product.ProductSlug}";
 
     private static ProductConsultationResult SelectUsageWinner(
         IReadOnlyList<ProductConsultationResult> products,

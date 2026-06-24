@@ -58,28 +58,7 @@ const PromotionsPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
-      <section className="border-b customer-rule bg-[#10233f] px-4 py-12 text-white">
-        <div className="customer-container grid gap-8 md:grid-cols-[1.2fr_0.8fr] md:items-center">
-          <div>
-            <span className="inline-flex bg-[#ff5b35] px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white">
-              Ưu đãi đặc biệt
-            </span>
-            <h1 className="customer-display mt-4 text-5xl font-bold leading-tight md:text-6xl">
-              Mã giảm giá đang mở
-            </h1>
-            <p className="mt-5 max-w-2xl text-sm leading-6 text-white/60">
-              Sao chép mã và áp dụng khi thanh toán. Các voucher demo giúp luồng checkout nhìn giống một cửa hàng thật hơn.
-            </p>
-          </div>
-          <div className="customer-grid-pattern border border-white/15 p-6">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#75d7dc]">Available vouchers</p>
-            <p className="customer-display mt-2 text-5xl font-bold">{vouchers.length}</p>
-            <p className="mt-2 text-sm text-white/50">mã ưu đãi đang hoạt động</p>
-          </div>
-        </div>
-      </section>
-
-      <main className="customer-container px-4 py-10">
+      <main className="customer-container px-4 py-8">
         {loading ? (
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -92,15 +71,15 @@ const PromotionsPage: React.FC = () => {
           </div>
         ) : vouchers.length === 0 ? (
           <div className="customer-panel-soft px-6 py-20 text-center">
-            <Tag className="mx-auto mb-5 text-[#10233f]/25" size={54} />
-            <h2 className="customer-display text-3xl font-bold text-[#10233f]">Chưa có mã ưu đãi nào</h2>
+            <Tag className="mx-auto mb-5 text-[#1f2937]/25" size={54} />
+            <h2 className="customer-display text-3xl font-bold text-[#1f2937]">Chưa có mã ưu đãi nào</h2>
             <p className="mt-3 text-sm text-slate-500">Hãy quay lại sau để xem các ưu đãi mới nhất.</p>
           </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {vouchers.map(voucher => (
               <article key={voucher.vouchercode} className="customer-panel relative overflow-hidden">
-                <div className={`h-2 w-full ${voucher.discountpercentage ? 'bg-[#ff5b35]' : 'bg-[#75d7dc]'}`} />
+                <div className={`h-2 w-full ${voucher.discountpercentage ? 'bg-[#e30613]' : 'bg-[#ffd166]'}`} />
 
                 {isExpiringSoon(voucher) && (
                   <div className="absolute right-4 top-5 bg-red-600 px-2 py-0.5 text-[10px] font-black text-white">
@@ -110,16 +89,16 @@ const PromotionsPage: React.FC = () => {
 
                 <div className="p-5">
                   <div className="mb-4 flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center bg-[#10233f] text-white">
+                    <div className="flex h-11 w-11 items-center justify-center bg-[#1f2937] text-white">
                       {voucher.discountpercentage ? <Percent size={18} /> : <DollarSign size={18} />}
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Mã voucher</p>
-                      <p className="text-xl font-black tracking-[0.16em] text-[#10233f]">{voucher.vouchercode}</p>
+                      <p className="text-xl font-black tracking-[0.16em] text-[#1f2937]">{voucher.vouchercode}</p>
                     </div>
                   </div>
 
-                  <p className="customer-display text-3xl font-bold text-[#db3d1c]">{formatDiscount(voucher)}</p>
+                  <p className="customer-display text-3xl font-bold text-[#c4000b]">{formatDiscount(voucher)}</p>
 
                   <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
                     <Clock size={12} />
@@ -136,7 +115,7 @@ const PromotionsPage: React.FC = () => {
                     className={`mt-6 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-black transition ${
                       copied === voucher.vouchercode
                         ? 'bg-emerald-600 text-white'
-                        : 'bg-[#10233f] text-white hover:bg-[#db3d1c]'
+                        : 'bg-[#1f2937] text-white hover:bg-[#c4000b]'
                     }`}
                   >
                     {copied === voucher.vouchercode
@@ -152,9 +131,9 @@ const PromotionsPage: React.FC = () => {
 
         {!loading && vouchers.length > 0 && (
           <div className="customer-panel-soft mt-8 flex gap-4 p-5">
-            <Tag className="shrink-0 text-[#db3d1c]" size={24} />
+            <Tag className="shrink-0 text-[#c4000b]" size={24} />
             <div>
-              <p className="font-black text-[#10233f]">Cách sử dụng mã giảm giá</p>
+              <p className="font-black text-[#1f2937]">Cách sử dụng mã giảm giá</p>
               <p className="mt-1 text-sm leading-6 text-slate-500">
                 Sao chép mã voucher, vào trang thanh toán, nhập mã vào ô mã giảm giá và nhấn áp dụng. Mỗi đơn hàng chỉ áp dụng được một mã.
               </p>

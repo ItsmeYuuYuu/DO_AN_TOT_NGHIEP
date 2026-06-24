@@ -29,6 +29,10 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Customer> Customers { get; set; }
 
+    public virtual DbSet<Homepageproductsection> Homepageproductsections { get; set; }
+
+    public virtual DbSet<Homepageproductsectionitem> Homepageproductsectionitems { get; set; }
+
     public virtual DbSet<Inventoryitem> Inventoryitems { get; set; }
 
     public virtual DbSet<Inventorytransaction> Inventorytransactions { get; set; }
@@ -290,6 +294,76 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Phone)
                 .HasMaxLength(20)
                 .HasColumnName("phone");
+        });
+
+        modelBuilder.Entity<Homepageproductsection>(entity =>
+        {
+            entity.HasKey(e => e.Sectionid).HasName("homepageproductsections_pkey");
+
+            entity.ToTable("homepageproductsections");
+
+            entity.HasIndex(e => e.Sectionkey, "homepageproductsections_sectionkey_key").IsUnique();
+            entity.HasIndex(e => new { e.Isactive, e.Displayorder }, "ix_homepageproductsections_active_order");
+
+            entity.Property(e => e.Sectionid).HasColumnName("sectionid");
+            entity.Property(e => e.Sectionkey)
+                .HasMaxLength(50)
+                .HasColumnName("sectionkey");
+            entity.Property(e => e.Title)
+                .HasMaxLength(120)
+                .HasColumnName("title");
+            entity.Property(e => e.Subtitle)
+                .HasMaxLength(300)
+                .HasColumnName("subtitle");
+            entity.Property(e => e.Theme)
+                .HasMaxLength(30)
+                .HasDefaultValue("LightBlue")
+                .HasColumnName("theme");
+            entity.Property(e => e.Displayorder)
+                .HasDefaultValue(0)
+                .HasColumnName("displayorder");
+            entity.Property(e => e.Isactive)
+                .HasDefaultValue(true)
+                .HasColumnName("isactive");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+        });
+
+        modelBuilder.Entity<Homepageproductsectionitem>(entity =>
+        {
+            entity.HasKey(e => e.Itemid).HasName("homepageproductsectionitems_pkey");
+
+            entity.ToTable("homepageproductsectionitems");
+
+            entity.HasIndex(e => new { e.Sectionid, e.Productid }, "homepageproductsectionitems_sectionid_productid_key").IsUnique();
+            entity.HasIndex(e => e.Productid, "ix_homepageproductsectionitems_productid");
+            entity.HasIndex(e => new { e.Sectionid, e.Isactive, e.Displayorder }, "ix_homepageproductsectionitems_section_active_order");
+
+            entity.Property(e => e.Itemid).HasColumnName("itemid");
+            entity.Property(e => e.Sectionid).HasColumnName("sectionid");
+            entity.Property(e => e.Productid).HasColumnName("productid");
+            entity.Property(e => e.Displayorder)
+                .HasDefaultValue(0)
+                .HasColumnName("displayorder");
+            entity.Property(e => e.Isactive)
+                .HasDefaultValue(true)
+                .HasColumnName("isactive");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+
+            entity.HasOne(e => e.Section).WithMany(e => e.Items)
+                .HasForeignKey(e => e.Sectionid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_homepageproductsectionitems_sections");
+
+            entity.HasOne(e => e.Product).WithMany(e => e.Homepageproductsectionitems)
+                .HasForeignKey(e => e.Productid)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_homepageproductsectionitems_products");
         });
 
         modelBuilder.Entity<Inventoryitem>(entity =>
@@ -945,6 +1019,8 @@ public partial class ECommerceContext : DbContext
 
             entity.ToTable("products");
 
+            entity.HasIndex(e => e.Slug, "products_slug_key").IsUnique();
+
             entity.Property(e => e.Productid).HasColumnName("productid");
             entity.Property(e => e.Brandid).HasColumnName("brandid");
             entity.Property(e => e.Categoryid).HasColumnName("categoryid");
@@ -957,6 +1033,9 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Productname)
                 .HasMaxLength(200)
                 .HasColumnName("productname");
+            entity.Property(e => e.Slug)
+                .HasMaxLength(220)
+                .HasColumnName("slug");
 
             entity.HasOne(d => d.Brand).WithMany(p => p.Products)
                 .HasForeignKey(d => d.Brandid)

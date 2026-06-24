@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Filter, Search, SlidersHorizontal, X } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { ArrowRight, Search, SlidersHorizontal, X } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
 import { ProductCard } from '@/features/products/components/ProductCard';
@@ -9,17 +9,39 @@ import { Skeleton } from '@/components/Skeleton';
 interface Category { categoryid: number; categoryname: string; }
 interface Brand { brandid: number; brandname: string; }
 
+type SortOption = 'default' | 'newest' | 'price-asc' | 'price-desc' | 'name-asc' | 'name-desc';
+
+const getProductPrice = (product: Product) => {
+  const variant = product.productvariants?.[0];
+  return variant ? variant.saleprice ?? variant.baseprice : Number.POSITIVE_INFINITY;
+};
+
+const parseNumberParam = (value: string | null) => {
+  if (!value) return undefined;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue >= 0 ? numberValue : undefined;
+};
+
+const getCreatedTime = (product: Product) => {
+  if (!product.createdat) return 0;
+  const time = new Date(product.createdat).getTime();
+  return Number.isNaN(time) ? 0 : time;
+};
+
 const ProductsListPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showFilter, setShowFilter] = useState(true);
+  const [showFilter, setShowFilter] = useState(false);
 
-  const categoryId = searchParams.get('categoryId') ? Number(searchParams.get('categoryId')) : undefined;
-  const brandId = searchParams.get('brandId') ? Number(searchParams.get('brandId')) : undefined;
-  const seriesId = searchParams.get('seriesId') ? Number(searchParams.get('seriesId')) : undefined;
+  const categoryId = parseNumberParam(searchParams.get('categoryId'));
+  const brandId = parseNumberParam(searchParams.get('brandId'));
+  const seriesId = parseNumberParam(searchParams.get('seriesId'));
+  const minPrice = parseNumberParam(searchParams.get('minPrice'));
+  const maxPrice = parseNumberParam(searchParams.get('maxPrice'));
+  const sortBy = (searchParams.get('sort') as SortOption | null) ?? 'default';
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -38,19 +60,49 @@ const ProductsListPage: React.FC = () => {
       setLoading(true);
       try {
         const res = await productsApi.getAll();
-        let filtered = res.data;
-        if (categoryId) filtered = filtered.filter(p => p.category?.id === categoryId);
-        if (brandId) filtered = filtered.filter(p => p.brand?.id === brandId);
-        if (seriesId) filtered = filtered.filter(p => p.series?.id === seriesId);
-        setProducts(filtered);
+        setAllProducts(res.data);
       } catch {
-        setProducts([]);
+        setAllProducts([]);
       } finally {
         setLoading(false);
       }
     };
     fetchProducts();
-  }, [categoryId, brandId, seriesId]);
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    let result = [...allProducts];
+
+    if (categoryId) result = result.filter(product => product.category?.id === categoryId);
+    if (brandId) result = result.filter(product => product.brand?.id === brandId);
+    if (seriesId) result = result.filter(product => product.series?.id === seriesId);
+    if (minPrice != null) result = result.filter(product => getProductPrice(product) >= minPrice);
+    if (maxPrice != null) result = result.filter(product => getProductPrice(product) <= maxPrice);
+    if (sortBy === 'newest') {
+      const twoMonthsAgo = new Date();
+      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+      result = result.filter(product => getCreatedTime(product) >= twoMonthsAgo.getTime());
+    }
+
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return getCreatedTime(b) - getCreatedTime(a);
+        case 'price-asc':
+          return getProductPrice(a) - getProductPrice(b);
+        case 'price-desc':
+          return getProductPrice(b) - getProductPrice(a);
+        case 'name-asc':
+          return a.productname.localeCompare(b.productname, 'vi');
+        case 'name-desc':
+          return b.productname.localeCompare(a.productname, 'vi');
+        default:
+          return a.productid - b.productid;
+      }
+    });
+
+    return result;
+  }, [allProducts, brandId, categoryId, maxPrice, minPrice, seriesId, sortBy]);
 
   const activeCategory = useMemo(
     () => categories.find(category => category.categoryid === categoryId),
@@ -71,68 +123,67 @@ const ProductsListPage: React.FC = () => {
   };
 
   const clearFilters = () => setSearchParams({});
-  const hasFilter = !!(categoryId || brandId || seriesId);
+  const hasFilter = !!(categoryId || brandId || seriesId || minPrice != null || maxPrice != null || sortBy !== 'default');
 
   return (
     <div className="customer-shell min-h-screen pb-16">
-      <section className="border-b customer-rule bg-[#fffdf8] px-4 py-8 md:py-10">
+      <section className="border-b customer-rule bg-white px-3 py-3 sm:px-4 sm:py-4">
         <div className="customer-container">
-          <div className="grid gap-6 lg:grid-cols-[1.5fr_0.8fr] lg:items-end">
-            <div>
-              <p className="customer-label">Catalog</p>
-              <h1 className="customer-display mt-2 text-4xl font-bold leading-tight text-[#10233f] md:text-5xl">
-                Tất cả sản phẩm
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                Lọc theo danh mục, thương hiệu hoặc dòng máy để tìm nhanh thiết bị phù hợp với nhu cầu.
-              </p>
-            </div>
-
-            <div className="customer-panel-soft p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#db3d1c]">
-                    Đang hiển thị
-                  </p>
-                  <p className="customer-display mt-1 text-3xl font-bold text-[#10233f]">
-                    {loading ? '...' : products.length}
-                    <span className="ml-2 text-base font-black">sản phẩm</span>
-                  </p>
-                </div>
-                <Link to="/search" className="customer-button-dark">
-                  <Search size={15} /> Tìm máy
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {(activeCategory || activeBrand || seriesId) && (
-            <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-bold">
+          {hasFilter && (
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
               <span className="text-slate-500">Bộ lọc:</span>
               {activeCategory && (
-                <span className="border border-[#d9d2c5] bg-white px-3 py-1.5 text-[#10233f]">
+                <span className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[#1f2937]">
                   {activeCategory.categoryname}
                 </span>
               )}
               {activeBrand && (
-                <span className="border border-[#d9d2c5] bg-white px-3 py-1.5 text-[#10233f]">
+                <span className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[#1f2937]">
                   {activeBrand.brandname}
                 </span>
               )}
               {seriesId && (
-                <span className="border border-[#d9d2c5] bg-white px-3 py-1.5 text-[#10233f]">
+                <span className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[#1f2937]">
                   Dòng #{seriesId}
                 </span>
               )}
-              <button type="button" onClick={clearFilters} className="ml-1 inline-flex items-center gap-1 text-[#db3d1c]">
+              {minPrice != null && (
+                <span className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[#1f2937]">
+                  Từ {minPrice.toLocaleString('vi-VN')}đ
+                </span>
+              )}
+              {maxPrice != null && (
+                <span className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[#1f2937]">
+                  Đến {maxPrice.toLocaleString('vi-VN')}đ
+                </span>
+              )}
+              {sortBy !== 'default' && (
+                <span className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[#1f2937]">
+                  Đã sắp xếp
+                </span>
+              )}
+              <button type="button" onClick={clearFilters} className="ml-1 inline-flex items-center gap-1 text-[#c4000b]">
                 <X size={13} /> Xóa lọc
+              </button>
+            </div>
+          )}
+
+          {!hasFilter && (
+            <div className="flex items-center justify-between gap-3 text-sm font-bold text-slate-500">
+              <span>{loading ? 'Đang tải sản phẩm...' : `${filteredProducts.length} sản phẩm đang hiển thị`}</span>
+              <button
+                type="button"
+                onClick={() => setShowFilter(prev => !prev)}
+                className="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#1f2937] transition hover:border-[#e30613] hover:text-[#c4000b] lg:hidden"
+              >
+                <SlidersHorizontal size={15} /> Bộ lọc
               </button>
             </div>
           )}
         </div>
       </section>
 
-      <section className="customer-container grid gap-6 px-4 py-8 lg:grid-cols-[280px_1fr]">
+      <section className="customer-container grid gap-5 px-3 py-5 sm:px-4 sm:py-8 lg:grid-cols-[280px_1fr]">
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <button
             type="button"
@@ -142,14 +193,11 @@ const ProductsListPage: React.FC = () => {
             <SlidersHorizontal size={15} /> Bộ lọc
           </button>
 
-          {showFilter && (
-            <div className="customer-panel p-5">
+          <div className={`${showFilter ? 'block' : 'hidden'} customer-panel p-4 sm:p-5 lg:block`}>
               <div className="mb-5 flex items-center justify-between">
                 <div>
-                  <p className="customer-label">Filter</p>
-                  <h2 className="mt-1 text-lg font-black text-[#10233f]">Tinh chỉnh kết quả</h2>
+                  <h2 className="text-lg font-black text-[#1f2937]">Tinh chỉnh kết quả</h2>
                 </div>
-                <Filter className="text-[#db3d1c]" size={20} />
               </div>
 
               <div className="space-y-5">
@@ -159,7 +207,7 @@ const ProductsListPage: React.FC = () => {
                   </span>
                   <select
                     value={categoryId ?? ''}
-                    onChange={e => setFilter('categoryId', e.target.value || undefined)}
+                    onChange={event => setFilter('categoryId', event.target.value || undefined)}
                     className="customer-input"
                   >
                     <option value="">Tất cả danh mục</option>
@@ -177,7 +225,7 @@ const ProductsListPage: React.FC = () => {
                   </span>
                   <select
                     value={brandId ?? ''}
-                    onChange={e => setFilter('brandId', e.target.value || undefined)}
+                    onChange={event => setFilter('brandId', event.target.value || undefined)}
                     className="customer-input"
                   >
                     <option value="">Tất cả thương hiệu</option>
@@ -189,31 +237,98 @@ const ProductsListPage: React.FC = () => {
                   </select>
                 </label>
 
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                    Sắp xếp
+                  </span>
+                  <select
+                    value={sortBy}
+                    onChange={event => setFilter('sort', event.target.value === 'default' ? undefined : event.target.value)}
+                    className="customer-input"
+                  >
+                    <option value="default">Mặc định</option>
+                    <option value="newest">Máy mới lên kệ</option>
+                    <option value="price-asc">Giá thấp đến cao</option>
+                    <option value="price-desc">Giá cao đến thấp</option>
+                    <option value="name-asc">Tên A-Z</option>
+                    <option value="name-desc">Tên Z-A</option>
+                  </select>
+                </label>
+
+                <div>
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                    Khoảng giá
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      value={minPrice ?? ''}
+                      onChange={event => setFilter('minPrice', event.target.value || undefined)}
+                      placeholder="Từ"
+                      className="customer-input"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      value={maxPrice ?? ''}
+                      onChange={event => setFilter('maxPrice', event.target.value || undefined)}
+                      placeholder="Đến"
+                      className="customer-input"
+                    />
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {[
+                      { label: 'Dưới 10tr', max: '10000000' },
+                      { label: '10-20tr', min: '10000000', max: '20000000' },
+                      { label: '20-30tr', min: '20000000', max: '30000000' },
+                      { label: 'Trên 30tr', min: '30000000' },
+                    ].map(range => (
+                      <button
+                        key={range.label}
+                        type="button"
+                        onClick={() => {
+                          setSearchParams(prev => {
+                            const next = new URLSearchParams(prev);
+                            if (range.min) next.set('minPrice', range.min);
+                            else next.delete('minPrice');
+                            if (range.max) next.set('maxPrice', range.max);
+                            else next.delete('maxPrice');
+                            return next;
+                          });
+                        }}
+                        className="rounded-full border border-[#e5e7eb] bg-white px-3 py-2 text-[11px] font-black text-[#1f2937] transition hover:border-[#e30613] hover:text-[#c4000b]"
+                      >
+                        {range.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {hasFilter && (
                   <button type="button" onClick={clearFilters} className="customer-button-outline w-full">
                     <X size={14} /> Xóa tất cả bộ lọc
                   </button>
                 )}
               </div>
-            </div>
-          )}
+          </div>
         </aside>
 
         <div>
           {loading ? (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="customer-panel p-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="customer-panel p-4">
                   <Skeleton className="mb-3 aspect-square w-full" />
                   <Skeleton className="mb-2 h-4 w-3/4" />
                   <Skeleton className="h-5 w-1/2" />
                 </div>
               ))}
             </div>
-          ) : products.length === 0 ? (
-            <div className="customer-panel-soft px-6 py-20 text-center">
-              <Search className="mx-auto mb-5 text-[#10233f]/25" size={54} />
-              <h2 className="customer-display text-3xl font-bold text-[#10233f]">
+          ) : filteredProducts.length === 0 ? (
+            <div className="customer-panel-soft px-5 py-14 text-center sm:px-6 sm:py-20">
+              <Search className="mx-auto mb-5 text-[#1f2937]/25" size={54} />
+              <h2 className="customer-display text-3xl font-bold text-[#1f2937]">
                 Chưa có sản phẩm phù hợp
               </h2>
               <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
@@ -224,9 +339,9 @@ const ProductsListPage: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-              {products.map(product => (
-                <ProductCard key={product.productid} product={product} />
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+              {filteredProducts.map(product => (
+                <ProductCard key={product.productid} product={product} compact />
               ))}
             </div>
           )}

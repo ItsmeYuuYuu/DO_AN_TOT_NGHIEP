@@ -8,7 +8,7 @@ import { getApiErrorMessage } from '@/utils/apiError';
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   Pending:    { label: 'Chờ xử lý', cls: 'bg-amber-100 text-amber-700 border border-amber-200' },
-  Processing: { label: 'Đang xử lý', cls: 'bg-blue-100 text-blue-700 border border-blue-200' },
+  Processing: { label: 'Đang xử lý', cls: 'bg-indigo-100 text-[#4338ca] border border-indigo-200' },
   Shipped:    { label: 'Đang giao',    cls: 'bg-purple-100 text-purple-700 border border-purple-200' },
   Completed:  { label: 'Hoàn thành',   cls: 'bg-emerald-100 text-emerald-700 border border-emerald-200' },
   Cancelled:  { label: 'Đã hủy',       cls: 'bg-red-100 text-red-700 border border-red-200' },
@@ -57,7 +57,7 @@ const StaffOrders: React.FC = () => {
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: 'Chờ xử lý', value: orders.filter((o) => o.orderstatus === 'Pending').length,    icon: <Clock size={20} className="text-amber-500" />,   bg: 'bg-amber-50',   val: 'text-amber-600' },
-          { label: 'Đang xử lý', value: orders.filter((o) => o.orderstatus === 'Processing').length, icon: <Package size={20} className="text-blue-500" />,   bg: 'bg-blue-50',    val: 'text-blue-600' },
+          { label: 'Đang xử lý', value: orders.filter((o) => o.orderstatus === 'Processing').length, icon: <Package size={20} className="text-[#4f46e5]" />,   bg: 'bg-indigo-50',    val: 'text-[#4f46e5]' },
           { label: 'Đang giao',    value: orders.filter((o) => o.orderstatus === 'Shipped').length,     icon: <Truck size={20} className="text-purple-500" />,  bg: 'bg-purple-50',  val: 'text-purple-600' },
         ].map((s) => (
           <div key={s.label} className={`${s.bg} rounded-xl p-4 border border-slate-100`}>
@@ -70,14 +70,14 @@ const StaffOrders: React.FC = () => {
         ))}
       </div>
 
-      {error && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>}
-      {actionError && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{actionError}</p>}
+      {error && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{error}</p>}
+      {actionError && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{actionError}</p>}
 
       {/* Table */}
       {loading ? (
         <Skeleton variant="row" />
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
           {/* Table header */}
           <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -105,8 +105,8 @@ const StaffOrders: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {orders.map((order) => (
-                <tr key={order.orderid} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 text-sm font-bold text-blue-600">
+                <tr key={order.orderid} className="hover:bg-indigo-50/40 transition-colors">
+                  <td className="px-4 py-3 text-sm font-bold text-[#4f46e5]">
                     {generateOrderCode(order.orderid)}
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold text-slate-800">
@@ -121,7 +121,7 @@ const StaffOrders: React.FC = () => {
                   <td className="px-4 py-3">
                     <div className="space-y-1">
                       <p className="text-xs font-bold text-slate-700">{order.paymentmethod ?? '—'}</p>
-                      <p className={`text-[11px] font-semibold ${order.paymentstatus === 'Paid' ? 'text-emerald-600' : order.paymentstatus === 'DepositPaid' ? 'text-blue-600' : 'text-amber-600'}`}>
+                      <p className={`text-[11px] font-semibold ${order.paymentstatus === 'Paid' ? 'text-emerald-600' : order.paymentstatus === 'DepositPaid' ? 'text-[#4f46e5]' : 'text-amber-600'}`}>
                         {order.paymentstatus ?? 'Chưa ghi nhận'}
                       </p>
                       {order.paymentmethod !== 'COD' &&
@@ -131,7 +131,7 @@ const StaffOrders: React.FC = () => {
                             type="button"
                             disabled={updatingId === order.orderid}
                             onClick={() => confirmPayment(order.orderid)}
-                            className="text-[11px] font-bold text-blue-600 hover:underline disabled:opacity-50"
+                            className="text-[11px] font-bold text-[#4f46e5] hover:underline disabled:opacity-50"
                           >
                             Xác nhận thanh toán
                           </button>
@@ -145,7 +145,7 @@ const StaffOrders: React.FC = () => {
                   </td>
                   <td className="px-4 py-3">
                     <select
-                      className="bg-white border border-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:border-blue-400 hover:border-slate-300 transition-colors"
+                      className="bg-white border border-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-2xl focus:outline-none focus:border-[#4f46e5] hover:border-slate-300 transition-colors"
                       value={order.orderstatus ?? ''}
                       disabled={updatingId === order.orderid}
                       onChange={(e) => changeStatus(order.orderid, e.target.value)}

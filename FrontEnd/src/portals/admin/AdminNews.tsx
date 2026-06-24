@@ -8,6 +8,8 @@ import { DataTable } from '@/components/DataTable';
 import { productsApi } from '@/features/products/api/productsApi';
 import { LoaderCircle, Upload } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { confirmAction, notifyError } from '@/utils/notifications';
+
 
 const AdminNews: React.FC = () => {
   const [news, setNews] = useState<News[]>([]);
@@ -29,7 +31,7 @@ const AdminNews: React.FC = () => {
       const data = await newsApi.getAll();
       setNews(data);
     } catch {
-      alert('Không thể tải danh sách tin tức.');
+      notifyError('Không thể tải danh sách tin tức.');
     } finally {
       setLoading(false);
     }
@@ -115,12 +117,12 @@ const AdminNews: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc muốn xóa tin tức này?')) return;
+    if (!(await confirmAction('Bạn có chắc muốn xóa tin tức này?', { danger: true, confirmLabel: 'Xóa' }))) return;
     try {
       await newsApi.delete(id);
       setNews(prev => prev.filter(n => n.postid !== id));
     } catch (error) {
-      alert(getApiErrorMessage(error, 'Không thể xóa tin tức.'));
+      notifyError(getApiErrorMessage(error, 'Không thể xóa tin tức.'));
     }
   };
 
@@ -135,7 +137,7 @@ const AdminNews: React.FC = () => {
       });
       await fetchNews();
     } catch (error) {
-      alert(getApiErrorMessage(error, 'Không thể cập nhật trạng thái.'));
+      notifyError(getApiErrorMessage(error, 'Không thể cập nhật trạng thái.'));
     }
   };
 
@@ -176,7 +178,7 @@ const AdminNews: React.FC = () => {
             header: 'Thao tác',
             render: (n: News) => (
               <div className="flex gap-2">
-                <button onClick={() => openEdit(n)} className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-xs font-bold">Sửa</button>
+                <button onClick={() => openEdit(n)} className="px-3 py-1 bg-indigo-50 text-[#4f46e5] rounded hover:bg-indigo-100 text-xs font-bold">Sửa</button>
                 <button onClick={() => handleDelete(n.postid)} className="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 text-xs font-bold">Xóa</button>
               </div>
             )
@@ -196,7 +198,7 @@ const AdminNews: React.FC = () => {
           />
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700">Ảnh thumbnail</label>
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100">
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-bold text-[#4338ca] hover:bg-indigo-100">
               {uploadingThumbnail
                 ? <LoaderCircle size={17} className="animate-spin" />
                 : <Upload size={17} />}
@@ -225,7 +227,7 @@ const AdminNews: React.FC = () => {
           <div className="space-y-1">
             <label className="text-sm font-bold text-slate-700">Tóm tắt</label>
             <textarea 
-              className="w-full border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:outline-none text-sm h-20"
+              className="w-full border border-slate-200 rounded-xl p-3 focus:border-[#4f46e5] focus:outline-none text-sm h-20"
               value={editing?.summary || ''} 
               onChange={e => setEditing({ ...editing, summary: e.target.value })} 
             />
@@ -233,7 +235,7 @@ const AdminNews: React.FC = () => {
           <div className="space-y-1">
             <label className="text-sm font-bold text-slate-700">Nội dung</label>
             <textarea 
-              className="w-full border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:outline-none text-sm h-40"
+              className="w-full border border-slate-200 rounded-xl p-3 focus:border-[#4f46e5] focus:outline-none text-sm h-40"
               value={editing?.content || ''} 
               onChange={e => setEditing({ ...editing, content: e.target.value })} 
             />
@@ -245,7 +247,7 @@ const AdminNews: React.FC = () => {
               id="isactive" 
               checked={editing?.isactive ?? true} 
               onChange={e => setEditing({ ...editing, isactive: e.target.checked })} 
-              className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+              className="w-4 h-4 text-[#4f46e5] rounded border-slate-300 focus:ring-[#4f46e5]"
             />
             <label htmlFor="isactive" className="text-sm font-bold text-slate-700">
               Hiển thị bài viết này

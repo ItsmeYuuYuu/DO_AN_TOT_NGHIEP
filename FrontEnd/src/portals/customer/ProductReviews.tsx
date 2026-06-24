@@ -5,6 +5,8 @@ import type { Review } from '@/features/products/api/reviewsApi';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { Button } from '@/components/Button';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { confirmAction, notifyError } from '@/utils/notifications';
+
 
 interface Props {
   productId?: number;
@@ -87,12 +89,12 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa đánh giá này?')) return;
+    if (!(await confirmAction('Bạn có chắc chắn muốn xóa đánh giá này?', { danger: true, confirmLabel: 'Xóa' }))) return;
     try {
       await reviewsApi.delete(id);
       fetchReviews();
     } catch (requestError: unknown) {
-      alert(getApiErrorMessage(requestError, 'Không thể xóa đánh giá.'));
+      notifyError(getApiErrorMessage(requestError, 'Không thể xóa đánh giá.'));
     }
   };
 
@@ -115,7 +117,7 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
       {/* Review Form */}
       <div id="review-form" className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100">
         {!isLoggedIn ? (
-          <p className="text-slate-500 text-sm">Vui lòng <a href="/auth/login" className="text-blue-600 font-bold hover:underline">đăng nhập</a> để viết đánh giá.</p>
+          <p className="text-slate-500 text-sm">Vui lòng <a href="/auth/login" className="text-[#e30613] font-bold hover:underline">đăng nhập</a> để viết đánh giá.</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <h3 className="font-bold text-slate-700 text-sm uppercase tracking-wide">
@@ -139,7 +141,7 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
             </div>
 
             <textarea
-              className="w-full border border-slate-200 rounded-xl p-4 text-sm focus:outline-none focus:border-blue-500 min-h-[100px]"
+              className="w-full border border-slate-200 rounded-2xl p-4 text-sm focus:outline-none focus:border-[#e30613] min-h-[100px]"
               placeholder="Chia sẻ cảm nhận của bạn về sản phẩm này..."
               value={comment}
               onChange={e => setComment(e.target.value)}
@@ -163,13 +165,13 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
       {/* Reviews Filter */}
       <div className="flex items-center gap-4 mb-6 border-b border-slate-200 pb-2">
         <button 
-          className={`pb-2 text-sm font-bold border-b-2 transition-colors ${filterType === 'all' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          className={`pb-2 text-sm font-bold border-b-2 transition-colors ${filterType === 'all' ? 'border-[#e30613] text-[#e30613]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
           onClick={() => setFilterType('all')}
         >
           Tất cả đánh giá
         </button>
         <button 
-          className={`pb-2 text-sm font-bold border-b-2 transition-colors ${filterType === 'variant' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          className={`pb-2 text-sm font-bold border-b-2 transition-colors ${filterType === 'variant' ? 'border-[#e30613] text-[#e30613]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
           onClick={() => setFilterType('variant')}
         >
           Phiên bản đang chọn
@@ -181,7 +183,7 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
         {loading ? (
           <p className="text-slate-400 text-sm animate-pulse">Đang tải đánh giá...</p>
         ) : reviews.length === 0 ? (
-          <p className="text-slate-400 text-sm text-center py-8 bg-slate-50 rounded-xl border border-slate-100">
+          <p className="text-slate-400 text-sm text-center py-8 bg-slate-50 rounded-2xl border border-slate-100">
             Chưa có đánh giá nào.
           </p>
         ) : (
@@ -210,7 +212,7 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
                     </div>
                     {canManage && (
                       <div className="flex gap-2">
-                        <button onClick={() => startEdit(rev)} className="text-slate-400 hover:text-blue-600 transition-colors p-1" title="Sửa">
+                        <button onClick={() => startEdit(rev)} className="text-slate-400 hover:text-[#e30613] transition-colors p-1" title="Sửa">
                           <Pen size={14} />
                         </button>
                         <button onClick={() => handleDelete(rev.reviewid)} className="text-slate-400 hover:text-red-600 transition-colors p-1" title="Xóa">

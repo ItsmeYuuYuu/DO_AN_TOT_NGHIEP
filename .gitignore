@@ -1,4 +1,4 @@
-# ─── IDE & OS ──────────────────────────────────────────────────────────────────
+# IDE and OS
 .vs/
 .vscode/
 .idea/
@@ -10,7 +10,7 @@
 .DS_Store
 Thumbs.db
 
-# ─── BACKEND (.NET) ───────────────────────────────────────────────────────────
+# Backend (.NET)
 bin/
 obj/
 [Bb]in/
@@ -21,21 +21,17 @@ TestResults/
 
 # User-specific files
 *.rsuser
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
 
 # Publish output
 publish/
 *.pfx
 *.publishsettings
 
-# Secrets & Config (Environment specific)
-# appsettings.Development.json  # Giữ lại nếu muốn share config dev cho team
-# appsettings.json              # Thường không nên ignore trừ khi chứa pass thật
+# Secrets and environment-specific config
+# appsettings.Development.json can be committed for this local-demo project if needed.
+# appsettings.json is currently committed because the thesis demo runs locally.
 
-# ─── FRONTEND (Node.js/React) ─────────────────────────────────────────────────
+# Frontend (Node.js/React)
 node_modules/
 dist/
 dist-ssr/
@@ -49,6 +45,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.log
 
 # Testing
 /coverage
@@ -60,7 +57,7 @@ build/
 .cache/
 out/
 
-# ─── DATABASE ────────────────────────────────────────────────────────────────
+# Database
 *.db
 *.db-journal
 *.sqlite

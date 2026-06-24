@@ -3,6 +3,8 @@ import apiClient from '@/api/apiClient';
 import { Plus, Edit2, Trash2, Tag, Percent, DollarSign, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { confirmAction, notifyError } from '@/utils/notifications';
+
 
 interface Voucher {
   vouchercode: string;
@@ -71,19 +73,19 @@ const AdminVouchers: React.FC = () => {
       closeModal();
     } catch (err) {
       console.error(err);
-      alert('Có lỗi xảy ra khi lưu voucher');
+      notifyError('Có lỗi xảy ra khi lưu voucher');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (code: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa voucher này?')) return;
+    if (!(await confirmAction('Bạn có chắc chắn muốn xóa voucher này?', { danger: true, confirmLabel: 'Xóa' }))) return;
     try {
       await apiClient.delete(`/Vouchers/${code}`);
       fetchVouchers();
     } catch {
-      alert('Không thể xóa voucher');
+      notifyError('Không thể xóa voucher');
     }
   };
 
@@ -97,13 +99,13 @@ const AdminVouchers: React.FC = () => {
           <p className="text-slate-500 text-sm">Tạo và quản lý các mã giảm giá cho hệ thống</p>
         </div>
         {canManage && (
-          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-[#4f46e5] text-white font-bold rounded-xl hover:bg-[#4338ca] transition-colors">
             <Plus size={18} /> Thêm Voucher
           </button>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-[0_10px_28px_rgba(15,23,42,0.06)] border border-slate-100 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -121,7 +123,7 @@ const AdminVouchers: React.FC = () => {
             ) : vouchers.length === 0 ? (
               <tr><td colSpan={6} className="p-8 text-center text-slate-400">Chưa có voucher nào</td></tr>
             ) : vouchers.map(v => (
-              <tr key={v.vouchercode} className="hover:bg-slate-50 transition-colors">
+              <tr key={v.vouchercode} className="hover:bg-indigo-50/40 transition-colors">
                 <td className="p-4 font-bold text-slate-800 flex items-center gap-2">
                   <Tag size={16} className="text-orange-500" /> {v.vouchercode}
                 </td>
@@ -129,7 +131,7 @@ const AdminVouchers: React.FC = () => {
                   {v.discountpercentage ? (
                     <span className="flex items-center gap-1 text-green-600"><Percent size={14}/> {v.discountpercentage}%</span>
                   ) : (
-                    <span className="flex items-center gap-1 text-blue-600"><DollarSign size={14}/> {v.discountamount?.toLocaleString('vi-VN')}đ</span>
+                    <span className="flex items-center gap-1 text-[#4f46e5]"><DollarSign size={14}/> {v.discountamount?.toLocaleString('vi-VN')}đ</span>
                   )}
                 </td>
                 <td className="p-4 text-sm text-slate-500">{fmtDate(v.validfrom)}</td>
@@ -142,8 +144,8 @@ const AdminVouchers: React.FC = () => {
                 <td className="p-4 text-right">
                   {canManage && (
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEditModal(v)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={16} /></button>
-                      <button onClick={() => handleDelete(v.vouchercode)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                      <button onClick={() => openEditModal(v)} className="p-2 text-[#4f46e5] hover:bg-indigo-50 rounded-2xl transition-colors"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(v.vouchercode)} className="p-2 text-red-600 hover:bg-red-50 rounded-2xl transition-colors"><Trash2 size={16} /></button>
                     </div>
                   )}
                 </td>
@@ -203,13 +205,13 @@ const AdminVouchers: React.FC = () => {
               <div className="flex items-center gap-2 pt-2">
                 <input type="checkbox" id="isactive" checked={!!formData.isactive}
                   onChange={e => setFormData({ ...formData, isactive: e.target.checked })}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                  className="w-4 h-4 rounded border-slate-300 text-[#4f46e5] focus:ring-[#4f46e5]" />
                 <label htmlFor="isactive" className="text-sm font-bold text-slate-700">Kích hoạt voucher</label>
               </div>
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={closeModal} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Hủy</button>
                 <button type="submit" disabled={saving || (!formData.discountpercentage && !formData.discountamount)} 
-                  className="flex-1 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-60 transition-colors">
+                  className="flex-1 py-2 bg-[#4f46e5] text-white font-bold rounded-xl hover:bg-[#4338ca] disabled:opacity-60 transition-colors">
                   {saving ? 'Đang lưu...' : 'Lưu lại'}
                 </button>
               </div>

@@ -24,9 +24,9 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-200 bg-slate-100/80">
             <tr>
               {columns.map(col => (
                 <th
@@ -55,9 +55,9 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
       <table className="w-full text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50">
+        <thead className="border-b border-slate-200 bg-slate-100/80">
           <tr>
             {columns.map(col => (
               <th
@@ -78,7 +78,7 @@ export function DataTable<T>({
             </tr>
           ) : (
             data.map(row => (
-              <tr key={String(row[keyField])} className="transition-colors hover:bg-slate-50">
+              <tr key={String(row[keyField])} className="transition-colors hover:bg-indigo-50/40">
                 {columns.map(col => (
                   <td key={col.key} className={`px-4 py-3 text-slate-700 ${col.className ?? ''}`}>
                     {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '—')}

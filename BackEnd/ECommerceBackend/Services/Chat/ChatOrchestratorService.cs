@@ -104,6 +104,7 @@ namespace ECommerceBackend.Services.Chat
                         .Select(item => new ChatRecommendationDto(
                             item.Recommendationid,
                             item.Productid,
+                            item.Product.Slug,
                             item.Variantid,
                             item.Product.Productname,
                             item.Variant.Condition + " - " + (item.Variant.Sku ?? string.Empty),

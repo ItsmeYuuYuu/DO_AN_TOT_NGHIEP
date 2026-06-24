@@ -105,12 +105,12 @@ const ConsultantChats = () => {
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl bg-[#10233f] text-white shadow-sm">
+      <section className="overflow-hidden rounded-3xl bg-[#172033] text-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
         <div className="grid gap-6 p-6 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.28em] text-teal-200">AI handoff desk</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight">Tư vấn trực tiếp</h1>
-            <p className="mt-2 max-w-2xl text-sm font-medium text-blue-100">
+            <p className="mt-2 max-w-2xl text-sm font-medium text-indigo-100">
               Tiếp nhận khách được chatbot chuyển sang, xem lại ngữ cảnh gợi ý sản phẩm và tư vấn tiếp như một nhân viên thật.
             </p>
           </div>
@@ -126,30 +126,30 @@ const ConsultantChats = () => {
             <div className="mb-3 flex h-10 w-10 items-center justify-center bg-violet-50 text-violet-700">
               <Bot size={19} />
             </div>
-            <p className="text-2xl font-black text-[#10233f]">{metrics.totalrecommendations}</p>
+            <p className="text-2xl font-black text-[#172033]">{metrics.totalrecommendations}</p>
             <p className="text-xs font-bold text-slate-400">Lượt AI đề xuất sản phẩm</p>
           </div>
           <div className="ops-card p-4">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center bg-blue-50 text-blue-700">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center bg-indigo-50 text-[#4338ca]">
               <ShoppingCart size={19} />
             </div>
-            <p className="text-2xl font-black text-[#10233f]">{metrics.addtocartrate}%</p>
+            <p className="text-2xl font-black text-[#172033]">{metrics.addtocartrate}%</p>
             <p className="text-xs font-bold text-slate-400">{metrics.addedtocart} lượt thêm vào giỏ</p>
           </div>
           <div className="ops-card p-4">
             <div className="mb-3 flex h-10 w-10 items-center justify-center bg-emerald-50 text-emerald-700">
               <TrendingUp size={19} />
             </div>
-            <p className="text-2xl font-black text-[#10233f]">{metrics.orderrate}%</p>
+            <p className="text-2xl font-black text-[#172033]">{metrics.orderrate}%</p>
             <p className="text-xs font-bold text-slate-400">{metrics.ordered} đơn từ đề xuất</p>
           </div>
         </div>
       )}
 
-      <div className="grid min-h-[680px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[340px_1fr]">
+      <div className="grid min-h-[680px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] lg:grid-cols-[340px_1fr]">
         <aside className="border-r border-slate-200 bg-slate-50">
           <div className="border-b border-slate-200 bg-white p-4">
-            <p className="font-black text-[#10233f]">Hàng chờ tư vấn</p>
+            <p className="font-black text-[#172033]">Hàng chờ tư vấn</p>
             <p className="text-xs font-semibold text-slate-400">Các phiên khách cần người thật hỗ trợ.</p>
           </div>
           <div className="space-y-2 p-3">
@@ -160,12 +160,12 @@ const ConsultantChats = () => {
                 onClick={() => selectSession(session)}
                 className={`w-full border p-3 text-left transition ${
                   activeSession?.sessionid === session.sessionid
-                    ? 'border-teal-400 bg-teal-50 shadow-sm'
+                    ? 'border-teal-400 bg-teal-50 shadow-[0_10px_28px_rgba(15,23,42,0.06)]'
                     : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-black text-[#10233f]">
+                  <span className="truncate text-sm font-black text-[#172033]">
                     {session.customername ?? `Khách #${session.customerid ?? session.sessionid}`}
                   </span>
                   <span className={`px-2 py-0.5 text-[10px] font-black ${
@@ -198,7 +198,7 @@ const ConsultantChats = () => {
             <>
               <header className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
                 <div>
-                  <p className="font-black text-[#10233f]">
+                  <p className="font-black text-[#172033]">
                     {activeSession.customername ?? `Khách #${activeSession.customerid ?? activeSession.sessionid}`}
                   </p>
                   <p className="text-xs font-semibold text-slate-500">
@@ -247,11 +247,11 @@ const ConsultantChats = () => {
                   return (
                     <div key={message.messageid} className={`flex gap-3 ${fromCustomer ? '' : 'flex-row-reverse'}`}>
                       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white ${
-                        fromCustomer ? 'bg-blue-600' : fromAssistant ? 'bg-violet-500' : 'bg-teal-600'
+                        fromCustomer ? 'bg-[#4f46e5]' : fromAssistant ? 'bg-violet-500' : 'bg-teal-600'
                       }`}>
                         {fromCustomer ? <User size={16} /> : fromAssistant ? <Bot size={16} /> : <Headphones size={16} />}
                       </div>
-                      <div className={`max-w-[78%] border px-4 py-3 text-sm shadow-sm ${
+                      <div className={`max-w-[78%] border px-4 py-3 text-sm shadow-[0_10px_28px_rgba(15,23,42,0.06)] ${
                         fromCustomer
                           ? 'border-slate-200 bg-white text-slate-700'
                           : fromAssistant

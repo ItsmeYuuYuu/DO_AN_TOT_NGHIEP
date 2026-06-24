@@ -49,7 +49,7 @@ const statusLabels: Record<string, string> = {
 
 const statusClasses: Record<string, string> = {
   PendingReview: 'bg-amber-50 text-amber-700',
-  Approved: 'bg-blue-50 text-blue-700',
+  Approved: 'bg-indigo-50 text-[#4338ca]',
   Rejected: 'bg-red-50 text-red-700',
   RefundPending: 'bg-violet-50 text-violet-700',
   Completed: 'bg-emerald-50 text-emerald-700',
@@ -236,12 +236,12 @@ const StaffReturns: React.FC = () => {
         {[
           ['Tổng yêu cầu', stats.total, RotateCcw, 'text-slate-700'],
           ['Chờ duyệt', stats.waiting, UserCheck, 'text-amber-600'],
-          ['Chờ kho', stats.warehouse, PackageCheck, 'text-blue-600'],
+          ['Chờ kho', stats.warehouse, PackageCheck, 'text-[#4f46e5]'],
           ['Chờ hoàn tiền', stats.refund, WalletCards, 'text-violet-600'],
         ].map(([label, value, Icon, color]) => {
           const CardIcon = Icon as typeof RotateCcw;
           return (
-            <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label as string}</p>
@@ -254,13 +254,13 @@ const StaffReturns: React.FC = () => {
         })}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
           <h2 className="font-black text-slate-800">Hàng đợi xử lý</h2>
           <select
             value={statusFilter}
             onChange={event => setStatusFilter(event.target.value)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
           >
             <option value="">Tất cả trạng thái</option>
             {Object.entries(statusLabels).map(([value, label]) => (
@@ -287,7 +287,7 @@ const StaffReturns: React.FC = () => {
               ) : requests.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">Không có yêu cầu phù hợp.</td></tr>
               ) : requests.map(request => (
-                <tr key={request.returnrequestid} className="hover:bg-slate-50">
+                <tr key={request.returnrequestid} className="hover:bg-indigo-50/40">
                   <td className="px-4 py-3">
                     <p className="font-black text-slate-800">#{request.returnrequestid}</p>
                     <p className="text-xs text-slate-400">Đơn #{request.orderid}</p>
@@ -370,7 +370,7 @@ const StaffReturns: React.FC = () => {
                 <div className="space-y-3 border-l-2 border-slate-100 pl-4">
                   {selected.histories.map(history => (
                     <div key={history.historyid} className="relative">
-                      <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-white" />
+                      <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-indigo-500 ring-4 ring-white" />
                       <p className="text-sm font-bold text-slate-700">{statusLabels[history.tostatus] ?? history.tostatus}</p>
                       <p className="text-xs text-slate-400">
                         {history.userfullname ?? 'Hệ thống'} · {history.createdat ? formatDateTime(history.createdat) : 'Chưa có thời gian'}
@@ -398,7 +398,7 @@ const StaffReturns: React.FC = () => {
                       const id = Number(event.target.value);
                       if (id) runAction(() => returnRequestsApi.assign(selected.returnrequestid, id));
                     }}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   >
                     <option value="">Chọn nhân viên</option>
                     {employees.map(employee => (
@@ -417,7 +417,7 @@ const StaffReturns: React.FC = () => {
                     value={reviewNote}
                     onChange={event => setReviewNote(event.target.value)}
                     placeholder="Ghi chú duyệt hoặc lý do từ chối"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <Button variant="danger" isLoading={working} onClick={() => runAction(() =>
@@ -450,12 +450,12 @@ const StaffReturns: React.FC = () => {
                           value={form?.condition ?? ''}
                           onChange={event => updateReceiveItem(item.returnitemid, 'condition', event.target.value)}
                           placeholder="Tình trạng thực tế khi nhận máy"
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                         />
                         <select
                           value={form?.disposition ?? 'Restock'}
                           onChange={event => updateReceiveItem(item.returnitemid, 'disposition', event.target.value)}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                         >
                           <option value="Restock">Nhập lại kho</option>
                           <option value="Warranty">Chuyển bảo hành</option>
@@ -466,7 +466,7 @@ const StaffReturns: React.FC = () => {
                             required
                             value={form?.replacementimei ?? ''}
                             onChange={event => updateReceiveItem(item.returnitemid, 'replacementimei', event.target.value)}
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                           >
                             <option value="">Chọn IMEI thay thế cùng biến thể</option>
                             {replacements.map(inventoryItem => (
@@ -482,7 +482,7 @@ const StaffReturns: React.FC = () => {
                             value={form?.refundamount ?? ''}
                             onChange={event => updateReceiveItem(item.returnitemid, 'refundamount', event.target.value)}
                             placeholder="Số tiền hoàn cho IMEI"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                           />
                         )}
                       </div>
@@ -493,14 +493,14 @@ const StaffReturns: React.FC = () => {
                     value={resolution}
                     onChange={event => setResolution(event.target.value)}
                     placeholder="Kết luận kiểm tra"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   />
                   <textarea
                     rows={2}
                     value={receiveNote}
                     onChange={event => setReceiveNote(event.target.value)}
                     placeholder="Ghi chú nội bộ"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   />
                   <Button type="submit" fullWidth isLoading={working}>
                     <PackageCheck size={16} className="mr-2" /> Xác nhận đã nhận máy
@@ -512,7 +512,7 @@ const StaffReturns: React.FC = () => {
                (user?.rolename !== 'Sales' || selected.assigneduserid === currentUserId) && (
                 <form onSubmit={handleRefund} className="space-y-3 rounded-xl border border-violet-200 bg-violet-50/40 p-4">
                   <h3 className="font-black text-violet-900">Ghi nhận hoàn tiền</h3>
-                  <div className="rounded-lg bg-white p-3 text-sm">
+                  <div className="rounded-2xl bg-white p-3 text-sm">
                     Còn phải hoàn: <b>{formatCurrency(
                       selected.requestedrefundamount - (selected.refundamount ?? 0),
                     )}</b>
@@ -523,12 +523,12 @@ const StaffReturns: React.FC = () => {
                     min="1"
                     value={refundAmount}
                     onChange={event => setRefundAmount(event.target.value)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   />
                   <select
                     value={refundProvider}
                     onChange={event => setRefundProvider(event.target.value)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   >
                     <option value="VNPay">VNPay</option>
                     <option value="Momo">Momo</option>
@@ -539,14 +539,14 @@ const StaffReturns: React.FC = () => {
                     value={refundReference}
                     onChange={event => setRefundReference(event.target.value)}
                     placeholder="Mã giao dịch (tùy chọn)"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   />
                   <textarea
                     rows={2}
                     value={refundNote}
                     onChange={event => setRefundNote(event.target.value)}
                     placeholder="Ghi chú hoàn tiền"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   />
                   <Button type="submit" fullWidth isLoading={working}>
                     <WalletCards size={16} className="mr-2" /> Xác nhận hoàn tiền

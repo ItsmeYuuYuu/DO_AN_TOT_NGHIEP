@@ -7,6 +7,8 @@ import { Button } from '@/components/Button';
 import { Pagination } from '@/components/Pagination';
 import { formatDateTime } from '@/utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { notifyError } from '@/utils/notifications';
+
 
 export default function AdminAuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -36,7 +38,7 @@ export default function AdminAuditLogs() {
       setLogs(result.items);
       setTotalCount(result.totalCount);
     } catch (error) {
-      alert(getApiErrorMessage(error, 'Lỗi khi tải nhật ký hệ thống.'));
+      notifyError(getApiErrorMessage(error, 'Lỗi khi tải nhật ký hệ thống.'));
     } finally {
       setLoading(false);
     }
@@ -65,7 +67,7 @@ export default function AdminAuditLogs() {
   const getActionColor = (action: string) => {
     const act = action.toUpperCase();
     if (act.includes('CREATE') || act.includes('INSERT')) return 'bg-emerald-100 text-emerald-700';
-    if (act.includes('UPDATE') || act.includes('EDIT')) return 'bg-blue-100 text-blue-700';
+    if (act.includes('UPDATE') || act.includes('EDIT')) return 'bg-indigo-100 text-[#4338ca]';
     if (act.includes('DELETE') || act.includes('REMOVE')) return 'bg-red-100 text-red-700';
     return 'bg-slate-100 text-slate-700';
   };
@@ -77,7 +79,7 @@ export default function AdminAuditLogs() {
         <p className="text-sm text-slate-500 mt-1">Giám sát các thao tác cập nhật, thêm mới, xóa từ quản trị viên</p>
       </div>
 
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="bg-white p-4 rounded-xl shadow-[0_10px_28px_rgba(15,23,42,0.06)] border border-slate-200 grid grid-cols-1 md:grid-cols-5 gap-4">
         <Input 
           label="User ID" 
           type="number" 

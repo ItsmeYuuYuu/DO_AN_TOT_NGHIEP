@@ -47,7 +47,10 @@ public class RoleAuthorizationTests : IClassFixture<CustomWebApplicationFactory>
         { "Warranty", HttpMethod.Get, "/api/Warranties", HttpStatusCode.OK },
         { "Content", HttpMethod.Delete, "/api/ProductImages/uploaded/role-matrix-unused.jpg", HttpStatusCode.NoContent },
         { "Consultant", HttpMethod.Get, "/api/ChatSessions/handoffs", HttpStatusCode.OK },
+        { "Consultant", HttpMethod.Get, "/api/Customers", HttpStatusCode.OK },
         { "Warehouse", HttpMethod.Get, "/api/Shipments", HttpStatusCode.OK },
+        { "Manager", HttpMethod.Get, "/api/ReturnRequests", HttpStatusCode.OK },
+        { "Admin", HttpMethod.Get, "/api/ChatSessions/recommendation-metrics", HttpStatusCode.OK },
         { "Customer", HttpMethod.Get, "/api/ReturnRequests/mine", HttpStatusCode.OK }
     };
 
@@ -83,7 +86,11 @@ public class RoleAuthorizationTests : IClassFixture<CustomWebApplicationFactory>
         { "Warranty", HttpMethod.Get, "/api/ReturnRequests" },
         { "Consultant", HttpMethod.Get, "/api/ReturnRequests" },
         { "Content", HttpMethod.Get, "/api/Inventory" },
-        { "Warranty", HttpMethod.Get, "/api/Shipments" }
+        { "Warranty", HttpMethod.Get, "/api/Shipments" },
+        { "Warehouse", HttpMethod.Get, "/api/ChatSessions/handoffs" },
+        { "Sales", HttpMethod.Get, "/api/ChatSessions/handoffs" },
+        { "Consultant", HttpMethod.Get, "/api/Users" },
+        { "Customer", HttpMethod.Get, "/api/ChatSessions/recommendation-metrics" }
     };
 
     [Theory]

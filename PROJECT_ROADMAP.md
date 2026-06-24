@@ -1,6 +1,6 @@
 # Ke hoach phat trien du an
 
-Cap nhat: 2026-06-12
+Cap nhat: 2026-06-23
 
 ## 1. Trang thai phan quyen nhan vien
 
@@ -254,6 +254,16 @@ Thuc hien sau khi vong doi thanh toan va ton kho da kin.
 4. Tach trai nghiem Staff theo tung role.
 5. Chuan hoa form, modal, empty state, loading va responsive.
 6. Ra soat tung trang va loai bo cac mau UI lap lai khong can thiet.
+
+### Da cap nhat them
+
+- Da bo role cu `Staff/Nhan vien chung` khoi form quan ly tai khoan.
+- Da thay cac popup `alert/confirm` trinh duyet o cac man quan tri/chinh
+  bang toast va modal xac nhan dung chung.
+- Da co checklist demo thu cong tai `docs/testing/demo-flow-checklist.md`.
+- Da co bo ca danh gia chatbot tai `docs/testing/chatbot-evaluation-cases.json`.
+- Tiep theo nen tu dong hoa cac checklist quan trong bang E2E test khi giao
+  dien on dinh hon.
 
 ## 8. Truoc khi bao ve
 

@@ -2,6 +2,7 @@ import apiClient from '@/api/apiClient';
 
 export interface Product {
   productid: number;
+  slug?: string;
   productname: string;
   description?: string;
   brandid?: number;
@@ -105,7 +106,12 @@ export interface UpdateFullProduct {
 export const productsApi = {
   getAll: () => apiClient.get<Product[]>('/Products'),
   getById: (id: number) => apiClient.get<Product>(`/Products/${id}`),
-  getFullDetail: (id: number) => apiClient.get<FullProductDetail>(`/Products/${id}/full-detail`),
+  getFullDetail: (idOrSlug: number | string) => {
+    const value = String(idOrSlug);
+    return /^\d+$/.test(value)
+      ? apiClient.get<FullProductDetail>(`/Products/${value}/full-detail`)
+      : apiClient.get<FullProductDetail>(`/Products/by-slug/${encodeURIComponent(value)}/full-detail`);
+  },
   search: (params: { q?: string; categoryId?: number; brandId?: number; seriesId?: number; minPrice?: number; maxPrice?: number }) =>
     apiClient.get<Product[]>('/Products/search', { params }),
   create: (data: Partial<Product>) => apiClient.post<Product>('/Products', data),

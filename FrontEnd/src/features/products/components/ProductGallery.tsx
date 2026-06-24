@@ -23,7 +23,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ productName, ima
   return (
     <div className="flex flex-col gap-4">
       {/* Main Image */}
-      <div className="relative aspect-square bg-white rounded-2xl border border-slate-200 overflow-hidden group flex items-center justify-center shadow-sm">
+      <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] group">
         <img
           src={activeImage}
           alt={productName}
@@ -38,13 +38,13 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ productName, ima
           <>
             <button
               onClick={prevImage}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 opacity-0 shadow-md transition-opacity hover:bg-white group-hover:opacity-100"
             >
               <ChevronLeft className="text-slate-700" size={24} />
             </button>
             <button
               onClick={nextImage}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute right-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 opacity-0 shadow-md transition-opacity hover:bg-white group-hover:opacity-100"
             >
               <ChevronRight className="text-slate-700" size={24} />
             </button>
@@ -59,8 +59,8 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ productName, ima
             <button
               key={img.imageid}
               onClick={() => setActiveIndex(idx)}
-              className={`h-[76px] rounded-xl border-2 overflow-hidden bg-white snap-start transition-all ${
-                activeIndex === idx ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-200 hover:border-blue-300'
+              className={`h-[76px] snap-start overflow-hidden rounded-2xl border bg-white transition-all ${
+                activeIndex === idx ? 'border-[#e30613] ring-4 ring-[#e30613]/10' : 'border-slate-200 hover:border-[#e30613]/40'
               }`}
             >
               <img src={img.imageurl} alt="" className="w-full h-full object-contain p-2" />

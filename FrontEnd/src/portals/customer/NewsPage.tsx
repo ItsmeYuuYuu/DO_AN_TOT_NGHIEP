@@ -24,11 +24,11 @@ const NewsPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
-      <section className="border-b customer-rule bg-[#fffdf8] px-4 py-10">
+      <section className="border-b customer-rule bg-[#ffffff] px-4 py-10">
         <div className="customer-container grid gap-6 md:grid-cols-[1.2fr_0.8fr] md:items-end">
           <div>
             <p className="customer-label">Tech journal</p>
-            <h1 className="customer-display mt-2 text-4xl font-bold text-[#10233f] md:text-5xl">
+            <h1 className="customer-display mt-2 text-4xl font-bold text-[#1f2937] md:text-5xl">
               Tin tức & công nghệ
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
@@ -37,12 +37,12 @@ const NewsPage: React.FC = () => {
           </div>
           <div className="customer-panel-soft p-5">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center bg-[#10233f] text-[#75d7dc]">
+              <div className="flex h-12 w-12 items-center justify-center bg-[#1f2937] text-[#ffd166]">
                 <Newspaper size={24} />
               </div>
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#db3d1c]">Đang có</p>
-                <p className="customer-display text-3xl font-bold text-[#10233f]">{newsList.length} bài viết</p>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#c4000b]">Đang có</p>
+                <p className="customer-display text-3xl font-bold text-[#1f2937]">{newsList.length} bài viết</p>
               </div>
             </div>
           </div>
@@ -63,8 +63,8 @@ const NewsPage: React.FC = () => {
           </div>
         ) : newsList.length === 0 ? (
           <div className="customer-panel-soft px-6 py-20 text-center">
-            <Newspaper className="mx-auto mb-5 text-[#10233f]/25" size={54} />
-            <h2 className="customer-display text-3xl font-bold text-[#10233f]">Chưa có bài viết nào</h2>
+            <Newspaper className="mx-auto mb-5 text-[#1f2937]/25" size={54} />
+            <h2 className="customer-display text-3xl font-bold text-[#1f2937]">Chưa có bài viết nào</h2>
             <p className="mt-3 text-sm text-slate-500">Hãy quay lại sau để đọc thêm nội dung mới.</p>
           </div>
         ) : (
@@ -82,15 +82,15 @@ const NewsPage: React.FC = () => {
                     onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 ) : (
-                  <div className="customer-grid-pattern flex min-h-72 items-center justify-center bg-[#10233f] text-[#75d7dc]">
+                  <div className="customer-grid-pattern flex min-h-72 items-center justify-center bg-[#1f2937] text-[#ffd166]">
                     <Newspaper size={68} />
                   </div>
                 )}
                 <div className="flex flex-col justify-center p-6 md:p-8">
-                  <span className="mb-4 w-fit bg-[#ff5b35] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white">
+                  <span className="mb-4 w-fit bg-[#e30613] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white">
                     Nổi bật
                   </span>
-                  <h2 className="customer-display text-3xl font-bold leading-tight text-[#10233f] md:text-4xl">
+                  <h2 className="customer-display text-3xl font-bold leading-tight text-[#1f2937] md:text-4xl">
                     {featured.title}
                   </h2>
                   <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-500">{featured.summary}</p>
@@ -106,7 +106,7 @@ const NewsPage: React.FC = () => {
               {secondary.map(post => (
                 <article
                   key={post.postid}
-                  className="product-card cursor-pointer bg-[#fffdf8]"
+                  className="product-card cursor-pointer bg-[#ffffff]"
                   onClick={() => setSelectedPost(post)}
                 >
                   {post.thumbnail ? (
@@ -117,18 +117,18 @@ const NewsPage: React.FC = () => {
                       onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
                     />
                   ) : (
-                    <div className="customer-grid-pattern flex aspect-video items-center justify-center bg-[#f4f0e8] text-[#10233f]/25">
+                    <div className="customer-grid-pattern flex aspect-video items-center justify-center bg-[#f3f4f6] text-[#1f2937]/25">
                       <Newspaper size={36} />
                     </div>
                   )}
                   <div className="p-4">
-                    <h3 className="line-clamp-2 text-base font-black leading-snug text-[#10233f] group-hover:text-[#db3d1c]">
+                    <h3 className="line-clamp-2 text-base font-black leading-snug text-[#1f2937] group-hover:text-[#c4000b]">
                       {post.title}
                     </h3>
                     <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">{post.summary}</p>
                     <div className="mt-4 flex items-center justify-between text-[11px] font-bold text-slate-400">
                       <span className="flex items-center gap-1"><Calendar size={11} />{formatDate(post.createdat)}</span>
-                      <span className="flex items-center gap-0.5 text-[#db3d1c]">Đọc thêm<ChevronRight size={12} /></span>
+                      <span className="flex items-center gap-0.5 text-[#c4000b]">Đọc thêm<ChevronRight size={12} /></span>
                     </div>
                   </div>
                 </article>
@@ -140,7 +140,7 @@ const NewsPage: React.FC = () => {
 
       {selectedPost && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#10233f]/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#1f2937]/70 p-4 backdrop-blur-sm"
           onClick={() => setSelectedPost(null)}
         >
           <article
@@ -157,10 +157,10 @@ const NewsPage: React.FC = () => {
             )}
             <div className="p-6 md:p-8">
               <div className="mb-4 flex items-start justify-between gap-4">
-                <h2 className="customer-display text-3xl font-bold leading-tight text-[#10233f]">
+                <h2 className="customer-display text-3xl font-bold leading-tight text-[#1f2937]">
                   {selectedPost.title}
                 </h2>
-                <button type="button" onClick={() => setSelectedPost(null)} className="text-slate-400 hover:text-[#10233f]">
+                <button type="button" onClick={() => setSelectedPost(null)} className="text-slate-400 hover:text-[#1f2937]">
                   <X size={22} />
                 </button>
               </div>

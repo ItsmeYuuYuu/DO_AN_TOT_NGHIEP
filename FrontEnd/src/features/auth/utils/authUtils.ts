@@ -8,6 +8,7 @@ export interface AuthUser {
   username: string;
   fullname: string;
   email: string;
+  phone?: string;
   rolename: string;
   exp: number;       // expiry timestamp (seconds)
 }
@@ -29,6 +30,21 @@ export function saveSession(token: string, expiresIn: number, userInfo: Omit<Aut
     expiresAt,
   };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
+export function updateStoredUser(userInfo: Partial<Omit<AuthUser, 'exp'>>): void {
+  const session = getSession();
+  if (!session) return;
+
+  const updatedSession: StoredSession = {
+    ...session,
+    user: {
+      ...session.user,
+      ...userInfo,
+    },
+  };
+
+  localStorage.setItem(SESSION_KEY, JSON.stringify(updatedSession));
 }
 
 // ─── Load ─────────────────────────────────────────────────────────────────────

@@ -95,7 +95,7 @@ export const ProductSpecsTable: React.FC<ProductSpecsTableProps> = ({ attributes
       {showToggleButton && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-center gap-2 py-4 bg-white hover:bg-slate-50 border-t border-slate-200 text-sm font-bold text-blue-600 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-4 bg-white hover:bg-slate-50 border-t border-slate-200 text-sm font-bold text-[#e30613] transition-colors"
         >
           {isExpanded ? (
             <>

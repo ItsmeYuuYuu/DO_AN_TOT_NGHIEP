@@ -95,30 +95,30 @@ const RegisterPage: React.FC = () => {
   return (
     <main className="customer-shell min-h-screen px-4 py-8">
       <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="grid w-full max-w-6xl overflow-hidden border border-[#d9d2c5] bg-[#fffdf8] shadow-[16px_16px_0_rgb(16_35_63_/_10%)] lg:grid-cols-[0.95fr_1.05fr]">
-          <section className="relative hidden overflow-hidden bg-[#10233f] p-10 text-white lg:flex lg:flex-col lg:justify-between">
-            <div className="absolute -right-24 top-20 h-72 w-72 rounded-full border border-white/10 bg-[#75d7dc]/10" />
-            <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-[#ff5b35]/20" />
+        <div className="grid w-full max-w-6xl overflow-hidden rounded-[30px] border border-[#e5e7eb] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)] lg:grid-cols-[0.95fr_1.05fr]">
+          <section className="relative hidden overflow-hidden bg-[#1f2937] p-10 text-white lg:flex lg:flex-col lg:justify-between">
+            <div className="absolute -right-24 top-20 h-72 w-72 rounded-full border border-white/10 bg-[#ffd166]/10" />
+            <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-[#e30613]/20" />
 
             <div className="relative z-10">
-              <Link to="/" className="inline-flex bg-white px-5 py-3 shadow-[6px_6px_0_rgb(255_91_53_/_55%)]">
+              <Link to="/" className="inline-flex rounded-2xl bg-white px-5 py-3 shadow-[0_14px_30px_rgba(227,6,19,0.18)]">
                 <img src={Logo} alt="Cuồng Điện Thoại" className="h-16 w-auto object-contain" />
               </Link>
-              <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#75d7dc]">Create account</p>
+              <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#ffd166]">Create account</p>
               <h1 className="customer-display mt-3 max-w-md text-5xl font-black leading-[0.95]">
                 Thành viên mới, ưu đãi mới.
               </h1>
-              <p className="mt-6 max-w-sm text-sm font-medium leading-7 text-blue-100">
+              <p className="mt-6 max-w-sm text-sm font-medium leading-7 text-white/70">
                 Tạo tài khoản để lưu lịch sử mua hàng, bảo hành và nhận tư vấn sản phẩm sát nhu cầu hơn.
               </p>
             </div>
 
-            <div className="relative z-10 border border-white/15 bg-white/10 p-4 backdrop-blur">
+            <div className="relative z-10 rounded-[22px] border border-white/15 bg-white/10 p-4 backdrop-blur">
               <div className="mb-2 flex items-center gap-2">
-                <ShieldCheck size={18} className="text-[#75d7dc]" />
+                <ShieldCheck size={18} className="text-[#ffd166]" />
                 <p className="text-xs font-black uppercase tracking-[0.18em]">Quy tắc an toàn</p>
               </div>
-              <p className="text-xs leading-6 text-blue-100">
+              <p className="text-xs leading-6 text-white/70">
                 Mật khẩu cần đủ mạnh ngay từ đầu để tránh lỗi đăng nhập và bảo vệ tài khoản khách hàng.
               </p>
             </div>
@@ -131,13 +131,13 @@ const RegisterPage: React.FC = () => {
               </Link>
 
               <p className="customer-label">Tạo tài khoản</p>
-              <h2 className="customer-display mt-2 text-4xl font-black text-[#10233f]">Đăng ký</h2>
+              <h2 className="customer-display mt-2 text-4xl font-black text-[#1f2937]">Đăng ký</h2>
               <p className="mt-2 text-sm font-medium text-slate-500">
                 Điền thông tin để trở thành thành viên Cuồng Điện Thoại.
               </p>
 
               {error && (
-                <div className="mt-6 flex items-center gap-2 border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                <div className="mt-6 flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
                   <AlertCircle size={16} className="shrink-0" /> {error}
                 </div>
               )}
@@ -225,16 +225,16 @@ const RegisterPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="mt-2 flex w-full items-center justify-center gap-2 bg-[#10233f] py-3.5 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#db3d1c] disabled:opacity-60"
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-[#e30613] py-3.5 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#c4000b] disabled:opacity-60"
                   >
                     {loading ? 'Đang đăng ký...' : 'Đăng ký ngay'}
                   </button>
                 </form>
               )}
 
-              <div className="mt-8 border-t border-[#d9d2c5] pt-6 text-center">
+              <div className="mt-8 border-t border-[#e5e7eb] pt-6 text-center">
                 <p className="text-sm font-medium text-slate-500">Đã có tài khoản?</p>
-                <Link to="/auth/login" className="mt-1 inline-flex items-center gap-1 font-black text-[#db3d1c] hover:underline">
+                <Link to="/auth/login" className="mt-1 inline-flex items-center gap-1 font-black text-[#c4000b] hover:underline">
                   Đăng nhập <ChevronRight size={14} />
                 </Link>
               </div>

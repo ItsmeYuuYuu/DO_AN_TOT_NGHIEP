@@ -29,6 +29,7 @@ export interface ChatMessage {
 export interface ChatRecommendation {
   recommendationid: number;
   productid: number;
+  productslug?: string | null;
   variantid: number;
   productname: string;
   variantname: string;

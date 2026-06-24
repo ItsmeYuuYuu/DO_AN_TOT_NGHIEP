@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using ECommerceBackend.DTOs.Products;
 using ECommerceBackend.Models;
+using ECommerceBackend.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ECommerceBackend.Tests;
@@ -44,6 +45,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
             Seriesid = series.Seriesid,
             Brand = brand,
             Series = series,
+            Slug = "google-pixel-10-pro",
             Productname = "Google Pixel 10 Pro",
             Description = "Điện thoại camera cao cấp"
         };
@@ -71,5 +73,29 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
         var products = await response.Content.ReadFromJsonAsync<List<ProductListItemDto>>();
         var product = Assert.Single(products!);
         Assert.Equal("Google Pixel 10 Pro", product.Productname);
+    }
+
+    [Fact]
+    public async Task GetProductBySlug_ReturnsProductDetail()
+    {
+        await SeedSearchCatalogAsync();
+
+        var response = await _client.GetAsync("/api/Products/by-slug/google-pixel-10-pro/full-detail");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var product = await response.Content.ReadFromJsonAsync<FullProductDetailDto>();
+        Assert.NotNull(product);
+        Assert.Equal(1, product!.Productid);
+        Assert.Equal("google-pixel-10-pro", product.Slug);
+    }
+
+    [Theory]
+    [InlineData("Google Pixel 10 Pro", "google-pixel-10-pro")]
+    [InlineData("Điện thoại Xiaomi 17", "dien-thoai-xiaomi-17")]
+    public void GenerateBaseSlug_NormalizesVietnameseText(string productName, string expectedSlug)
+    {
+        var slug = ProductSlugService.GenerateBaseSlug(productName);
+
+        Assert.Equal(expectedSlug, slug);
     }
 }

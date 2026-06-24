@@ -13,6 +13,8 @@ import { ProductEditModal } from './ProductEditModal';
 import { brandsApi } from '@/features/brands/api/brandsApi';
 import { categoriesApi } from '@/features/categories/api/categoriesApi';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { confirmAction, notifyError } from '@/utils/notifications';
+
 
 const PAGE_SIZE = 10;
 
@@ -61,12 +63,12 @@ const AdminProducts: React.FC = () => {
   );
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
+    if (!(await confirmAction('Bạn có chắc muốn xóa sản phẩm này?', { danger: true, confirmLabel: 'Xóa' }))) return;
     try {
       await deleteProduct(id);
     } catch (err) {
       const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
-      alert(message || 'Không thể xóa sản phẩm này.');
+      notifyError(message || 'Không thể xóa sản phẩm này.');
     }
   };
 
@@ -101,7 +103,7 @@ const AdminProducts: React.FC = () => {
               )}
             </div>
             <div className="min-w-0">
-              <p className="line-clamp-1 text-sm font-black text-[#10233f]">{product.productname}</p>
+              <p className="line-clamp-1 text-sm font-black text-[#172033]">{product.productname}</p>
               <p className="mt-1 text-xs font-semibold text-slate-400">
                 {product.category?.name ?? 'Chưa có danh mục'} · {product.productvariants?.length ?? 0} biến thể
               </p>
@@ -115,7 +117,7 @@ const AdminProducts: React.FC = () => {
       header: 'Hãng / dòng',
       render: (product: Product) => (
         <div className="space-y-1">
-          <span className="inline-flex bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700">
+          <span className="inline-flex bg-indigo-50 px-2.5 py-1 text-xs font-black text-[#4338ca]">
             {product.brand?.name ?? '—'}
           </span>
           {product.series?.name && <p className="text-[11px] font-bold text-slate-400">{product.series.name}</p>}
@@ -130,7 +132,7 @@ const AdminProducts: React.FC = () => {
         if (!variant) return <span className="text-xs font-semibold text-slate-400">Chưa có biến thể</span>;
         return (
           <div>
-            <p className="text-sm font-black text-[#db3d1c]">{formatCurrency(variant.saleprice ?? variant.baseprice)}</p>
+            <p className="text-sm font-black text-[#4338ca]">{formatCurrency(variant.saleprice ?? variant.baseprice)}</p>
             {variant.saleprice && variant.saleprice < variant.baseprice && (
               <p className="text-xs text-slate-400 line-through">{formatCurrency(variant.baseprice)}</p>
             )}
@@ -166,7 +168,7 @@ const AdminProducts: React.FC = () => {
           <button
             type="button"
             onClick={() => setEditingProductId(product.productid)}
-            className="inline-flex items-center gap-1 bg-blue-50 px-2.5 py-1.5 text-xs font-black text-blue-700 hover:bg-blue-100"
+            className="inline-flex items-center gap-1 bg-indigo-50 px-2.5 py-1.5 text-xs font-black text-[#4338ca] hover:bg-indigo-100"
           >
             <Wrench size={12} /> Sửa
           </button>
@@ -187,16 +189,16 @@ const AdminProducts: React.FC = () => {
   return (
     <div className="mx-auto max-w-[1500px] space-y-5">
       <section className="ops-card overflow-hidden">
-        <div className="grid gap-6 bg-[#10233f] p-6 text-white lg:grid-cols-[1fr_auto] lg:items-end">
+        <div className="grid gap-6 bg-[#172033] p-6 text-white lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-200">Product operations</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight">Quản lý sản phẩm</h1>
-            <p className="mt-2 max-w-2xl text-sm font-medium text-blue-100">
+            <p className="mt-2 max-w-2xl text-sm font-medium text-indigo-100">
               Kiểm soát sản phẩm, biến thể, hình ảnh, tồn kho và chương trình giảm giá trước khi bán ra website.
             </p>
           </div>
           {user?.rolename !== 'Content' && (
-            <Button onClick={() => setWizardOpen(true)} size="sm" className="inline-flex items-center gap-2 bg-[#ff5b35] hover:bg-[#e64925]">
+            <Button onClick={() => setWizardOpen(true)} size="sm" className="inline-flex items-center gap-2 bg-[#4f46e5] hover:bg-[#4338ca]">
               <Plus size={16} /> Thêm sản phẩm
             </Button>
           )}
@@ -205,14 +207,14 @@ const AdminProducts: React.FC = () => {
 
       <div className="grid gap-4 md:grid-cols-4">
         {[
-          { label: 'Tổng sản phẩm', value: products.length, icon: <Package size={19} />, tone: 'bg-blue-50 text-blue-700' },
+          { label: 'Tổng sản phẩm', value: products.length, icon: <Package size={19} />, tone: 'bg-indigo-50 text-[#4338ca]' },
           { label: 'Biến thể', value: totalVariants, icon: <Tags size={19} />, tone: 'bg-violet-50 text-violet-700' },
           { label: 'Tổng tồn kho', value: totalStock, icon: <Boxes size={19} />, tone: 'bg-emerald-50 text-emerald-700' },
           { label: 'Đang giảm giá', value: discountedProducts, icon: <Search size={19} />, tone: 'bg-orange-50 text-orange-700' },
         ].map(item => (
           <div key={item.label} className="ops-card p-4">
             <div className={`mb-3 flex h-10 w-10 items-center justify-center ${item.tone}`}>{item.icon}</div>
-            <p className="text-2xl font-black text-[#10233f]">{loading ? '...' : item.value}</p>
+            <p className="text-2xl font-black text-[#172033]">{loading ? '...' : item.value}</p>
             <p className="text-xs font-bold text-slate-400">{item.label}</p>
           </div>
         ))}
@@ -232,23 +234,23 @@ const AdminProducts: React.FC = () => {
               value={search}
               onChange={event => { setSearch(event.target.value); setPage(1); }}
               placeholder="Tìm sản phẩm, thương hiệu, dòng máy..."
-              className="w-full border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm font-semibold outline-none focus:border-[#10233f] focus:bg-white"
+              className="w-full border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm font-semibold outline-none focus:border-[#172033] focus:bg-white"
             />
           </div>
-          <select className="border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#10233f]" value={filterBrand} onChange={event => { setFilterBrand(event.target.value); setPage(1); }}>
+          <select className="border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]" value={filterBrand} onChange={event => { setFilterBrand(event.target.value); setPage(1); }}>
             <option value="">Tất cả thương hiệu</option>
             {brands.map(brand => <option key={brand.brandid} value={brand.brandid}>{brand.brandname}</option>)}
           </select>
-          <select className="border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#10233f]" value={filterCategory} onChange={event => { setFilterCategory(event.target.value); setPage(1); }}>
+          <select className="border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]" value={filterCategory} onChange={event => { setFilterCategory(event.target.value); setPage(1); }}>
             <option value="">Tất cả danh mục</option>
             {categories.map(category => <option key={category.categoryid} value={category.categoryid}>{category.categoryname}</option>)}
           </select>
-          <label className="flex cursor-pointer items-center gap-2 text-sm font-black text-[#10233f]">
-            <input type="checkbox" checked={filterDiscount} onChange={event => { setFilterDiscount(event.target.checked); setPage(1); }} className="accent-[#ff5b35]" />
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-black text-[#172033]">
+            <input type="checkbox" checked={filterDiscount} onChange={event => { setFilterDiscount(event.target.checked); setPage(1); }} className="accent-[#4f46e5]" />
             Đang giảm giá
           </label>
           {(search || filterBrand || filterCategory || filterDiscount) && (
-            <button type="button" onClick={resetFilters} className="text-xs font-black uppercase tracking-wide text-slate-400 hover:text-[#10233f]">
+            <button type="button" onClick={resetFilters} className="text-xs font-black uppercase tracking-wide text-slate-400 hover:text-[#172033]">
               Xóa lọc
             </button>
           )}

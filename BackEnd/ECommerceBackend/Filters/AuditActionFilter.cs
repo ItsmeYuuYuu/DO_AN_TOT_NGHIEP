@@ -38,6 +38,7 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
             ["Warranties"]          = "inventoryitems",
             ["Vouchers"]            = "vouchers",
             ["PromotionalContents"] = "promotionalcontents",
+            ["HomepageProductSections"] = "homepageproductsections",
             ["News"]                = "news",
             ["Reviews"]             = "reviews",
             ["Auth"]                = "users",  // Login / change-password

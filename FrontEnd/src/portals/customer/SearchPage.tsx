@@ -36,12 +36,12 @@ const SearchPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
-      <section className="border-b customer-rule bg-[#fffdf8] px-4 py-8 md:py-10">
+      <section className="border-b customer-rule bg-[#ffffff] px-4 py-8 md:py-10">
         <div className="customer-container">
           <div className="grid gap-6 lg:grid-cols-[1.45fr_0.75fr] lg:items-end">
             <div>
               <p className="customer-label">Search desk</p>
-              <h1 className="customer-display mt-2 text-4xl font-bold leading-tight text-[#10233f] md:text-5xl">
+              <h1 className="customer-display mt-2 text-4xl font-bold leading-tight text-[#1f2937] md:text-5xl">
                 Kết quả tìm kiếm
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
@@ -51,14 +51,14 @@ const SearchPage: React.FC = () => {
 
             <div className="customer-panel-soft p-5">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-[#10233f] text-white">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-[#1f2937] text-white">
                   <SearchCheck size={22} />
                 </div>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#db3d1c]">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c4000b]">
                     Đang tìm
                   </p>
-                  <p className="mt-1 line-clamp-1 text-lg font-black text-[#10233f]">
+                  <p className="mt-1 line-clamp-1 text-lg font-black text-[#1f2937]">
                     {query || 'Chưa có từ khóa'}
                   </p>
                 </div>
@@ -68,7 +68,7 @@ const SearchPage: React.FC = () => {
 
           {query && !loading && (
             <p className="mt-6 text-sm font-medium text-slate-500">
-              Tìm thấy <span className="font-black text-[#db3d1c]">{results.length}</span> sản phẩm cho “{query}”.
+              Tìm thấy <span className="font-black text-[#c4000b]">{results.length}</span> sản phẩm cho “{query}”.
             </p>
           )}
         </div>
@@ -92,8 +92,8 @@ const SearchPage: React.FC = () => {
           </>
         ) : searched && results.length === 0 ? (
           <div className="customer-panel-soft px-6 py-20 text-center">
-            <SearchX className="mx-auto mb-5 text-[#10233f]/30" size={54} />
-            <h2 className="customer-display text-3xl font-bold text-[#10233f]">
+            <SearchX className="mx-auto mb-5 text-[#1f2937]/30" size={54} />
+            <h2 className="customer-display text-3xl font-bold text-[#1f2937]">
               Không tìm thấy “{query}”
             </h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
@@ -116,8 +116,8 @@ const SearchPage: React.FC = () => {
           </div>
         ) : (
           <div className="customer-panel-soft px-6 py-20 text-center">
-            <SearchCheck className="mx-auto mb-5 text-[#10233f]/25" size={54} />
-            <h2 className="customer-display text-3xl font-bold text-[#10233f]">
+            <SearchCheck className="mx-auto mb-5 text-[#1f2937]/25" size={54} />
+            <h2 className="customer-display text-3xl font-bold text-[#1f2937]">
               Sẵn sàng tìm máy
             </h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">

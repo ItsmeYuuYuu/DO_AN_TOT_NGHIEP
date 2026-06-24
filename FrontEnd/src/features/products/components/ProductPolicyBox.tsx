@@ -7,8 +7,8 @@ export const ProductPolicyBox: React.FC = () => {
       <h3 className="font-bold text-slate-800 text-base mb-2">Chính sách mua hàng</h3>
       
       <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-          <Shield className="text-blue-500 w-4 h-4" />
+        <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+          <Shield className="text-[#e30613] w-4 h-4" />
         </div>
         <div>
           <p className="font-semibold text-slate-700 text-sm">Bảo hành chính hãng</p>

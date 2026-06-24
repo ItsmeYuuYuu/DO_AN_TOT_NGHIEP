@@ -21,7 +21,8 @@ public sealed record ProductConsultationResult(
     int Stock,
     string ImageUrl,
     IReadOnlyDictionary<string, string> Specifications,
-    string Description = "");
+    string Description = "",
+    string? ProductSlug = null);
 
 public interface IProductConsultationService
 {
@@ -67,6 +68,7 @@ public sealed class ProductConsultationService : IProductConsultationService
             .AsNoTracking()
             .Include(product => product.Brand)
             .Include(product => product.Category)
+            .Include(product => product.Series)
             .Include(product => product.Productvariants)
                 .ThenInclude(variant => variant.Inventoryitems)
             .Include(product => product.Productvariants)
@@ -88,7 +90,8 @@ public sealed class ProductConsultationService : IProductConsultationService
             {
                 product.Productname,
                 product.Brand?.Brandname,
-                product.Category?.Categoryname
+                product.Category?.Categoryname,
+                product.Series?.Seriesname
             })
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => Normalize(value!))
@@ -129,6 +132,7 @@ public sealed class ProductConsultationService : IProductConsultationService
                     product.Productname,
                     product.Brand?.Brandname,
                     product.Category?.Categoryname,
+                    product.Series?.Seriesname,
                     product.Description,
                     variant.Condition,
                     variant.Sku,
@@ -160,6 +164,9 @@ public sealed class ProductConsultationService : IProductConsultationService
                 if (!string.IsNullOrWhiteSpace(product.Brand?.Brandname) &&
                     normalizedQuery.Contains(Normalize(product.Brand.Brandname)))
                     score += 8;
+                if (!string.IsNullOrWhiteSpace(product.Series?.Seriesname) &&
+                    normalizedQuery.Contains(Normalize(product.Series.Seriesname)))
+                    score += 10;
                 if (stock > 0)
                     score += 2;
                 if (variant.Saleprice.HasValue && variant.Saleprice < variant.Baseprice)
@@ -188,7 +195,8 @@ public sealed class ProductConsultationService : IProductConsultationService
                             .Select(image => image.Imageurl)
                             .FirstOrDefault() ?? string.Empty,
                         specifications,
-                        product.Description ?? string.Empty),
+                        product.Description ?? string.Empty,
+                        product.Slug),
                     score));
             }
         }
@@ -396,8 +404,19 @@ public sealed class ProductConsultationService : IProductConsultationService
                 text,
                 ("choi game", 10),
                 ("gaming", 10),
-                ("snapdragon 8", 6),
+                ("snapdragon 8 elite", 12),
+                ("snapdragon 8 gen 4", 11),
+                ("snapdragon 8 gen 3", 10),
+                ("snapdragon 8 gen 2", 8),
+                ("snapdragon 8", 7),
+                ("dimensity 9400", 11),
+                ("dimensity 9300", 10),
+                ("dimensity 9200", 8),
                 ("dimensity 9", 6),
+                ("apple a18", 11),
+                ("apple a17", 10),
+                ("a18 pro", 12),
+                ("a17 pro", 11),
                 ("chipset", 5),
                 ("gpu", 5),
                 ("ram", 4),
@@ -407,15 +426,18 @@ public sealed class ProductConsultationService : IProductConsultationService
                 ("pin", 2)),
             "camera" => ScoreTerms(
                 text,
-                ("zeiss", 6),
-                ("leica", 6),
-                ("hasselblad", 6),
+                ("zeiss", 10),
+                ("leica", 10),
+                ("hasselblad", 10),
+                ("periscope", 7),
+                ("tele", 5),
                 ("telephoto", 5),
-                ("200mp", 5),
+                ("sony imx", 6),
+                ("ois", 6),
+                ("chong rung", 5),
+                ("200mp", 4),
                 ("camera sau", 6),
                 ("quay video", 5),
-                ("chong rung", 4),
-                ("ois", 4),
                 ("zoom", 3),
                 ("camera truoc", 2)),
             "battery" => ScoreTerms(

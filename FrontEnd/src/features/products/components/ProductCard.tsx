@@ -1,11 +1,13 @@
 import React from 'react';
-import { ArrowUpRight, PackageCheck, Sparkles } from 'lucide-react';
+import { PackageCheck, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Product } from '../api/productsApi';
+import { getProductPath } from '../utils/productLinks';
 import { formatCurrency, getDiscountPercent } from '@/utils/formatters';
 
 interface ProductCardProps {
   product: Product;
+  compact?: boolean;
 }
 
 const imageTones = [
@@ -31,7 +33,7 @@ const getVariantSummary = (product: Product) => {
   };
 };
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = false }) => {
   const { firstVariant, hasStockData, stock, availabilityLabel } = getVariantSummary(product);
   const mainImage = firstVariant?.productimages?.find(image => image.ismain)?.imageurl
     ?? firstVariant?.productimages?.[0]?.imageurl;
@@ -39,49 +41,52 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const imageTone = imageTones[product.productid % imageTones.length];
   const price = firstVariant ? firstVariant.saleprice ?? firstVariant.baseprice : undefined;
   const isAvailable = !hasStockData || stock > 0;
+  const productPath = getProductPath(product);
 
   return (
     <article className="product-card group flex h-full flex-col">
       <Link
-        to={`/products/${product.productid}`}
-        className={`card-img-container relative block aspect-[4/4.45] overflow-hidden ${imageTone}`}
+        to={productPath}
+        className={`card-img-container relative m-2 mb-0 block aspect-[4/4.25] overflow-hidden rounded-[18px] sm:m-3 sm:mb-0 ${imageTone}`}
       >
-        <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between p-3">
-          <span className="border border-[#10233f]/15 bg-[#fffdf8]/90 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-[#10233f] backdrop-blur">
+        <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-1 p-2 sm:p-3">
+          <span className="max-w-[76%] truncate rounded-full border border-[#1f2937]/10 bg-white/90 px-2 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-[#1f2937] backdrop-blur sm:px-2.5 sm:text-[9px]">
             {product.series?.name ?? product.brand?.name ?? 'Điện thoại'}
           </span>
           {discount ? (
-            <span className="bg-[#ff5b35] px-2 py-1 text-[10px] font-black text-white">
+            <span className="rounded-full bg-[#e30613] px-2 py-1 text-[9px] font-black text-white shadow-sm sm:px-2.5 sm:text-[10px]">
               -{discount}%
             </span>
-          ) : (
-            <span className="flex h-7 w-7 items-center justify-center border border-[#10233f]/10 bg-[#fffdf8]/80 text-[#db3d1c]">
+          ) : !compact ? (
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#1f2937]/10 bg-white/80 text-[#c4000b] shadow-sm">
               <Sparkles size={13} />
             </span>
-          )}
+          ) : null}
         </div>
 
         {mainImage ? (
           <img
             src={mainImage}
             alt={product.productname}
-            className="h-full w-full object-contain p-7 transition duration-500 group-hover:scale-[1.06]"
+            className="h-full w-full object-contain p-5 transition duration-500 group-hover:scale-[1.06] sm:p-7"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <span className="customer-display text-5xl font-bold text-[#10233f]/15">
+            <span className="customer-display text-5xl font-bold text-[#1f2937]/15">
               {product.productname.charAt(0)}
             </span>
           </div>
         )}
 
-        <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center border border-[#10233f] bg-[#fffdf8] text-[#10233f] transition group-hover:bg-[#10233f] group-hover:text-white">
-          <ArrowUpRight size={17} />
-        </span>
+        {!compact && (
+          <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border border-[#1f2937]/10 bg-white text-[#1f2937] shadow-sm transition group-hover:bg-[#e30613] group-hover:text-white">
+            <Sparkles size={15} />
+          </span>
+        )}
       </Link>
 
-      <div className="flex flex-1 flex-col p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
+        <div className="mb-2 flex items-center justify-between gap-2 sm:mb-3">
           <span className="customer-label truncate">
             {product.brand?.name ?? 'Chính hãng'}
           </span>
@@ -93,32 +98,34 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </span>
         </div>
 
-        <Link to={`/products/${product.productid}`} className="block">
-          <h3 className="min-h-11 line-clamp-2 text-[15px] font-black leading-[1.45] text-[#10233f] transition group-hover:text-[#db3d1c]">
+        <Link to={productPath} className="block">
+          <h3 className="min-h-10 line-clamp-2 text-sm font-black leading-[1.45] text-[#1f2937] transition group-hover:text-[#c4000b] sm:min-h-11 sm:text-[15px]">
             {product.productname}
           </h3>
         </Link>
 
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {product.category?.name && (
-            <span className="bg-[#10233f]/5 px-2 py-1 text-[10px] font-bold text-[#10233f]/70">
-              {product.category.name}
-            </span>
-          )}
-          {product.series?.name && (
-            <span className="bg-[#ff5b35]/10 px-2 py-1 text-[10px] font-bold text-[#db3d1c]">
-              {product.series.name}
-            </span>
-          )}
-        </div>
+        {!compact && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {product.category?.name && (
+              <span className="rounded-full bg-[#1f2937]/5 px-2.5 py-1 text-[10px] font-bold text-[#1f2937]/70">
+                {product.category.name}
+              </span>
+            )}
+            {product.series?.name && (
+              <span className="rounded-full bg-[#e30613]/10 px-2.5 py-1 text-[10px] font-bold text-[#c4000b]">
+                {product.series.name}
+              </span>
+            )}
+          </div>
+        )}
 
-        <div className="mt-auto flex items-end justify-between gap-3 border-t border-[#d9d2c5] pt-4">
+        <div className="mt-auto flex items-end justify-between gap-2 border-t border-[#e5e7eb] pt-3 sm:gap-3 sm:pt-4">
           {firstVariant && price != null ? (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Giá từ
               </p>
-              <p className="mt-0.5 text-lg font-black tracking-tight text-[#db3d1c]">
+              <p className="mt-0.5 text-base font-black tracking-tight text-[#c4000b] sm:text-lg">
                 {formatCurrency(price)}
               </p>
               {firstVariant.saleprice && firstVariant.saleprice < firstVariant.baseprice && (
@@ -130,12 +137,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           ) : (
             <span className="text-sm font-bold text-slate-400">Liên hệ</span>
           )}
-          <Link
-            to={`/products/${product.productid}`}
-            className="mb-1 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.16em] text-[#10233f] underline decoration-[#ff5b35] decoration-2 underline-offset-4"
-          >
-            Xem máy
-          </Link>
+          {!compact && (
+            <Link
+              to={productPath}
+              className="mb-1 whitespace-nowrap rounded-full bg-[#f3f4f6] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#1f2937] transition hover:bg-[#e30613] hover:text-white"
+            >
+              Xem máy
+            </Link>
+          )}
         </div>
       </div>
     </article>

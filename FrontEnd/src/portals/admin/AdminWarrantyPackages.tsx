@@ -7,6 +7,8 @@ import { Modal } from '@/components/Modal';
 import { DataTable } from '@/components/DataTable';
 import { formatCurrency } from '@/utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { confirmAction, notifyError } from '@/utils/notifications';
+
 
 const AdminWarrantyPackages: React.FC = () => {
   const [packages, setPackages] = useState<WarrantyPackage[]>([]);
@@ -26,7 +28,7 @@ const AdminWarrantyPackages: React.FC = () => {
       const data = await warrantyPackagesApi.getAll();
       setPackages(data);
     } catch {
-      alert('Không thể tải danh sách gói bảo hành.');
+      notifyError('Không thể tải danh sách gói bảo hành.');
     } finally {
       setLoading(false);
     }
@@ -78,12 +80,12 @@ const AdminWarrantyPackages: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc muốn xóa gói bảo hành này?')) return;
+    if (!(await confirmAction('Bạn có chắc muốn xóa gói bảo hành này?', { danger: true, confirmLabel: 'Xóa' }))) return;
     try {
       await warrantyPackagesApi.delete(id);
       await fetchPackages();
     } catch (error) {
-      alert(getApiErrorMessage(error, 'Không thể xóa gói bảo hành này.'));
+      notifyError(getApiErrorMessage(error, 'Không thể xóa gói bảo hành này.'));
     }
   };
 
@@ -115,7 +117,7 @@ const AdminWarrantyPackages: React.FC = () => {
       className: 'w-28 text-right',
       render: (p: WarrantyPackage) => (
         <div className="flex justify-end gap-2">
-          <button onClick={() => openEdit(p)} className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 font-semibold text-xs transition-colors">
+          <button onClick={() => openEdit(p)} className="px-3 py-1.5 bg-indigo-50 text-[#4f46e5] rounded hover:bg-indigo-100 font-semibold text-xs transition-colors">
             Sửa
           </button>
           <button onClick={() => handleDelete(p.packageid)} className="px-3 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 font-semibold text-xs transition-colors">
@@ -156,7 +158,7 @@ const AdminWarrantyPackages: React.FC = () => {
               <label className="block text-sm font-bold text-slate-700 mb-1.5">Thời hạn (Tháng) *</label>
               <input 
                 type="number" 
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#4f46e5] transition-colors"
                 value={editing?.durationmonths ?? ''} 
                 onChange={e => setEditing(p => ({ ...p!, durationmonths: parseInt(e.target.value) || 0 }))}
                 min="1"
@@ -166,14 +168,14 @@ const AdminWarrantyPackages: React.FC = () => {
               <label className="block text-sm font-bold text-slate-700 mb-1.5">Giá gói (VNĐ) *</label>
               <input 
                 type="number" 
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#4f46e5] transition-colors"
                 value={editing?.price ?? ''} 
                 onChange={e => setEditing(p => ({ ...p!, price: parseInt(e.target.value) || 0 }))}
                 min="0"
               />
             </div>
           </div>
-          {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">{error}</div>}
+          {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-2xl border border-red-100">{error}</div>}
           <div className="flex gap-3 pt-4 border-t border-slate-100">
             <Button onClick={handleSave} isLoading={saving} className="flex-1">Lưu lại</Button>
             <Button onClick={closeModal} variant="secondary" className="flex-1">Hủy</Button>

@@ -30,6 +30,7 @@ const ProductsListPage  = lazy(() => import('@/portals/customer/ProductsListPage
 const SearchPage        = lazy(() => import('@/portals/customer/SearchPage'));
 const NewsPage          = lazy(() => import('@/portals/customer/NewsPage'));
 const PromotionsPage    = lazy(() => import('@/portals/customer/PromotionsPage'));
+const CustomerPolicyPage = lazy(() => import('@/portals/customer/CustomerPolicyPage'));
 const OrderLookupPage   = lazy(() => import('@/portals/customer/OrderLookupPage'));
 const CartPage          = lazy(() => import('@/portals/customer/CartPage'));
 const CheckoutPage      = lazy(() => import('@/portals/customer/CheckoutPage'));
@@ -52,6 +53,7 @@ const AdminVouchers      = lazy(() => import('@/portals/admin/AdminVouchers'));
 const AdminWarrantyPackages = lazy(() => import('@/portals/admin/AdminWarrantyPackages'));
 const AdminNews          = lazy(() => import('@/portals/admin/AdminNews'));
 const AdminPromotionalContents = lazy(() => import('@/portals/admin/AdminPromotionalContents').then(m => ({ default: m.AdminPromotionalContents })));
+const AdminHomepageSections = lazy(() => import('@/portals/admin/AdminHomepageSections'));
 const AdminAuditLogs     = lazy(() => import('@/portals/admin/AdminAuditLogs'));
 
 // ── Employee portal pages ────────────────────────────────────────────────────
@@ -100,6 +102,9 @@ const App: React.FC = () => {
           <Route path="chat"              element={<CustomerChat />} />
           <Route path="news"              element={<NewsPage />} />
           <Route path="promotions"        element={<PromotionsPage />} />
+          <Route path="policy"            element={<CustomerPolicyPage />} />
+          <Route path="shipping"          element={<CustomerPolicyPage />} />
+          <Route path="return"            element={<CustomerPolicyPage />} />
           <Route path="cart"              element={<CartPage />} />
           <Route path="checkout"          element={<CheckoutPage />} />
           <Route path="payment/:orderId"  element={<PaymentSimulationPage />} />
@@ -130,6 +135,7 @@ const App: React.FC = () => {
             <Route path="warranty-packages" element={<AdminWarrantyPackages />} />
             <Route path="news"            element={<AdminNews />} />
             <Route path="promotional-contents" element={<AdminPromotionalContents />} />
+            <Route path="homepage-sections" element={<AdminHomepageSections />} />
             <Route path="consultations"    element={<ConsultantChats />} />
             <Route path="auditlogs"       element={<AdminAuditLogs />} />
           </Route>
@@ -178,6 +184,9 @@ const App: React.FC = () => {
             <Route element={<AuthGuard allowedRoles={['Admin', 'Content']} />}>
               <Route path="news" element={<AdminNews />} />
               <Route path="promotional-contents" element={<AdminPromotionalContents />} />
+            </Route>
+            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Content']} />}>
+              <Route path="homepage-sections" element={<AdminHomepageSections />} />
             </Route>
             <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Consultant']} />}>
               <Route path="consultations" element={<ConsultantChats />} />

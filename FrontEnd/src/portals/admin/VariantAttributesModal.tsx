@@ -3,6 +3,8 @@ import { Modal } from '@/components/Modal';
 import { Button } from '@/components/Button';
 import { attributesApi } from '@/features/products/api/attributesApi';
 import { Plus, Trash2 } from 'lucide-react';
+import { notifyError, notifySuccess } from '@/utils/notifications';
+
 
 interface VariantAttributesModalProps {
   isOpen: boolean;
@@ -55,10 +57,10 @@ export const VariantAttributesModal: React.FC<VariantAttributesModalProps> = ({ 
       // Filter out empty keys
       const filtered = specs.filter(s => s.key.trim() !== '');
       await attributesApi.assignVariantAttributes(variantId, filtered);
-      alert('Đã cập nhật thông số kỹ thuật thành công.');
+      notifySuccess('Đã cập nhật thông số kỹ thuật thành công.');
       onClose();
     } catch {
-      alert('Không thể cập nhật thông số kỹ thuật. Vui lòng kiểm tra lại.');
+      notifyError('Không thể cập nhật thông số kỹ thuật. Vui lòng kiểm tra lại.');
     } finally {
       setSaving(false);
     }
@@ -88,14 +90,14 @@ export const VariantAttributesModal: React.FC<VariantAttributesModalProps> = ({ 
                     placeholder="Tên thông số (e.g. RAM)"
                     value={spec.key}
                     onChange={(e) => updateSpecKey(index, e.target.value)}
-                    className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800"
+                    className="flex-1 px-3 py-2 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] bg-white text-slate-800"
                   />
                   <input
                     type="text"
                     placeholder="Giá trị (e.g. 12GB)"
                     value={spec.value}
                     onChange={(e) => updateSpecValue(index, e.target.value)}
-                    className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800"
+                    className="flex-1 px-3 py-2 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] bg-white text-slate-800"
                   />
                   <button
                     type="button"

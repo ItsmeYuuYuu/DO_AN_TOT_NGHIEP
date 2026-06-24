@@ -61,6 +61,7 @@ namespace ECommerceBackend.Controllers
 
             return new ProductListItemDto(
                 p.Productid,
+                p.Slug,
                 p.Productname,
                 p.Description,
                 p.Createdat,
@@ -85,6 +86,7 @@ namespace ECommerceBackend.Controllers
 
             return new ProductDetailDto(
                 p.Productid,
+                p.Slug,
                 p.Productname,
                 p.Description,
                 p.Createdat,
@@ -101,6 +103,26 @@ namespace ECommerceBackend.Controllers
             // Use a compact, explicit placeholder for quantity-only stock records.
             return $"TMP-{variantId}-{Guid.NewGuid():N}";
         }
+
+        private IQueryable<Product> ProductDetailQuery() =>
+            _context.Products
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .Include(p => p.Series)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Productimages);
+
+        private IQueryable<Product> FullProductDetailQuery() =>
+            _context.Products
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .Include(p => p.Series)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Productimages)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Reviews)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Inventoryitems);
 
         // GET: api/Products
         [HttpGet]
@@ -168,13 +190,20 @@ namespace ECommerceBackend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductDetailDto>> GetProduct(int id)
         {
-            var product = await _context.Products
-                .Include(p => p.Brand)
-                .Include(p => p.Category)
-                .Include(p => p.Series)
-                .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Productimages)
+            var product = await ProductDetailQuery()
                 .FirstOrDefaultAsync(p => p.Productid == id);
+
+            if (product == null) return NotFound(new ApiErrorDto("Không tìm thấy sản phẩm", null));
+            return Ok(MapToDetailDto(product));
+        }
+
+        // GET: api/Products/by-slug/google-pixel-8-pro
+        [HttpGet("by-slug/{slug}")]
+        public async Task<ActionResult<ProductDetailDto>> GetProductBySlug(string slug)
+        {
+            var normalizedSlug = slug.Trim().ToLowerInvariant();
+            var product = await ProductDetailQuery()
+                .FirstOrDefaultAsync(p => p.Slug == normalizedSlug);
 
             if (product == null) return NotFound(new ApiErrorDto("Không tìm thấy sản phẩm", null));
             return Ok(MapToDetailDto(product));
@@ -184,20 +213,27 @@ namespace ECommerceBackend.Controllers
         [HttpGet("{id}/full-detail")]
         public async Task<ActionResult<FullProductDetailDto>> GetFullProductDetail(int id)
         {
-            var product = await _context.Products
-                .Include(p => p.Brand)
-                .Include(p => p.Category)
-                .Include(p => p.Series)
-                .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Productimages)
-                .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Reviews)
-                .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Inventoryitems)
+            var product = await FullProductDetailQuery()
                 .FirstOrDefaultAsync(p => p.Productid == id);
 
             if (product == null) return NotFound(new ApiErrorDto("Không tìm thấy sản phẩm", null));
+            return Ok(await BuildFullProductDetailDto(product));
+        }
 
+        // GET: api/Products/by-slug/google-pixel-8-pro/full-detail
+        [HttpGet("by-slug/{slug}/full-detail")]
+        public async Task<ActionResult<FullProductDetailDto>> GetFullProductDetailBySlug(string slug)
+        {
+            var normalizedSlug = slug.Trim().ToLowerInvariant();
+            var product = await FullProductDetailQuery()
+                .FirstOrDefaultAsync(p => p.Slug == normalizedSlug);
+
+            if (product == null) return NotFound(new ApiErrorDto("Không tìm thấy sản phẩm", null));
+            return Ok(await BuildFullProductDetailDto(product));
+        }
+
+        private async Task<FullProductDetailDto> BuildFullProductDetailDto(Product product)
+        {
             var allReviews = product.Productvariants.SelectMany(v => v.Reviews).ToList();
             var totalReviews = allReviews.Count;
             var avgRating = totalReviews > 0 ? allReviews.Average(r => (double)(r.Rating ?? 0)) : 0;
@@ -218,7 +254,7 @@ namespace ECommerceBackend.Controllers
                     .Include(p => p.Series)
                     .Include(p => p.Productvariants)
                         .ThenInclude(v => v.Productimages)
-                    .Where(p => p.Brandid == product.Brandid && p.Productid != id)
+                    .Where(p => p.Brandid == product.Brandid && p.Productid != product.Productid)
                     .Take(5)
                     .ToListAsync();
                 relatedProducts = related.Select(MapToDto).ToList();
@@ -238,6 +274,7 @@ namespace ECommerceBackend.Controllers
 
             var result = new FullProductDetailDto(
                 product.Productid,
+                product.Slug,
                 product.Productname,
                 product.Description,
                 product.Createdat,
@@ -249,7 +286,7 @@ namespace ECommerceBackend.Controllers
                 relatedProducts
             );
 
-            return Ok(result);
+            return result;
         }
 
         // POST: api/Products
@@ -268,6 +305,7 @@ namespace ECommerceBackend.Controllers
             var product = new Product
             {
                 Productname = dto.Productname,
+                Slug = await ProductSlugService.GenerateUniqueSlugAsync(_context, dto.Productname),
                 Description = dto.Description,
                 Categoryid = dto.Categoryid,
                 Brandid = dto.Brandid,
@@ -359,6 +397,7 @@ namespace ECommerceBackend.Controllers
                 var product = new Product
                 {
                     Productname = dto.Productname,
+                    Slug = await ProductSlugService.GenerateUniqueSlugAsync(_context, dto.Productname),
                     Description = dto.Description,
                     Categoryid = dto.Categoryid,
                     Brandid = dto.Brandid,
@@ -593,7 +632,16 @@ namespace ECommerceBackend.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                product.Productname = dto.Productname.Trim();
+                var nextProductName = dto.Productname.Trim();
+                if (!string.Equals(product.Productname, nextProductName, StringComparison.Ordinal))
+                {
+                    product.Slug = await ProductSlugService.GenerateUniqueSlugAsync(
+                        _context,
+                        nextProductName,
+                        product.Productid);
+                }
+
+                product.Productname = nextProductName;
                 product.Description = dto.Description?.Trim();
                 product.Categoryid = dto.Categoryid;
                 product.Brandid = dto.Brandid;
@@ -764,7 +812,16 @@ namespace ECommerceBackend.Controllers
             if (dto.Brandid.HasValue && !await _context.Brands.AnyAsync(b => b.Brandid == dto.Brandid.Value))
                 return BadRequest(new ApiErrorDto("Thương hiệu đã chọn không tồn tại.", null));
 
-            product.Productname = dto.Productname;
+            var nextName = dto.Productname.Trim();
+            if (!string.Equals(product.Productname, nextName, StringComparison.Ordinal))
+            {
+                product.Slug = await ProductSlugService.GenerateUniqueSlugAsync(
+                    _context,
+                    nextName,
+                    product.Productid);
+            }
+
+            product.Productname = nextName;
             product.Description = dto.Description;
             product.Categoryid = dto.Categoryid;
             product.Brandid = dto.Brandid;

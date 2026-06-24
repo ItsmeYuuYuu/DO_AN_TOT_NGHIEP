@@ -15,6 +15,8 @@ public partial class Product
 
     public string Productname { get; set; } = null!;
 
+    public string? Slug { get; set; }
+
     public string? Description { get; set; }
 
     public DateTime? Createdat { get; set; }
@@ -24,6 +26,8 @@ public partial class Product
     public virtual Category? Category { get; set; }
 
     public virtual ICollection<Chatproductrecommendation> Chatproductrecommendations { get; set; } = new List<Chatproductrecommendation>();
+
+    public virtual ICollection<Homepageproductsectionitem> Homepageproductsectionitems { get; set; } = new List<Homepageproductsectionitem>();
 
     public virtual Productseries? Series { get; set; }
 

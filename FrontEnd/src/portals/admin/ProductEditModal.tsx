@@ -46,7 +46,7 @@ interface EditVariant {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500';
+  'w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#4f46e5]';
 
 const newClientId = () => crypto.randomUUID();
 
@@ -393,10 +393,10 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                     <img
                       src={(variant.images.find(image => image.ismain) ?? variant.images[0]).imageurl}
                       alt=""
-                      className="h-11 w-11 rounded-lg border border-slate-200 bg-white object-contain"
+                      className="h-11 w-11 rounded-2xl border border-slate-200 bg-white object-contain"
                     />
                   ) : (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-200 text-slate-400">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-200 text-slate-400">
                       <ImageIcon size={18} />
                     </div>
                   )}
@@ -412,7 +412,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                     <button
                       type="button"
                       onClick={() => { void removeVariant(variant); }}
-                      className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      className="rounded-2xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
                       aria-label="Xóa biến thể"
                     >
                       <Trash2 size={17} />
@@ -421,7 +421,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   <button
                     type="button"
                     onClick={() => updateVariant(variant.clientId, current => ({ ...current, expanded: !current.expanded }))}
-                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
+                    className="rounded-2xl p-2 text-slate-500 hover:bg-slate-200"
                   >
                     {variant.expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                   </button>
@@ -477,7 +477,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                           <h4 className="text-xs font-bold uppercase text-slate-600">Hình ảnh ({variant.images.length}/8)</h4>
                           <p className="text-[11px] text-slate-500">Chọn một ảnh làm đại diện cho danh sách sản phẩm.</p>
                         </div>
-                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100">
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-2xl bg-indigo-50 px-3 py-2 text-xs font-bold text-[#4338ca] hover:bg-indigo-100">
                           {uploadingVariant === variant.clientId
                             ? <LoaderCircle size={15} className="animate-spin" />
                             : <Upload size={15} />}
@@ -507,10 +507,10 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                             <div
                               key={`${image.imageurl}-${imageIndex}`}
                               className={`relative rounded-xl border-2 bg-white p-2 ${
-                                image.ismain ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200'
+                                image.ismain ? 'border-[#4f46e5] ring-2 ring-indigo-100' : 'border-slate-200'
                               }`}
                             >
-                              <img src={image.imageurl} alt="" className="aspect-square w-full rounded-lg bg-slate-50 object-contain" />
+                              <img src={image.imageurl} alt="" className="aspect-square w-full rounded-2xl bg-slate-50 object-contain" />
                               <label className="mt-2 flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-600">
                                 <input
                                   type="radio"
@@ -523,7 +523,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => { void removeImage(variant, imageIndex); }}
-                                className="absolute right-2 top-2 rounded-lg bg-white/90 p-1.5 text-red-500 shadow hover:bg-red-50"
+                                className="absolute right-2 top-2 rounded-2xl bg-white/90 p-1.5 text-red-500 shadow hover:bg-red-50"
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -542,13 +542,13 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                             ...current,
                             specs: [...current.specs, { key: '', value: '' }],
                           }))}
-                          className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200"
+                          className="inline-flex items-center gap-1 rounded-2xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200"
                         >
                           <Plus size={14} /> Thêm thông số
                         </button>
                       </div>
                       {variant.specs.length === 0 ? (
-                        <p className="rounded-lg bg-slate-50 py-5 text-center text-xs text-slate-400">Chưa có thông số kỹ thuật.</p>
+                        <p className="rounded-2xl bg-slate-50 py-5 text-center text-xs text-slate-400">Chưa có thông số kỹ thuật.</p>
                       ) : (
                         <div className="space-y-2">
                           {variant.specs.map((spec, specIndex) => (
@@ -571,7 +571,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                                   ...current,
                                   specs: current.specs.filter((_, index) => index !== specIndex),
                                 }))}
-                                className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                                className="rounded-2xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
                               >
                                 <Trash2 size={16} />
                               </button>

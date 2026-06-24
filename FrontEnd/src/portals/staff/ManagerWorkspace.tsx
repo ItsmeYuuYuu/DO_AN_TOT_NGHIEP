@@ -25,7 +25,7 @@ const ManagerWorkspace: React.FC = () => (
           <Link
             key={to}
             to={to}
-            className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
+            className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
           >
             <div className="flex items-start gap-3">
               <span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700">

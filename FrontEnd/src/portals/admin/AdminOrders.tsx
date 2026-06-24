@@ -10,12 +10,14 @@ import { formatCurrency, formatDateTime } from '@/utils/formatters';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { notifyError, notifyWarning } from '@/utils/notifications';
+
 
 const PAGE_SIZE = 10;
 
 const statusConfig: Record<string, { label: string; classes: string }> = {
   Completed: { label: 'Hoàn thành', classes: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
-  Shipped: { label: 'Đang giao', classes: 'bg-blue-50 text-blue-700 border border-blue-200' },
+  Shipped: { label: 'Đang giao', classes: 'bg-indigo-50 text-[#4338ca] border border-indigo-200' },
   Returned: { label: 'Hoàn về kho', classes: 'bg-purple-50 text-purple-700 border border-purple-200' },
   Processing: { label: 'Đang xử lý', classes: 'bg-amber-50 text-amber-700 border border-amber-200' },
   Pending: { label: 'Chờ duyệt', classes: 'bg-slate-100 text-slate-600 border border-slate-200' },
@@ -79,7 +81,7 @@ const AdminOrders: React.FC = () => {
     try {
       await updateStatus(id, status);
     } catch (requestError) {
-      alert(getApiErrorMessage(requestError, 'Không thể cập nhật trạng thái đơn hàng.'));
+      notifyError(getApiErrorMessage(requestError, 'Không thể cập nhật trạng thái đơn hàng.'));
     } finally {
       setUpdatingId(null);
     }
@@ -94,7 +96,7 @@ const AdminOrders: React.FC = () => {
       setViewOrder(refreshed.data);
       await refetch();
     } catch (requestError) {
-      alert(getApiErrorMessage(requestError, 'Không thể xác nhận thanh toán.'));
+      notifyError(getApiErrorMessage(requestError, 'Không thể xác nhận thanh toán.'));
     } finally {
       setPaymentUpdating(false);
     }
@@ -113,12 +115,12 @@ const AdminOrders: React.FC = () => {
         const errorLines = response.failed.map((failed: { orderId: number; reason: string }) =>
           `Đơn #${failed.orderId}: ${failed.reason}`,
         ).join('\n');
-        alert(`Cập nhật một phần.\n\nThành công: ${response.updatedOrderIds.length}\nThất bại: ${response.failed.length}\n\nLý do:\n${errorLines}`);
+        notifyWarning(`Cập nhật một phần.\n\nThành công: ${response.updatedOrderIds.length}\nThất bại: ${response.failed.length}\n\nLý do:\n${errorLines}`);
       } else {
         setBulkStatus('');
       }
     } catch {
-      alert('Lỗi hệ thống khi cập nhật trạng thái.');
+      notifyError('Lỗi hệ thống khi cập nhật trạng thái.');
     } finally {
       setUpdatingId(null);
     }
@@ -168,7 +170,7 @@ const AdminOrders: React.FC = () => {
           type="checkbox"
           checked={paged.length > 0 && selectedIds.size === paged.length}
           onChange={toggleSelectAll}
-          className="accent-[#ff5b35]"
+          className="accent-[#4f46e5]"
         />
       ),
       className: 'w-10 text-center',
@@ -177,7 +179,7 @@ const AdminOrders: React.FC = () => {
           type="checkbox"
           checked={selectedIds.has(order.orderid)}
           onChange={() => toggleSelect(order.orderid)}
-          className="accent-[#ff5b35]"
+          className="accent-[#4f46e5]"
         />
       ),
     },
@@ -185,7 +187,7 @@ const AdminOrders: React.FC = () => {
       key: 'orderid',
       header: 'Mã đơn',
       render: (order: Order) => (
-        <button onClick={() => setViewOrder(order)} className="font-mono text-xs font-black text-blue-700 hover:underline">
+        <button onClick={() => setViewOrder(order)} className="font-mono text-xs font-black text-[#4338ca] hover:underline">
           #{String(order.orderid).padStart(5, '0')}
         </button>
       ),
@@ -195,7 +197,7 @@ const AdminOrders: React.FC = () => {
       header: 'Khách hàng',
       render: (order: Order) => (
         <div>
-          <p className="text-sm font-black text-[#10233f]">
+          <p className="text-sm font-black text-[#172033]">
             {order.customer?.fullname ?? order.shippingname ?? `KH #${order.customerid ?? '—'}`}
           </p>
           <p className="text-xs font-semibold text-slate-400">{order.customer?.phone ?? order.shippingphone ?? ''}</p>
@@ -207,7 +209,7 @@ const AdminOrders: React.FC = () => {
       header: 'Giá trị',
       render: (order: Order) => (
         <div>
-          <p className="font-black text-[#10233f]">{formatCurrency(order.finalamount ?? 0)}</p>
+          <p className="font-black text-[#172033]">{formatCurrency(order.finalamount ?? 0)}</p>
           {order.discountamount && order.discountamount > 0 && (
             <p className="text-xs font-bold text-emerald-600">-{formatCurrency(order.discountamount)}</p>
           )}
@@ -224,7 +226,7 @@ const AdminOrders: React.FC = () => {
           </span>
           <p className={`text-[11px] font-black ${
             order.paymentstatus === 'Paid' ? 'text-emerald-600' :
-              order.paymentstatus === 'DepositPaid' ? 'text-blue-600' : 'text-amber-600'
+              order.paymentstatus === 'DepositPaid' ? 'text-[#4f46e5]' : 'text-amber-600'
           }`}>
             {order.paymentstatus ?? 'Chưa ghi nhận'}
           </p>
@@ -256,7 +258,7 @@ const AdminOrders: React.FC = () => {
       className: 'w-44',
       render: (order: Order) => (
         <select
-          className="border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold text-[#10233f] outline-none focus:border-blue-500 disabled:opacity-60"
+          className="border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold text-[#172033] outline-none focus:border-[#4f46e5] disabled:opacity-60"
           value={order.orderstatus ?? ''}
           disabled={
             updatingId === order.orderid ||
@@ -281,7 +283,7 @@ const AdminOrders: React.FC = () => {
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
             <p className="ops-label">Order control room</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#10233f]">Quản lý đơn hàng</h1>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#172033]">Quản lý đơn hàng</h1>
             <p className="mt-2 text-sm text-slate-500">
               Theo dõi đơn, xác nhận thanh toán, cập nhật trạng thái và xuất dữ liệu phục vụ vận hành.
             </p>
@@ -294,14 +296,14 @@ const AdminOrders: React.FC = () => {
 
       <div className="grid gap-4 md:grid-cols-4">
         {[
-          { label: 'Tổng đơn lọc được', value: filtered.length, icon: <ShoppingCart size={19} />, tone: 'bg-blue-50 text-blue-700' },
+          { label: 'Tổng đơn lọc được', value: filtered.length, icon: <ShoppingCart size={19} />, tone: 'bg-indigo-50 text-[#4338ca]' },
           { label: 'Chờ duyệt', value: pendingCount, icon: <Clock3 size={19} />, tone: 'bg-amber-50 text-amber-700' },
           { label: 'Đang xử lý', value: processingCount, icon: <PackageCheck size={19} />, tone: 'bg-violet-50 text-violet-700' },
           { label: 'Đã có thanh toán', value: paidCount, icon: <WalletCards size={19} />, tone: 'bg-emerald-50 text-emerald-700' },
         ].map(item => (
           <div key={item.label} className="ops-card p-4">
             <div className={`mb-3 flex h-10 w-10 items-center justify-center ${item.tone}`}>{item.icon}</div>
-            <p className="text-2xl font-black text-[#10233f]">{loading ? '...' : item.value}</p>
+            <p className="text-2xl font-black text-[#172033]">{loading ? '...' : item.value}</p>
             <p className="text-xs font-bold text-slate-400">{item.label}</p>
           </div>
         ))}
@@ -319,8 +321,8 @@ const AdminOrders: React.FC = () => {
               onClick={() => { setFilterStatus(status); setPage(1); }}
               className={`border px-3 py-1.5 text-xs font-black transition ${
                 filterStatus === status
-                  ? 'border-[#10233f] bg-[#10233f] text-white'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50'
+                  ? 'border-[#172033] bg-[#172033] text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50'
               }`}
             >
               {status === 'all' ? 'Tất cả' : (statusConfig[status]?.label ?? status)}
@@ -335,7 +337,7 @@ const AdminOrders: React.FC = () => {
           <div className="relative min-w-[240px] flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
-              className="w-full border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm font-semibold outline-none focus:border-[#10233f] focus:bg-white"
+              className="w-full border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm font-semibold outline-none focus:border-[#172033] focus:bg-white"
               placeholder="Tìm mã đơn, tên khách, SĐT..."
               value={search}
               onChange={event => { setSearch(event.target.value); setPage(1); }}
@@ -343,18 +345,18 @@ const AdminOrders: React.FC = () => {
           </div>
           <label className="text-xs font-black uppercase text-slate-500">
             Từ ngày
-            <input type="date" value={dateFrom} onChange={event => { setDateFrom(event.target.value); setPage(1); }} className="ml-2 border border-slate-200 bg-white px-3 py-2 text-sm font-bold normal-case text-[#10233f]" />
+            <input type="date" value={dateFrom} onChange={event => { setDateFrom(event.target.value); setPage(1); }} className="ml-2 border border-slate-200 bg-white px-3 py-2 text-sm font-bold normal-case text-[#172033]" />
           </label>
           <label className="text-xs font-black uppercase text-slate-500">
             Đến ngày
-            <input type="date" value={dateTo} onChange={event => { setDateTo(event.target.value); setPage(1); }} className="ml-2 border border-slate-200 bg-white px-3 py-2 text-sm font-bold normal-case text-[#10233f]" />
+            <input type="date" value={dateTo} onChange={event => { setDateTo(event.target.value); setPage(1); }} className="ml-2 border border-slate-200 bg-white px-3 py-2 text-sm font-bold normal-case text-[#172033]" />
           </label>
         </div>
 
         {selectedIds.size > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-2 border border-blue-100 bg-blue-50 px-3 py-2">
-            <span className="text-sm font-black text-blue-800">{selectedIds.size} đơn đã chọn</span>
-            <select className="border border-blue-200 bg-white px-2 py-1 text-sm font-bold" value={bulkStatus} onChange={event => setBulkStatus(event.target.value)}>
+          <div className="mt-4 flex flex-wrap items-center gap-2 border border-indigo-200 bg-indigo-50 px-3 py-2">
+            <span className="text-sm font-black text-[#4338ca]">{selectedIds.size} đơn đã chọn</span>
+            <select className="border border-indigo-200 bg-white px-2 py-1 text-sm font-bold" value={bulkStatus} onChange={event => setBulkStatus(event.target.value)}>
               <option value="">Đổi trạng thái</option>
               <option value="Processing">Đang xử lý</option>
               <option value="Cancelled">Hủy</option>
@@ -367,7 +369,7 @@ const AdminOrders: React.FC = () => {
       <DataTable columns={columns} data={paged} keyField="orderid" loading={loading} emptyMessage="Chưa có đơn hàng phù hợp." />
 
       <div className="flex flex-col justify-between gap-3 text-sm font-bold text-slate-500 md:flex-row md:items-center">
-        <span>Tổng giá trị theo bộ lọc: <strong className="text-[#db3d1c]">{formatCurrency(totalRevenue)}</strong></span>
+        <span>Tổng giá trị theo bộ lọc: <strong className="text-[#4338ca]">{formatCurrency(totalRevenue)}</strong></span>
         <Pagination
           page={page}
           totalPages={totalPages}
@@ -391,11 +393,11 @@ const AdminOrders: React.FC = () => {
                     const currentIndex = orderProgress.indexOf(viewOrder.orderstatus ?? 'Pending');
                     const isPast = index <= currentIndex;
                     return (
-                      <div key={status} className={`border p-3 text-center ${isPast ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-slate-50'}`}>
-                        <div className={`mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${isPast ? 'bg-blue-600 text-white' : 'bg-white text-slate-400'}`}>
+                      <div key={status} className={`border p-3 text-center ${isPast ? 'border-indigo-200 bg-indigo-50' : 'border-slate-200 bg-slate-50'}`}>
+                        <div className={`mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${isPast ? 'bg-[#4f46e5] text-white' : 'bg-white text-slate-400'}`}>
                           {isPast ? <CheckCircle2 size={16} /> : index + 1}
                         </div>
-                        <p className={`text-xs font-black ${isPast ? 'text-blue-700' : 'text-slate-400'}`}>
+                        <p className={`text-xs font-black ${isPast ? 'text-[#4338ca]' : 'text-slate-400'}`}>
                           {statusConfig[status].label}
                         </p>
                       </div>
@@ -407,13 +409,13 @@ const AdminOrders: React.FC = () => {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="border border-slate-200 bg-slate-50 p-4">
-                <h4 className="mb-2 text-sm font-black text-[#10233f]">Thông tin khách hàng</h4>
+                <h4 className="mb-2 text-sm font-black text-[#172033]">Thông tin khách hàng</h4>
                 <p className="text-sm text-slate-600"><span className="font-bold">Tên:</span> {viewOrder.customer?.fullname ?? viewOrder.shippingname ?? '—'}</p>
                 <p className="text-sm text-slate-600"><span className="font-bold">SĐT:</span> {viewOrder.customer?.phone ?? viewOrder.shippingphone ?? '—'}</p>
                 <p className="text-sm text-slate-600"><span className="font-bold">Địa chỉ:</span> {viewOrder.shippingaddress ?? '—'}</p>
               </div>
               <div className="border border-slate-200 bg-slate-50 p-4">
-                <h4 className="mb-2 text-sm font-black text-[#10233f]">Thanh toán</h4>
+                <h4 className="mb-2 text-sm font-black text-[#172033]">Thanh toán</h4>
                 <p className="text-sm text-slate-600"><span className="font-bold">Hình thức:</span> {viewOrder.paymentmethod ?? '—'}</p>
                 <p className="text-sm text-slate-600"><span className="font-bold">Tổng tiền:</span> {formatCurrency(viewOrder.finalamount ?? 0)}</p>
                 <p className="text-sm text-slate-600"><span className="font-bold">Đã trả:</span> {formatCurrency(viewOrder.paidamount ?? 0)}</p>

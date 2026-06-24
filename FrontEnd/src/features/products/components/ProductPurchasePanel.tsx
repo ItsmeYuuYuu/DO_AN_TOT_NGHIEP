@@ -162,10 +162,10 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
 
   return (
     <div className="flex h-full flex-col gap-6">
-      <div className="border border-[#d9d2c5] bg-white p-5">
+      <div className="rounded-[22px] border border-[#e5e7eb] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <p className="customer-label">Giá bán</p>
         <div className="mt-2 flex flex-wrap items-end gap-3">
-          <span className="text-4xl font-black tracking-tight text-[#db3d1c]">
+          <span className="text-4xl font-black tracking-tight text-[#c4000b]">
             {formatCurrency(selectedVariant?.saleprice ?? selectedVariant?.baseprice ?? 0)}
           </span>
           {discount && discount > 0 ? (
@@ -173,7 +173,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
               <span className="mb-1 text-sm text-slate-400 line-through">
                 {formatCurrency(selectedVariant?.baseprice ?? 0)}
               </span>
-              <span className="mb-1 bg-[#ff5b35] px-2 py-1 text-xs font-black text-white">
+              <span className="mb-1 rounded-full bg-[#e30613] px-2.5 py-1 text-xs font-black text-white">
                 -{discount}%
               </span>
             </>
@@ -181,7 +181,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 font-black ${
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-black ${
             isOutOfStock ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-800'
           }`}>
             <PackageCheck size={15} />
@@ -194,7 +194,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
         <div className="flex flex-col gap-5">
           {Object.entries(optionGroups).map(([attrName, values]) => (
             <div key={attrName}>
-              <h3 className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-[#10233f]">
+              <h3 className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-[#1f2937]">
                 {attrName}
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -209,12 +209,12 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
                       onClick={() => handleOptionClick(attrName, value)}
                       disabled={!isAvailable}
                       title={isAvailable ? undefined : 'Phiên bản này đã hết hàng'}
-                      className={`min-w-[86px] border-2 px-4 py-2.5 text-sm font-black transition ${
+                      className={`min-w-[86px] rounded-full border px-4 py-2.5 text-sm font-black transition ${
                         !isAvailable
-                          ? 'cursor-not-allowed border-[#d9d2c5] bg-slate-100 text-slate-400 opacity-60 line-through'
+                          ? 'cursor-not-allowed border-[#e5e7eb] bg-slate-100 text-slate-400 opacity-60 line-through'
                           : isActive
-                            ? 'border-[#10233f] bg-[#10233f] text-white shadow-[4px_4px_0_rgba(255,91,53,0.35)]'
-                            : 'border-[#d9d2c5] bg-white text-[#10233f] hover:border-[#10233f]'
+                            ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_10px_24px_rgba(227,6,19,0.22)]'
+                            : 'border-[#e5e7eb] bg-white text-[#1f2937] hover:border-[#1f2937]'
                       }`}
                     >
                       {isColor && (
@@ -234,7 +234,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
       ) : (
         variants.length > 0 && (
           <div className="flex flex-col gap-3">
-            <h3 className="text-xs font-black uppercase tracking-[0.14em] text-[#10233f]">
+            <h3 className="text-xs font-black uppercase tracking-[0.14em] text-[#1f2937]">
               Chọn phiên bản
             </h3>
             <div className="grid grid-cols-2 gap-2">
@@ -248,12 +248,12 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
                     onClick={() => { if (isAvailable) onSelectVariant(variant); }}
                     disabled={!isAvailable}
                     title={isAvailable ? undefined : 'Phiên bản này đã hết hàng'}
-                    className={`border-2 p-3 text-center transition ${
+                    className={`rounded-2xl border p-3 text-center transition ${
                       !isAvailable
-                        ? 'cursor-not-allowed border-[#d9d2c5] bg-slate-100 text-slate-400 opacity-60'
+                        ? 'cursor-not-allowed border-[#e5e7eb] bg-slate-100 text-slate-400 opacity-60'
                         : isActive
-                          ? 'border-[#10233f] bg-[#10233f] text-white'
-                          : 'border-[#d9d2c5] bg-white text-[#10233f] hover:border-[#10233f]'
+                          ? 'border-[#1f2937] bg-[#1f2937] text-white'
+                          : 'border-[#e5e7eb] bg-white text-[#1f2937] hover:border-[#1f2937]'
                     }`}
                   >
                     <div className={`line-clamp-2 text-sm font-black ${!isAvailable ? 'line-through' : ''}`}>
@@ -268,12 +268,12 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
         )
       )}
 
-      <div className="mt-auto grid grid-cols-1 gap-3 border-t border-[#d9d2c5] pt-5 sm:grid-cols-2">
+      <div className="mt-auto grid grid-cols-1 gap-3 border-t border-[#e5e7eb] pt-5 sm:grid-cols-2">
         <button
           type="button"
           onClick={async () => { await handleAddToCart(); navigate('/cart'); }}
           disabled={isOutOfStock}
-          className="flex min-h-12 items-center justify-center gap-2 bg-[#db3d1c] px-4 py-3 text-white transition hover:bg-[#b83217] disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#e30613] px-4 py-3 text-white shadow-[0_12px_26px_rgba(227,6,19,0.22)] transition hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
           <span className="flex items-center gap-2 text-sm font-black uppercase">
             <Zap size={17} className="fill-current" /> {isOutOfStock ? 'Tạm hết hàng' : 'Mua ngay'}
@@ -284,12 +284,12 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
           type="button"
           onClick={() => { void handleAddToCart(); }}
           disabled={isOutOfStock}
-          className={`flex min-h-12 items-center justify-center gap-2 border-2 px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 ${
+          className={`flex min-h-12 items-center justify-center gap-2 rounded-full border px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 ${
             addedToCart
               ? 'border-emerald-600 bg-emerald-600 text-white'
               : inCart
-                ? 'border-[#75d7dc] bg-[#75d7dc]/25 text-[#10233f]'
-                : 'border-[#10233f] bg-white text-[#10233f] hover:bg-[#10233f] hover:text-white'
+                ? 'border-[#ffd166] bg-[#ffd166]/25 text-[#1f2937]'
+                : 'border-[#1f2937] bg-white text-[#1f2937] hover:bg-[#1f2937] hover:text-white'
           }`}
         >
           {addedToCart ? <Check size={17} /> : <ShoppingCart size={17} />}

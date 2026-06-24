@@ -22,7 +22,7 @@ const statusLabels: Record<string, string> = {
 
 const statusClasses: Record<string, string> = {
   PendingReview: 'bg-amber-50 text-amber-700',
-  Approved: 'bg-blue-50 text-blue-700',
+  Approved: 'bg-red-50 text-[#c4000b]',
   Rejected: 'bg-red-50 text-red-700',
   RefundPending: 'bg-violet-50 text-violet-700',
   Completed: 'bg-emerald-50 text-emerald-700',
@@ -150,7 +150,7 @@ const CustomerReturns: React.FC = () => {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {error}
         </div>
       )}
@@ -186,7 +186,7 @@ const CustomerReturns: React.FC = () => {
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {request.items.map(item => (
-                  <div key={item.returnitemid} className="rounded-xl bg-slate-50 p-3 text-sm">
+                  <div key={item.returnitemid} className="rounded-2xl bg-slate-50 p-3 text-sm">
                     <p className="font-bold text-slate-800">{item.productname ?? item.sku ?? 'Sản phẩm'}</p>
                     <p className="mt-1 text-xs text-slate-500">IMEI: {item.imei}</p>
                     {item.replacementimei && (
@@ -220,7 +220,7 @@ const CustomerReturns: React.FC = () => {
                 )}
               </div>
               {request.reviewnote && (
-                <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <p className="mt-3 rounded-full bg-amber-50 px-3 py-2 text-sm text-amber-800">
                   Phản hồi: {request.reviewnote}
                 </p>
               )}
@@ -241,7 +241,7 @@ const CustomerReturns: React.FC = () => {
                   setOrderId(event.target.value);
                   setSelectedItems([]);
                 }}
-                className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm"
+                className="w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm"
               >
                 <option value="">Chọn đơn trong 30 ngày</option>
                 {eligibleOrders.map(order => (
@@ -256,7 +256,7 @@ const CustomerReturns: React.FC = () => {
               <select
                 value={requestType}
                 onChange={event => setRequestType(event.target.value as 'Return' | 'Exchange')}
-                className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm"
+                className="w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm"
               >
                 <option value="Return">Trả hàng và hoàn tiền</option>
                 <option value="Exchange">Đổi sang máy cùng cấu hình</option>
@@ -269,14 +269,14 @@ const CustomerReturns: React.FC = () => {
               <label className="mb-2 block text-sm font-bold text-slate-700">Sản phẩm cần xử lý</label>
               <div className="space-y-2">
                 {(selectedOrder.orderitems ?? []).map(item => (
-                  <label key={item.orderitemid} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50">
+                  <label key={item.orderitemid} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 p-3 hover:bg-slate-50">
                     <input
                       type="checkbox"
                       checked={selectedItems.includes(item.orderitemid)}
                       onChange={() => toggleItem(item.orderitemid)}
                       className="h-4 w-4"
                     />
-                    <PackageCheck size={18} className="text-blue-500" />
+                    <PackageCheck size={18} className="text-[#e30613]" />
                     <span className="flex-1">
                       <span className="block text-sm font-bold text-slate-800">{item.productname ?? item.variantsku ?? 'Sản phẩm'}</span>
                       <span className="text-xs text-slate-500">IMEI: {item.imei}</span>
@@ -295,7 +295,7 @@ const CustomerReturns: React.FC = () => {
               value={reason}
               onChange={event => setReason(event.target.value)}
               placeholder="Ví dụ: sản phẩm lỗi, không đúng mô tả..."
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
             />
           </div>
           <div>
@@ -305,12 +305,12 @@ const CustomerReturns: React.FC = () => {
               value={description}
               onChange={event => setDescription(event.target.value)}
               placeholder="Tình trạng máy, phụ kiện và hộp khi gửi lại..."
-              className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm"
+              className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm"
             />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-bold text-slate-700">Ảnh thiết bị (tối đa 6)</label>
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-5 text-sm font-semibold text-slate-500 hover:border-blue-300 hover:bg-blue-50">
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 p-5 text-sm font-semibold text-slate-500 hover:border-red-300 hover:bg-red-50">
               <Camera size={20} /> Chọn ảnh từ máy
               <input
                 type="file"

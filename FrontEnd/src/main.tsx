@@ -5,13 +5,16 @@ import './assets/index.css'
 import App from './App.tsx'
 import { AuthProvider } from './features/auth/context/AuthContext.tsx'
 import { CartProvider } from './features/orders/context/CartContext.tsx'
+import { NotificationProvider } from './components/NotificationProvider.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <App />
+          <NotificationProvider>
+            <App />
+          </NotificationProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

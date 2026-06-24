@@ -19,6 +19,8 @@ import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTa
 import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
 import { formatDateTime } from '../../utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { confirmAction, notifyError } from '@/utils/notifications';
+
 
 const quickPrompts = [
   { label: 'Chụp ảnh đẹp', prompt: 'Tôi cần điện thoại chụp ảnh đẹp trong tầm giá hợp lý', icon: Camera },
@@ -34,11 +36,17 @@ export default function CustomerChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMsg, setInputMsg] = useState(() => (searchParams.get('q') ?? '').slice(0, 500));
   const [loading, setLoading] = useState(false);
+  const messagesPaneRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     window.setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const pane = messagesPaneRef.current;
+      if (pane) {
+        pane.scrollTo({ top: pane.scrollHeight, behavior: 'smooth' });
+        return;
+      }
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
   };
 
@@ -105,7 +113,7 @@ export default function CustomerChat() {
 
   const deleteSession = async (id: number, event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
-    if (!confirm('Bạn có chắc muốn xóa cuộc hội thoại này?')) return;
+    if (!(await confirmAction('Bạn có chắc muốn xóa cuộc hội thoại này?', { danger: true, confirmLabel: 'Xóa' }))) return;
     try {
       await chatSessionsApi.deleteSession(id);
       setSessions(current => current.filter(session => session.sessionid !== id));
@@ -115,7 +123,7 @@ export default function CustomerChat() {
       }
     } catch (err) {
       console.error(err);
-      alert(getApiErrorMessage(err, 'Không thể xóa cuộc hội thoại này.'));
+      notifyError(getApiErrorMessage(err, 'Không thể xóa cuộc hội thoại này.'));
     }
   };
 
@@ -151,7 +159,7 @@ export default function CustomerChat() {
       }
       scrollToBottom();
     } catch (error: unknown) {
-      alert(getApiErrorMessage(error, 'Lỗi khi gửi tin nhắn'));
+      notifyError(getApiErrorMessage(error, 'Lỗi khi gửi tin nhắn'));
       setMessages(prev => prev.filter(message => message.messageid !== tempMsg.messageid));
     } finally {
       setLoading(false);
@@ -172,7 +180,7 @@ export default function CustomerChat() {
       setMessages(await chatSessionsApi.getMessages(activeSession.sessionid));
       scrollToBottom();
     } catch (error: unknown) {
-      alert(getApiErrorMessage(error, 'Không thể chuyển cuộc trò chuyện cho nhân viên.'));
+      notifyError(getApiErrorMessage(error, 'Không thể chuyển cuộc trò chuyện cho nhân viên.'));
     }
   };
 
@@ -182,7 +190,7 @@ export default function CustomerChat() {
         <Link
           key={`${part}-${index}`}
           to={part}
-          className="font-black text-[#db3d1c] underline underline-offset-2"
+          className="font-black text-[#c4000b] underline underline-offset-2"
         >
           {part}
         </Link>
@@ -191,22 +199,67 @@ export default function CustomerChat() {
       ),
     );
 
+  const renderAssistantMessageContent = (content: string) => {
+    const lines = content.split('\n');
+
+    return (
+      <div className="space-y-2 text-sm leading-7">
+        {lines.map((line, index) => {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            return <div key={`gap-${index}`} className="h-1" />;
+          }
+
+          const isReason = trimmed.toLowerCase().startsWith('lý do gợi ý:');
+          const isProductTitle = /^\d+\.\s+/.test(trimmed);
+          const isVariantLine = /^-\s+/.test(trimmed);
+
+          if (isReason) {
+            return (
+              <div
+                key={`${trimmed}-${index}`}
+                className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-semibold text-amber-900"
+              >
+                {renderMessageContent(trimmed)}
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={`${trimmed}-${index}`}
+              className={
+                isProductTitle
+                  ? 'pt-1 font-black text-slate-900'
+                  : isVariantLine
+                    ? 'pl-3 text-slate-700'
+                    : 'text-slate-700'
+              }
+            >
+              {renderMessageContent(trimmed)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
-    <div className="customer-shell min-h-screen px-4 py-6">
-      <div className="customer-container grid h-[calc(100vh-9rem)] min-h-[680px] overflow-hidden border border-[#d9d2c5] bg-[#fffdf8] lg:grid-cols-[320px_1fr]">
-        <aside className="hidden border-r border-[#d9d2c5] bg-white lg:flex lg:flex-col">
-          <div className="border-b border-[#d9d2c5] p-5">
+    <div className="customer-shell px-0 py-0 md:px-4 md:py-6">
+      <div className="customer-container grid h-[calc(100dvh-8.75rem)] min-h-[460px] overflow-hidden border border-[#e5e7eb] bg-[#ffffff] shadow-[0_18px_45px_rgba(15,23,42,0.08)] md:h-[calc(100vh-12rem)] md:min-h-[560px] md:max-h-[calc(100vh-8rem)] md:rounded-[28px] lg:grid-cols-[320px_1fr]">
+        <aside className="hidden min-h-0 border-r border-[#e5e7eb] bg-white lg:flex lg:flex-col">
+          <div className="border-b border-[#e5e7eb] p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="customer-label">AI history</p>
-                <h2 className="mt-1 flex items-center gap-2 text-xl font-black text-[#10233f]">
+                <h2 className="mt-1 flex items-center gap-2 text-xl font-black text-[#1f2937]">
                   <MessageSquare size={19} /> Lịch sử chat
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={createSession}
-                className="flex h-10 w-10 items-center justify-center bg-[#10233f] text-white hover:bg-[#db3d1c]"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1f2937] text-white hover:bg-[#c4000b]"
                 title="Tạo hội thoại mới"
               >
                 <Plus size={19} />
@@ -214,9 +267,9 @@ export default function CustomerChat() {
             </div>
           </div>
 
-          <div className="flex-1 space-y-2 overflow-y-auto p-3">
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
             {sessions.length === 0 ? (
-              <div className="border border-dashed border-[#d9d2c5] px-4 py-10 text-center text-sm text-slate-400">
+              <div className="border border-dashed border-[#e5e7eb] px-4 py-10 text-center text-sm text-slate-400">
                 Chưa có cuộc hội thoại nào.
               </div>
             ) : (
@@ -234,8 +287,8 @@ export default function CustomerChat() {
                   }}
                   className={`group flex w-full items-start justify-between gap-3 border p-3 text-left transition ${
                     activeSession?.sessionid === session.sessionid
-                      ? 'border-[#10233f] bg-[#10233f] text-white shadow-[4px_4px_0_rgba(255,91,53,0.35)]'
-                      : 'border-[#d9d2c5] bg-[#fffdf8] text-[#10233f] hover:border-[#10233f]'
+                      ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_12px_28px_rgba(227,6,19,0.18)]'
+                      : 'border-[#e5e7eb] bg-[#ffffff] text-[#1f2937] hover:border-[#1f2937]'
                   }`}
                 >
                   <span className="min-w-0">
@@ -268,12 +321,47 @@ export default function CustomerChat() {
           </div>
         </aside>
 
-        <section className="flex min-w-0 flex-col">
-          <header className="border-b border-[#d9d2c5] bg-white p-5">
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+        <section className="flex min-h-0 min-w-0 flex-col">
+          <header className="shrink-0 border-b border-[#e5e7eb] bg-white p-3 md:p-5">
+            <div className="mb-4 lg:hidden">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="customer-label">Lịch sử chat</p>
+                <button
+                  type="button"
+                  onClick={createSession}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1f2937] px-3 py-2 text-xs font-black text-white"
+                >
+                  <Plus size={14} /> Mới
+                </button>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {sessions.length === 0 ? (
+                  <span className="shrink-0 rounded-full border border-dashed border-[#e5e7eb] px-4 py-2 text-xs font-bold text-slate-400">
+                    Chưa có hội thoại
+                  </span>
+                ) : (
+                  sessions.map(session => (
+                    <button
+                      key={session.sessionid}
+                      type="button"
+                      onClick={() => selectSession(session)}
+                      className={`shrink-0 rounded-full border px-4 py-2 text-xs font-black ${
+                        activeSession?.sessionid === session.sessionid
+                          ? 'border-[#e30613] bg-[#e30613] text-white'
+                          : 'border-[#e5e7eb] bg-white text-[#1f2937]'
+                      }`}
+                    >
+                      {session.title}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start md:gap-4">
               <div>
                 <p className="customer-label">AI consultation</p>
-                <h1 className="customer-display mt-1 text-3xl font-bold text-[#10233f]">
+                <h1 className="customer-display mt-1 line-clamp-2 text-2xl font-bold text-[#1f2937] sm:text-3xl">
                   {activeSession ? activeSession.title : 'Tư vấn chọn điện thoại'}
                 </h1>
                 {activeSession && (
@@ -296,14 +384,14 @@ export default function CustomerChat() {
               )}
             </div>
 
-            <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 md:mt-5">
               {quickPrompts.map(({ label, prompt, icon: Icon }) => (
                 <button
                   key={label}
                   type="button"
                   onClick={() => submitMessage(prompt)}
                   disabled={loading}
-                  className="inline-flex shrink-0 items-center gap-2 border border-[#d9d2c5] bg-[#fffdf8] px-3 py-2 text-xs font-black text-[#10233f] hover:border-[#10233f] disabled:opacity-50"
+                  className="inline-flex shrink-0 items-center gap-2 border border-[#e5e7eb] bg-[#ffffff] px-3 py-2 text-xs font-black text-[#1f2937] hover:border-[#1f2937] disabled:opacity-50"
                 >
                   <Icon size={14} /> {label}
                 </button>
@@ -311,13 +399,13 @@ export default function CustomerChat() {
             </div>
           </header>
 
-          <div className="flex-1 space-y-6 overflow-y-auto bg-[#f4f0e8] p-4 md:p-6">
+          <div ref={messagesPaneRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[#f3f4f6] p-3 md:space-y-6 md:p-6">
             {!activeSession && sessions.length === 0 && (
               <div className="flex h-full flex-col items-center justify-center text-center">
-                <div className="mb-5 flex h-20 w-20 items-center justify-center bg-[#10233f] text-[#75d7dc]">
+                <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-[24px] bg-[#1f2937] text-[#ffd166]">
                   <Bot size={42} />
                 </div>
-                <h2 className="customer-display text-3xl font-bold text-[#10233f]">
+                <h2 className="customer-display text-3xl font-bold text-[#1f2937]">
                   Trợ lý mua sắm đã sẵn sàng
                 </h2>
                 <p className="mt-3 max-w-md text-sm leading-6 text-slate-500">
@@ -339,18 +427,22 @@ export default function CustomerChat() {
               return (
                 <div key={message.messageid || index} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
                   <div className={`flex h-9 w-9 shrink-0 items-center justify-center ${
-                    isUser ? 'bg-[#ff5b35] text-white' : 'bg-[#10233f] text-[#75d7dc]'
+                      isUser ? 'rounded-[22px] bg-[#e30613] text-white' : 'rounded-[22px] bg-[#1f2937] text-[#ffd166]'
                   }`}>
                     {isUser ? <User size={16} /> : message.sendertype === 'consultant' ? <Headphones size={16} /> : <Bot size={16} />}
                   </div>
-                  <div className={`${message.recommendations?.length ? 'max-w-[92%]' : 'max-w-[76%]'} border p-4 ${
+                  <div className={`${message.recommendations?.length ? 'max-w-[88vw] md:max-w-[92%]' : 'max-w-[82%] md:max-w-[76%]'} border p-3 md:p-4 ${
                     isUser
-                      ? 'border-[#ff5b35] bg-[#ff5b35] text-white'
-                      : 'border-[#d9d2c5] bg-white text-slate-700 shadow-[5px_5px_0_rgba(16,35,63,0.06)]'
+                      ? 'border-[#e30613] bg-[#e30613] text-white'
+                      : 'border-[#e5e7eb] bg-white text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08)]'
                   }`}>
-                    <p className="whitespace-pre-wrap text-sm leading-7">
-                      {renderMessageContent(message.messagecontent)}
-                    </p>
+                    {isUser ? (
+                      <p className="whitespace-pre-wrap text-sm leading-7">
+                        {renderMessageContent(message.messagecontent)}
+                      </p>
+                    ) : (
+                      renderAssistantMessageContent(message.messagecontent)
+                    )}
 
                     {message.responsetype === 'comparison' && message.recommendations && (
                       <ChatComparisonTable recommendations={message.recommendations} />
@@ -382,7 +474,7 @@ export default function CustomerChat() {
                               type="button"
                               disabled={loading}
                               onClick={() => submitMessage(reply)}
-                              className="border border-[#75d7dc] bg-[#75d7dc]/20 px-3 py-1.5 text-xs font-black text-[#10233f] transition hover:bg-[#75d7dc] disabled:opacity-50"
+                              className="border border-[#ffd166] bg-[#ffd166]/20 px-3 py-1.5 text-xs font-black text-[#1f2937] transition hover:bg-[#ffd166] disabled:opacity-50"
                             >
                               {reply}
                             </button>
@@ -400,20 +492,20 @@ export default function CustomerChat() {
 
             {loading && activeSession && (
               <div className="flex gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#10233f] text-[#75d7dc]">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1f2937] text-[#ffd166]">
                   <Bot size={16} />
                 </div>
-                <div className="flex items-center gap-2 border border-[#d9d2c5] bg-white p-4 shadow-[5px_5px_0_rgba(16,35,63,0.06)]">
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#10233f]" style={{ animationDelay: '0ms' }} />
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#10233f]" style={{ animationDelay: '150ms' }} />
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#10233f]" style={{ animationDelay: '300ms' }} />
+                <div className="flex items-center gap-2 rounded-[22px] border border-[#e5e7eb] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937]" style={{ animationDelay: '0ms' }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937]" style={{ animationDelay: '150ms' }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937]" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={sendMessage} className="flex items-center gap-3 border-t border-[#d9d2c5] bg-white p-4">
+          <form onSubmit={sendMessage} className="shrink-0 flex items-center gap-2 border-t border-[#e5e7eb] bg-white p-3 md:gap-3 md:p-4">
             <input
               type="text"
               value={inputMsg}
@@ -426,7 +518,7 @@ export default function CustomerChat() {
             <button
               type="submit"
               disabled={loading || !inputMsg.trim()}
-              className="flex h-12 w-12 shrink-0 items-center justify-center bg-[#10233f] text-white transition hover:bg-[#db3d1c] disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e30613] text-white transition hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               <Send size={20} />
             </button>

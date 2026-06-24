@@ -38,10 +38,10 @@ const renderDescription = (description: string) => {
     }
 
     blocks.push(
-      <figure key={`image-${match.index}`} className="my-7 overflow-hidden border border-[#d9d2c5] bg-[#f4f0e8]">
+      <figure key={`image-${match.index}`} className="my-7 overflow-hidden rounded-[24px] border border-[#e5e7eb] bg-[#f3f4f6]">
         <img src={match[2]} alt={match[1] || 'Hình ảnh sản phẩm'} className="mx-auto max-h-[680px] w-full object-contain" />
         {match[1] && match[1] !== 'Hình ảnh' && (
-          <figcaption className="border-t border-[#d9d2c5] px-4 py-2 text-center text-xs text-slate-500">
+          <figcaption className="border-t border-[#e5e7eb] px-4 py-2 text-center text-xs text-slate-500">
             {match[1]}
           </figcaption>
         )}
@@ -74,7 +74,7 @@ const ProductDetailPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    productsApi.getFullDetail(Number(id))
+    productsApi.getFullDetail(id)
       .then(res => {
         setProduct(res.data);
         if (res.data.productvariants && res.data.productvariants.length > 0) {
@@ -93,13 +93,13 @@ const ProductDetailPage: React.FC = () => {
       <div className="customer-shell min-h-screen px-4 py-10">
         <div className="customer-container animate-pulse">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            <div className="h-[520px] bg-[#fffdf8] lg:col-span-5" />
+            <div className="h-[520px] rounded-[28px] bg-white lg:col-span-5" />
             <div className="space-y-4 lg:col-span-4">
-              <div className="h-10 w-3/4 bg-[#fffdf8]" />
-              <div className="h-28 bg-[#fffdf8]" />
-              <div className="h-72 bg-[#fffdf8]" />
+              <div className="h-10 w-3/4 rounded-full bg-white" />
+              <div className="h-28 rounded-[24px] bg-white" />
+              <div className="h-72 rounded-[24px] bg-white" />
             </div>
-            <div className="h-[430px] bg-[#fffdf8] lg:col-span-3" />
+            <div className="h-[430px] rounded-[28px] bg-white lg:col-span-3" />
           </div>
         </div>
       </div>
@@ -130,44 +130,44 @@ const ProductDetailPage: React.FC = () => {
   ];
 
   return (
-    <div className="customer-shell pb-20">
-      <div className="customer-container px-4 py-6 md:py-8">
+    <div className="customer-shell pb-28 lg:pb-20">
+      <div className="customer-container px-3 py-5 sm:px-4 md:py-8">
         <nav className="mb-5 flex items-center gap-2 overflow-hidden text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
-          <Link to="/" className="shrink-0 hover:text-[#db3d1c]">Trang chủ</Link>
+          <Link to="/" className="shrink-0 hover:text-[#c4000b]">Trang chủ</Link>
           <ChevronRight size={13} />
           {product.category && (
             <>
-              <Link to={`/products?categoryId=${product.category.id}`} className="shrink-0 hover:text-[#db3d1c]">
+              <Link to={`/products?categoryId=${product.category.id}`} className="shrink-0 hover:text-[#c4000b]">
                 {product.category.name}
               </Link>
               <ChevronRight size={13} />
             </>
           )}
-          <span className="truncate text-[#10233f]">{product.productname}</span>
+          <span className="truncate text-[#1f2937]">{product.productname}</span>
         </nav>
 
         <section className="customer-panel overflow-hidden">
-          <div className="border-b border-[#d9d2c5] bg-[#fffdf8] px-5 py-5 md:px-7">
+          <div className="border-b border-[#e5e7eb] bg-white px-5 py-5 md:px-7">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
               <div>
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   {product.brand && (
-                    <span className="border border-[#d9d2c5] bg-[#f4f0e8] px-3 py-1 text-xs font-black text-[#10233f]">
+                    <span className="rounded-full border border-[#e5e7eb] bg-[#f3f4f6] px-3 py-1 text-xs font-black text-[#1f2937]">
                       {product.brand.name}
                     </span>
                   )}
                   {product.series && (
-                    <span className="border border-[#ff5b35]/25 bg-[#ff5b35]/10 px-3 py-1 text-xs font-black text-[#db3d1c]">
+                    <span className="rounded-full border border-[#e30613]/25 bg-[#e30613]/10 px-3 py-1 text-xs font-black text-[#c4000b]">
                       {product.series.name}
                     </span>
                   )}
-                  <span className={`px-3 py-1 text-xs font-black ${
+                  <span className={`rounded-full px-3 py-1 text-xs font-black ${
                     stock > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
                   }`}>
                     {stock > 0 ? 'Còn hàng' : 'Tạm hết hàng'}
                   </span>
                 </div>
-                <h1 className="customer-display max-w-3xl text-3xl font-bold leading-tight text-[#10233f] md:text-5xl">
+                <h1 className="customer-display max-w-3xl text-2xl font-bold leading-tight text-[#1f2937] sm:text-3xl md:text-5xl">
                   {product.productname}
                 </h1>
               </div>
@@ -175,7 +175,7 @@ const ProductDetailPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('reviews')}
-                className="flex shrink-0 items-center gap-2 border border-[#d9d2c5] bg-white px-4 py-3 text-sm font-bold text-[#10233f] hover:border-[#10233f]"
+                className="flex w-fit shrink-0 items-center gap-2 rounded-full border border-[#e5e7eb] bg-white px-3 py-2 text-xs font-bold text-[#1f2937] shadow-sm hover:border-[#e30613] sm:px-4 sm:py-3 sm:text-sm"
               >
                 <span className="flex text-amber-400">
                   {[1, 2, 3, 4, 5].map(value => (
@@ -188,11 +188,11 @@ const ProductDetailPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12">
-            <div className="border-b border-[#d9d2c5] bg-white p-5 md:p-7 lg:col-span-5 lg:border-b-0 lg:border-r">
+            <div className="border-b border-[#e5e7eb] bg-white p-4 sm:p-5 md:p-7 lg:col-span-5 lg:border-b-0 lg:border-r">
               <ProductGallery productName={product.productname} images={variantImages} />
             </div>
 
-            <div id="purchase-options" className="border-b border-[#d9d2c5] bg-[#fffdf8] p-5 md:p-7 lg:col-span-4 lg:border-b-0 lg:border-r">
+            <div id="purchase-options" className="border-b border-[#e5e7eb] bg-[#f9fafb] p-4 sm:p-5 md:p-7 lg:col-span-4 lg:border-b-0 lg:border-r">
               <ProductPurchasePanel
                 productId={product.productid}
                 productName={product.productname}
@@ -202,7 +202,7 @@ const ProductDetailPage: React.FC = () => {
               />
             </div>
 
-            <aside className="space-y-5 bg-white p-5 md:p-7 lg:col-span-3">
+            <aside className="space-y-5 bg-white p-4 sm:p-5 md:p-7 lg:col-span-3">
               <div>
                 <p className="customer-label">Cam kết mua hàng</p>
                 <div className="mt-5 space-y-4">
@@ -213,11 +213,11 @@ const ProductDetailPage: React.FC = () => {
                     { icon: Headphones, title: 'Tư vấn trực tiếp', text: 'Có thể chuyển từ AI sang nhân viên khi cần.' },
                   ].map(({ icon: Icon, title, text }) => (
                     <div key={title} className="flex gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-[#10233f] text-[#75d7dc]">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#1f2937] text-[#ffd166]">
                         <Icon size={19} />
                       </div>
                       <div>
-                        <p className="text-sm font-black text-[#10233f]">{title}</p>
+                        <p className="text-sm font-black text-[#1f2937]">{title}</p>
                         <p className="mt-0.5 text-xs leading-5 text-slate-500">{text}</p>
                       </div>
                     </div>
@@ -225,9 +225,9 @@ const ProductDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-[#10233f] p-5 text-white shadow-[6px_6px_0_rgba(255,91,53,0.45)]">
-                <MessageCircleMore size={26} className="mb-3 text-[#75d7dc]" />
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#75d7dc]">Trợ lý mua sắm AI</p>
+              <div className="rounded-[24px] bg-[#1f2937] p-5 text-white shadow-[0_18px_45px_rgba(15,23,42,0.2)]">
+                <MessageCircleMore size={26} className="mb-3 text-[#ffd166]" />
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">Trợ lý mua sắm AI</p>
                 <h3 className="customer-display mt-2 text-2xl font-bold leading-tight">
                   Chưa chắc máy này phù hợp?
                 </h3>
@@ -237,13 +237,13 @@ const ProductDetailPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={askAi}
-                  className="mt-5 inline-flex w-full items-center justify-center gap-2 bg-white px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-[#10233f] hover:bg-[#75d7dc]"
+                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-[#1f2937] hover:bg-[#ffd166]"
                 >
                   <MessageCircleMore size={16} /> Hỏi AI về sản phẩm
                 </button>
               </div>
 
-              <div className="flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4">
+              <div className="flex items-start gap-3 rounded-[20px] border border-emerald-200 bg-emerald-50 p-4">
                 <BadgeCheck className="mt-0.5 shrink-0 text-emerald-700" size={20} />
                 <div>
                   <p className="text-sm font-black text-emerald-900">Giá theo đúng phiên bản</p>
@@ -257,16 +257,16 @@ const ProductDetailPage: React.FC = () => {
         </section>
 
         <section className="customer-panel mt-8 overflow-hidden">
-          <div className="flex overflow-x-auto border-b border-[#d9d2c5] bg-[#fffdf8] px-3 md:px-6">
+          <div className="flex gap-2 overflow-x-auto border-b border-[#e5e7eb] bg-white px-3 py-3 md:px-6">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`shrink-0 border-b-4 px-5 py-4 text-sm font-black transition-colors ${
+                className={`shrink-0 rounded-full px-5 py-3 text-sm font-black transition-colors ${
                   activeTab === tab.id
-                    ? 'border-[#ff5b35] bg-white text-[#10233f]'
-                    : 'border-transparent text-slate-500 hover:text-[#10233f]'
+                    ? 'bg-[#e30613] text-white shadow-[0_10px_24px_rgba(227,6,19,0.18)]'
+                    : 'bg-[#f3f4f6] text-slate-500 hover:text-[#1f2937]'
                 }`}
               >
                 {tab.label}
@@ -274,11 +274,11 @@ const ProductDetailPage: React.FC = () => {
             ))}
           </div>
 
-          <div className="bg-white p-5 md:p-8">
+          <div className="bg-white p-4 sm:p-5 md:p-8">
             {activeTab === 'description' && (
               <div className="mx-auto max-w-4xl">
                 <p className="customer-label">Product story</p>
-                <h2 className="customer-display mt-2 mb-6 text-3xl font-bold text-[#10233f]">
+                <h2 className="customer-display mt-2 mb-6 text-3xl font-bold text-[#1f2937]">
                   {product.productname}
                 </h2>
                 {product.description
@@ -306,15 +306,15 @@ const ProductDetailPage: React.FC = () => {
         <RelatedProducts products={product.relatedProducts} />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-[#d9d2c5] bg-[#fffdf8] p-3 shadow-[0_-8px_30px_rgba(16,35,63,0.12)] lg:hidden">
+      <div className="fixed inset-x-3 bottom-3 z-30 flex items-center gap-3 rounded-[24px] border border-[#e5e7eb] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.16)] lg:hidden">
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs text-slate-500">{product.productname}</p>
-          <p className="font-black text-[#db3d1c]">{formatCurrency(currentPrice)}</p>
+          <p className="font-black text-[#c4000b]">{formatCurrency(currentPrice)}</p>
         </div>
         <button
           type="button"
           onClick={() => document.getElementById('purchase-options')?.scrollIntoView({ behavior: 'smooth' })}
-          className="bg-[#10233f] px-5 py-3 text-sm font-black text-white"
+          className="rounded-full bg-[#e30613] px-5 py-3 text-sm font-black text-white"
         >
           Chọn mua
         </button>

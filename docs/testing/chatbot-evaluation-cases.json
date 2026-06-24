@@ -1,0 +1,79 @@
+{
+  "updatedAt": "2026-06-23",
+  "purpose": "Manual/automated evaluation set for the product advisory chatbot.",
+  "cases": [
+    {
+      "id": "clarify-ambiguous-phone",
+      "message": "Tu van dien thoai cho toi",
+      "expectedResponseType": "clarification",
+      "expectedSignals": ["asks_budget_or_usage", "has_quick_replies"],
+      "note": "The bot should not list many products when the request is too broad."
+    },
+    {
+      "id": "budget-camera",
+      "message": "Can dien thoai chup anh dep tu 15 den 20 trieu",
+      "expectedResponseType": "recommendation",
+      "expectedSignals": ["max_3_products", "camera_priority", "in_budget_or_near_budget", "has_add_to_cart"],
+      "note": "Used for the thesis highlight: real catalog recommendation by need."
+    },
+    {
+      "id": "gaming-performance",
+      "message": "May nao choi game tot tam 12 den 18 trieu",
+      "expectedResponseType": "recommendation",
+      "expectedSignals": ["chipset_priority", "ram_priority", "stock_visible", "max_3_products"],
+      "note": "Ranking should favor chipset/RAM/cooling wording over only low price."
+    },
+    {
+      "id": "battery-priority",
+      "message": "Toi can may pin trau sac nhanh duoi 15 trieu",
+      "expectedResponseType": "recommendation",
+      "expectedSignals": ["battery_priority", "charging_priority", "budget_filter"],
+      "note": "Should use Pin/Cong nghe sac specifications when available."
+    },
+    {
+      "id": "compare-last-three",
+      "message": "So sanh 3 may nay",
+      "historyContext": "previous_assistant_recommended_three_products",
+      "expectedResponseType": "comparison",
+      "expectedSignals": ["uses_previous_scope", "comparison_table", "price_camera_battery_performance"],
+      "note": "The bot should compare the latest recommended products instead of searching the full catalog again."
+    },
+    {
+      "id": "follow-up-camera-in-scope",
+      "message": "Trong 3 may do may nao chup anh dep hon",
+      "historyContext": "previous_assistant_recommended_three_products",
+      "expectedResponseType": "recommendation",
+      "expectedSignals": ["uses_previous_scope", "camera_priority", "does_not_introduce_unrelated_products"],
+      "note": "Regression for follow-up questions like the recent manual test."
+    },
+    {
+      "id": "exact-model-search",
+      "message": "Co Pixel 10 Pro khong",
+      "expectedResponseType": "recommendation",
+      "expectedSignals": ["exact_model_priority", "brand_model_match"],
+      "note": "Exact product/model names should outrank generic matches."
+    },
+    {
+      "id": "handoff-to-consultant",
+      "message": "Gap nhan vien tu van",
+      "expectedResponseType": "handoff",
+      "expectedSignals": ["session_waiting_for_consultant", "history_preserved"],
+      "note": "Consultant should see the chat history and product recommendations before accepting."
+    },
+    {
+      "id": "anti-spam-long-listing",
+      "message": "Liet ke tat ca dien thoai trong cua hang",
+      "expectedResponseType": "recommendation",
+      "expectedSignals": ["max_3_products", "explains_limit", "asks_filter"],
+      "note": "The bot must not dump the whole catalog."
+    },
+    {
+      "id": "cart-attribution",
+      "message": "Them san pham dau tien vao gio",
+      "historyContext": "previous_assistant_recommended_products",
+      "expectedResponseType": "action",
+      "expectedSignals": ["adds_correct_variant", "marks_addedtocartat"],
+      "note": "Frontend action should call recommendation tracking endpoint after adding to cart."
+    }
+  ]
+}

@@ -32,7 +32,7 @@ interface Customer {
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   Pending: { label: 'Chờ xác nhận', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  Processing: { label: 'Đang xử lý', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+  Processing: { label: 'Đang xử lý', className: 'bg-indigo-50 text-[#4338ca] border-indigo-200' },
   Shipped: { label: 'Đang giao', className: 'bg-violet-50 text-violet-700 border-violet-200' },
   Completed: { label: 'Hoàn thành', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   Cancelled: { label: 'Đã hủy', className: 'bg-red-50 text-red-700 border-red-200' },
@@ -143,7 +143,7 @@ const AdminCustomers: React.FC = () => {
         <button
           type="button"
           onClick={() => openCustomerDetail(c)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+          className="inline-flex items-center gap-1.5 rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-[#4338ca] transition-colors hover:bg-indigo-100"
         >
           <Eye size={15} />
           Chi tiết
@@ -159,12 +159,12 @@ const AdminCustomers: React.FC = () => {
         <p className="text-sm text-slate-500">{filtered.length} khách hàng đã đăng ký</p>
       </div>
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">{error}</div>}
 
       <div className="bg-white rounded-xl border border-slate-200 p-4">
         <div className="max-w-sm">
           <input
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 placeholder:text-slate-400"
+            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 text-sm text-slate-700 outline-none focus:border-[#4f46e5] placeholder:text-slate-400"
             placeholder="Tìm tên, số điện thoại, email..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
@@ -213,13 +213,13 @@ const AdminCustomers: React.FC = () => {
                 Đang tải lịch sử đơn hàng...
               </div>
             ) : ordersError ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{ordersError}</div>
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{ordersError}</div>
             ) : (
               <>
                 <section className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-                    <ShoppingBag size={20} className="mb-2 text-blue-600" />
-                    <p className="text-xs font-semibold uppercase text-blue-600">Tổng đơn hàng</p>
+                  <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                    <ShoppingBag size={20} className="mb-2 text-[#4f46e5]" />
+                    <p className="text-xs font-semibold uppercase text-[#4f46e5]">Tổng đơn hàng</p>
                     <p className="mt-1 text-xl font-black text-slate-800">{orderSummary.total}</p>
                   </div>
                   <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">

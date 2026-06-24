@@ -9,6 +9,7 @@ import {
   Gift,
   Headphones,
   Home,
+  LayoutGrid,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -88,6 +89,7 @@ const adminNav: NavGroup[] = [
     items: [
       { label: 'Tin tức', to: '/admin/news', icon: <FileText size={16} /> },
       { label: 'Banner & slider', to: '/admin/promotional-contents', icon: <Newspaper size={16} /> },
+      { label: 'Sản phẩm trang chủ', to: '/admin/homepage-sections', icon: <LayoutGrid size={16} /> },
     ],
   },
   { label: 'Nhật ký', to: '/admin/auditlogs', icon: <Activity size={17} /> },
@@ -126,28 +128,28 @@ export const AdminLayout: React.FC = () => {
           <Link to="/admin" className="flex min-w-0 items-center gap-3">
             <img src={Logo} alt="Admin Logo" className="h-12 w-auto shrink-0 object-contain" />
             <div className="hidden min-w-0 sm:block">
-              <p className="text-sm font-black leading-tight text-[#10233f]">Trung tâm quản trị</p>
+              <p className="text-sm font-black leading-tight text-[#172033]">Trung tâm quản trị</p>
               <p className="truncate text-[11px] text-slate-400">Điều phối sản phẩm, đơn hàng và nhân sự</p>
             </div>
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden items-center gap-1.5 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700 md:flex">
+            <div className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700 md:flex">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Hệ thống hoạt động
             </div>
 
             <div className="hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex">
-              <div className="flex h-8 w-8 items-center justify-center bg-[#10233f] text-xs font-black text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#172033] text-xs font-black text-white">
                 {user?.fullname?.charAt(0).toUpperCase() ?? 'A'}
               </div>
               <div className="hidden max-w-36 lg:block">
-                <p className="truncate text-xs font-bold text-[#10233f]">{user?.fullname ?? 'Admin'}</p>
+                <p className="truncate text-xs font-bold text-[#172033]">{user?.fullname ?? 'Admin'}</p>
                 <p className="truncate text-[10px] text-slate-400">{user?.email ?? ''}</p>
               </div>
             </div>
 
-            <Link to="/" title="Về trang chủ" className="p-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#10233f]">
+            <Link to="/" title="Về trang chủ" className="p-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#172033]">
               <Home size={17} />
             </Link>
             <button type="button" onClick={logout} title="Đăng xuất" className="p-2 text-red-500 transition hover:bg-red-50">
@@ -181,8 +183,8 @@ export const AdminLayout: React.FC = () => {
                     onClick={() => setOpenGroup(openGroup === item.label ? null : item.label)}
                     className={`flex h-full items-center gap-1.5 border-b-2 px-3 text-sm font-black transition-colors ${
                       active
-                        ? 'border-[#ff5b35] text-[#10233f]'
-                        : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-[#10233f]'
+                        ? 'border-[#4f46e5] text-[#172033]'
+                        : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-[#172033]'
                     }`}
                   >
                     {item.label}
@@ -191,7 +193,7 @@ export const AdminLayout: React.FC = () => {
 
                   {openGroup === item.label && (
                     <div className="absolute left-0 top-full min-w-64 pt-2">
-                      <div className="ops-card p-2 shadow-xl">
+                      <div className="ops-card p-2 shadow-xl shadow-slate-900/10">
                         {item.items.map(child => (
                           <NavLink
                             key={child.to}
@@ -199,8 +201,8 @@ export const AdminLayout: React.FC = () => {
                             className={({ isActive }) =>
                               `flex items-center gap-3 px-3 py-2.5 text-sm font-bold transition-colors ${
                                 isActive
-                                  ? 'bg-[#10233f] text-white'
-                                  : 'text-slate-600 hover:bg-slate-50 hover:text-[#10233f]'
+                                  ? 'rounded-2xl bg-[#4f46e5] text-white'
+                                  : 'rounded-2xl text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
                               }`
                             }
                           >
@@ -223,8 +225,8 @@ export const AdminLayout: React.FC = () => {
                 className={() =>
                   `flex h-full items-center gap-1.5 border-b-2 px-3 text-sm font-black transition-colors ${
                     active
-                      ? 'border-[#ff5b35] text-[#10233f]'
-                      : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-[#10233f]'
+                      ? 'border-[#4f46e5] text-[#172033]'
+                      : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-[#172033]'
                   }`
                 }
               >
@@ -248,7 +250,7 @@ export const AdminLayout: React.FC = () => {
                         type="button"
                         onClick={() => setOpenGroup(expanded ? null : item.label)}
                         className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-sm font-black ${
-                          active ? 'bg-[#10233f] text-white' : 'text-slate-700 hover:bg-slate-50'
+                          active ? 'rounded-2xl bg-[#4f46e5] text-white' : 'rounded-2xl text-slate-700 hover:bg-slate-50'
                         }`}
                       >
                         <span className="flex items-center gap-3">{item.icon}{item.label}</span>
@@ -263,7 +265,7 @@ export const AdminLayout: React.FC = () => {
                               to={child.to}
                               className={({ isActive }) =>
                                 `flex items-center gap-3 px-3 py-2 text-sm font-medium ${
-                                  isActive ? 'bg-[#10233f] text-white' : 'text-slate-600 hover:bg-slate-50'
+                                  isActive ? 'rounded-2xl bg-[#4f46e5] text-white' : 'rounded-2xl text-slate-600 hover:bg-slate-50'
                                 }`
                               }
                             >
@@ -284,7 +286,7 @@ export const AdminLayout: React.FC = () => {
                     end={item.end}
                     className={() =>
                       `flex items-center gap-3 px-3 py-2.5 text-sm font-black ${
-                        active ? 'bg-[#10233f] text-white' : 'text-slate-700 hover:bg-slate-50'
+                        active ? 'rounded-2xl bg-[#4f46e5] text-white' : 'rounded-2xl text-slate-700 hover:bg-slate-50'
                       }`
                     }
                   >

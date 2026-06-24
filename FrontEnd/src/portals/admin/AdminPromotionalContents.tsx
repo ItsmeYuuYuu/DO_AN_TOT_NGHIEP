@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { promotionsApi, type PromotionalContent } from '@/features/content/api/promotionsApi';
-import { productsApi } from '@/features/products/api/productsApi';
+import { productsApi, type Product } from '@/features/products/api/productsApi';
 import { Button } from '@/components/Button';
 import { Edit2, Trash2, Sliders, Image, Check, X, Upload, LoaderCircle } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { confirmAction, notifyError, notifySuccess } from '@/utils/notifications';
+import { getProductPath } from '@/features/products/utils/productLinks';
+
 
 export const AdminPromotionalContents: React.FC = () => {
   const [contents, setContents] = useState<PromotionalContent[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'Slider' | 'Banner'>('Slider');
   const [isEditing, setIsEditing] = useState(false);
@@ -28,8 +32,12 @@ export const AdminPromotionalContents: React.FC = () => {
   const loadContents = async () => {
     setLoading(true);
     try {
-      const data = await promotionsApi.getAll();
-      setContents(data);
+      const [contentData, productResponse] = await Promise.all([
+        promotionsApi.getAll(),
+        productsApi.getAll(),
+      ]);
+      setContents(contentData);
+      setProducts(productResponse.data);
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu quảng cáo:', err);
     } finally {
@@ -37,7 +45,12 @@ export const AdminPromotionalContents: React.FC = () => {
     }
   };
 
-  const filteredContents = contents.filter(c => c.contenttype === activeTab);
+  const filteredContents = contents
+    .filter(c => c.contenttype === activeTab)
+    .sort((a, b) => (a.displayorder ?? 0) - (b.displayorder ?? 0));
+  const selectedProductId = products.find(product => linkurl === getProductPath(product))
+    ?.productid
+    .toString() ?? linkurl.match(/^\/products\/(\d+)$/)?.[1] ?? '';
 
   const resetForm = (deleteTemporaryImage = true) => {
     if (deleteTemporaryImage && uploadedFileName) {
@@ -79,20 +92,20 @@ export const AdminPromotionalContents: React.FC = () => {
       setImageurl(uploaded.url);
       setUploadedFileName(uploaded.fileName);
     } catch (error) {
-      alert(getApiErrorMessage(error, 'Không thể tải ảnh lên.'));
+      notifyError(getApiErrorMessage(error, 'Không thể tải ảnh lên.'));
     } finally {
       setUploadingImage(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa nội dung quảng cáo này?')) return;
+    if (!(await confirmAction('Bạn có chắc chắn muốn xóa nội dung quảng cáo này?', { danger: true, confirmLabel: 'Xóa' }))) return;
     try {
       await promotionsApi.delete(id);
       setContents(prev => prev.filter(c => c.contentid !== id));
-      alert('Đã xóa thành công.');
+      notifySuccess('Đã xóa thành công.');
     } catch {
-      alert('Không thể xóa nội dung quảng cáo.');
+      notifyError('Không thể xóa nội dung quảng cáo.');
     }
   };
 
@@ -108,14 +121,14 @@ export const AdminPromotionalContents: React.FC = () => {
       });
       setContents(prev => prev.map(item => item.contentid === c.contentid ? updated : item));
     } catch {
-      alert('Không thể thay đổi trạng thái.');
+      notifyError('Không thể thay đổi trạng thái.');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!imageurl) {
-      alert('Vui lòng chọn hình ảnh từ máy.');
+      notifyError('Vui lòng chọn hình ảnh từ máy.');
       return;
     }
 
@@ -124,7 +137,7 @@ export const AdminPromotionalContents: React.FC = () => {
       title: title || undefined,
       imageurl,
       linkurl: linkurl || undefined,
-      displayorder: activeTab === 'Slider' ? displayorder : undefined,
+      displayorder,
       isactive
     };
 
@@ -132,16 +145,16 @@ export const AdminPromotionalContents: React.FC = () => {
       if (isEditing && currentId !== null) {
         const updated = await promotionsApi.update(currentId, payload);
         setContents(prev => prev.map(item => item.contentid === currentId ? updated : item));
-        alert('Cập nhật thành công.');
+        notifySuccess('Cập nhật thành công.');
       } else {
         const created = await promotionsApi.create(payload);
         setContents(prev => [created, ...prev]);
-        alert('Thêm mới thành công.');
+        notifySuccess('Thêm mới thành công.');
       }
       setUploadedFileName(null);
       resetForm(false);
     } catch {
-      alert('Có lỗi xảy ra khi lưu nội dung.');
+      notifyError('Có lỗi xảy ra khi lưu nội dung.');
     }
   };
 
@@ -160,7 +173,7 @@ export const AdminPromotionalContents: React.FC = () => {
           onClick={() => { setActiveTab('Slider'); resetForm(); }}
           className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all border-b-2 ${
             activeTab === 'Slider'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-[#4f46e5] text-[#4f46e5]'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -170,19 +183,19 @@ export const AdminPromotionalContents: React.FC = () => {
           onClick={() => { setActiveTab('Banner'); resetForm(); }}
           className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all border-b-2 ${
             activeTab === 'Banner'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-[#4f46e5] text-[#4f46e5]'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
-          <Image size={16} /> Banners Khuyến Mãi
+          <Image size={16} /> Banner phụ trang chủ
         </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 h-fit space-y-4">
+        <div className="bg-white rounded-xl shadow-[0_10px_28px_rgba(15,23,42,0.06)] border border-slate-100 p-5 h-fit space-y-4">
           <h2 className="text-lg font-bold text-slate-900">
-            {isEditing ? 'Cập nhật nội dung' : `Thêm mới ${activeTab === 'Slider' ? 'Slider' : 'Banner'}`}
+            {isEditing ? 'Cập nhật nội dung' : `Thêm mới ${activeTab === 'Slider' ? 'Slider chính' : 'Banner phụ'}`}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -192,13 +205,13 @@ export const AdminPromotionalContents: React.FC = () => {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Nhập tiêu đề hoặc mô tả ngắn..."
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800"
+                className="w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#4f46e5] text-slate-800"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Hình ảnh</label>
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-bold text-[#4338ca] hover:bg-indigo-100">
                 {uploadingImage ? <LoaderCircle size={17} className="animate-spin" /> : <Upload size={17} />}
                 {uploadingImage ? 'Đang tải ảnh...' : imageurl ? 'Chọn ảnh khác' : 'Chọn ảnh từ máy'}
                 <input
@@ -216,33 +229,51 @@ export const AdminPromotionalContents: React.FC = () => {
                 <img
                   src={imageurl}
                   alt="Xem trước nội dung quảng cáo"
-                  className="mt-3 h-36 w-full rounded-lg border border-slate-200 object-cover"
+                  className="mt-3 h-36 w-full rounded-2xl border border-slate-200 object-cover"
                 />
               )}
             </div>
 
             <div>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Sản phẩm liên kết</label>
+              <select
+                value={selectedProductId}
+                onChange={(e) => {
+                  const selectedProduct = products.find(product =>
+                    product.productid === Number(e.target.value));
+                  setLinkurl(selectedProduct ? getProductPath(selectedProduct) : '');
+                }}
+                className="mb-2 w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#4f46e5] text-slate-800"
+              >
+                <option value="">Không gắn sản phẩm cụ thể</option>
+                {products.map(product => (
+                  <option key={product.productid} value={product.productid}>
+                    #{product.productid} - {product.productname}
+                  </option>
+                ))}
+              </select>
               <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Đường dẫn liên kết (Tùy chọn)</label>
               <input
                 type="text"
                 value={linkurl}
                 onChange={(e) => setLinkurl(e.target.value)}
-                placeholder="/products/101"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800"
+                placeholder="/products/google-pixel-10-pro"
+                className="w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#4f46e5] text-slate-800"
               />
             </div>
 
-            {activeTab === 'Slider' && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Thứ tự hiển thị</label>
-                <input
-                  type="number"
-                  value={displayorder}
-                  onChange={(e) => setDisplayorder(parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800"
-                />
-              </div>
-            )}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Thứ tự hiển thị</label>
+              <input
+                type="number"
+                value={displayorder}
+                onChange={(e) => setDisplayorder(parseInt(e.target.value) || 0)}
+                className="w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#4f46e5] text-slate-800"
+              />
+              {activeTab === 'Banner' && (
+                <p className="mt-1 text-[11px] font-medium text-slate-400">Trang chủ lấy 2 banner phụ đầu tiên theo thứ tự này.</p>
+              )}
+            </div>
 
             <div className="flex items-center gap-2 pt-2">
               <input
@@ -250,7 +281,7 @@ export const AdminPromotionalContents: React.FC = () => {
                 id="isactive-checkbox"
                 checked={isactive}
                 onChange={(e) => setIsactive(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-[#4f46e5] border-slate-300 rounded focus:ring-[#4f46e5]"
               />
               <label htmlFor="isactive-checkbox" className="text-sm font-medium text-slate-700 select-none">Hiển thị nội dung này</label>
             </div>
@@ -269,7 +300,7 @@ export const AdminPromotionalContents: React.FC = () => {
         </div>
 
         {/* List */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-[0_10px_28px_rgba(15,23,42,0.06)] border border-slate-100 overflow-hidden">
           {loading ? (
             <div className="p-12 text-center text-slate-400">Đang tải danh sách...</div>
           ) : filteredContents.length === 0 ? (
@@ -281,32 +312,28 @@ export const AdminPromotionalContents: React.FC = () => {
                   <tr className="bg-slate-50 border-b border-slate-100">
                     <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Hình ảnh</th>
                     <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Thông tin</th>
-                    {activeTab === 'Slider' && (
-                      <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Thứ tự</th>
-                    )}
+                    <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Thứ tự</th>
                     <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Trạng thái</th>
                     <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredContents.map(c => (
-                    <tr key={c.contentid} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={c.contentid} className="hover:bg-indigo-50/40 transition-colors">
                       <td className="px-5 py-4">
                         <img
                           src={c.imageurl}
                           alt={c.title || 'Promo'}
-                          className="w-24 h-12 object-cover rounded-md border border-slate-100 shadow-sm"
+                          className="w-24 h-12 object-cover rounded-xl border border-slate-100 shadow-[0_10px_28px_rgba(15,23,42,0.06)]"
                         />
                       </td>
                       <td className="px-5 py-4">
                         <div className="font-semibold text-slate-800 text-sm">{c.title || <span className="text-slate-400 italic">Không có tiêu đề</span>}</div>
                         <div className="text-xs text-slate-400 mt-0.5 truncate max-w-[200px]" title={c.linkurl}>Liên kết: {c.linkurl || 'Không có'}</div>
                       </td>
-                      {activeTab === 'Slider' && (
-                        <td className="px-5 py-4 text-sm text-slate-600 font-medium">
-                          {c.displayorder}
-                        </td>
-                      )}
+                      <td className="px-5 py-4 text-sm text-slate-600 font-medium">
+                        {c.displayorder}
+                      </td>
                       <td className="px-5 py-4">
                         <button
                           onClick={() => handleToggleActive(c)}
@@ -324,14 +351,14 @@ export const AdminPromotionalContents: React.FC = () => {
                         <div className="flex justify-end gap-1.5">
                           <button
                             onClick={() => handleEdit(c)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition-all"
+                            className="p-1.5 text-slate-400 hover:text-[#4f46e5] rounded-2xl hover:bg-slate-100 transition-all"
                             title="Chỉnh sửa"
                           >
                             <Edit2 size={15} />
                           </button>
                           <button
                             onClick={() => handleDelete(c.contentid)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 transition-all"
+                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-2xl hover:bg-slate-100 transition-all"
                             title="Xóa"
                           >
                             <Trash2 size={15} />

@@ -93,8 +93,8 @@ const CheckoutPage: React.FC = () => {
     return (
       <div className="customer-shell min-h-screen px-4 py-16">
         <div className="customer-panel-soft mx-auto max-w-2xl px-6 py-20 text-center">
-          <ShoppingBag className="mx-auto mb-5 text-[#10233f]/25" size={58} />
-          <h2 className="customer-display text-4xl font-bold text-[#10233f]">Giỏ hàng trống</h2>
+          <ShoppingBag className="mx-auto mb-5 text-[#1f2937]/25" size={58} />
+          <h2 className="customer-display text-4xl font-bold text-[#1f2937]">Giỏ hàng trống</h2>
           <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
             Bạn cần thêm sản phẩm vào giỏ trước khi thanh toán.
           </p>
@@ -115,15 +115,15 @@ const CheckoutPage: React.FC = () => {
             <CheckCircle size={50} />
           </div>
           <p className="customer-label">Order created</p>
-          <h2 className="customer-display mt-2 text-4xl font-bold text-[#10233f]">
+          <h2 className="customer-display mt-2 text-4xl font-bold text-[#1f2937]">
             Đặt hàng thành công
           </h2>
           <p className="mt-3 text-sm text-slate-500">
-            Mã đơn hàng của bạn là <span className="font-black text-[#db3d1c]">#{createdOrder.orderid}</span>.
+            Mã đơn hàng của bạn là <span className="font-black text-[#c4000b]">#{createdOrder.orderid}</span>.
           </p>
           {createdOrder.requiredpayment && createdOrder.requiredpayment > 0 && (
-            <div className="mx-auto mt-6 max-w-md border border-[#d9d2c5] bg-white p-4 text-sm text-[#10233f]">
-              Cần thanh toán trước <span className="font-black text-[#db3d1c]">{formatCurrency(createdOrder.requiredpayment)}</span>.
+            <div className="mx-auto mt-6 max-w-md border border-[#e5e7eb] bg-white p-4 text-sm text-[#1f2937]">
+              Cần thanh toán trước <span className="font-black text-[#c4000b]">{formatCurrency(createdOrder.requiredpayment)}</span>.
               Hàng được giữ trong 15 phút trong lúc bạn hoàn tất thanh toán.
             </div>
           )}
@@ -200,27 +200,27 @@ const CheckoutPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
-      <section className="border-b customer-rule bg-[#fffdf8] px-4 py-8">
+      <section className="border-b customer-rule bg-[#ffffff] px-3 py-6 sm:px-4 sm:py-8">
         <div className="customer-container">
           <p className="customer-label">Checkout desk</p>
           <div className="mt-2 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <h1 className="customer-display text-4xl font-bold text-[#10233f] md:text-5xl">Thanh toán</h1>
+              <h1 className="customer-display text-3xl font-bold text-[#1f2937] sm:text-4xl md:text-5xl">Thanh toán</h1>
               <p className="mt-3 text-sm text-slate-500">
                 {totalItems} sản phẩm · Tổng tạm tính {formatCurrency(grandTotal)}
               </p>
             </div>
-            <div className="grid grid-cols-3 border border-[#d9d2c5] bg-white text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+            <div className="grid grid-cols-3 border border-[#e5e7eb] bg-white text-center text-[9px] font-black uppercase tracking-[0.1em] text-slate-500 sm:text-[10px] sm:tracking-[0.14em]">
               {['Nhận hàng', 'Thanh toán', 'Xác nhận'].map(step => (
-                <span key={step} className="border-r border-[#d9d2c5] px-3 py-2 last:border-r-0">{step}</span>
+                <span key={step} className="border-r border-[#e5e7eb] px-3 py-2 last:border-r-0">{step}</span>
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      <form onSubmit={handleSubmit} className="customer-container grid gap-8 px-4 py-8 lg:grid-cols-[1fr_380px]">
-        <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="customer-container grid gap-6 px-3 py-6 sm:px-4 sm:py-8 lg:grid-cols-[1fr_380px]">
+        <div className="space-y-5 sm:space-y-6">
           {!isLoggedIn && (
             <div className="flex gap-3 border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <ShieldCheck size={21} className="shrink-0" />
@@ -231,14 +231,14 @@ const CheckoutPage: React.FC = () => {
             </div>
           )}
 
-          <section className="customer-panel p-6">
+          <section className="customer-panel p-4 sm:p-6">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center bg-[#10233f] text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1f2937] text-white">
                 <MapPin size={20} />
               </div>
               <div>
                 <p className="customer-label">Step 1</p>
-                <h2 className="text-xl font-black text-[#10233f]">Thông tin nhận hàng</h2>
+                <h2 className="text-xl font-black text-[#1f2937]">Thông tin nhận hàng</h2>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -269,24 +269,24 @@ const CheckoutPage: React.FC = () => {
             </div>
           </section>
 
-          <section className="customer-panel p-6">
+          <section className="customer-panel p-4 sm:p-6">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center bg-[#10233f] text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1f2937] text-white">
                 <CreditCard size={20} />
               </div>
               <div>
                 <p className="customer-label">Step 2</p>
-                <h2 className="text-xl font-black text-[#10233f]">Phương thức thanh toán</h2>
+                <h2 className="text-xl font-black text-[#1f2937]">Phương thức thanh toán</h2>
               </div>
             </div>
             <div className="grid gap-3">
               {paymentMethods.map(method => (
                 <label
                   key={method.value}
-                  className={`flex cursor-pointer items-start gap-4 border-2 p-4 transition ${
+                  className={`flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition ${
                     form.paymentMethod === method.value
-                      ? 'border-[#10233f] bg-[#10233f] text-white shadow-[5px_5px_0_rgba(255,91,53,0.35)]'
-                      : 'border-[#d9d2c5] bg-white text-[#10233f] hover:border-[#10233f]'
+                    ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_12px_28px_rgba(227,6,19,0.18)]'
+                      : 'border-[#e5e7eb] bg-white text-[#1f2937] hover:border-[#1f2937]'
                   }`}
                 >
                   <input
@@ -295,7 +295,7 @@ const CheckoutPage: React.FC = () => {
                     value={method.value}
                     checked={form.paymentMethod === method.value}
                     onChange={handleChange}
-                    className="mt-1 accent-[#ff5b35]"
+                    className="mt-1 accent-[#e30613]"
                   />
                   <span>
                     <span className="block text-sm font-black">{method.label}</span>
@@ -315,10 +315,10 @@ const CheckoutPage: React.FC = () => {
                 ].map(option => (
                   <label
                     key={option.value}
-                    className={`cursor-pointer border-2 p-4 transition ${
+                    className={`cursor-pointer rounded-2xl border p-4 transition ${
                       form.paymentOption === option.value
-                        ? 'border-[#ff5b35] bg-[#ff5b35]/10'
-                        : 'border-[#d9d2c5] bg-white hover:border-[#ff5b35]'
+                        ? 'border-[#e30613] bg-[#e30613]/10'
+                        : 'border-[#e5e7eb] bg-white hover:border-[#e30613]'
                     }`}
                   >
                     <input
@@ -327,9 +327,9 @@ const CheckoutPage: React.FC = () => {
                       value={option.value}
                       checked={form.paymentOption === option.value}
                       onChange={handleChange}
-                      className="mr-2 accent-[#ff5b35]"
+                      className="mr-2 accent-[#e30613]"
                     />
-                    <span className="text-sm font-black text-[#10233f]">{option.label}</span>
+                    <span className="text-sm font-black text-[#1f2937]">{option.label}</span>
                     <p className="mt-1 text-xs text-slate-500">Cần thanh toán: {option.desc}</p>
                   </label>
                 ))}
@@ -345,25 +345,25 @@ const CheckoutPage: React.FC = () => {
         </div>
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="customer-panel p-6">
+          <div className="customer-panel p-4 sm:p-6">
             <p className="customer-label">Order summary</p>
-            <h2 className="customer-display mt-2 text-3xl font-bold text-[#10233f]">Đơn hàng</h2>
+            <h2 className="customer-display mt-2 text-3xl font-bold text-[#1f2937]">Đơn hàng</h2>
 
             <div className="mt-5 max-h-72 space-y-3 overflow-y-auto pr-1">
               {items.map(item => (
-                <div key={item.variantId} className="border border-[#d9d2c5] bg-[#fffdf8] p-3">
+                <div key={item.variantId} className="border border-[#e5e7eb] bg-[#ffffff] p-3">
                   <div className="flex items-center gap-3">
                     <img
                       src={item.imageUrl}
                       alt={item.productName}
-                      className="h-12 w-12 border border-[#d9d2c5] bg-white object-contain p-1"
+                      className="h-12 w-12 border border-[#e5e7eb] bg-white object-contain p-1"
                       onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-black text-[#10233f]">{item.productName}</p>
+                      <p className="truncate text-xs font-black text-[#1f2937]">{item.productName}</p>
                       <p className="text-xs text-slate-400">x{item.quantity}</p>
                     </div>
-                    <span className="text-xs font-black text-[#db3d1c]">{formatCurrency(item.price * item.quantity)}</span>
+                    <span className="text-xs font-black text-[#c4000b]">{formatCurrency(item.price * item.quantity)}</span>
                   </div>
                   {packages.length > 0 && (
                     <label className="mt-3 block">
@@ -396,7 +396,7 @@ const CheckoutPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="mt-5 space-y-2 border-t border-[#d9d2c5] pt-4 text-sm">
+            <div className="mt-5 space-y-2 border-t border-[#e5e7eb] pt-4 text-sm">
               <div className="flex justify-between text-slate-600">
                 <span>Tạm tính</span><span>{formatCurrency(totalPrice)}</span>
               </div>
@@ -409,15 +409,15 @@ const CheckoutPage: React.FC = () => {
               {totalWarrantyPrice > 0 && (
                 <div className="flex justify-between text-slate-600">
                   <span>Gói bảo hành</span>
-                  <span className="font-bold text-[#10233f]">{formatCurrency(totalWarrantyPrice)}</span>
+                  <span className="font-bold text-[#1f2937]">{formatCurrency(totalWarrantyPrice)}</span>
                 </div>
               )}
-              <div className="flex justify-between border-t border-[#d9d2c5] pt-3 text-base font-black text-[#10233f]">
+              <div className="flex justify-between border-t border-[#e5e7eb] pt-3 text-base font-black text-[#1f2937]">
                 <span>Tổng cộng</span>
-                <span className="text-2xl text-[#db3d1c]">{formatCurrency(grandTotal)}</span>
+                <span className="text-2xl text-[#c4000b]">{formatCurrency(grandTotal)}</span>
               </div>
               {requiredPayment > 0 && (
-                <div className="flex justify-between bg-[#75d7dc]/25 px-3 py-2 font-black text-[#10233f]">
+                <div className="flex justify-between bg-[#ffd166]/25 px-3 py-2 font-black text-[#1f2937]">
                   <span>Cần thanh toán trước</span>
                   <span>{formatCurrency(requiredPayment)}</span>
                 </div>

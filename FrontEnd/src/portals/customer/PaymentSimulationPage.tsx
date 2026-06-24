@@ -95,7 +95,7 @@ const PaymentSimulationPage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 size={36} className="animate-spin text-blue-600" />
+        <Loader2 size={36} className="animate-spin text-[#e30613]" />
       </div>
     );
   }
@@ -106,7 +106,7 @@ const PaymentSimulationPage: React.FC = () => {
         <XCircle size={56} className="mx-auto text-red-500 mb-4" />
         <h1 className="text-2xl font-black text-slate-900">Không thể thanh toán</h1>
         <p className="text-slate-500 mt-2 mb-6">{message}</p>
-        <Link to="/" className="inline-flex px-5 py-3 rounded-xl bg-blue-600 text-white font-bold">
+        <Link to="/" className="inline-flex px-5 py-3 rounded-2xl bg-[#e30613] text-white font-bold">
           Về trang chủ
         </Link>
       </div>
@@ -118,15 +118,15 @@ const PaymentSimulationPage: React.FC = () => {
   const expired = checkout.reservationexpiresat ? remainingSeconds <= 0 : false;
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-12">
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-xl shadow-slate-200/60 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-7">
+    <div className="customer-shell min-h-screen px-4 py-12">
+      <div className="customer-panel mx-auto max-w-xl overflow-hidden">
+        <div className="bg-gradient-to-r from-[#1f2937] to-[#e30613] text-white p-7">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-blue-100 text-sm font-semibold">Thanh toán đơn hàng</p>
+              <p className="text-white/70 text-sm font-semibold">Thanh toán đơn hàng</p>
               <h1 className="text-2xl font-black mt-1">#{checkout.orderid}</h1>
             </div>
-            <CreditCard size={38} className="text-blue-100" />
+            <CreditCard size={38} className="text-white/70" />
           </div>
         </div>
 
@@ -145,13 +145,13 @@ const PaymentSimulationPage: React.FC = () => {
             <div className="flex justify-between"><span className="text-slate-500">Đã thanh toán</span><span className="font-bold text-emerald-600">{formatCurrency(checkout.paidamount)}</span></div>
           </div>
 
-          <div className="rounded-2xl bg-blue-50 border border-blue-100 p-5 text-center">
-            <p className="text-sm text-blue-700 font-semibold">Số tiền cần thanh toán</p>
-            <p className="text-3xl font-black text-blue-700 mt-1">{formatCurrency(checkout.requiredpayment)}</p>
+          <div className="rounded-2xl bg-red-50 border border-red-100 p-5 text-center">
+            <p className="text-sm text-[#c4000b] font-semibold">Số tiền cần thanh toán</p>
+            <p className="text-3xl font-black text-[#c4000b] mt-1">{formatCurrency(checkout.requiredpayment)}</p>
           </div>
 
           {message && (
-            <div className={`rounded-xl p-4 text-sm font-semibold ${result === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+            <div className={`rounded-2xl p-4 text-sm font-semibold ${result === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
               {message}
             </div>
           )}
@@ -159,7 +159,7 @@ const PaymentSimulationPage: React.FC = () => {
           {result === 'success' || isPaid || isDepositPaid ? (
             <div className="text-center py-2">
               <CheckCircle2 size={48} className="mx-auto text-emerald-500 mb-3" />
-              <Link to="/order-lookup" className="inline-flex px-5 py-3 bg-blue-600 text-white font-bold rounded-xl">
+              <Link to="/order-lookup" className="inline-flex px-5 py-3 bg-[#e30613] text-white font-bold rounded-2xl">
                 Tra cứu đơn hàng
               </Link>
             </div>
@@ -168,19 +168,19 @@ const PaymentSimulationPage: React.FC = () => {
               <button
                 onClick={() => submitPayment(true)}
                 disabled={submitting || expired}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-black rounded-xl transition-colors"
+                className="w-full py-3.5 bg-[#e30613] hover:bg-[#c4000b] disabled:bg-slate-300 text-white font-black rounded-2xl transition-colors"
               >
                 {submitting ? 'Đang xử lý...' : `Mô phỏng thanh toán ${formatCurrency(checkout.requiredpayment)}`}
               </button>
               <button
                 onClick={() => submitPayment(false)}
                 disabled={submitting || expired}
-                className="w-full py-3 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50"
+                className="w-full py-3 border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50"
               >
                 Mô phỏng giao dịch thất bại
               </button>
               {result === 'failed' && !expired && (
-                <button onClick={loadPayment} className="mx-auto flex items-center gap-2 text-sm font-bold text-blue-600">
+                <button onClick={loadPayment} className="mx-auto flex items-center gap-2 text-sm font-bold text-[#e30613]">
                   <RefreshCcw size={15} /> Tải lại giao dịch
                 </button>
               )}

@@ -5,6 +5,9 @@ import { useCart } from '@/features/orders/context/CartContext';
 import { formatCurrency } from '@/utils/formatters';
 import { chatSessionsApi } from '../api/chatSessionsApi';
 import type { ChatRecommendation } from '../api/chatSessionsApi';
+import { notifyError } from '@/utils/notifications';
+import { getProductPath } from '@/features/products/utils/productLinks';
+
 
 interface ChatRecommendationCardsProps {
   sessionId: number;
@@ -43,7 +46,7 @@ export const ChatRecommendationCards = ({
         price: recommendation.price,
       });
       if (!addedToCart) {
-        window.alert('Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.');
+        notifyError('Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.');
         return;
       }
       await chatSessionsApi.markRecommendationAddedToCart(
@@ -62,16 +65,20 @@ export const ChatRecommendationCards = ({
         const added = addedIds.has(recommendation.recommendationid) ||
           isInCart(recommendation.variantid);
         const outOfStock = recommendation.stock <= 0;
+        const productPath = getProductPath({
+          productid: recommendation.productid,
+          slug: recommendation.productslug,
+        });
 
         return (
           <div
             key={recommendation.recommendationid}
-            className="overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-700"
+            className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-700"
           >
             <div className="flex gap-3 p-3">
               <Link
-                to={`/products/${recommendation.productid}`}
-                className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-50"
+                to={productPath}
+                className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-slate-50"
               >
                 <img
                   src={recommendation.imageurl ||
@@ -82,8 +89,8 @@ export const ChatRecommendationCards = ({
               </Link>
               <div className="min-w-0 flex-1">
                 <Link
-                  to={`/products/${recommendation.productid}`}
-                  className="line-clamp-2 text-sm font-black text-slate-800 hover:text-blue-600"
+                  to={productPath}
+                  className="line-clamp-2 text-sm font-black text-slate-800 hover:text-[#e30613]"
                 >
                   {recommendation.productname}
                 </Link>
@@ -118,7 +125,7 @@ export const ChatRecommendationCards = ({
                     ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
                     : outOfStock
                       ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400'
-                      : 'border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                      : 'border-red-100 bg-red-50 text-[#c4000b] hover:bg-red-100'
                 }`}
               >
                 {added ? <Check size={15} /> : outOfStock ? <PackageX size={15} /> : <ShoppingCart size={15} />}

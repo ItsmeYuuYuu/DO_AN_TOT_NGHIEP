@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, PackageX } from 'lucide-react';
 import type { ChatRecommendation } from '../api/chatSessionsApi';
 import { formatCurrency } from '@/utils/formatters';
+import { getProductPath } from '@/features/products/utils/productLinks';
 
 interface ChatComparisonTableProps {
   recommendations: ChatRecommendation[];
@@ -109,29 +110,29 @@ export const ChatComparisonTable = ({
   ];
 
   return (
-    <div className="mt-4 overflow-x-auto border border-[#d9d2c5] bg-white shadow-[5px_5px_0_rgba(16,35,63,0.08)]">
+    <div className="mt-4 overflow-x-auto rounded-[22px] border border-[#e5e7eb] bg-white shadow-[0_14px_32px_rgba(15,23,42,0.08)]">
       <table className="w-full min-w-[620px] border-collapse text-left text-xs text-slate-700">
         <thead>
-          <tr className="bg-[#fffdf8]">
-            <th className="w-28 border-b border-r border-[#d9d2c5] p-3 font-black uppercase tracking-[0.12em] text-slate-500">
+          <tr className="bg-[#ffffff]">
+            <th className="w-28 border-b border-r border-[#e5e7eb] p-3 font-black uppercase tracking-[0.12em] text-slate-500">
               Tiêu chí
             </th>
             {products.map(product => (
               <th
                 key={product.productid}
-                className="min-w-40 border-b border-r border-[#d9d2c5] p-3 align-top last:border-r-0"
+                className="min-w-40 border-b border-r border-[#e5e7eb] p-3 align-top last:border-r-0"
               >
                 <Link
-                  to={`/products/${product.productid}`}
-                  className="flex items-start gap-2 hover:text-[#db3d1c]"
+                  to={getProductPath({ productid: product.productid, slug: product.productslug })}
+                  className="flex items-start gap-2 hover:text-[#c4000b]"
                 >
                   <img
                     src={product.imageurl || `https://placehold.co/120x120?text=${encodeURIComponent(product.productname)}`}
                     alt={product.productname}
-                    className="h-12 w-12 border border-[#d9d2c5] bg-white object-contain"
+                    className="h-12 w-12 border border-[#e5e7eb] bg-white object-contain"
                   />
                   <span>
-                    <span className="line-clamp-2 font-black text-[#10233f]">
+                    <span className="line-clamp-2 font-black text-[#1f2937]">
                       {product.productname}
                     </span>
                     <span className="mt-1 block font-medium text-slate-400">{product.brand}</span>
@@ -143,8 +144,8 @@ export const ChatComparisonTable = ({
         </thead>
         <tbody>
           {rows.map(row => (
-            <tr key={row.label} className="even:bg-[#fffdf8]">
-              <th className="border-b border-r border-[#d9d2c5] p-3 font-bold text-slate-500">
+            <tr key={row.label} className="even:bg-[#ffffff]">
+              <th className="border-b border-r border-[#e5e7eb] p-3 font-bold text-slate-500">
                 {row.label}
               </th>
               {products.map(product => {
@@ -167,7 +168,7 @@ export const ChatComparisonTable = ({
                 return (
                   <td
                     key={`${row.label}-${product.productid}`}
-                    className={`border-b border-r border-[#d9d2c5] p-3 align-top last:border-r-0 ${
+                    className={`border-b border-r border-[#e5e7eb] p-3 align-top last:border-r-0 ${
                       isBest ? 'bg-emerald-50/70 font-bold text-emerald-800' : ''
                     }`}
                   >
@@ -183,9 +184,9 @@ export const ChatComparisonTable = ({
             </tr>
           ))}
           <tr>
-            <th className="border-r border-[#d9d2c5] p-3 font-bold text-slate-500">Tồn kho</th>
+            <th className="border-r border-[#e5e7eb] p-3 font-bold text-slate-500">Tồn kho</th>
             {products.map(product => (
-              <td key={`stock-${product.productid}`} className="border-r border-[#d9d2c5] p-3 last:border-r-0">
+              <td key={`stock-${product.productid}`} className="border-r border-[#e5e7eb] p-3 last:border-r-0">
                 <span className={`inline-flex items-center gap-1 font-bold ${
                   product.stock > 0 ? 'text-emerald-600' : 'text-red-500'
                 }`}>

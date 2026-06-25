@@ -19,6 +19,7 @@ import { warrantyPackagesApi } from '@/features/orders/api/warrantyPackagesApi';
 import type { WarrantyPackage } from '@/features/orders/api/warrantyPackagesApi';
 import { formatCurrency } from '@/utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { Seo } from '@/components/Seo';
 
 interface CheckoutForm {
   fullname: string;
@@ -92,6 +93,7 @@ const CheckoutPage: React.FC = () => {
   if (items.length === 0 && !createdOrder) {
     return (
       <div className="customer-shell min-h-screen px-4 py-16">
+        <Seo title="Thanh toan - Cuong Dien Thoai" description="Hoan tat thong tin dat hang tai Cuong Dien Thoai." noIndex />
         <div className="customer-panel-soft mx-auto max-w-2xl px-6 py-20 text-center">
           <ShoppingBag className="mx-auto mb-5 text-[#1f2937]/25" size={58} />
           <h2 className="customer-display text-4xl font-bold text-[#1f2937]">Giỏ hàng trống</h2>
@@ -110,6 +112,7 @@ const CheckoutPage: React.FC = () => {
     const isGuestOrder = createdOrder.checkouttype === 'Guest';
     return (
       <div className="customer-shell min-h-screen px-4 py-16">
+        <Seo title="Dat hang thanh cong - Cuong Dien Thoai" description="Ket qua dat hang tai Cuong Dien Thoai." noIndex />
         <div className="customer-panel-soft mx-auto max-w-2xl px-6 py-16 text-center">
           <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center bg-emerald-100 text-emerald-700">
             <CheckCircle size={50} />
@@ -200,6 +203,7 @@ const CheckoutPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
+      <Seo title="Thanh toan - Cuong Dien Thoai" description="Hoan tat thong tin dat hang tai Cuong Dien Thoai." noIndex />
       <section className="border-b customer-rule bg-[#ffffff] px-3 py-6 sm:px-4 sm:py-8">
         <div className="customer-container">
           <p className="customer-label">Checkout desk</p>

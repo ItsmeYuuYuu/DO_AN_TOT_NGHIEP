@@ -3,6 +3,7 @@ import apiClient from '@/api/apiClient';
 export interface News {
   postid: number;
   title: string;
+  slug?: string;
   summary?: string;
   content?: string;
   thumbnail?: string;
@@ -41,6 +42,11 @@ export const newsApi = {
 
   getById: async (id: number): Promise<News> => {
     const { data } = await apiClient.get<News>(`/news/${id}`);
+    return data;
+  },
+
+  getBySlug: async (slug: string): Promise<News> => {
+    const { data } = await apiClient.get<News>(`/news/by-slug/${slug}`);
     return data;
   },
 

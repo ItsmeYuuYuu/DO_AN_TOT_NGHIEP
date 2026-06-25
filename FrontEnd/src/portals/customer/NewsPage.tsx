@@ -1,29 +1,133 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, ChevronRight, Newspaper, User, X } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Calendar, ChevronRight, Newspaper, User } from 'lucide-react';
 import { newsApi } from '@/features/content/api/newsApi';
 import type { News as NewsItem } from '@/features/content/api/newsApi';
 import { Skeleton } from '@/components/Skeleton';
+import { Seo } from '@/components/Seo';
+import { buildSeoDescription } from '@/utils/seoUtils';
+
+const formatDate = (date?: string) =>
+  date ? new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+
+const getNewsPath = (post: NewsItem) => `/news/${post.slug ?? post.postid}`;
 
 const NewsPage: React.FC = () => {
+  const { slug } = useParams<{ slug?: string }>();
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPost, setSelectedPost] = useState<NewsItem | null>(null);
+  const [detailPost, setDetailPost] = useState<NewsItem | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
+    if (slug) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     newsApi.getActive()
       .then(response => setNewsList(response))
       .catch(() => setNewsList([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [slug]);
 
-  const formatDate = (date?: string) =>
-    date ? new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+  useEffect(() => {
+    if (!slug) {
+      setDetailPost(null);
+      return;
+    }
+
+    setDetailLoading(true);
+    newsApi.getBySlug(slug)
+      .then(response => setDetailPost(response))
+      .catch(() => setDetailPost(null))
+      .finally(() => setDetailLoading(false));
+  }, [slug]);
+
+  if (slug) {
+    const description = buildSeoDescription(detailPost?.summary || detailPost?.content, 'Tin tuc cong nghe moi nhat tu Cuong Dien Thoai.');
+
+    return (
+      <div className="customer-shell min-h-screen pb-16">
+        <Seo
+          title={detailPost ? `${detailPost.title} - Cuong Dien Thoai` : 'Tin tuc cong nghe - Cuong Dien Thoai'}
+          description={description}
+          image={detailPost?.thumbnail}
+          canonicalPath={`/news/${detailPost?.slug ?? slug}`}
+          type="article"
+        />
+
+        <main className="customer-container px-4 py-10">
+          <Link
+            to="/news"
+            className="mb-6 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-[#c4000b] hover:text-[#1f2937]"
+          >
+            <ArrowLeft size={16} />
+            Quay lại tin tức
+          </Link>
+
+          {detailLoading ? (
+            <article className="customer-panel overflow-hidden">
+              <Skeleton className="aspect-video w-full" />
+              <div className="p-6 md:p-8">
+                <Skeleton className="mb-4 h-9 w-3/4" />
+                <Skeleton className="mb-3 h-4 w-1/3" />
+                <Skeleton className="mb-2 h-4 w-full" />
+                <Skeleton className="mb-2 h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </article>
+          ) : !detailPost ? (
+            <div className="customer-panel-soft px-6 py-20 text-center">
+              <Newspaper className="mx-auto mb-5 text-[#1f2937]/25" size={54} />
+              <h1 className="customer-display text-3xl font-bold text-[#1f2937]">Không tìm thấy bài viết</h1>
+              <p className="mt-3 text-sm text-slate-500">Bài viết có thể đã bị ẩn hoặc đường dẫn không còn tồn tại.</p>
+            </div>
+          ) : (
+            <article className="customer-panel overflow-hidden bg-white">
+              {detailPost.thumbnail && (
+                <img
+                  src={detailPost.thumbnail}
+                  alt={detailPost.title}
+                  className="aspect-video w-full object-cover"
+                  onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              )}
+              <div className="p-6 md:p-10">
+                <p className="customer-label">Tin công nghệ</p>
+                <h1 className="customer-display mt-3 text-3xl font-bold leading-tight text-[#1f2937] md:text-5xl">
+                  {detailPost.title}
+                </h1>
+                <div className="mt-5 flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400">
+                  <span className="flex items-center gap-1"><Calendar size={12} />{formatDate(detailPost.createdat)}</span>
+                  {detailPost.authorName && <span className="flex items-center gap-1"><User size={12} />{detailPost.authorName}</span>}
+                </div>
+                {detailPost.summary && (
+                  <p className="mt-6 text-base font-semibold leading-7 text-slate-600">{detailPost.summary}</p>
+                )}
+                <div className="mt-8 whitespace-pre-wrap text-sm leading-8 text-slate-700">
+                  {detailPost.content || detailPost.summary}
+                </div>
+              </div>
+            </article>
+          )}
+        </main>
+      </div>
+    );
+  }
 
   const featured = newsList[0];
   const secondary = newsList.slice(1);
 
   return (
     <div className="customer-shell min-h-screen pb-16">
+      <Seo
+        title="Tin tuc cong nghe - Cuong Dien Thoai"
+        description="Cap nhat tin tuc smartphone, xu huong cong nghe va noi dung giup ban chon dien thoai phu hop hon."
+        canonicalPath="/news"
+        type="article"
+      />
       <section className="border-b customer-rule bg-[#ffffff] px-4 py-10">
         <div className="customer-container grid gap-6 md:grid-cols-[1.2fr_0.8fr] md:items-end">
           <div>
@@ -70,9 +174,9 @@ const NewsPage: React.FC = () => {
         ) : (
           <>
             {featured && (
-              <article
-                className="customer-panel mb-8 grid cursor-pointer overflow-hidden transition hover:-translate-y-0.5 hover:shadow-xl md:grid-cols-[1fr_1fr]"
-                onClick={() => setSelectedPost(featured)}
+              <Link
+                to={getNewsPath(featured)}
+                className="customer-panel mb-8 grid overflow-hidden transition hover:-translate-y-0.5 hover:shadow-xl md:grid-cols-[1fr_1fr]"
               >
                 {featured.thumbnail ? (
                   <img
@@ -99,16 +203,12 @@ const NewsPage: React.FC = () => {
                     {featured.authorName && <span className="flex items-center gap-1"><User size={12} />{featured.authorName}</span>}
                   </div>
                 </div>
-              </article>
+              </Link>
             )}
 
             <div className="grid gap-5 md:grid-cols-3">
               {secondary.map(post => (
-                <article
-                  key={post.postid}
-                  className="product-card cursor-pointer bg-[#ffffff]"
-                  onClick={() => setSelectedPost(post)}
-                >
+                <Link key={post.postid} to={getNewsPath(post)} className="product-card group bg-[#ffffff]">
                   {post.thumbnail ? (
                     <img
                       src={post.thumbnail}
@@ -131,50 +231,12 @@ const NewsPage: React.FC = () => {
                       <span className="flex items-center gap-0.5 text-[#c4000b]">Đọc thêm<ChevronRight size={12} /></span>
                     </div>
                   </div>
-                </article>
+                </Link>
               ))}
             </div>
           </>
         )}
       </main>
-
-      {selectedPost && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#1f2937]/70 p-4 backdrop-blur-sm"
-          onClick={() => setSelectedPost(null)}
-        >
-          <article
-            className="customer-panel my-8 w-full max-w-3xl overflow-hidden"
-            onClick={event => event.stopPropagation()}
-          >
-            {selectedPost.thumbnail && (
-              <img
-                src={selectedPost.thumbnail}
-                alt={selectedPost.title}
-                className="aspect-video w-full object-cover"
-                onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            )}
-            <div className="p-6 md:p-8">
-              <div className="mb-4 flex items-start justify-between gap-4">
-                <h2 className="customer-display text-3xl font-bold leading-tight text-[#1f2937]">
-                  {selectedPost.title}
-                </h2>
-                <button type="button" onClick={() => setSelectedPost(null)} className="text-slate-400 hover:text-[#1f2937]">
-                  <X size={22} />
-                </button>
-              </div>
-              <div className="mb-6 flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400">
-                <span className="flex items-center gap-1"><Calendar size={12} />{formatDate(selectedPost.createdat)}</span>
-                {selectedPost.authorName && <span className="flex items-center gap-1"><User size={12} />{selectedPost.authorName}</span>}
-              </div>
-              <div className="whitespace-pre-wrap text-sm leading-8 text-slate-700">
-                {selectedPost.content || selectedPost.summary}
-              </div>
-            </div>
-          </article>
-        </div>
-      )}
     </div>
   );
 };

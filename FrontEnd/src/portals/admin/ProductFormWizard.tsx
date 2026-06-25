@@ -351,8 +351,16 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
       setError('Giá gốc của biến thể phải lớn hơn 0.');
       return;
     }
-    if (variantStock === '' || Number(variantStock) < 0) {
-      setError('Số lượng tồn kho phải là số không âm.');
+    if (variantSalePrice !== '' && Number(variantSalePrice) < 0) {
+      setError('Giá giảm của biến thể không được âm.');
+      return;
+    }
+    if (variantSalePrice !== '' && Number(variantSalePrice) > Number(variantBasePrice)) {
+      setError('Giá giảm của biến thể không được lớn hơn giá gốc.');
+      return;
+    }
+    if (variantStock === '' || Number(variantStock) <= 0) {
+      setError('Số lượng của mỗi biến thể phải lớn hơn 0.');
       return;
     }
 
@@ -369,6 +377,12 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     }
 
     const optionKeys = [activeColor, activeRam, activeRom, activeCondition, activeOrigin];
+    const optionSignature = optionKeys.join('|').toLowerCase();
+    if (variants.some(variant => variant.optionKeys.join('|').toLowerCase() === optionSignature)) {
+      setError('Cấu hình này đã tồn tại trong danh sách biến thể.');
+      return;
+    }
+
     const specsList = [
       { key: 'Màu sắc', value: activeColor },
       { key: 'RAM', value: activeRam },
@@ -400,7 +414,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   };
 
   const handleClose = async () => {
-    if (submitting || uploadingImages) return;
+    if (submitting || uploadingImages || uploadingDescriptionImages) return;
 
     await cleanupUploadedFiles([
       ...activeImages,
@@ -443,7 +457,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
       if (baseprice === '' || Number(baseprice) <= 0) return setError('Giá gốc sản phẩm phải lớn hơn 0.');
       if (hasDiscount && (saleprice === '' || Number(saleprice) < 0)) return setError('Giá giảm không hợp lệ.');
       if (hasDiscount && Number(saleprice) > Number(baseprice)) return setError('Giá giảm không được lớn hơn giá gốc.');
-      if (stock === '' || Number(stock) < 0) return setError('Số lượng tồn kho phải là số không âm.');
+      if (stock === '' || Number(stock) <= 0) return setError('Số lượng lô hàng phải lớn hơn 0.');
       setStep(2);
     } else if (step === 2) {
       setStep(3);
@@ -859,7 +873,12 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
               </div>
 
               <div className="pt-2">
-                <Button variant="primary" onClick={handleAddVariant} className="w-full justify-center font-bold">
+                <Button
+                  variant="primary"
+                  onClick={handleAddVariant}
+                  disabled={uploadingImages || remainingStock <= 0}
+                  className="w-full justify-center font-bold"
+                >
                   + Thêm biến thể này vào danh sách
                 </Button>
               </div>

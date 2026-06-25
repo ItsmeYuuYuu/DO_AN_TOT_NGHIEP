@@ -3,6 +3,7 @@ import apiClient from '@/api/apiClient';
 import { Package, Plus, Filter, Edit2, History, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 import { notifyError } from '@/utils/notifications';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 
 interface InventoryItem {
@@ -36,6 +37,8 @@ interface LowStockVariant {
 }
 
 const StaffInventory: React.FC = () => {
+  const { user } = useAuth();
+  const canManageInventory = user?.rolename === 'Admin' || user?.rolename === 'Warehouse';
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -106,6 +109,10 @@ const StaffInventory: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageInventory) {
+      notifyError('Tài khoản hiện tại chỉ có quyền xem kho hàng.');
+      return;
+    }
     setSaving(true);
     try {
       if (editingItem) {
@@ -138,9 +145,15 @@ const StaffInventory: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-800">Quản lý IMEI Tồn kho</h1>
           <p className="text-slate-500 text-sm">Theo dõi chi tiết thiết bị trong kho</p>
         </div>
-        <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-[#4f46e5] text-white font-bold rounded-xl hover:bg-[#4338ca] transition-colors">
-          <Plus size={18} /> Thêm IMEI
-        </button>
+        {canManageInventory ? (
+          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-[#4f46e5] text-white font-bold rounded-xl hover:bg-[#4338ca] transition-colors">
+            <Plus size={18} /> Thêm IMEI
+          </button>
+        ) : (
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-slate-500">
+            Chỉ xem
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-[0_10px_28px_rgba(15,23,42,0.06)] border border-slate-100">
@@ -232,9 +245,11 @@ const StaffInventory: React.FC = () => {
                   <button onClick={() => openHistory(item)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-2xl transition-colors" title="Lịch sử kho">
                     <History size={16} />
                   </button>
-                  <button onClick={() => openEditModal(item)} className="p-2 text-[#4f46e5] hover:bg-indigo-50 rounded-2xl transition-colors">
-                    <Edit2 size={16} />
-                  </button>
+                  {canManageInventory && (
+                    <button onClick={() => openEditModal(item)} className="p-2 text-[#4f46e5] hover:bg-indigo-50 rounded-2xl transition-colors">
+                      <Edit2 size={16} />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

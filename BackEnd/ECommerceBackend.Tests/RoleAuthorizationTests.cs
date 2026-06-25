@@ -51,6 +51,8 @@ public class RoleAuthorizationTests : IClassFixture<CustomWebApplicationFactory>
         { "Warehouse", HttpMethod.Get, "/api/Shipments", HttpStatusCode.OK },
         { "Manager", HttpMethod.Get, "/api/ReturnRequests", HttpStatusCode.OK },
         { "Admin", HttpMethod.Get, "/api/ChatSessions/recommendation-metrics", HttpStatusCode.OK },
+        { "Content", HttpMethod.Get, "/api/HomepageProductSections", HttpStatusCode.OK },
+        { "Manager", HttpMethod.Get, "/api/HomepageProductSections", HttpStatusCode.OK },
         { "Customer", HttpMethod.Get, "/api/ReturnRequests/mine", HttpStatusCode.OK }
     };
 
@@ -90,6 +92,8 @@ public class RoleAuthorizationTests : IClassFixture<CustomWebApplicationFactory>
         { "Warehouse", HttpMethod.Get, "/api/ChatSessions/handoffs" },
         { "Sales", HttpMethod.Get, "/api/ChatSessions/handoffs" },
         { "Consultant", HttpMethod.Get, "/api/Users" },
+        { "Sales", HttpMethod.Get, "/api/HomepageProductSections" },
+        { "Consultant", HttpMethod.Get, "/api/HomepageProductSections" },
         { "Customer", HttpMethod.Get, "/api/ChatSessions/recommendation-metrics" }
     };
 

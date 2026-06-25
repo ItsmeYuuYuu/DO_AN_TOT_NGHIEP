@@ -4,6 +4,7 @@ import { ArrowRight, SearchCheck, SearchX } from 'lucide-react';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { Skeleton } from '@/components/Skeleton';
+import { Seo } from '@/components/Seo';
 
 const SearchPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -36,6 +37,11 @@ const SearchPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
+      <Seo
+        title={query ? `Tim kiem "${query}" - Cuong Dien Thoai` : 'Tim kiem san pham - Cuong Dien Thoai'}
+        description="Trang ket qua tim kiem san pham noi bo cua Cuong Dien Thoai."
+        noIndex
+      />
       <section className="border-b customer-rule bg-[#ffffff] px-4 py-8 md:py-10">
         <div className="customer-container">
           <div className="grid gap-6 lg:grid-cols-[1.45fr_0.75fr] lg:items-end">

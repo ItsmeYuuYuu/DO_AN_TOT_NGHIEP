@@ -13,6 +13,7 @@ import {
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { Skeleton } from '@/components/Skeleton';
+import { Seo } from '@/components/Seo';
 import { promotionsApi, type PromotionalContent } from '@/features/content/api/promotionsApi';
 import { homepageSectionsApi, type HomepageProductSection } from '@/features/homepage/api/homepageSectionsApi';
 
@@ -90,10 +91,15 @@ const CustomerHome: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-20">
+      <Seo
+        title="Cuong Dien Thoai - Tu van smartphone bang AI"
+        description="Mua smartphone chinh hang, xem khuyen mai, so sanh san pham va nhan tu van AI theo nhu cau tai Cuong Dien Thoai."
+        canonicalPath="/"
+      />
       <section className="border-b customer-rule bg-white px-3 py-3 sm:px-4 md:py-6">
         <div className="mx-auto grid max-w-7xl gap-3 lg:grid-cols-12">
           <div
-            className="group relative min-h-[240px] overflow-hidden rounded-[24px] bg-[#1f2937] shadow-[0_24px_60px_rgba(15,23,42,0.18)] sm:min-h-[330px] sm:rounded-[30px] lg:col-span-8 lg:min-h-[440px]"
+            className="group relative min-h-[240px] overflow-hidden rounded-2xl bg-[#1f2937] shadow-[0_24px_60px_rgba(15,23,42,0.18)] sm:min-h-[330px] lg:col-span-8 lg:min-h-[440px]"
             onMouseEnter={() => setIsSliderPaused(true)}
             onMouseLeave={() => setIsSliderPaused(false)}
             onFocusCapture={() => setIsSliderPaused(true)}
@@ -155,7 +161,7 @@ const CustomerHome: React.FC = () => {
                 )}
               </>
             ) : (
-              <div className="customer-grid-pattern relative flex h-full min-h-[330px] flex-col justify-between rounded-[30px] p-7 text-white md:p-10 lg:min-h-[440px]">
+              <div className="customer-grid-pattern relative flex h-full min-h-[330px] flex-col justify-between rounded-2xl p-7 text-white md:p-10 lg:min-h-[440px]">
                 <div className="flex items-center justify-between">
                   <span className="border border-[#ffd166] px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-[#ffd166]">
                     Tech selection 2026
@@ -190,7 +196,7 @@ const CustomerHome: React.FC = () => {
 
           <div className="grid gap-3 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1">
             {sideBanners.map(banner => (
-              <div key={banner.contentid} className="relative min-h-36 overflow-hidden rounded-[20px] bg-[#e8f1ef] shadow-[0_16px_38px_rgba(15,23,42,0.1)] sm:min-h-52 sm:rounded-[24px]">
+              <div key={banner.contentid} className="relative min-h-36 overflow-hidden rounded-xl bg-[#e8f1ef] shadow-[0_16px_38px_rgba(15,23,42,0.1)] sm:min-h-52 sm:rounded-2xl">
                 <img
                   src={banner.imageurl}
                   alt={banner.title || 'Ưu đãi nổi bật'}
@@ -205,7 +211,7 @@ const CustomerHome: React.FC = () => {
             {Array.from({ length: Math.max(0, 2 - sideBanners.length) }).map((_, index) => (
               <div
                 key={`banner-placeholder-${index}`}
-                className="flex min-h-36 items-center justify-center rounded-[20px] border border-dashed border-[#d7dce3] bg-white/70 p-4 text-center text-sm font-bold text-slate-400 shadow-[0_16px_38px_rgba(15,23,42,0.06)] sm:min-h-52 sm:rounded-[24px] sm:p-6"
+                className="flex min-h-36 items-center justify-center rounded-xl border border-dashed border-[#d7dce3] bg-white/70 p-4 text-center text-sm font-bold text-slate-400 shadow-[0_16px_38px_rgba(15,23,42,0.06)] sm:min-h-52 sm:rounded-2xl sm:p-6"
               >
                 Chưa cấu hình banner phụ {sideBanners.length + index + 1}
               </div>
@@ -216,10 +222,10 @@ const CustomerHome: React.FC = () => {
 
       <section className="mx-auto max-w-7xl space-y-8 px-3 py-10 sm:px-4 md:space-y-10 md:py-20">
         {loading && displaySections.length === 0 ? (
-          <div className="rounded-[30px] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+          <div className="rounded-2xl bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
             <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
               {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="rounded-[22px] border border-[#e5e7eb] bg-white p-4">
+                <div key={index} className="rounded-xl border border-[#e5e7eb] bg-white p-4">
                   <Skeleton className="mb-4 aspect-[4/4.4] w-full rounded-2xl" />
                   <Skeleton className="mb-2 h-4 w-3/4" />
                   <Skeleton className="h-6 w-1/2" />
@@ -243,7 +249,7 @@ const CustomerHome: React.FC = () => {
               return (
                 <div
                   key={section.sectionid || section.sectionkey}
-                  className={`overflow-hidden rounded-[24px] p-3 shadow-[0_22px_55px_rgba(15,23,42,0.12)] sm:rounded-[30px] sm:p-4 md:p-6 ${
+                  className={`overflow-hidden rounded-2xl p-3 shadow-[0_22px_55px_rgba(15,23,42,0.12)] sm:p-4 md:p-6 ${
                     isRed
                       ? 'bg-gradient-to-br from-[#e30613] via-[#c4000b] to-[#7f0007]'
                       : 'bg-gradient-to-br from-[#eaf4ff] via-[#f4f9ff] to-[#dcecff]'
@@ -298,7 +304,7 @@ const CustomerHome: React.FC = () => {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pb-4 pt-8 md:pb-10">
-        <div className="rounded-[24px] border border-[#e5e7eb] bg-white px-5 py-8 shadow-[0_18px_45px_rgba(15,23,42,0.08)] md:-skew-x-3 md:rounded-[28px] md:px-10 md:py-10">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white px-5 py-8 shadow-[0_18px_45px_rgba(15,23,42,0.08)] md:-skew-x-3 md:px-10 md:py-10">
           <div className="grid gap-7 text-center sm:grid-cols-2 md:skew-x-3 md:grid-cols-4 md:gap-8">
             {[
               { icon: Truck, title: 'Giao hàng toàn quốc', description: 'Giao hàng trước, trả tiền sau COD' },

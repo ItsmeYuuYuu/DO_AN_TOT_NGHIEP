@@ -22,6 +22,7 @@ import { formatCurrency } from '@/utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { notifyError, notifySuccess } from '@/utils/notifications';
 import { MyReviews } from './MyReviews';
+import { Seo } from '@/components/Seo';
 
 interface Order {
   orderid: number;
@@ -182,6 +183,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
+      <Seo title="Tai khoan cua toi - Cuong Dien Thoai" description="Trang tai khoan va lich su don hang cua khach hang Cuong Dien Thoai." noIndex />
       <section className="border-b customer-rule bg-[#ffffff] px-3 py-6 sm:px-4 sm:py-8">
         <div className="customer-container">
           <p className="customer-label">Member account</p>

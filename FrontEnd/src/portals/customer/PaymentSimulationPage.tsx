@@ -4,6 +4,7 @@ import { CheckCircle2, Clock3, CreditCard, Loader2, RefreshCcw, XCircle } from '
 import { ordersApi, type PaymentCheckout } from '@/features/orders/api/ordersApi';
 import { formatCurrency } from '@/utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { Seo } from '@/components/Seo';
 
 const PaymentSimulationPage: React.FC = () => {
   const { orderId } = useParams();
@@ -95,6 +96,7 @@ const PaymentSimulationPage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
+        <Seo title="Thanh toan don hang - Cuong Dien Thoai" description="Trang thanh toan gia lap don hang Cuong Dien Thoai." noIndex />
         <Loader2 size={36} className="animate-spin text-[#e30613]" />
       </div>
     );
@@ -103,6 +105,7 @@ const PaymentSimulationPage: React.FC = () => {
   if (!checkout) {
     return (
       <div className="max-w-lg mx-auto px-4 py-20 text-center">
+        <Seo title="Thanh toan don hang - Cuong Dien Thoai" description="Trang thanh toan gia lap don hang Cuong Dien Thoai." noIndex />
         <XCircle size={56} className="mx-auto text-red-500 mb-4" />
         <h1 className="text-2xl font-black text-slate-900">Không thể thanh toán</h1>
         <p className="text-slate-500 mt-2 mb-6">{message}</p>
@@ -119,6 +122,7 @@ const PaymentSimulationPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen px-4 py-12">
+      <Seo title="Thanh toan don hang - Cuong Dien Thoai" description="Trang thanh toan gia lap don hang Cuong Dien Thoai." noIndex />
       <div className="customer-panel mx-auto max-w-xl overflow-hidden">
         <div className="bg-gradient-to-r from-[#1f2937] to-[#e30613] text-white p-7">
           <div className="flex items-center justify-between gap-4">

@@ -74,6 +74,7 @@ const UnauthorizedPage = lazy(() => import('@/portals/UnauthorizedPage'));
 const StaffHomeRedirect = () => {
   const { user } = useAuth();
   const destinations: Record<string, string> = {
+    Admin: '/admin',
     Manager: '/staff/manager',
     Sales: '/staff/sales-orders',
     Warehouse: '/staff/warehouse-orders',
@@ -101,6 +102,7 @@ const App: React.FC = () => {
           <Route path="search"            element={<SearchPage />} />
           <Route path="chat"              element={<CustomerChat />} />
           <Route path="news"              element={<NewsPage />} />
+          <Route path="news/:slug"        element={<NewsPage />} />
           <Route path="promotions"        element={<PromotionsPage />} />
           <Route path="policy"            element={<CustomerPolicyPage />} />
           <Route path="shipping"          element={<CustomerPolicyPage />} />

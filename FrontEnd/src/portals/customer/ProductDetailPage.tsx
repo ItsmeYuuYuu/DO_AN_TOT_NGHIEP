@@ -18,6 +18,8 @@ import { ProductSpecsTable } from '@/features/products/components/ProductSpecsTa
 import { ProductReviewSummary } from '@/features/products/components/ProductReviewSummary';
 import { RelatedProducts } from '@/features/products/components/RelatedProducts';
 import { formatCurrency } from '@/utils/formatters';
+import { Seo } from '@/components/Seo';
+import { buildSeoDescription } from '@/utils/seoUtils';
 
 type DetailTab = 'description' | 'specs' | 'reviews';
 
@@ -38,7 +40,7 @@ const renderDescription = (description: string) => {
     }
 
     blocks.push(
-      <figure key={`image-${match.index}`} className="my-7 overflow-hidden rounded-[24px] border border-[#e5e7eb] bg-[#f3f4f6]">
+      <figure key={`image-${match.index}`} className="my-7 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#f3f4f6]">
         <img src={match[2]} alt={match[1] || 'Hình ảnh sản phẩm'} className="mx-auto max-h-[680px] w-full object-contain" />
         {match[1] && match[1] !== 'Hình ảnh' && (
           <figcaption className="border-t border-[#e5e7eb] px-4 py-2 text-center text-xs text-slate-500">
@@ -93,13 +95,13 @@ const ProductDetailPage: React.FC = () => {
       <div className="customer-shell min-h-screen px-4 py-10">
         <div className="customer-container animate-pulse">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            <div className="h-[520px] rounded-[28px] bg-white lg:col-span-5" />
+            <div className="h-[520px] rounded-2xl bg-white lg:col-span-5" />
             <div className="space-y-4 lg:col-span-4">
               <div className="h-10 w-3/4 rounded-full bg-white" />
-              <div className="h-28 rounded-[24px] bg-white" />
-              <div className="h-72 rounded-[24px] bg-white" />
+              <div className="h-28 rounded-2xl bg-white" />
+              <div className="h-72 rounded-2xl bg-white" />
             </div>
-            <div className="h-[430px] rounded-[28px] bg-white lg:col-span-3" />
+            <div className="h-[430px] rounded-2xl bg-white lg:col-span-3" />
           </div>
         </div>
       </div>
@@ -114,6 +116,14 @@ const ProductDetailPage: React.FC = () => {
   const rating = product.reviewSummary?.avgRating ?? 0;
   const stock = selectedVariant?.stockquantity ?? 0;
   const currentPrice = selectedVariant?.saleprice ?? selectedVariant?.baseprice ?? 0;
+  const mainImage =
+    variantImages.find(image => image.ismain)?.imageurl ??
+    variantImages[0]?.imageurl ??
+    '/favicon.svg';
+  const seoDescription = buildSeoDescription(
+    product.description,
+    `${product.productname}${product.brand?.name ? ` thuong hieu ${product.brand.name}` : ''}, gia tu ${formatCurrency(currentPrice)} tai Cuong Dien Thoai. Tu van AI, thong so ro rang va ho tro bao hanh theo IMEI.`,
+  );
 
   const askAi = () => {
     const variantDetails = selectedVariant?.attributes
@@ -131,6 +141,13 @@ const ProductDetailPage: React.FC = () => {
 
   return (
     <div className="customer-shell pb-28 lg:pb-20">
+      <Seo
+        title={`${product.productname} - Cuong Dien Thoai`}
+        description={seoDescription}
+        image={mainImage}
+        type="product"
+        canonicalPath={`/products/${product.slug || product.productid}`}
+      />
       <div className="customer-container px-3 py-5 sm:px-4 md:py-8">
         <nav className="mb-5 flex items-center gap-2 overflow-hidden text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
           <Link to="/" className="shrink-0 hover:text-[#c4000b]">Trang chủ</Link>
@@ -225,7 +242,7 @@ const ProductDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded-[24px] bg-[#1f2937] p-5 text-white shadow-[0_18px_45px_rgba(15,23,42,0.2)]">
+              <div className="rounded-2xl bg-[#1f2937] p-5 text-white shadow-[0_18px_45px_rgba(15,23,42,0.2)]">
                 <MessageCircleMore size={26} className="mb-3 text-[#ffd166]" />
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">Trợ lý mua sắm AI</p>
                 <h3 className="customer-display mt-2 text-2xl font-bold leading-tight">
@@ -243,7 +260,7 @@ const ProductDetailPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-start gap-3 rounded-[20px] border border-emerald-200 bg-emerald-50 p-4">
+              <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                 <BadgeCheck className="mt-0.5 shrink-0 text-emerald-700" size={20} />
                 <div>
                   <p className="text-sm font-black text-emerald-900">Giá theo đúng phiên bản</p>
@@ -306,7 +323,7 @@ const ProductDetailPage: React.FC = () => {
         <RelatedProducts products={product.relatedProducts} />
       </div>
 
-      <div className="fixed inset-x-3 bottom-3 z-30 flex items-center gap-3 rounded-[24px] border border-[#e5e7eb] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.16)] lg:hidden">
+      <div className="fixed inset-x-3 bottom-3 z-30 flex items-center gap-3 rounded-2xl border border-[#e5e7eb] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.16)] lg:hidden">
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs text-slate-500">{product.productname}</p>
           <p className="font-black text-[#c4000b]">{formatCurrency(currentPrice)}</p>

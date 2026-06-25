@@ -46,7 +46,7 @@ interface EditVariant {
 }
 
 const inputClass =
-  'w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#4f46e5]';
+  'w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#4f46e5] disabled:bg-slate-100 disabled:text-slate-500';
 
 const newClientId = () => crypto.randomUUID();
 
@@ -323,13 +323,19 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
             </div>
           )}
 
+          {contentOnly && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              Tài khoản Content chỉ được chỉnh tên, mô tả, hình ảnh và thông số kỹ thuật. Giá, SKU, tồn kho, danh mục và thương hiệu được khóa để tránh sai lệch dữ liệu bán hàng.
+            </div>
+          )}
+
           <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <h3 className="text-sm font-bold text-slate-800">Thông tin cơ bản</h3>
             <Input label="Tên sản phẩm *" value={productname} onChange={event => setProductname(event.target.value)} />
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-600">Danh mục *</label>
-                <select className={inputClass} value={categoryid} onChange={event => setCategoryid(Number(event.target.value) || '')}>
+                <select disabled={contentOnly} className={inputClass} value={categoryid} onChange={event => setCategoryid(Number(event.target.value) || '')}>
                   <option value="">Chọn danh mục</option>
                   {categories.map(category => (
                     <option key={category.categoryid} value={category.categoryid}>{category.categoryname}</option>
@@ -338,7 +344,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
               </div>
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-600">Thương hiệu *</label>
-                <select className={inputClass} value={brandid} onChange={event => {
+                <select disabled={contentOnly} className={inputClass} value={brandid} onChange={event => {
                   setBrandid(Number(event.target.value) || '');
                   setSeriesid('');
                 }}>
@@ -353,7 +359,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 <select
                   className={inputClass}
                   value={seriesid}
-                  disabled={!brandid || filteredSeries.length === 0}
+                  disabled={contentOnly || !brandid || filteredSeries.length === 0}
                   onChange={event => setSeriesid(Number(event.target.value) || '')}
                 >
                   <option value="">{brandid ? 'Chọn dòng máy' : 'Chọn thương hiệu trước'}</option>

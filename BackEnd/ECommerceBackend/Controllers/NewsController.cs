@@ -30,6 +30,7 @@ namespace ECommerceBackend.Controllers
         private static NewsDto MapToDto(News n) => new NewsDto(
             n.Postid,
             n.Title,
+            n.Slug,
             n.Summary,
             n.Content,
             n.Thumbnail,
@@ -61,6 +62,26 @@ namespace ECommerceBackend.Controllers
             return Ok(MapToDto(news));
         }
 
+        [HttpGet("by-slug/{slug}")]
+        public async Task<ActionResult<NewsDto>> GetNewsItemBySlug(string slug)
+        {
+            if (string.IsNullOrWhiteSpace(slug))
+                return NotFound(new ApiErrorDto("Tin tuc khong ton tai.", null));
+
+            var normalizedSlug = slug.Trim().ToLowerInvariant();
+            var news = await _context.News
+                .Include(n => n.User)
+                .FirstOrDefaultAsync(n => n.Slug == normalizedSlug && n.Isactive == true);
+            if (news == null && int.TryParse(normalizedSlug, out var legacyId))
+            {
+                news = await _context.News
+                    .Include(n => n.User)
+                    .FirstOrDefaultAsync(n => n.Postid == legacyId && n.Isactive == true);
+            }
+            if (news == null) return NotFound(new ApiErrorDto("Tin tuc khong ton tai.", null));
+            return Ok(MapToDto(news));
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin,Content")]
         public async Task<ActionResult<NewsDto>> PostNews([FromBody] CreateNewsRequestDto dto)
@@ -75,6 +96,7 @@ namespace ECommerceBackend.Controllers
                 Summary = dto.Summary,
                 Content = dto.Content,
                 Thumbnail = dto.Thumbnail,
+                Slug = await ProductSlugService.GenerateUniqueNewsSlugAsync(_context, dto.Title),
                 Userid = int.Parse(claimUserId),
                 Createdat = DateTime.Now,
                 Isactive = dto.Isactive ?? true
@@ -99,6 +121,10 @@ namespace ECommerceBackend.Controllers
             news.Summary = dto.Summary;
             news.Content = dto.Content;
             news.Thumbnail = dto.Thumbnail;
+            if (string.IsNullOrWhiteSpace(news.Slug))
+            {
+                news.Slug = await ProductSlugService.GenerateUniqueNewsSlugAsync(_context, dto.Title, id);
+            }
             if (dto.Isactive.HasValue)
             {
                 news.Isactive = dto.Isactive.Value;

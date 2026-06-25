@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '@/features/auth/api/authApi';
-import { AlertCircle, CheckCircle2, ChevronRight, Lock, Mail, Phone, ShieldCheck, User, UserPlus } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronRight, Lock, Mail, Phone, User, UserPlus } from 'lucide-react';
 import Logo from '@/assets/Logo.png';
+import { Seo } from '@/components/Seo';
 
 const isStrongPassword = (password: string) =>
   password.length >= 8 &&
@@ -94,9 +95,14 @@ const RegisterPage: React.FC = () => {
 
   return (
     <main className="customer-shell min-h-screen px-4 py-8">
+      <Seo
+        title="Dang ky tai khoan - Cuong Dien Thoai"
+        description="Tao tai khoan mua hang tai Cuong Dien Thoai."
+        noIndex
+      />
       <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="grid w-full max-w-6xl overflow-hidden rounded-[30px] border border-[#e5e7eb] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)] lg:grid-cols-[0.95fr_1.05fr]">
-          <section className="relative hidden overflow-hidden bg-[#1f2937] p-10 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="grid w-full max-w-6xl overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)] lg:grid-cols-[0.95fr_1.05fr]">
+          <section className="relative hidden min-h-[560px] overflow-hidden bg-[#1f2937] p-10 text-white lg:flex lg:flex-col">
             <div className="absolute -right-24 top-20 h-72 w-72 rounded-full border border-white/10 bg-[#ffd166]/10" />
             <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-[#e30613]/20" />
 
@@ -104,22 +110,12 @@ const RegisterPage: React.FC = () => {
               <Link to="/" className="inline-flex rounded-2xl bg-white px-5 py-3 shadow-[0_14px_30px_rgba(227,6,19,0.18)]">
                 <img src={Logo} alt="Cuồng Điện Thoại" className="h-16 w-auto object-contain" />
               </Link>
-              <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#ffd166]">Create account</p>
+              <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#ffd166]">Cuồng Điện Thoại</p>
               <h1 className="customer-display mt-3 max-w-md text-5xl font-black leading-[0.95]">
-                Thành viên mới, ưu đãi mới.
+                Tạo tài khoản mới.
               </h1>
               <p className="mt-6 max-w-sm text-sm font-medium leading-7 text-white/70">
-                Tạo tài khoản để lưu lịch sử mua hàng, bảo hành và nhận tư vấn sản phẩm sát nhu cầu hơn.
-              </p>
-            </div>
-
-            <div className="relative z-10 rounded-[22px] border border-white/15 bg-white/10 p-4 backdrop-blur">
-              <div className="mb-2 flex items-center gap-2">
-                <ShieldCheck size={18} className="text-[#ffd166]" />
-                <p className="text-xs font-black uppercase tracking-[0.18em]">Quy tắc an toàn</p>
-              </div>
-              <p className="text-xs leading-6 text-white/70">
-                Mật khẩu cần đủ mạnh ngay từ đầu để tránh lỗi đăng nhập và bảo vệ tài khoản khách hàng.
+                Lưu lịch sử mua hàng, theo dõi bảo hành và đặt hàng nhanh hơn ở những lần sau.
               </p>
             </div>
           </section>
@@ -130,10 +126,9 @@ const RegisterPage: React.FC = () => {
                 <img src={Logo} alt="Cuồng Điện Thoại" className="h-14 w-auto object-contain" />
               </Link>
 
-              <p className="customer-label">Tạo tài khoản</p>
               <h2 className="customer-display mt-2 text-4xl font-black text-[#1f2937]">Đăng ký</h2>
               <p className="mt-2 text-sm font-medium text-slate-500">
-                Điền thông tin để trở thành thành viên Cuồng Điện Thoại.
+                Điền thông tin để tạo tài khoản mua hàng.
               </p>
 
               {error && (

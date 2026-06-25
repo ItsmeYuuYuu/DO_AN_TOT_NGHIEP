@@ -28,6 +28,7 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'md',
   fullWidth = false,
   isLoading = false,
+  disabled = false,
   className = '',
   children,
   ...props
@@ -43,8 +44,8 @@ export const Button: React.FC<ButtonProps> = ({
         ${sizeClasses[size]}
         ${className}
       `}
-      disabled={isLoading || props.disabled}
       {...props}
+      disabled={isLoading || disabled}
     >
       {isLoading ? (
         <span className="flex items-center gap-2">

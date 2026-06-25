@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /staff
+Disallow: /auth
+Disallow: /cart
+Disallow: /checkout
+Disallow: /payment
+Disallow: /profile
+Disallow: /chat
+Disallow: /returns
+
+Sitemap: https://cuongdienthoai.vn/sitemap.xml

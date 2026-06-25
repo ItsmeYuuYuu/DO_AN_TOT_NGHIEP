@@ -110,7 +110,7 @@ export const ChatComparisonTable = ({
   ];
 
   return (
-    <div className="mt-4 overflow-x-auto rounded-[22px] border border-[#e5e7eb] bg-white shadow-[0_14px_32px_rgba(15,23,42,0.08)]">
+    <div className="mt-4 overflow-x-auto rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_14px_32px_rgba(15,23,42,0.08)]">
       <table className="w-full min-w-[620px] border-collapse text-left text-xs text-slate-700">
         <thead>
           <tr className="bg-[#ffffff]">

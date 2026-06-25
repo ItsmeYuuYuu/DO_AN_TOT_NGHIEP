@@ -23,7 +23,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ productName, ima
   return (
     <div className="flex flex-col gap-4">
       {/* Main Image */}
-      <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] group">
+      <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] group">
         <img
           src={activeImage}
           alt={productName}
@@ -59,7 +59,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ productName, ima
             <button
               key={img.imageid}
               onClick={() => setActiveIndex(idx)}
-              className={`h-[76px] snap-start overflow-hidden rounded-2xl border bg-white transition-all ${
+              className={`h-[76px] snap-start overflow-hidden rounded-xl border bg-white transition-all ${
                 activeIndex === idx ? 'border-[#e30613] ring-4 ring-[#e30613]/10' : 'border-slate-200 hover:border-[#e30613]/40'
               }`}
             >

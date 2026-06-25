@@ -20,6 +20,7 @@ import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommen
 import { formatDateTime } from '../../utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
+import { Seo } from '@/components/Seo';
 
 
 const quickPrompts = [
@@ -37,16 +38,13 @@ export default function CustomerChat() {
   const [inputMsg, setInputMsg] = useState(() => (searchParams.get('q') ?? '').slice(0, 500));
   const [loading, setLoading] = useState(false);
   const messagesPaneRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     window.setTimeout(() => {
       const pane = messagesPaneRef.current;
       if (pane) {
         pane.scrollTo({ top: pane.scrollHeight, behavior: 'smooth' });
-        return;
       }
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
   };
 
@@ -77,6 +75,7 @@ export default function CustomerChat() {
   };
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     void fetchSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -246,7 +245,8 @@ export default function CustomerChat() {
 
   return (
     <div className="customer-shell px-0 py-0 md:px-4 md:py-6">
-      <div className="customer-container grid h-[calc(100dvh-8.75rem)] min-h-[460px] overflow-hidden border border-[#e5e7eb] bg-[#ffffff] shadow-[0_18px_45px_rgba(15,23,42,0.08)] md:h-[calc(100vh-12rem)] md:min-h-[560px] md:max-h-[calc(100vh-8rem)] md:rounded-[28px] lg:grid-cols-[320px_1fr]">
+      <Seo title="Tro ly mua sam AI - Cuong Dien Thoai" description="Tro ly tu van AI cua Cuong Dien Thoai." noIndex />
+      <div className="customer-container grid h-[calc(100dvh-8.75rem)] min-h-[460px] overflow-hidden border border-[#e5e7eb] bg-[#ffffff] shadow-[0_18px_45px_rgba(15,23,42,0.08)] md:h-[calc(100vh-12rem)] md:min-h-[560px] md:max-h-[calc(100vh-8rem)] md:rounded-2xl lg:grid-cols-[320px_1fr]">
         <aside className="hidden min-h-0 border-r border-[#e5e7eb] bg-white lg:flex lg:flex-col">
           <div className="border-b border-[#e5e7eb] p-5">
             <div className="flex items-center justify-between">
@@ -402,7 +402,7 @@ export default function CustomerChat() {
           <div ref={messagesPaneRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[#f3f4f6] p-3 md:space-y-6 md:p-6">
             {!activeSession && sessions.length === 0 && (
               <div className="flex h-full flex-col items-center justify-center text-center">
-                <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-[24px] bg-[#1f2937] text-[#ffd166]">
+                <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#1f2937] text-[#ffd166]">
                   <Bot size={42} />
                 </div>
                 <h2 className="customer-display text-3xl font-bold text-[#1f2937]">
@@ -427,7 +427,7 @@ export default function CustomerChat() {
               return (
                 <div key={message.messageid || index} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
                   <div className={`flex h-9 w-9 shrink-0 items-center justify-center ${
-                      isUser ? 'rounded-[22px] bg-[#e30613] text-white' : 'rounded-[22px] bg-[#1f2937] text-[#ffd166]'
+                      isUser ? 'rounded-2xl bg-[#e30613] text-white' : 'rounded-2xl bg-[#1f2937] text-[#ffd166]'
                   }`}>
                     {isUser ? <User size={16} /> : message.sendertype === 'consultant' ? <Headphones size={16} /> : <Bot size={16} />}
                   </div>
@@ -495,14 +495,13 @@ export default function CustomerChat() {
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1f2937] text-[#ffd166]">
                   <Bot size={16} />
                 </div>
-                <div className="flex items-center gap-2 rounded-[22px] border border-[#e5e7eb] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+                <div className="flex items-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
                   <div className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937]" style={{ animationDelay: '0ms' }} />
                   <div className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937]" style={{ animationDelay: '150ms' }} />
                   <div className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937]" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
           </div>
 
           <form onSubmit={sendMessage} className="shrink-0 flex items-center gap-2 border-t border-[#e5e7eb] bg-white p-3 md:gap-3 md:p-4">

@@ -6,6 +6,7 @@ namespace ECommerceBackend.DTOs.News
     public record NewsDto(
         int Postid,
         string Title,
+        string? Slug,
         string? Summary,
         string? Content,
         string? Thumbnail,

@@ -562,6 +562,8 @@ public partial class ECommerceContext : DbContext
 
             entity.ToTable("news");
 
+            entity.HasIndex(e => e.Slug, "news_slug_key").IsUnique();
+
             entity.Property(e => e.Postid).HasColumnName("postid");
             entity.Property(e => e.Content).HasColumnName("content");
             entity.Property(e => e.Createdat)
@@ -577,6 +579,9 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Thumbnail)
                 .HasMaxLength(500)
                 .HasColumnName("thumbnail");
+            entity.Property(e => e.Slug)
+                .HasMaxLength(220)
+                .HasColumnName("slug");
             entity.Property(e => e.Title)
                 .HasMaxLength(255)
                 .HasColumnName("title");

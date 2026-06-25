@@ -1,20 +1,34 @@
 # Demo flow checklist
 
-Cap nhat: 2026-06-23
+Cap nhat: 2026-06-25
 
 Tai lieu nay dung de chay thu cong truoc khi demo khoa luan. Khi co dieu kien,
 co the chuyen cac muc nay thanh Playwright/Cypress E2E.
 
 ## Tai khoan can co
 
-- Admin: quan tri toan he thong.
-- Manager: xem tong hop va dieu phoi.
-- Sales: xac nhan don va thanh toan.
-- Warehouse: xuat kho, doi chieu IMEI va tao van don.
-- Warranty: tiep nhan bao hanh.
-- Content: quan ly tin tuc, banner, slider.
-- Consultant: tiep nhan chat tu AI.
-- Customer: mua hang co tai khoan.
+- Admin: `admin300475@gmail.com` / `Admin@300475!`
+- Admin du phong: `admin02@gmail.com` / `Admin@123456!`
+- Manager: `manager01@gmail.com` / `Manager@123456!`
+- Sales: `sales01@gmail.com` / `Sales@123456!`
+- Warehouse: `staff01@gmail.com` / `Warehouse@123456!`
+- Warranty: `warranty01@gmail.com` / `Warranty@123456!`
+- Content: `content01@gmail.com` / `Content@123456!`
+- Consultant: `consultant01@gmail.com` / `Consultant@123456!`
+- Customer: `customer01@gmail.com` / `Customer@123456!`
+
+## 0. San pham va link slug
+
+1. Mo trang chu va bam vao mot san pham flagship.
+2. Kiem tra URL co dang `/products/google-pixel-10-pro` thay vi chi co ID.
+3. Thu mo link cu `/products/101` neu database co san pham ID 101.
+4. Tu trang admin, tao banner gan san pham va kiem tra link duoc sinh theo slug.
+
+Ket qua mong doi:
+
+- Link slug hien trang chi tiet dung san pham.
+- Link cu theo ID van hoat dong de khong gay du lieu cu.
+- Chatbot va product card deu dieu huong bang slug neu san pham co slug.
 
 ## 1. Dang ky va dang nhap
 

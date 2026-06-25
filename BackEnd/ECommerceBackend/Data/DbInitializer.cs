@@ -30,6 +30,7 @@ public static class DbInitializer
             await EnsureProductSeriesSchemaAsync(context);
             await EnsureHomepageProductSectionsSchemaAsync(context);
             await EnsureProductSlugSchemaAsync(context);
+            await EnsureNewsSlugSchemaAsync(context);
         }
         catch (Exception ex)
         {
@@ -312,6 +313,7 @@ public static class DbInitializer
 
         await SeedDemoCatalogAsync(context);
         await EnsureProductSlugsAsync(context);
+        await EnsureNewsSlugsAsync(context);
         await SeedHomepageProductSectionsAsync(context);
         await SeedDemoChatScenariosAsync(context);
 
@@ -1058,6 +1060,51 @@ public static class DbInitializer
         }
     }
 
+    private static async Task EnsureNewsSlugSchemaAsync(ECommerceContext context)
+    {
+        await context.Database.ExecuteSqlRawAsync("""
+            ALTER TABLE news
+            ADD COLUMN IF NOT EXISTS slug character varying(220);
+            CREATE UNIQUE INDEX IF NOT EXISTS news_slug_key
+                ON news (slug)
+                WHERE slug IS NOT NULL;
+            """);
+    }
+
+    private static async Task EnsureNewsSlugsAsync(ECommerceContext context)
+    {
+        var newsList = await context.News
+            .OrderBy(news => news.Postid)
+            .ToListAsync();
+        var usedSlugs = newsList
+            .Where(news => !string.IsNullOrWhiteSpace(news.Slug))
+            .Select(news => news.Slug!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var changed = false;
+        foreach (var news in newsList)
+        {
+            if (!string.IsNullOrWhiteSpace(news.Slug))
+                continue;
+
+            var baseSlug = ProductSlugService.GenerateBaseSlug(news.Title);
+            var slug = baseSlug;
+            var suffix = 2;
+            while (!usedSlugs.Add(slug))
+            {
+                slug = $"{baseSlug}-{suffix++}";
+            }
+
+            news.Slug = slug;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await context.SaveChangesAsync();
+        }
+    }
+
     private static async Task SeedAdditionalDemoUsersAsync(ECommerceContext context)
     {
         var demoUsers = new[]
@@ -1149,7 +1196,7 @@ public static class DbInitializer
                 EXISTS (SELECT 1 FROM productimages));
             """);
 
-        var demoProducts = new[]
+        var demoProducts = new List<DemoProductSeed>
         {
             new DemoProductSeed(
                 "Google Pixel", "Pixel 8 series", "Google Pixel 8 Pro",
@@ -1377,6 +1424,7 @@ public static class DbInitializer
                     gpu: "Mali-G615",
                     highlights: "Tầm trung thiết kế đẹp, selfie tốt và pin ổn"))
         };
+        demoProducts.AddRange(CreateAdditionalDemoVariants(demoProducts.ToList()));
 
         var phoneCategory = await context.Categories
             .OrderBy(category => category.Categoryid)
@@ -1407,12 +1455,6 @@ public static class DbInitializer
             var product = products.FirstOrDefault(item =>
                 item.Productname.Equals(seed.Name, StringComparison.OrdinalIgnoreCase));
             var variantExists = variantsBySku.TryGetValue(seed.Sku, out var variant);
-            if (product != null && !variantExists)
-            {
-                // An admin-created product with the same name remains untouched.
-                continue;
-            }
-
             if (product == null)
             {
                 product = new Product
@@ -1497,8 +1539,12 @@ public static class DbInitializer
             }
         }
 
+        var expectedDemoImeis = demoProducts
+            .SelectMany(seed => Enumerable.Range(1, seed.Stock)
+                .Select(index => $"{seed.Sku}-{index:00}"))
+            .ToList();
         var existingDemoImeis = (await context.Inventoryitems
-            .Where(item => item.Imei.StartsWith("DEMO-"))
+            .Where(item => expectedDemoImeis.Contains(item.Imei))
             .Select(item => item.Imei)
             .ToListAsync())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -1524,6 +1570,81 @@ public static class DbInitializer
         }
 
         await context.SaveChangesAsync();
+    }
+
+    private static IEnumerable<DemoProductSeed> CreateAdditionalDemoVariants(
+        IEnumerable<DemoProductSeed> baseSeeds)
+    {
+        foreach (var seed in baseSeeds)
+        {
+            var specs = JsonSerializer.Deserialize<Dictionary<string, string>>(
+                seed.Specifications) ?? new Dictionary<string, string>();
+            var baseStorage = specs.GetValueOrDefault("Bộ nhớ trong", "256GB");
+            var baseRam = specs.GetValueOrDefault("Dung lượng RAM", "12GB");
+            var variants = baseStorage.Contains("512", StringComparison.OrdinalIgnoreCase)
+                ? new[]
+                {
+                    ("256GB", baseRam, -2_000_000m, -1_500_000m, 2),
+                    ("1TB", IncreaseRam(baseRam), 4_000_000m, 3_000_000m, 1)
+                }
+                : new[]
+                {
+                    ("512GB", IncreaseRam(baseRam), 2_000_000m, 1_500_000m, 2)
+                };
+
+            foreach (var (storage, ram, baseDelta, saleDelta, stock) in variants)
+            {
+                yield return seed with
+                {
+                    Sku = $"{seed.Sku}-{StorageCode(storage)}",
+                    BasePrice = Math.Max(1_000_000m, seed.BasePrice + baseDelta),
+                    SalePrice = seed.SalePrice.HasValue
+                        ? Math.Max(1_000_000m, seed.SalePrice.Value + saleDelta)
+                        : null,
+                    Stock = stock,
+                    Specifications = UpdateDemoVariantSpecs(
+                        seed.Specifications,
+                        ram,
+                        storage)
+                };
+            }
+        }
+    }
+
+    private static string IncreaseRam(string currentRam)
+    {
+        var normalized = currentRam.ToUpperInvariant();
+        if (normalized.Contains("16GB"))
+            return "24GB";
+        if (normalized.Contains("12GB"))
+            return "16GB";
+        if (normalized.Contains("8GB"))
+            return "12GB";
+        return currentRam;
+    }
+
+    private static string StorageCode(string storage) =>
+        storage.Replace(" ", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("GB", "G", StringComparison.OrdinalIgnoreCase)
+            .Replace("TB", "T", StringComparison.OrdinalIgnoreCase)
+            .ToUpperInvariant();
+
+    private static string UpdateDemoVariantSpecs(
+        string specifications,
+        string ram,
+        string storage)
+    {
+        var specs = JsonSerializer.Deserialize<Dictionary<string, string>>(
+            specifications) ?? new Dictionary<string, string>();
+        specs["Dung lượng RAM"] = ram;
+        specs["Bộ nhớ trong"] = storage;
+        if (specs.TryGetValue("Điểm nổi bật tư vấn", out var highlights))
+        {
+            specs["Điểm nổi bật tư vấn"] =
+                $"{highlights}; cấu hình {ram}/{storage} phù hợp để demo chọn biến thể theo nhu cầu.";
+        }
+
+        return JsonSerializer.Serialize(specs);
     }
 
     private static string GetBrandImageSlug(string brand) =>

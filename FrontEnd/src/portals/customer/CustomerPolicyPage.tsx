@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, RefreshCcw, ShieldCheck, Truck } from 'lucide-react';
+import { Seo } from '@/components/Seo';
 
 interface PolicySection {
   title: string;
@@ -127,13 +128,18 @@ const CustomerPolicyPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
+      <Seo
+        title={`${content.eyebrow} - Cuong Dien Thoai`}
+        description={content.description}
+        canonicalPath={location.pathname}
+      />
       <section className="border-b customer-rule bg-white px-4 py-10">
         <div className="customer-container">
           <Link to="/" className="mb-8 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[#c4000b]">
             <ArrowLeft size={15} /> Về trang chủ
           </Link>
           <div className="grid gap-8 lg:grid-cols-[0.9fr_1.5fr] lg:items-center">
-            <div className="customer-panel-soft flex h-36 w-36 items-center justify-center rounded-[34px] text-[#c4000b]">
+            <div className="customer-panel-soft flex h-36 w-36 items-center justify-center rounded-2xl text-[#c4000b]">
               {content.icon}
             </div>
             <div>

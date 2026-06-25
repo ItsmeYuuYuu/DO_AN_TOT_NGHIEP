@@ -47,7 +47,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = fal
     <article className="product-card group flex h-full flex-col">
       <Link
         to={productPath}
-        className={`card-img-container relative m-2 mb-0 block aspect-[4/4.25] overflow-hidden rounded-[18px] sm:m-3 sm:mb-0 ${imageTone}`}
+        className={`card-img-container relative m-2 mb-0 block aspect-[4/4.25] overflow-hidden rounded-xl sm:m-3 sm:mb-0 ${imageTone}`}
       >
         <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-1 p-2 sm:p-3">
           <span className="max-w-[76%] truncate rounded-full border border-[#1f2937]/10 bg-white/90 px-2 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-[#1f2937] backdrop-blur sm:px-2.5 sm:text-[9px]">
@@ -104,21 +104,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = fal
           </h3>
         </Link>
 
-        {!compact && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {product.category?.name && (
-              <span className="rounded-full bg-[#1f2937]/5 px-2.5 py-1 text-[10px] font-bold text-[#1f2937]/70">
-                {product.category.name}
-              </span>
-            )}
-            {product.series?.name && (
-              <span className="rounded-full bg-[#e30613]/10 px-2.5 py-1 text-[10px] font-bold text-[#c4000b]">
-                {product.series.name}
-              </span>
-            )}
-          </div>
-        )}
-
         <div className="mt-auto flex items-end justify-between gap-2 border-t border-[#e5e7eb] pt-3 sm:gap-3 sm:pt-4">
           {firstVariant && price != null ? (
             <div>
@@ -136,14 +121,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = fal
             </div>
           ) : (
             <span className="text-sm font-bold text-slate-400">Liên hệ</span>
-          )}
-          {!compact && (
-            <Link
-              to={productPath}
-              className="mb-1 whitespace-nowrap rounded-full bg-[#f3f4f6] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#1f2937] transition hover:bg-[#e30613] hover:text-white"
-            >
-              Xem máy
-            </Link>
           )}
         </div>
       </div>

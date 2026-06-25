@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import apiClient from '@/api/apiClient';
 import { Check, Clock, Copy, DollarSign, Percent, Tag } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
+import { Seo } from '@/components/Seo';
 
 interface Voucher {
   vouchercode: string;
@@ -58,6 +59,11 @@ const PromotionsPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
+      <Seo
+        title="Uu dai hien tai - Cuong Dien Thoai"
+        description="Cap nhat voucher va cac chuong trinh uu dai dang ap dung tai Cuong Dien Thoai."
+        canonicalPath="/promotions"
+      />
       <main className="customer-container px-4 py-8">
         {loading ? (
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">

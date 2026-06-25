@@ -11,6 +11,8 @@ public partial class News
 
     public string Title { get; set; } = null!;
 
+    public string? Slug { get; set; }
+
     public string? Summary { get; set; }
 
     public string? Content { get; set; }

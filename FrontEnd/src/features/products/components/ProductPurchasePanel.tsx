@@ -162,7 +162,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
 
   return (
     <div className="flex h-full flex-col gap-6">
-      <div className="rounded-[22px] border border-[#e5e7eb] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+      <div className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <p className="customer-label">Giá bán</p>
         <div className="mt-2 flex flex-wrap items-end gap-3">
           <span className="text-4xl font-black tracking-tight text-[#c4000b]">
@@ -248,7 +248,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
                     onClick={() => { if (isAvailable) onSelectVariant(variant); }}
                     disabled={!isAvailable}
                     title={isAvailable ? undefined : 'Phiên bản này đã hết hàng'}
-                    className={`rounded-2xl border p-3 text-center transition ${
+                    className={`rounded-xl border p-3 text-center transition ${
                       !isAvailable
                         ? 'cursor-not-allowed border-[#e5e7eb] bg-slate-100 text-slate-400 opacity-60'
                         : isActive

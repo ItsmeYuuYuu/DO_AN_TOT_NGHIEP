@@ -5,6 +5,7 @@ import apiClient from '@/api/apiClient';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { Skeleton } from '@/components/Skeleton';
+import { Seo } from '@/components/Seo';
 
 interface Category { categoryid: number; categoryname: string; }
 interface Brand { brandid: number; brandname: string; }
@@ -127,6 +128,11 @@ const ProductsListPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
+      <Seo
+        title="Tat ca san pham - Cuong Dien Thoai"
+        description="Danh sach smartphone tai Cuong Dien Thoai, loc theo danh muc, thuong hieu, dong may, gia ban va sap xep theo nhu cau."
+        canonicalPath="/products"
+      />
       <section className="border-b customer-rule bg-white px-3 py-3 sm:px-4 sm:py-4">
         <div className="customer-container">
           {hasFilter && (

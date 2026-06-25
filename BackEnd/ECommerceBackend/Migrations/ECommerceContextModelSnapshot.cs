@@ -556,6 +556,11 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("thumbnail");
 
+                    b.Property<string>("Slug")
+                        .HasMaxLength(220)
+                        .HasColumnType("character varying(220)")
+                        .HasColumnName("slug");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -570,6 +575,10 @@ namespace ECommerceBackend.Migrations
                         .HasName("news_pkey");
 
                     b.HasIndex("Userid");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("news_slug_key");
 
                     b.ToTable("news", (string)null);
                 });

@@ -10,6 +10,7 @@ import {
 } from '@/features/returns/api/returnRequestsApi';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { formatCurrency, formatDateTime } from '@/utils/formatters';
+import { Seo } from '@/components/Seo';
 
 const statusLabels: Record<string, string> = {
   PendingReview: 'Chờ duyệt',
@@ -132,6 +133,7 @@ const CustomerReturns: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
+      <Seo title="Doi tra va hoan tien - Cuong Dien Thoai" description="Trang yeu cau doi tra va hoan tien cua khach hang Cuong Dien Thoai." noIndex />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900">Đổi trả & hoàn tiền</h1>

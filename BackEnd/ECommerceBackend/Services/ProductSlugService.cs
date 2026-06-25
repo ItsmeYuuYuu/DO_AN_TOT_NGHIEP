@@ -49,4 +49,26 @@ public static class ProductSlugService
 
         return slug;
     }
+
+    public static async Task<string> GenerateUniqueNewsSlugAsync(
+        ECommerceContext context,
+        string title,
+        int? currentPostId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var baseSlug = GenerateBaseSlug(title);
+        var slug = baseSlug;
+        var suffix = 2;
+
+        while (await context.News.AnyAsync(
+                   news =>
+                       news.Slug == slug &&
+                       (!currentPostId.HasValue || news.Postid != currentPostId.Value),
+                   cancellationToken))
+        {
+            slug = $"{baseSlug}-{suffix++}";
+        }
+
+        return slug;
+    }
 }

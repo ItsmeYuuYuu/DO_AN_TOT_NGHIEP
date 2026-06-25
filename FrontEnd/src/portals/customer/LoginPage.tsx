@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/Button';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertCircle, Eye, EyeOff, ShieldCheck, ShoppingBag, Sparkles } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 import { saveSession } from '@/features/auth/utils/authUtils';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import Logo from '@/assets/Logo.png';
+import { Seo } from '@/components/Seo';
 
 const validateLoginId = (value: string): string | null => {
   if (!value.trim()) return 'Tên đăng nhập hoặc email không được để trống.';
@@ -74,38 +75,27 @@ const LoginPage: React.FC = () => {
 
   return (
     <main className="customer-shell min-h-screen px-4 py-8">
+      <Seo
+        title="Dang nhap - Cuong Dien Thoai"
+        description="Dang nhap tai khoan thanh vien Cuong Dien Thoai."
+        noIndex
+      />
       <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="grid w-full max-w-6xl overflow-hidden rounded-[30px] border border-[#e5e7eb] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)] lg:grid-cols-[0.95fr_1.05fr]">
-          <section className="relative hidden min-h-[620px] overflow-hidden bg-[#1f2937] p-10 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="grid w-full max-w-6xl overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)] lg:grid-cols-[0.95fr_1.05fr]">
+          <section className="relative hidden min-h-[560px] overflow-hidden bg-[#1f2937] p-10 text-white lg:flex lg:flex-col">
             <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/10 bg-white/5" />
             <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full border border-white/10 bg-[#e30613]/20" />
             <div className="relative z-10">
               <Link to="/" className="inline-flex rounded-2xl bg-white px-5 py-3 shadow-[0_14px_30px_rgba(227,6,19,0.18)]">
                 <img src={Logo} alt="Cuồng Điện Thoại" className="h-16 w-auto object-contain" />
               </Link>
-              <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#ffd166]">Member login</p>
+              <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#ffd166]">Cuồng Điện Thoại</p>
               <h1 className="customer-display mt-3 max-w-md text-5xl font-black leading-[0.95]">
-                Đăng nhập để giữ trọn ưu đãi.
+                Đăng nhập tài khoản.
               </h1>
               <p className="mt-6 max-w-sm text-sm font-medium leading-7 text-white/70">
-                Xem lịch sử đơn hàng, nhận gợi ý từ chatbot và lưu lại cấu hình điện thoại bạn đang quan tâm.
+                Theo dõi đơn hàng, bảo hành và lưu lại các sản phẩm bạn đang quan tâm.
               </p>
-            </div>
-
-            <div className="relative z-10 grid gap-3">
-              <div className="rounded-[22px] border border-white/15 bg-white/10 p-4 backdrop-blur">
-                <div className="mb-2 flex items-center gap-2">
-                  <ShieldCheck size={18} className="text-[#ffd166]" />
-                  <p className="text-xs font-black uppercase tracking-[0.18em]">Bảo mật tài khoản</p>
-                </div>
-                <p className="text-xs leading-6 text-white/70">
-                  Mật khẩu được mã hóa bằng BCrypt. Hệ thống không lưu mật khẩu gốc của khách hàng.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs font-black uppercase tracking-[0.12em]">
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-3"><ShoppingBag size={16} /> Lưu đơn hàng</div>
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-3"><Sparkles size={16} /> Gợi ý cá nhân</div>
-              </div>
             </div>
           </section>
 
@@ -115,10 +105,9 @@ const LoginPage: React.FC = () => {
                 <img src={Logo} alt="Cuồng Điện Thoại" className="h-14 w-auto object-contain" />
               </Link>
 
-              <p className="customer-label">Tài khoản thành viên</p>
               <h2 className="customer-display mt-2 text-4xl font-black text-[#1f2937]">Đăng nhập</h2>
               <p className="mt-2 text-sm font-medium text-slate-500">
-                Nhập thông tin tài khoản để tiếp tục mua sắm.
+                Nhập tài khoản để tiếp tục mua sắm.
               </p>
 
               {formError && (
@@ -180,8 +169,7 @@ const LoginPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold text-slate-400">Bảo vệ bằng phiên đăng nhập JWT.</span>
+                <div className="flex items-center justify-end text-sm">
                   <Link to="/forgot-password" className="font-black text-[#c4000b] hover:underline">
                     Quên mật khẩu?
                   </Link>

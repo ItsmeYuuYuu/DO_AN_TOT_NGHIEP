@@ -56,7 +56,9 @@ namespace ECommerceBackend.Controllers
                 v.Baseprice,
                 v.Saleprice,
                 !string.IsNullOrEmpty(v.Condition) ? new ConditionDto(Math.Abs(v.Condition.GetHashCode()), v.Condition) : null,
-                v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList()
+                v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList(),
+                null,
+                v.Inventoryitems.Count(item => item.Status == "InStock")
             )).ToList();
 
             return new ProductListItemDto(
@@ -81,7 +83,9 @@ namespace ECommerceBackend.Controllers
                 v.Baseprice,
                 v.Saleprice,
                 !string.IsNullOrEmpty(v.Condition) ? new ConditionDto(Math.Abs(v.Condition.GetHashCode()), v.Condition) : null,
-                v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList()
+                v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList(),
+                null,
+                v.Inventoryitems.Count(item => item.Status == "InStock")
             )).ToList();
 
             return new ProductDetailDto(
@@ -110,7 +114,9 @@ namespace ECommerceBackend.Controllers
                 .Include(p => p.Category)
                 .Include(p => p.Series)
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Productimages);
+                    .ThenInclude(v => v.Productimages)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Inventoryitems);
 
         private IQueryable<Product> FullProductDetailQuery() =>
             _context.Products
@@ -134,6 +140,8 @@ namespace ECommerceBackend.Controllers
                 .Include(p => p.Series)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Inventoryitems)
                 .ToListAsync();
 
             return Ok(products.Select(MapToDto));
@@ -155,6 +163,8 @@ namespace ECommerceBackend.Controllers
                 .Include(p => p.Series)
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Productimages)
+                .Include(p => p.Productvariants)
+                    .ThenInclude(v => v.Inventoryitems)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(q))
@@ -633,7 +643,7 @@ namespace ECommerceBackend.Controllers
             try
             {
                 var nextProductName = dto.Productname.Trim();
-                if (!string.Equals(product.Productname, nextProductName, StringComparison.Ordinal))
+                if (string.IsNullOrWhiteSpace(product.Slug))
                 {
                     product.Slug = await ProductSlugService.GenerateUniqueSlugAsync(
                         _context,
@@ -813,7 +823,7 @@ namespace ECommerceBackend.Controllers
                 return BadRequest(new ApiErrorDto("Thương hiệu đã chọn không tồn tại.", null));
 
             var nextName = dto.Productname.Trim();
-            if (!string.Equals(product.Productname, nextName, StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(product.Slug))
             {
                 product.Slug = await ProductSlugService.GenerateUniqueSlugAsync(
                     _context,

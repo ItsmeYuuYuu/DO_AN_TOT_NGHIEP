@@ -436,6 +436,39 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
     }
 
     [Fact]
+    public void BuildCatalogResponse_WhenProductHasSlug_UsesSeoFriendlyProductLink()
+    {
+        var products = new[]
+        {
+            new ProductConsultationResult(
+                ProductId: 10,
+                VariantId: 101,
+                ProductName: "Google Pixel 10 Pro",
+                Brand: "Google Pixel",
+                Category: "Điện thoại",
+                Condition: "New Seal",
+                Sku: "PIXEL-10-PRO",
+                Price: 23_990_000,
+                BasePrice: 25_990_000,
+                Stock: 2,
+                ImageUrl: string.Empty,
+                Specifications: new Dictionary<string, string>
+                {
+                    ["Camera sau"] = "50MP OIS",
+                    ["Chipset"] = "Google Tensor G5"
+                },
+                ProductSlug: "google-pixel-10-pro")
+        };
+
+        var response = GroundedAiProvider.BuildCatalogResponse(
+            "Tư vấn Pixel 10 Pro",
+            products);
+
+        Assert.Contains("/products/google-pixel-10-pro", response);
+        Assert.DoesNotContain("/products/10", response);
+    }
+
+    [Fact]
     public void BuildCatalogResponse_WhenManyProducts_ReturnsOnlyTopThree()
     {
         var products = Enumerable.Range(1, 4)

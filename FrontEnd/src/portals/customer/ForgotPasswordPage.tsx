@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { authApi } from '@/features/auth/api/authApi';
 import { AlertCircle, ArrowLeft, CheckCircle2, Mail, ShieldCheck } from 'lucide-react';
 import Logo from '@/assets/Logo.png';
+import { Seo } from '@/components/Seo';
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -28,8 +29,13 @@ const ForgotPasswordPage: React.FC = () => {
 
   return (
     <main className="customer-shell min-h-screen px-4 py-8">
+      <Seo
+        title="Quen mat khau - Cuong Dien Thoai"
+        description="Khoi phuc tai khoan Cuong Dien Thoai."
+        noIndex
+      />
       <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="grid w-full max-w-5xl overflow-hidden rounded-[30px] border border-[#e5e7eb] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)] lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)] lg:grid-cols-[0.9fr_1.1fr]">
           <section className="relative hidden overflow-hidden bg-[#1f2937] p-10 text-white lg:flex lg:flex-col lg:justify-between">
             <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/5" />
             <div>
@@ -44,7 +50,7 @@ const ForgotPasswordPage: React.FC = () => {
                 Nhập email đã đăng ký để hệ thống xử lý yêu cầu đặt lại mật khẩu.
               </p>
             </div>
-            <div className="rounded-[22px] border border-white/15 bg-white/10 p-4 backdrop-blur">
+            <div className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur">
               <div className="mb-2 flex items-center gap-2">
                 <ShieldCheck size={18} className="text-[#ffd166]" />
                 <p className="text-xs font-black uppercase tracking-[0.18em]">Lưu ý demo</p>
@@ -74,7 +80,7 @@ const ForgotPasswordPage: React.FC = () => {
               )}
 
               {success ? (
-                <div className="mt-8 rounded-[24px] border border-red-100 bg-red-50 p-8 text-center">
+                <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-8 text-center">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-[#e30613]">
                     <CheckCircle2 size={34} />
                   </div>

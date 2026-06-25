@@ -21,6 +21,7 @@ import {
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { roleLabels } from '@/features/users/api/usersApi';
 import Logo from '@/assets/Logo.png';
+import { Seo } from '@/components/Seo';
 
 interface StaffNavItem {
   label: string;
@@ -81,6 +82,7 @@ export const StaffLayout: React.FC = () => {
 
   return (
     <div className="ops-shell flex h-screen overflow-hidden">
+      <Seo title="Staff Portal - Cuong Dien Thoai" description="Khu vuc nhan vien noi bo cua Cuong Dien Thoai." noIndex />
       <aside className="flex w-72 shrink-0 flex-col border-r border-slate-200 bg-[#172033] text-white">
         <div className="flex h-20 items-center border-b border-white/10 px-5">
           <div className="flex min-w-0 items-center gap-3">

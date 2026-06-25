@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import apiClient from '@/api/apiClient';
 import { Search, Package, CheckCircle2, Clock, Truck, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Seo } from '@/components/Seo';
 
 interface OrderLookup {
   orderid: number;
@@ -83,6 +84,7 @@ const OrderLookupPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen">
+      <Seo title="Tra cuu don hang - Cuong Dien Thoai" description="Tra cuu trang thai don hang va van don tai Cuong Dien Thoai." noIndex />
       {/* Header */}
       <div className="border-b customer-rule bg-white">
         <div className="max-w-2xl mx-auto px-4 py-8 text-center">

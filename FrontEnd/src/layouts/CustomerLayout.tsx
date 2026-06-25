@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
+  Bot,
   ChevronDown,
   ClipboardList,
   Headphones,
@@ -11,12 +12,17 @@ import {
   Newspaper,
   Phone,
   Search,
+  Send,
   ShoppingCart,
   User,
   X,
 } from 'lucide-react';
 import { useCart } from '@/features/orders/context/CartContext';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
+import type { ChatMessage, ChatSession } from '@/features/chat/api/chatSessionsApi';
+import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
+import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
 import { brandsApi, type Brand } from '@/features/brands/api/brandsApi';
 import { categoriesApi, type Category } from '@/features/categories/api/categoriesApi';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
@@ -34,6 +40,13 @@ export const CustomerLayout: React.FC = () => {
   const [menuSeries, setMenuSeries] = useState<ProductSeries[]>([]);
   const [activePhoneBrandId, setActivePhoneBrandId] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [aiWidgetOpen, setAiWidgetOpen] = useState(false);
+  const [aiWidgetMessage, setAiWidgetMessage] = useState('');
+  const [aiWidgetSession, setAiWidgetSession] = useState<ChatSession | null>(null);
+  const [aiWidgetMessages, setAiWidgetMessages] = useState<ChatMessage[]>([]);
+  const [aiWidgetLoading, setAiWidgetLoading] = useState(false);
+  const [aiWidgetError, setAiWidgetError] = useState<string | null>(null);
+  const aiWidgetMessagesRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { totalItems } = useCart();
@@ -58,6 +71,14 @@ export const CustomerLayout: React.FC = () => {
     if (location.pathname !== '/search') return;
     setSearchQuery(new URLSearchParams(location.search).get('q') ?? '');
   }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!aiWidgetOpen) return;
+    window.setTimeout(() => {
+      const pane = aiWidgetMessagesRef.current;
+      if (pane) pane.scrollTo({ top: pane.scrollHeight, behavior: 'smooth' });
+    }, 60);
+  }, [aiWidgetMessages, aiWidgetLoading, aiWidgetOpen]);
 
   const phoneCategory = useMemo(
     () => menuCategories.find(category => {
@@ -106,6 +127,106 @@ export const CustomerLayout: React.FC = () => {
     navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     setMobileMenuOpen(false);
   };
+
+  const renderMiniChatText = (content: string) =>
+    content.split(/(\/products\/\d+)/g).map((part, index) =>
+      /^\/products\/\d+$/.test(part) ? (
+        <Link
+          key={`${part}-${index}`}
+          to={part}
+          className="font-black text-[#c4000b] underline underline-offset-2"
+        >
+          {part}
+        </Link>
+      ) : (
+        part
+      ),
+    );
+
+  const ensureAiWidgetSession = async () => {
+    if (aiWidgetSession) return aiWidgetSession;
+
+    const session = await chatSessionsApi.createSession('Cuộc hội thoại mới');
+    setAiWidgetSession(session);
+    setAiWidgetMessages([]);
+    return session;
+  };
+
+  const startAiChat = async (question?: string) => {
+    const message = (question ?? aiWidgetMessage).trim();
+    if (!message || aiWidgetLoading) return;
+    const tempMessageId = Date.now();
+
+    setAiWidgetError(null);
+    setAiWidgetMessage('');
+    setAiWidgetLoading(true);
+
+    try {
+      const session = await ensureAiWidgetSession();
+      const tempMessage: ChatMessage = {
+        messageid: tempMessageId,
+        sessionid: session.sessionid,
+        sendertype: 'user',
+        messagecontent: message,
+        sentat: new Date().toISOString(),
+      };
+      setAiWidgetMessages(current => [...current, tempMessage]);
+
+      const response = await chatSessionsApi.postMessage(session.sessionid, message);
+      if (response.sendertype === 'user') {
+        setAiWidgetMessages(await chatSessionsApi.getMessages(session.sessionid));
+      } else {
+        setAiWidgetMessages(current => [...current, response]);
+      }
+    } catch {
+      setAiWidgetError('Không thể gửi tin nhắn lúc này. Bạn thử lại sau nhé.');
+      setAiWidgetMessages(current => current.filter(messageItem => messageItem.messageid !== tempMessageId));
+    } finally {
+      setAiWidgetLoading(false);
+    }
+  };
+
+  const handleAiWidgetSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    void startAiChat();
+  };
+
+  const requestAiWidgetConsultant = async () => {
+    if (aiWidgetLoading) return;
+    setAiWidgetError(null);
+    setAiWidgetLoading(true);
+
+    try {
+      const session = await ensureAiWidgetSession();
+      if (aiWidgetMessages.length === 0) {
+        const message = 'Tôi muốn gặp nhân viên tư vấn để được hỗ trợ rõ hơn.';
+        setAiWidgetMessages([{
+          messageid: Date.now(),
+          sessionid: session.sessionid,
+          sendertype: 'user',
+          messagecontent: message,
+          sentat: new Date().toISOString(),
+        }]);
+        await chatSessionsApi.postMessage(session.sessionid, message);
+      }
+      const updated = await chatSessionsApi.requestHandoff(session.sessionid);
+      setAiWidgetSession(updated);
+      setAiWidgetMessages(await chatSessionsApi.getMessages(session.sessionid));
+    } catch {
+      setAiWidgetError('Chưa thể chuyển nhân viên tư vấn. Bạn thử lại sau nhé.');
+    } finally {
+      setAiWidgetLoading(false);
+    }
+  };
+
+  const openAiHistory = () => {
+    setAiWidgetOpen(false);
+    navigate('/chat');
+  };
+
+  const showAiWidget = !location.pathname.startsWith('/chat');
+  const aiWidgetHandoffActive =
+    aiWidgetSession?.handoffstatus === 'Waiting' || aiWidgetSession?.handoffstatus === 'InProgress';
 
   return (
     <div className="customer-shell flex min-h-screen flex-col">
@@ -244,11 +365,11 @@ export const CustomerLayout: React.FC = () => {
                 Điện thoại <ChevronDown size={14} />
               </button>
 
-              <div className="pointer-events-none absolute left-0 top-full z-[999] w-[780px] max-w-[calc(100vw-2rem)] translate-y-2 pt-2 opacity-0 transition duration-200 group-hover/phone:pointer-events-auto group-hover/phone:translate-y-0 group-hover/phone:opacity-100">
-                <div className="grid min-h-80 grid-cols-[230px_1fr] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
+              <div className="pointer-events-none absolute left-0 top-full z-[999] w-[900px] max-w-[calc(100vw-2rem)] translate-y-2 pt-2 opacity-0 transition duration-200 group-hover/phone:pointer-events-auto group-hover/phone:translate-y-0 group-hover/phone:opacity-100">
+                <div className="grid min-h-80 grid-cols-[250px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
                   <div className="bg-[#1f2937] p-4 text-white">
                     <p className="mb-3 text-[9px] font-black uppercase tracking-[0.2em] text-[#ffd166]">Hãng sản xuất</p>
-                    <div className="max-h-72 space-y-1 overflow-y-auto">
+                    <div className="space-y-1">
                       {phoneMenuBrands.map(brand => (
                         <NavLink
                           key={brand.brandid}
@@ -357,15 +478,18 @@ export const CustomerLayout: React.FC = () => {
               </div>
 
               <p className="customer-label mt-5">Hãng điện thoại</p>
-              <div className="mt-2 grid grid-cols-2 border-l border-t customer-rule">
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {phoneMenuBrands.map(brand => (
                   <Link
                     key={brand.brandid}
                     to={buildPhoneBrandUrl(brand.brandid)}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="border-b border-r customer-rule bg-white px-3 py-3 text-sm font-bold text-[#1f2937]"
+                    className="rounded-2xl border border-[#e5e7eb] bg-white px-3 py-3 text-sm font-black text-[#1f2937] shadow-sm"
                   >
-                    {brand.brandname}
+                    <span className="block truncate">{brand.brandname}</span>
+                    <span className="mt-1 block text-[10px] font-bold text-slate-400">
+                      {brand.phoneProducts.length} máy
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -389,13 +513,211 @@ export const CustomerLayout: React.FC = () => {
 
       <main className="relative flex-1">
         <Outlet />
-        <Link
-          to="/chat"
-          className="group fixed bottom-20 right-4 z-[9999] flex items-center gap-3 rounded-full bg-[#e30613] px-3 py-3 text-white shadow-[0_18px_40px_rgba(227,6,19,0.32)] transition hover:-translate-y-1 hover:bg-[#c4000b] sm:bottom-5 sm:right-5 sm:px-4"
-        >
-          <Headphones size={20} className="text-[#ffd166]" />
-          <span className="hidden text-xs font-black uppercase tracking-[0.12em] md:inline">Hỏi AI chọn máy</span>
-        </Link>
+        {showAiWidget && (
+          <div className="fixed bottom-20 right-4 z-[9999] sm:bottom-5 sm:right-5">
+            {aiWidgetOpen ? (
+              <section className="flex h-[min(680px,calc(100dvh-6.5rem))] w-[calc(100vw-2rem)] max-w-[420px] flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_22px_60px_rgba(15,23,42,0.22)]">
+                <div className="flex items-center justify-between bg-[#e30613] px-4 py-3 text-white">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[#e30613]">
+                      <Bot size={22} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-black">AI tư vấn chọn máy</p>
+                      <p className="truncate text-[11px] font-medium text-white/80">
+                        {aiWidgetHandoffActive ? 'Đã chuyển cho tư vấn viên' : 'Chat nhanh ngay tại trang này'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={openAiHistory}
+                      className="rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-wider text-white/85 hover:bg-white/15 hover:text-white"
+                    >
+                      Lịch sử
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAiWidgetOpen(false)}
+                      aria-label="Đóng khung chat AI"
+                      className="rounded-full p-1.5 text-white/80 hover:bg-white/15 hover:text-white"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  ref={aiWidgetMessagesRef}
+                  className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#f8fafc] p-3"
+                >
+                  {aiWidgetMessages.length === 0 && !aiWidgetLoading && (
+                    <>
+                      <div className="rounded-2xl bg-white p-3 text-sm leading-6 text-[#1f2937] shadow-sm">
+                        Em là trợ lý AI của Cuồng Điện Thoại. Bạn cần tìm máy theo nhu cầu, ngân sách hay muốn so sánh sản phẩm nào?
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          'Tư vấn máy chụp ảnh đẹp',
+                          'Máy chơi game dưới 20 triệu',
+                          'So sánh iPhone với Pixel',
+                        ].map(prompt => (
+                          <button
+                            key={prompt}
+                            type="button"
+                            disabled={aiWidgetLoading}
+                            onClick={() => void startAiChat(prompt)}
+                            className="rounded-full border border-[#e5e7eb] bg-white px-3 py-2 text-[11px] font-bold text-[#1f2937] hover:border-[#e30613] hover:text-[#c4000b] disabled:opacity-60"
+                          >
+                            {prompt}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {aiWidgetMessages.map((message, index) => {
+                    const isUserMessage = message.sendertype === 'user';
+                    if (message.sendertype === 'system') {
+                      return (
+                        <div key={message.messageid || index} className="text-center text-[11px] font-bold text-slate-400">
+                          {message.messagecontent}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={message.messageid || index}
+                        className={`flex gap-2 ${isUserMessage ? 'flex-row-reverse' : 'flex-row'}`}
+                      >
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                          isUserMessage ? 'bg-[#e30613] text-white' : 'bg-[#1f2937] text-[#ffd166]'
+                        }`}>
+                          {isUserMessage ? <User size={14} /> : message.sendertype === 'consultant' ? <Headphones size={14} /> : <Bot size={14} />}
+                        </div>
+                        <div className={`min-w-0 max-w-[82%] rounded-2xl border p-3 text-sm leading-6 ${
+                          isUserMessage
+                            ? 'border-[#e30613] bg-[#e30613] text-white'
+                            : 'border-[#e5e7eb] bg-white text-slate-700 shadow-sm'
+                        }`}>
+                          <div className="whitespace-pre-wrap">
+                            {renderMiniChatText(message.messagecontent)}
+                          </div>
+
+                          {message.responsetype === 'comparison' && message.recommendations && (
+                            <div className="-mx-1">
+                              <ChatComparisonTable recommendations={message.recommendations.slice(0, 3)} />
+                            </div>
+                          )}
+
+                          {message.recommendations && message.recommendations.length > 0 && aiWidgetSession && (
+                            <ChatRecommendationCards
+                              sessionId={aiWidgetSession.sessionid}
+                              recommendations={message.recommendations.slice(0, 3)}
+                              allowAddToCart
+                            />
+                          )}
+
+                          {!isUserMessage &&
+                            index === aiWidgetMessages.length - 1 &&
+                            message.quickreplies &&
+                            message.quickreplies.length > 0 && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {message.quickreplies.map(reply => (
+                                  <button
+                                    key={reply}
+                                    type="button"
+                                    disabled={aiWidgetLoading}
+                                    onClick={() => void startAiChat(reply)}
+                                    className="rounded-full border border-[#ffd166] bg-[#ffd166]/20 px-3 py-1.5 text-[11px] font-black text-[#1f2937] hover:bg-[#ffd166] disabled:opacity-50"
+                                  >
+                                    {reply}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                          <span className={`mt-2 block text-[10px] ${isUserMessage ? 'text-white/60' : 'text-slate-400'}`}>
+                            {message.sentat ? new Date(message.sentat).toLocaleTimeString() : 'Đang gửi...'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {aiWidgetLoading && (
+                    <div className="flex gap-2">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1f2937] text-[#ffd166]">
+                        <Bot size={14} />
+                      </div>
+                      <div className="flex items-center gap-1 rounded-2xl border border-[#e5e7eb] bg-white p-3 shadow-sm">
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937] [animation-delay:150ms]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937] [animation-delay:300ms]" />
+                      </div>
+                    </div>
+                  )}
+
+                  {aiWidgetError && (
+                    <div className="rounded-2xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
+                      {aiWidgetError}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2 border-t border-[#e5e7eb] bg-white p-3">
+                  <form onSubmit={handleAiWidgetSubmit} className="flex gap-2">
+                    <input
+                      value={aiWidgetMessage}
+                      onChange={event => setAiWidgetMessage(event.target.value)}
+                      placeholder="Nhập nhu cầu của bạn..."
+                      maxLength={500}
+                      className="min-w-0 flex-1 rounded-full border border-[#e5e7eb] px-4 py-3 text-sm outline-none focus:border-[#e30613] focus:ring-4 focus:ring-[#e30613]/10"
+                      disabled={aiWidgetLoading}
+                    />
+                    <button
+                      type="submit"
+                      disabled={aiWidgetLoading || !aiWidgetMessage.trim()}
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e30613] text-white hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-300"
+                      aria-label="Gửi tin nhắn cho AI"
+                    >
+                      <Send size={17} />
+                    </button>
+                  </form>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void requestAiWidgetConsultant()}
+                      disabled={aiWidgetLoading || aiWidgetHandoffActive}
+                      className="flex items-center justify-center gap-2 rounded-full border border-[#1f2937] px-3 py-2.5 text-[11px] font-black text-[#1f2937] hover:bg-[#1f2937] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                    >
+                      <Headphones size={14} /> {aiWidgetHandoffActive ? 'Đã chuyển' : 'Gặp tư vấn'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openAiHistory}
+                      className="rounded-full border border-[#e5e7eb] px-3 py-2.5 text-[11px] font-black text-[#1f2937] hover:border-[#e30613] hover:text-[#c4000b]"
+                    >
+                      Mở lịch sử
+                    </button>
+                  </div>
+                </div>
+              </section>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAiWidgetOpen(true)}
+                className="group flex items-center gap-3 rounded-full bg-[#e30613] px-3 py-3 text-white shadow-[0_18px_40px_rgba(227,6,19,0.32)] transition hover:-translate-y-1 hover:bg-[#c4000b] sm:px-4"
+              >
+                <Bot size={20} className="text-[#ffd166]" />
+                <span className="hidden text-xs font-black uppercase tracking-[0.12em] md:inline">Hỏi AI chọn máy</span>
+              </button>
+            )}
+          </div>
+        )}
       </main>
 
       <footer className="border-t-4 border-[#e30613] bg-[#1f2937] text-white">

@@ -49,4 +49,11 @@ export const auditLogsApi = {
     const response = await apiClient.get('/auditlogs/stats', { params });
     return response.data;
   },
+  exportXlsx: async (params?: GetAuditLogsParams): Promise<Blob> => {
+    const response = await apiClient.get('/auditlogs/export', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };

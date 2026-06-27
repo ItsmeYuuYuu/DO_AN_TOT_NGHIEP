@@ -116,6 +116,19 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
 
     private static string BuildFriendlyAction(string method, string action, string controller)
     {
+        if (controller.Equals("Auth", StringComparison.OrdinalIgnoreCase))
+        {
+            return action.ToLowerInvariant() switch
+            {
+                "login" => "Đăng nhập hệ thống",
+                "logout" => "Đăng xuất hệ thống",
+                "register" => "Đăng ký tài khoản",
+                "changepassword" => "Đổi mật khẩu",
+                "forgotpassword" => "Yêu cầu khôi phục mật khẩu",
+                _ => $"Xác thực [Auth] - {action}",
+            };
+        }
+
         var verb = method.ToUpper() switch
         {
             "POST"   => "Tạo mới",

@@ -23,14 +23,7 @@ const emptyStats: AuditLogStats = {
   topEntityCount: 0,
 };
 
-const escapeCsvValue = (value: string | number | null | undefined) => {
-  const text = value == null ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-};
-
-const downloadCsv = (filename: string, rows: (string | number | null | undefined)[][]) => {
-  const csv = rows.map(row => row.map(escapeCsvValue).join(',')).join('\r\n');
-  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+const downloadBlob = (filename: string, blob: Blob) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -39,6 +32,16 @@ const downloadCsv = (filename: string, rows: (string | number | null | undefined
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+};
+
+const getDisplayAction = (action: string) => {
+  const normalized = action.toLowerCase();
+  if (normalized.includes('[auth]') && normalized.includes('login')) return 'Đăng nhập hệ thống';
+  if (normalized.includes('[auth]') && normalized.includes('logout')) return 'Đăng xuất hệ thống';
+  if (normalized.includes('[auth]') && normalized.includes('register')) return 'Đăng ký tài khoản';
+  if (normalized.includes('[auth]') && normalized.includes('changepassword')) return 'Đổi mật khẩu';
+  if (normalized.includes('[auth]') && normalized.includes('forgotpassword')) return 'Yêu cầu khôi phục mật khẩu';
+  return action;
 };
 
 const StatCard = ({
@@ -150,27 +153,14 @@ export default function AdminAuditLogs() {
     setPage(1);
   };
 
-  const handleExportCsv = async () => {
+  const handleExportXlsx = async () => {
     try {
       setExporting(true);
-      const result = await auditLogsApi.getLogs({ ...buildFilterParams(), page: 1, pageSize: 10000 });
-      const rows = [
-        ['ID', 'User ID', 'Người dùng', 'Thao tác', 'Bảng / Đối tượng', 'Record ID', 'Thời gian'],
-        ...result.items.map(item => [
-          item.logid,
-          item.userid ?? '',
-          item.fullName || 'Hệ thống',
-          item.action,
-          item.tablename || '',
-          item.recordid || '',
-          formatDateTime(item.createdat),
-        ]),
-      ];
-
-      downloadCsv(`audit_logs_${new Date().toISOString().slice(0, 10)}.csv`, rows);
-      notifySuccess(`Đã xuất ${result.items.length} dòng nhật ký.`);
+      const blob = await auditLogsApi.exportXlsx(buildFilterParams());
+      downloadBlob(`audit_logs_${new Date().toISOString().slice(0, 10)}.xlsx`, blob);
+      notifySuccess('Đã xuất file Excel nhật ký hệ thống.');
     } catch (error) {
-      notifyError(getApiErrorMessage(error, 'Không thể xuất CSV nhật ký hệ thống.'));
+      notifyError(getApiErrorMessage(error, 'Không thể xuất Excel nhật ký hệ thống.'));
     } finally {
       setExporting(false);
     }
@@ -211,12 +201,12 @@ export default function AdminAuditLogs() {
             <RotateCcw size={16} className="mr-2" /> Reset lọc
           </Button>
           <Button
-            onClick={handleExportCsv}
+            onClick={handleExportXlsx}
             isLoading={exporting}
             disabled={totalCount === 0}
             className="bg-red-600 text-white hover:bg-red-700"
           >
-            <Download size={16} className="mr-2" /> Xuất CSV
+            <Download size={16} className="mr-2" /> Xuất Excel
           </Button>
         </div>
       </div>
@@ -340,29 +330,32 @@ export default function AdminAuditLogs() {
 
       <DataTable
         columns={[
-          { key: 'logid', header: 'ID', render: (l: AuditLog) => <span className="font-mono text-xs text-slate-500">#{l.logid}</span> },
+          { key: 'logid', header: 'ID', render: (log: AuditLog) => <span className="font-mono text-xs text-slate-500">#{log.logid}</span> },
           {
             key: 'user',
             header: 'Người dùng',
-            render: (l: AuditLog) => (
+            render: (log: AuditLog) => (
               <div className="flex flex-col">
-                <span className="font-bold text-slate-800">{l.fullName || 'Hệ thống'}</span>
-                {l.userid && <span className="text-xs text-slate-500">ID: {l.userid}</span>}
+                <span className="font-bold text-slate-800">{log.fullName || 'Hệ thống'}</span>
+                {log.userid && <span className="text-xs text-slate-500">ID: {log.userid}</span>}
               </div>
             ),
           },
           {
             key: 'action',
             header: 'Thao tác',
-            render: (l: AuditLog) => (
-              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${getActionColor(l.action)}`}>
-                {l.action}
-              </span>
-            ),
+            render: (log: AuditLog) => {
+              const displayAction = getDisplayAction(log.action);
+              return (
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${getActionColor(displayAction)}`}>
+                  {displayAction}
+                </span>
+              );
+            },
           },
-          { key: 'tablename', header: 'Bảng / Đối tượng', render: (l: AuditLog) => <span className="font-mono text-xs">{l.tablename || '-'}</span> },
-          { key: 'recordid', header: 'Record ID', render: (l: AuditLog) => <span className="font-mono text-xs">{l.recordid || '-'}</span> },
-          { key: 'createdat', header: 'Thời gian', render: (l: AuditLog) => <span className="text-sm">{formatDateTime(l.createdat)}</span> },
+          { key: 'tablename', header: 'Bảng / Đối tượng', render: (log: AuditLog) => <span className="font-mono text-xs">{log.tablename || '-'}</span> },
+          { key: 'recordid', header: 'Record ID', render: (log: AuditLog) => <span className="font-mono text-xs">{log.recordid || '-'}</span> },
+          { key: 'createdat', header: 'Thời gian', render: (log: AuditLog) => <span className="text-sm">{formatDateTime(log.createdat)}</span> },
         ]}
         data={logs}
         keyField="logid"

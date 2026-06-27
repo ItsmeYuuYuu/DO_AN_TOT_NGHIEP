@@ -140,13 +140,12 @@ const StaffInventory: React.FC = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="ops-hero mb-6 flex items-center justify-between gap-4 p-6">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">Quản lý IMEI Tồn kho</h1>
-          <p className="text-slate-500 text-sm">Theo dõi chi tiết thiết bị trong kho</p>
+          <h1 className="ops-hero-title">Quản lý IMEI tồn kho</h1>
         </div>
         {canManageInventory ? (
-          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-[#4f46e5] text-white font-bold rounded-xl hover:bg-[#4338ca] transition-colors">
+          <button onClick={openAddModal} className="ops-hero-action">
             <Plus size={18} /> Thêm IMEI
           </button>
         ) : (

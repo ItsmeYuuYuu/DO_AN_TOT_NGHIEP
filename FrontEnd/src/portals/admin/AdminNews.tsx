@@ -143,12 +143,11 @@ const AdminNews: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="ops-hero flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">Quản lý Tin tức</h1>
-          <p className="text-slate-500 text-sm mt-1">Thêm, sửa, xóa các bài viết tin tức</p>
+          <h1 className="ops-hero-title">Quản lý tin tức</h1>
         </div>
-        <Button onClick={openCreate}>+ Thêm tin tức</Button>
+        <Button onClick={openCreate} className="bg-[#e30613] hover:bg-[#c4000b]">+ Thêm tin tức</Button>
       </div>
 
       <DataTable

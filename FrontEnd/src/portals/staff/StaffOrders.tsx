@@ -48,9 +48,8 @@ const StaffOrders: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">Vận hành</p>
-        <h1 className="text-2xl font-black text-slate-800">Quản lý Đơn hàng</h1>
+      <div className="ops-hero p-6">
+        <h1 className="ops-hero-title">Quản lý đơn hàng</h1>
       </div>
 
       {/* Quick stats */}

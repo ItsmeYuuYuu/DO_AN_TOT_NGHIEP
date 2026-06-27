@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import {
   ChevronDown,
@@ -13,9 +13,11 @@ import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { productsApi } from '@/features/products/api/productsApi';
-import type { UpdateFullProduct, UpdateFullProductVariant } from '@/features/products/api/productsApi';
+import type { UpdateFullProduct, UpdateFullProductVariant, UploadedProductImage } from '@/features/products/api/productsApi';
+import { PRODUCT_CONDITION_OPTIONS } from '@/features/products/constants/productOptions';
 import { productSeriesApi, type ProductSeries } from '@/features/productSeries/api/productSeriesApi';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 interface ProductEditModalProps {
   productId: number | null;
@@ -64,12 +66,16 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [productname, setProductname] = useState('');
   const [description, setDescription] = useState('');
+  const [descriptionImages, setDescriptionImages] = useState<UploadedProductImage[]>([]);
+  const [uploadingDescriptionImages, setUploadingDescriptionImages] = useState(false);
   const [categoryid, setCategoryid] = useState<number | ''>('');
   const [brandid, setBrandid] = useState<number | ''>('');
   const [seriesid, setSeriesid] = useState<number | ''>('');
   const [seriesList, setSeriesList] = useState<ProductSeries[]>([]);
   const [variants, setVariants] = useState<EditVariant[]>([]);
   const [uploadingVariant, setUploadingVariant] = useState<string | null>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const descriptionImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!productId) return;
@@ -85,6 +91,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
         setSeriesList(seriesResponse.data);
         setProductname(product.productname);
         setDescription(product.description ?? '');
+        setDescriptionImages([]);
         setCategoryid(product.category?.id ?? '');
         setBrandid(product.brand?.id ?? '');
         setSeriesid(product.series?.id ?? '');
@@ -136,9 +143,14 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
     await Promise.allSettled(fileNames.map(fileName => productsApi.deleteUploadedImage(fileName)));
   };
 
+  const cleanupDescriptionUploads = async (images: UploadedProductImage[]) => {
+    await Promise.allSettled(images.map(image => productsApi.deleteUploadedImage(image.fileName)));
+  };
+
   const closeSafely = async () => {
-    if (saving || uploadingVariant) return;
+    if (saving || uploadingVariant || uploadingDescriptionImages) return;
     await cleanupUploads(variants.flatMap(variant => variant.images));
+    await cleanupDescriptionUploads(descriptionImages);
     onClose();
   };
 
@@ -196,6 +208,59 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
     }
   };
 
+  const insertDescriptionImageMarkdown = (images: UploadedProductImage[]) => {
+    const textarea = descriptionRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(end);
+    const insertText = images
+      .map(image => `\n![Hình ảnh sản phẩm](${image.url})\n`)
+      .join('');
+
+    setDescription(before + insertText + after);
+
+    window.setTimeout(() => {
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
+    }, 50);
+  };
+
+  const uploadDescriptionImages = async (files: File[]) => {
+    if (files.length === 0) return;
+    if (files.length > 8) {
+      setError('Mỗi lần chỉ được chọn tối đa 8 ảnh mô tả.');
+      return;
+    }
+
+    setUploadingDescriptionImages(true);
+    setError(null);
+    try {
+      const response = await productsApi.uploadImages(files);
+      setDescriptionImages(current => [...current, ...response.data]);
+      insertDescriptionImageMarkdown(response.data);
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Không thể tải ảnh mô tả lên.'));
+    } finally {
+      setUploadingDescriptionImages(false);
+      if (descriptionImageInputRef.current) {
+        descriptionImageInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeDescriptionImage = async (image: UploadedProductImage) => {
+    await productsApi.deleteUploadedImage(image.fileName).catch(() => undefined);
+    setDescriptionImages(current => current.filter(item => item.fileName !== image.fileName));
+    setDescription(current =>
+      current
+        .replace(`\n![Hình ảnh sản phẩm](${image.url})\n`, '\n')
+        .replace(`![Hình ảnh sản phẩm](${image.url})`, '')
+    );
+  };
+
   const removeImage = async (variant: EditVariant, imageIndex: number) => {
     const image = variant.images[imageIndex];
     if (image.uploadedFileName) {
@@ -236,10 +301,20 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
     if (!brandid) return 'Vui lòng chọn thương hiệu.';
     if (variants.length === 0) return 'Sản phẩm phải có ít nhất một biến thể.';
 
+    const seenSkus = new Set<string>();
     for (const variant of variants) {
-      if (!variant.sku.trim()) return 'SKU không được để trống.';
+      const cleanSku = variant.sku.trim().toLowerCase();
+      if (!cleanSku) return 'SKU không được để trống.';
+      if (seenSkus.has(cleanSku)) {
+        return `SKU ${variant.sku.trim()} đang bị trùng. Mỗi biến thể phải có một SKU riêng.`;
+      }
+      seenSkus.add(cleanSku);
+
       if (variant.baseprice === '' || Number(variant.baseprice) <= 0) {
         return `Giá gốc của SKU ${variant.sku || 'mới'} phải lớn hơn 0.`;
+      }
+      if (variant.saleprice !== '' && Number(variant.saleprice) < 0) {
+        return `Giá giảm của SKU ${variant.sku} không được âm.`;
       }
       if (variant.saleprice !== '' && Number(variant.saleprice) > Number(variant.baseprice)) {
         return `Giá giảm của SKU ${variant.sku} không được lớn hơn giá gốc.`;
@@ -249,6 +324,10 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
       }
       if (variant.images.length === 0) {
         return `SKU ${variant.sku} phải có ít nhất một hình ảnh.`;
+      }
+      const invalidSpec = variant.specs.find(spec => spec.key.trim() && !spec.value.trim());
+      if (invalidSpec) {
+        return `Thông số "${invalidSpec.key}" của SKU ${variant.sku} chưa có giá trị.`;
       }
     }
     return null;
@@ -289,6 +368,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
     setError(null);
     try {
       await productsApi.updateFull(productId, payload);
+      setDescriptionImages([]);
       setVariants(current => current.map(variant => ({
         ...variant,
         images: variant.images.map(image => ({ ...image, uploadedFileName: undefined })),
@@ -370,12 +450,53 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-bold text-slate-600">Mô tả</label>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <label className="block text-xs font-bold text-slate-600">Mô tả</label>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-2xl bg-indigo-50 px-3 py-2 text-xs font-bold text-[#4338ca] hover:bg-indigo-100">
+                  {uploadingDescriptionImages
+                    ? <LoaderCircle size={15} className="animate-spin" />
+                    : <Upload size={15} />}
+                  Chèn ảnh vào mô tả
+                  <input
+                    ref={descriptionImageInputRef}
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    disabled={uploadingDescriptionImages}
+                    onChange={event => {
+                      const files = Array.from(event.target.files ?? []);
+                      void uploadDescriptionImages(files);
+                    }}
+                  />
+                </label>
+              </div>
               <textarea
+                ref={descriptionRef}
                 className={`${inputClass} min-h-28 resize-y`}
                 value={description}
                 onChange={event => setDescription(event.target.value)}
               />
+              <p className="mt-1 text-[11px] text-slate-500">
+                Ảnh sẽ được chèn vào vị trí con trỏ trong mô tả dưới dạng markdown.
+              </p>
+              {descriptionImages.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {descriptionImages.map(image => (
+                    <div key={image.fileName} className="relative rounded-xl border border-slate-200 bg-white p-2">
+                      <img src={image.url} alt="" className="aspect-square w-full rounded-xl bg-slate-50 object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => { void removeDescriptionImage(image); }}
+                        className="absolute right-2 top-2 rounded-2xl bg-white/90 p-1.5 text-red-500 shadow hover:bg-red-50"
+                        aria-label="Xóa ảnh mô tả"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
@@ -444,9 +565,21 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-bold text-slate-600">Tình trạng</label>
-                        <input disabled={contentOnly} className={inputClass} value={variant.condition} onChange={event =>
-                          updateVariant(variant.clientId, current => ({ ...current, condition: event.target.value }))
-                        } />
+                        <select
+                          disabled={contentOnly}
+                          className={inputClass}
+                          value={variant.condition}
+                          onChange={event =>
+                            updateVariant(variant.clientId, current => ({ ...current, condition: event.target.value }))
+                          }
+                        >
+                          {!PRODUCT_CONDITION_OPTIONS.includes(variant.condition) && (
+                            <option value={variant.condition}>{variant.condition}</option>
+                          )}
+                          {PRODUCT_CONDITION_OPTIONS.map(condition => (
+                            <option key={condition} value={condition}>{condition}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-bold text-slate-600">Giá gốc *</label>
@@ -593,10 +726,10 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
           </section>
 
           <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-100 bg-white pt-4">
-            <Button variant="secondary" onClick={() => { void closeSafely(); }} disabled={saving || uploadingVariant !== null}>
+            <Button variant="secondary" onClick={() => { void closeSafely(); }} disabled={saving || uploadingVariant !== null || uploadingDescriptionImages}>
               Hủy
             </Button>
-            <Button onClick={save} isLoading={saving} disabled={uploadingVariant !== null}>
+            <Button onClick={save} isLoading={saving} disabled={uploadingVariant !== null || uploadingDescriptionImages}>
               Lưu toàn bộ thay đổi
             </Button>
           </div>

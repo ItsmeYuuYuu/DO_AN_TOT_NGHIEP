@@ -377,3 +377,5 @@ nghiệp vụ bảo hành, đổi trả, hoàn tiền, vận chuyển, hỏi l�
 Kế hoạch tiếp theo được theo dõi tại [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
 Hướng dẫn migration chi tiết nằm tại
 [docs/database_migration_guide.md](docs/database_migration_guide.md).
+Hướng dẫn backup PostgreSQL local nằm tại
+[docs/database/backup_postgres.md](docs/database/backup_postgres.md).

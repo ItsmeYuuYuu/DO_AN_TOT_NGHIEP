@@ -10,6 +10,18 @@ export interface AuditLog {
   createdat: string;
 }
 
+export interface AuditLogStats {
+  totalLogs: number;
+  todayLogs: number;
+  createLogs: number;
+  updateLogs: number;
+  deleteLogs: number;
+  topUser: string;
+  topUserCount: number;
+  topEntity: string;
+  topEntityCount: number;
+}
+
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;
@@ -32,5 +44,9 @@ export const auditLogsApi = {
   getLogs: async (params?: GetAuditLogsParams): Promise<PagedResult<AuditLog>> => {
     const response = await apiClient.get('/auditlogs', { params });
     return response.data;
-  }
+  },
+  getStats: async (params?: GetAuditLogsParams): Promise<AuditLogStats> => {
+    const response = await apiClient.get('/auditlogs/stats', { params });
+    return response.data;
+  },
 };

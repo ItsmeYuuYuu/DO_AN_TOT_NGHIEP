@@ -31,12 +31,8 @@ const modules = [
 
 const ContentWorkspace: React.FC = () => (
   <div className="space-y-6">
-    <div>
-      <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#4f46e5]">Content workspace</p>
-      <h1 className="mt-1 text-2xl font-black text-slate-900">Trung tâm nội dung</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Quản lý nội dung hiển thị cho khách hàng mà không can thiệp giá, tồn kho hay đơn hàng.
-      </p>
+    <div className="ops-hero p-6">
+      <h1 className="ops-hero-title">Trung tâm nội dung</h1>
     </div>
 
     <div className="grid gap-4 lg:grid-cols-3">

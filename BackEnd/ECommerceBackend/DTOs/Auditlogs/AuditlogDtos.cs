@@ -11,4 +11,16 @@ namespace ECommerceBackend.DTOs.Auditlogs
         string? Recordid,
         DateTime? Createdat
     );
+
+    public record AuditlogStatsDto(
+        int TotalLogs,
+        int TodayLogs,
+        int CreateLogs,
+        int UpdateLogs,
+        int DeleteLogs,
+        string TopUser,
+        int TopUserCount,
+        string TopEntity,
+        int TopEntityCount
+    );
 }

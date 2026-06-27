@@ -220,6 +220,8 @@ namespace ECommerceBackend.Controllers
             m.Sentat,
             m.Chatproductrecommendations
                 .OrderBy(item => item.Rank)
+                .GroupBy(item => item.Productid)
+                .Select(group => group.First())
                 .Select(MapRecommendationToDto)
                 .ToList(),
             m.Responsetype,

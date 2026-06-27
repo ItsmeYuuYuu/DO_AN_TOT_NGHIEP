@@ -31,13 +31,14 @@ const quickPrompts = [
 ];
 
 export default function CustomerChat() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMsg, setInputMsg] = useState(() => (searchParams.get('q') ?? '').slice(0, 500));
   const [loading, setLoading] = useState(false);
   const messagesPaneRef = useRef<HTMLDivElement>(null);
+  const initialPromptSentRef = useRef(false);
 
   const scrollToBottom = () => {
     window.setTimeout(() => {
@@ -170,6 +171,17 @@ export default function CustomerChat() {
     await submitMessage(inputMsg);
   };
 
+  useEffect(() => {
+    const initialPrompt = (searchParams.get('q') ?? '').trim().slice(0, 500);
+    if (!initialPrompt || initialPromptSentRef.current || loading) return;
+
+    initialPromptSentRef.current = true;
+    void submitMessage(initialPrompt).then(() => {
+      setSearchParams({}, { replace: true });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, loading]);
+
   const requestConsultant = async () => {
     if (!activeSession) return;
     try {
@@ -184,19 +196,23 @@ export default function CustomerChat() {
   };
 
   const renderMessageContent = (content: string) =>
-    content.split(/(\/products\/\d+)/g).map((part, index) =>
-      /^\/products\/\d+$/.test(part) ? (
+    content.split(/(\[[^\]]+\]\(\/products\/[A-Za-z0-9-]+\)|\/products\/[A-Za-z0-9-]+)/g).map((part, index) => {
+      const markdownLink = part.match(/^\[([^\]]+)\]\((\/products\/[A-Za-z0-9-]+)\)$/);
+      const rawProductLink = part.match(/^\/products\/[A-Za-z0-9-]+$/);
+      if (!markdownLink && !rawProductLink) return part;
+
+      const to = markdownLink?.[2] ?? part;
+      const label = markdownLink?.[1] ?? part;
+      return (
         <Link
           key={`${part}-${index}`}
-          to={part}
+          to={to}
           className="font-black text-[#c4000b] underline underline-offset-2"
         >
-          {part}
+          {label}
         </Link>
-      ) : (
-        part
-      ),
-    );
+      );
+    });
 
   const renderAssistantMessageContent = (content: string) => {
     const lines = content.split('\n');
@@ -246,20 +262,23 @@ export default function CustomerChat() {
   return (
     <div className="customer-shell px-0 py-0 md:px-4 md:py-6">
       <Seo title="Tro ly mua sam AI - Cuong Dien Thoai" description="Tro ly tu van AI cua Cuong Dien Thoai." noIndex />
-      <div className="customer-container grid h-[calc(100dvh-8.75rem)] min-h-[460px] overflow-hidden border border-[#e5e7eb] bg-[#ffffff] shadow-[0_18px_45px_rgba(15,23,42,0.08)] md:h-[calc(100vh-12rem)] md:min-h-[560px] md:max-h-[calc(100vh-8rem)] md:rounded-2xl lg:grid-cols-[320px_1fr]">
-        <aside className="hidden min-h-0 border-r border-[#e5e7eb] bg-white lg:flex lg:flex-col">
-          <div className="border-b border-[#e5e7eb] p-5">
+      <div className="customer-container grid h-[calc(100dvh-8.75rem)] min-h-[460px] overflow-hidden border border-[#dde3ea] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.12)] md:h-[calc(100vh-12rem)] md:min-h-[560px] md:max-h-[calc(100vh-8rem)] md:rounded-[24px] lg:grid-cols-[310px_1fr]">
+        <aside className="hidden min-h-0 bg-[#1f2937] text-white lg:flex lg:flex-col">
+          <div className="border-b border-white/10 p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="customer-label">AI history</p>
-                <h2 className="mt-1 flex items-center gap-2 text-xl font-black text-[#1f2937]">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#ffd166]">AI history</p>
+                <h2 className="mt-2 flex items-center gap-2 text-xl font-black text-white">
                   <MessageSquare size={19} /> Lịch sử chat
                 </h2>
+                <p className="mt-1 text-xs font-semibold text-white/50">
+                  Lưu lại các nhu cầu bạn đã hỏi.
+                </p>
               </div>
               <button
                 type="button"
                 onClick={createSession}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1f2937] text-white hover:bg-[#c4000b]"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#1f2937] shadow-[0_12px_28px_rgba(0,0,0,0.22)] transition hover:bg-[#e30613] hover:text-white"
                 title="Tạo hội thoại mới"
               >
                 <Plus size={19} />
@@ -267,9 +286,9 @@ export default function CustomerChat() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
             {sessions.length === 0 ? (
-              <div className="border border-dashed border-[#e5e7eb] px-4 py-10 text-center text-sm text-slate-400">
+              <div className="rounded-[20px] border border-dashed border-white/15 bg-white/5 px-4 py-10 text-center text-sm font-semibold text-white/45">
                 Chưa có cuộc hội thoại nào.
               </div>
             ) : (
@@ -285,16 +304,16 @@ export default function CustomerChat() {
                       void selectSession(session);
                     }
                   }}
-                  className={`group flex w-full items-start justify-between gap-3 border p-3 text-left transition ${
+                  className={`group flex w-full items-start justify-between gap-3 rounded-[18px] border p-3 text-left transition ${
                     activeSession?.sessionid === session.sessionid
-                      ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_12px_28px_rgba(227,6,19,0.18)]'
-                      : 'border-[#e5e7eb] bg-[#ffffff] text-[#1f2937] hover:border-[#1f2937]'
+                      ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_14px_34px_rgba(227,6,19,0.28)]'
+                      : 'border-white/10 bg-white/5 text-white hover:border-white/25 hover:bg-white/10'
                   }`}
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-black">{session.title}</span>
                     <span className={`mt-1 block text-xs ${
-                      activeSession?.sessionid === session.sessionid ? 'text-white/55' : 'text-slate-400'
+                      activeSession?.sessionid === session.sessionid ? 'text-white/65' : 'text-white/40'
                     }`}>
                       {formatDateTime(session.starttime)}
                     </span>
@@ -308,7 +327,7 @@ export default function CustomerChat() {
                       }
                     }}
                     className={`flex h-8 w-8 shrink-0 items-center justify-center opacity-0 transition group-hover:opacity-100 focus:opacity-100 ${
-                      activeSession?.sessionid === session.sessionid ? 'text-white/60 hover:text-white' : 'text-slate-300 hover:text-red-600'
+                      activeSession?.sessionid === session.sessionid ? 'text-white/60 hover:text-white' : 'text-white/35 hover:text-white'
                     }`}
                     title="Xóa cuộc hội thoại"
                     aria-label="Xóa cuộc hội thoại"
@@ -322,10 +341,10 @@ export default function CustomerChat() {
         </aside>
 
         <section className="flex min-h-0 min-w-0 flex-col">
-          <header className="shrink-0 border-b border-[#e5e7eb] bg-white p-3 md:p-5">
+          <header className="shrink-0 border-b border-[#e5e7eb] bg-white/95 p-4 md:p-6">
             <div className="mb-4 lg:hidden">
               <div className="mb-2 flex items-center justify-between">
-                <p className="customer-label">Lịch sử chat</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#c4000b]">Lịch sử chat</p>
                 <button
                   type="button"
                   onClick={createSession}
@@ -358,10 +377,16 @@ export default function CustomerChat() {
               </div>
             </div>
 
-            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start md:gap-4">
-              <div>
-                <p className="customer-label">AI consultation</p>
-                <h1 className="customer-display mt-1 line-clamp-2 text-2xl font-bold text-[#1f2937] sm:text-3xl">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+              <div className="flex min-w-0 gap-3">
+                <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-[#1f2937] text-[#ffd166] shadow-[0_14px_34px_rgba(15,23,42,0.18)] sm:flex">
+                  <Bot size={24} />
+                </div>
+                <div className="min-w-0">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ffe0a3] bg-[#fff7df] px-3 py-1 text-[11px] font-black text-[#8a5a00]">
+                  <Sparkles size={13} /> AI tư vấn theo dữ liệu cửa hàng
+                </div>
+                <h1 className="customer-display mt-2 line-clamp-2 text-2xl font-bold text-[#1f2937] sm:text-3xl">
                   {activeSession ? activeSession.title : 'Tư vấn chọn điện thoại'}
                 </h1>
                 {activeSession && (
@@ -372,26 +397,27 @@ export default function CustomerChat() {
                     {activeSession.handoffstatus === 'Closed' && ' · Phiên tư vấn đã kết thúc'}
                   </p>
                 )}
+                </div>
               </div>
               {activeSession && !activeSession.handoffstatus && (
                 <button
                   type="button"
                   onClick={requestConsultant}
-                  className="customer-button-outline"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[#1f2937] bg-white px-4 py-3 text-xs font-black text-[#1f2937] transition hover:bg-[#1f2937] hover:text-white"
                 >
                   <Headphones size={16} /> Gặp nhân viên tư vấn
                 </button>
               )}
             </div>
 
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 md:mt-5">
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 md:mt-5">
               {quickPrompts.map(({ label, prompt, icon: Icon }) => (
                 <button
                   key={label}
                   type="button"
                   onClick={() => submitMessage(prompt)}
                   disabled={loading}
-                  className="inline-flex shrink-0 items-center gap-2 border border-[#e5e7eb] bg-[#ffffff] px-3 py-2 text-xs font-black text-[#1f2937] hover:border-[#1f2937] disabled:opacity-50"
+                  className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-4 py-2.5 text-xs font-black text-[#1f2937] transition hover:border-[#e30613] hover:bg-white hover:text-[#c4000b] disabled:opacity-50"
                 >
                   <Icon size={14} /> {label}
                 </button>
@@ -399,10 +425,10 @@ export default function CustomerChat() {
             </div>
           </header>
 
-          <div ref={messagesPaneRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[#f3f4f6] p-3 md:space-y-6 md:p-6">
+          <div ref={messagesPaneRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] p-3 md:space-y-6 md:p-6">
             {!activeSession && sessions.length === 0 && (
               <div className="flex h-full flex-col items-center justify-center text-center">
-                <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#1f2937] text-[#ffd166]">
+                <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-[24px] bg-[#1f2937] text-[#ffd166] shadow-[0_16px_38px_rgba(15,23,42,0.18)]">
                   <Bot size={42} />
                 </div>
                 <h2 className="customer-display text-3xl font-bold text-[#1f2937]">
@@ -426,15 +452,15 @@ export default function CustomerChat() {
 
               return (
                 <div key={message.messageid || index} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center ${
-                      isUser ? 'rounded-2xl bg-[#e30613] text-white' : 'rounded-2xl bg-[#1f2937] text-[#ffd166]'
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center shadow-sm ${
+                      isUser ? 'rounded-[16px] bg-[#e30613] text-white' : 'rounded-[16px] bg-[#1f2937] text-[#ffd166]'
                   }`}>
                     {isUser ? <User size={16} /> : message.sendertype === 'consultant' ? <Headphones size={16} /> : <Bot size={16} />}
                   </div>
-                  <div className={`${message.recommendations?.length ? 'max-w-[88vw] md:max-w-[92%]' : 'max-w-[82%] md:max-w-[76%]'} border p-3 md:p-4 ${
+                  <div className={`${message.recommendations?.length ? 'max-w-[88vw] md:max-w-[92%]' : 'max-w-[82%] md:max-w-[76%]'} rounded-[22px] border p-3 md:p-4 ${
                     isUser
-                      ? 'border-[#e30613] bg-[#e30613] text-white'
-                      : 'border-[#e5e7eb] bg-white text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08)]'
+                      ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_16px_36px_rgba(227,6,19,0.16)]'
+                      : 'border-white bg-white text-slate-700 shadow-[0_16px_40px_rgba(15,23,42,0.08)]'
                   }`}>
                     {isUser ? (
                       <p className="whitespace-pre-wrap text-sm leading-7">
@@ -474,7 +500,7 @@ export default function CustomerChat() {
                               type="button"
                               disabled={loading}
                               onClick={() => submitMessage(reply)}
-                              className="border border-[#ffd166] bg-[#ffd166]/20 px-3 py-1.5 text-xs font-black text-[#1f2937] transition hover:bg-[#ffd166] disabled:opacity-50"
+                              className="rounded-full border border-[#ffd166] bg-[#ffd166]/20 px-3 py-1.5 text-xs font-black text-[#1f2937] transition hover:bg-[#ffd166] disabled:opacity-50"
                             >
                               {reply}
                             </button>
@@ -492,10 +518,10 @@ export default function CustomerChat() {
 
             {loading && activeSession && (
               <div className="flex gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1f2937] text-[#ffd166]">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] bg-[#1f2937] text-[#ffd166]">
                   <Bot size={16} />
                 </div>
-                <div className="flex items-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+                <div className="flex items-center gap-2 rounded-[22px] border border-white bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
                   <div className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937]" style={{ animationDelay: '0ms' }} />
                   <div className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937]" style={{ animationDelay: '150ms' }} />
                   <div className="h-2 w-2 animate-bounce rounded-full bg-[#1f2937]" style={{ animationDelay: '300ms' }} />

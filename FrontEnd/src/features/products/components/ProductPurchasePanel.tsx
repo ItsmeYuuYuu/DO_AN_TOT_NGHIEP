@@ -53,6 +53,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
   const navigate = useNavigate();
   const { addToCart, isInCart } = useCart();
   const [addedToCart, setAddedToCart] = useState(false);
+  const [cartError, setCartError] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
   const optionGroups = useMemo(() => {
@@ -139,12 +140,13 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
   };
 
   const handleAddToCart = async () => {
-    if (!selectedVariant || isOutOfStock) return;
+    if (!selectedVariant || isOutOfStock) return false;
     const images = selectedVariant.productimages ?? [];
     const primary = images.find(image => image.ismain) ?? images[0];
     const attrsName = selectedVariant.attributes?.map(attribute => attribute.valuename).join(' - ');
 
-    await addToCart({
+    setCartError('');
+    const added = await addToCart({
       variantId: selectedVariant.variantid,
       productId,
       productName,
@@ -154,8 +156,14 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
       price: selectedVariant.saleprice ?? selectedVariant.baseprice,
     }, 1);
 
+    if (!added) {
+      setCartError('Chưa thể thêm sản phẩm vào giỏ. Vui lòng thử lại sau.');
+      return false;
+    }
+
     setAddedToCart(true);
     window.setTimeout(() => setAddedToCart(false), 2000);
+    return true;
   };
 
   const hasOptions = Object.keys(optionGroups).length > 0;
@@ -269,9 +277,17 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
       )}
 
       <div className="mt-auto grid grid-cols-1 gap-3 border-t border-[#e5e7eb] pt-5 sm:grid-cols-2">
+        {cartError && (
+          <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold text-red-600 sm:col-span-2">
+            {cartError}
+          </div>
+        )}
         <button
           type="button"
-          onClick={async () => { await handleAddToCart(); navigate('/cart'); }}
+          onClick={async () => {
+            const added = await handleAddToCart();
+            if (added) navigate('/cart');
+          }}
           disabled={isOutOfStock}
           className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#e30613] px-4 py-3 text-white shadow-[0_12px_26px_rgba(227,6,19,0.22)] transition hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >

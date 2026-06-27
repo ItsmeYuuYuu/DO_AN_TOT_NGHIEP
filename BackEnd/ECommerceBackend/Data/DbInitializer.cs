@@ -171,7 +171,9 @@ public static class DbInitializer
                 new Brand { Brandid = 11, Brandname = "iPhone" },
                 new Brand { Brandid = 12, Brandname = "Samsung" },
                 new Brand { Brandid = 13, Brandname = "Sony" },
-                new Brand { Brandid = 14, Brandname = "Nothing Phone" }
+                new Brand { Brandid = 14, Brandname = "Nothing Phone" },
+                new Brand { Brandid = 15, Brandname = "ASUS ROG" },
+                new Brand { Brandid = 16, Brandname = "REDMAGIC" }
             );
             await context.SaveChangesAsync();
         }
@@ -179,7 +181,8 @@ public static class DbInitializer
         {
             var requestedBrandNames = new[]
             {
-                "Google Pixel", "Xiaomi", "Vivo", "IQOO", "Honor", "OnePlus", "OPPO"
+                "Google Pixel", "Xiaomi", "Vivo", "IQOO", "Honor", "OnePlus", "OPPO",
+                "iPhone", "Samsung", "Sony", "Huawei", "ASUS ROG", "REDMAGIC"
             };
             var existingBrands = await context.Brands.ToListAsync();
             foreach (var brandName in requestedBrandNames)
@@ -207,13 +210,13 @@ public static class DbInitializer
             ["Google Pixel"] = new[]
             {
                 "Pixel 10 series", "Pixel 11 series", "Pixel XL", "Pixel 9 series",
-                "Pixel Fold", "Pixel 8 series"
+                "Pixel Fold", "Pixel 8 series", "Pixel Pro XL"
             },
             ["Xiaomi"] = new[]
             {
                 "POCO", "REDMI", "Xiaomi 11 series", "Xiaomi 12 series",
                 "Xiaomi 13 series", "Xiaomi 14 series", "Xiaomi 15 Series",
-                "Xiaomi 17 Series"
+                "Xiaomi 17 Series", "Xiaomi Ultra"
             },
             ["Vivo"] = new[]
             {
@@ -248,8 +251,12 @@ public static class DbInitializer
                 "A Series", "Find X8 Series", "Find X9 Series", "K Series",
                 "Reno Series", "Find X7 Ultra"
             },
-            ["iPhone"] = new[] { "iPhone", "iPhone Pro", "iPhone Pro Max" },
-            ["Samsung"] = new[] { "Galaxy S", "Galaxy A", "Galaxy Z Fold", "Galaxy Z Flip" }
+            ["iPhone"] = new[] { "iPhone", "iPhone Pro", "iPhone Pro Max", "iPhone 17 Pro Max" },
+            ["Samsung"] = new[] { "Galaxy S", "Galaxy S Ultra", "Galaxy A", "Galaxy Z Fold", "Galaxy Z Flip" },
+            ["Sony"] = new[] { "Xperia 1 Series" },
+            ["Huawei"] = new[] { "Pura Ultra", "Pura Series" },
+            ["ASUS ROG"] = new[] { "ROG Phone" },
+            ["REDMAGIC"] = new[] { "RedMagic 11 Series" }
         };
 
         var brandsByName = await context.Brands.ToDictionaryAsync(
@@ -1226,6 +1233,15 @@ public static class DbInitializer
                     gpu: "Google Tensor GPU",
                     highlights: "Phù hợp người cần camera AI, ảnh chân dung và cập nhật Android lâu dài")),
             new DemoProductSeed(
+                "Google Pixel", "Pixel Pro XL", "Google Pixel 10 Pro XL",
+                "Pixel màn hình lớn, mạnh về ảnh đêm, HDR, chân dung và các tính năng AI của Google.",
+                "DEMO-PIX10PXL-256-NEW", 31_990_000, 29_490_000, 2,
+                Specs("6.8 inch LTPO OLED 120Hz", "Google Tensor G5", "16GB", "256GB", "50MP OIS + 48MP ultrawide + 48MP telephoto", "42MP", "5200mAh", "USB-C, sạc không dây Pixelsnap", "Android",
+                    cameraTechnology: "Google computational photography, Gemini AI, Night Sight, Super Res Zoom, OIS",
+                    video: "4K HDR, Video Boost, chống rung điện tử",
+                    gpu: "Google Tensor GPU",
+                    highlights: "Rất hợp khách thích ảnh tự nhiên, ảnh đêm, HDR và chỉnh ảnh bằng AI")),
+            new DemoProductSeed(
                 "iPhone", "iPhone Pro Max", "iPhone 15 Pro Max",
                 "iPhone Pro Max khung titan, chip A17 Pro, quay video tốt và zoom xa.",
                 "IPH-15PM-256-NEW", 34_990_000, 32_990_000, 0,
@@ -1262,6 +1278,15 @@ public static class DbInitializer
                     gpu: "Apple GPU 6-core",
                     highlights: "Hợp người cần màn lớn, pin tốt, quay video và zoom xa")),
             new DemoProductSeed(
+                "iPhone", "iPhone 17 Pro Max", "iPhone 17 Pro Max",
+                "iPhone cao cấp tập trung quay video, màu ổn định, telephoto chất lượng cao và hệ sinh thái Apple.",
+                "DEMO-IP17PM-256-NEW", 43_990_000, 41_990_000, 2,
+                Specs("6.9 inch LTPO Super Retina XDR 120Hz", "Apple A19 Pro", "12GB", "256GB", "48MP Fusion + 48MP ultrawide + 48MP tetraprism telephoto", "18MP Center Stage", "5000mAh", "USB-C, MagSafe", "iOS",
+                    cameraTechnology: "Photonic Engine, Deep Fusion, ProRAW, tetraprism telephoto, Center Stage",
+                    video: "4K Dolby Vision, ProRes, Log video, Dual Capture",
+                    gpu: "Apple GPU thế hệ mới",
+                    highlights: "Ưu tiên quay video, màu dễ dùng, chụp nhanh ổn định và zoom iPhone tốt nhất")),
+            new DemoProductSeed(
                 "Samsung", "Galaxy S", "Samsung Galaxy S24 Ultra",
                 "Flagship Samsung có Galaxy AI, S Pen, màn hình lớn và camera zoom đa dụng.",
                 "SAM-S24U-256-NEW", 33_990_000, 31_990_000, 0,
@@ -1270,6 +1295,15 @@ public static class DbInitializer
                     video: "8K, 4K, Super Steady",
                     gpu: "Adreno 750",
                     highlights: "Hợp người cần zoom xa, ghi chú S Pen, màn đẹp và hiệu năng cao")),
+            new DemoProductSeed(
+                "Samsung", "Galaxy S Ultra", "Samsung Galaxy S26 Ultra",
+                "Flagship Samsung 2026 đa dụng, zoom tốt, màu ảnh rực và nhiều công cụ AI chỉnh ảnh.",
+                "DEMO-S26U-512-NEW", 39_990_000, 37_990_000, 2,
+                Specs("6.9 inch Dynamic LTPO AMOLED 2X 120Hz", "Snapdragon 8 Elite Gen 5 for Galaxy", "12GB", "512GB", "200MP OIS f/1.4 + 50MP ultrawide + 10MP telephoto 3x + 50MP periscope 5x", "12MP", "5000mAh", "Sạc nhanh 60W, sạc không dây", "Android",
+                    cameraTechnology: "ProVisual Engine, Galaxy AI, Nightography, OIS, ALoP telephoto 5x",
+                    video: "8K 30fps, 4K 60fps, Super Steady, Horizon Lock",
+                    gpu: "Adreno 840",
+                    highlights: "Rất đa dụng: zoom xa, ảnh rực, AI chỉnh ảnh và hiệu năng flagship")),
             new DemoProductSeed(
                 "Samsung", "Galaxy S", "Samsung Galaxy S24 FE",
                 "Điện thoại Galaxy AI dễ tiếp cận, màn hình đẹp và camera đa dụng.",
@@ -1316,6 +1350,15 @@ public static class DbInitializer
                     gpu: "Adreno 750",
                     highlights: "Rất mạnh cho chụp ảnh, zoom, quay video và vẫn đủ mạnh để chơi game")),
             new DemoProductSeed(
+                "Xiaomi", "Xiaomi 15 Series", "Xiaomi 15 Ultra",
+                "Flagship camera Leica với cảm biến lớn, telephoto độ phân giải cao và bộ phụ kiện chụp ảnh chuyên sâu.",
+                "DEMO-X15U-512-NEW", 35_990_000, 33_490_000, 2,
+                Specs("6.73 inch LTPO AMOLED 120Hz", "Snapdragon 8 Elite", "16GB", "512GB", "50MP Leica OIS + 50MP ultrawide + 50MP telephoto + 200MP periscope", "32MP", "5410mAh", "Sạc nhanh 90W, sạc không dây 80W", "Android",
+                    cameraTechnology: "Leica Summilux, cảm biến 1-inch type, 200MP periscope, OIS, Leica Authentic/Vibrant",
+                    video: "8K, 4K HDR, quay Log",
+                    gpu: "Adreno 830",
+                    highlights: "Một trong các máy hợp nhất cho khách thích chất ảnh Leica, zoom xa và chỉnh tay")),
+            new DemoProductSeed(
                 "Xiaomi", "REDMI", "Redmi Note 13 Pro+ 5G",
                 "Điện thoại tầm trung có camera độ phân giải cao, màn hình đẹp và sạc nhanh.",
                 "DEMO-RN13P-256-NEW", 10_990_000, 9_490_000, 3,
@@ -1343,6 +1386,15 @@ public static class DbInitializer
                     gpu: "Immortalis-G925",
                     highlights: "Rất hợp chụp chân dung, zoom xa và pin lớn")),
             new DemoProductSeed(
+                "Vivo", "vivo X300 Series", "vivo X300 Ultra",
+                "Flagship camera ZEISS cao cấp, tập trung chân dung, zoom xa và quay video chuyên sâu.",
+                "DEMO-VX300U-512-NEW", 37_990_000, 35_990_000, 2,
+                Specs("6.8 inch LTPO AMOLED 120Hz", "Snapdragon 8 Elite Gen 5", "16GB", "512GB", "50MP OIS + 50MP ultrawide + 200MP ZEISS telephoto", "50MP", "6000mAh", "Sạc nhanh 90W, sạc không dây", "Android",
+                    cameraTechnology: "ZEISS T*, ZEISS portrait, telephoto OIS, full focal length imaging",
+                    video: "4K 120fps, 10-bit Log, chống rung",
+                    gpu: "Adreno 840",
+                    highlights: "Rất hợp khách ưu tiên chân dung, zoom xa, màu ZEISS và quay video nâng cao")),
+            new DemoProductSeed(
                 "Vivo", "V Series", "vivo V40 5G",
                 "Điện thoại mỏng nhẹ, camera chân dung ZEISS và pin tốt.",
                 "DEMO-VV40-256-NEW", 15_990_000, 13_990_000, 2,
@@ -1360,6 +1412,15 @@ public static class DbInitializer
                     video: "4K, chống rung",
                     gpu: "Adreno thế hệ mới",
                     highlights: "Rất mạnh cho gaming nhờ chip đầu bảng, màn 144Hz và pin lớn")),
+            new DemoProductSeed(
+                "IQOO", "iQOO 15", "iQOO 15",
+                "Flagship gaming mới của iQOO với chip Snapdragon đầu bảng, màn 2K 144Hz và chip xử lý game riêng.",
+                "DEMO-IQ15-512-NEW", 24_990_000, 22_990_000, 3,
+                Specs("6.85 inch 2K LTPO AMOLED 144Hz", "Snapdragon 8 Elite Gen 5", "16GB", "512GB", "50MP OIS + 50MP ultrawide + 50MP telephoto", "32MP", "7000mAh", "Sạc nhanh 100W", "Android",
+                    cameraTechnology: "OIS, camera đa tiêu cự, xử lý AI",
+                    video: "4K, chống rung",
+                    gpu: "Adreno 840, Q3 gaming chip",
+                    highlights: "Rất hợp khách ưu tiên game nặng, FPS ổn định, màn 2K 144Hz và pin lớn")),
             new DemoProductSeed(
                 "IQOO", "Neo 10 Series", "iQOO Neo 10",
                 "Máy gaming cận cao cấp có hiệu năng tốt và sạc nhanh trong tầm giá.",
@@ -1397,6 +1458,15 @@ public static class DbInitializer
                     gpu: "Adreno thế hệ mới",
                     highlights: "Flagship cân bằng giữa hiệu năng, pin, màn hình và camera Hasselblad")),
             new DemoProductSeed(
+                "OnePlus", "OnePlus 15 Series", "OnePlus 15",
+                "Flagship cân bằng giữa hiệu năng Snapdragon mới, pin rất lớn, màn đẹp và camera tốt.",
+                "DEMO-OP15-512-NEW", 28_990_000, 26_990_000, 3,
+                Specs("6.82 inch LTPO AMOLED 165Hz", "Snapdragon 8 Elite Gen 5", "16GB", "512GB", "50MP OIS + 50MP ultrawide + 50MP telephoto", "32MP", "7300mAh", "Sạc nhanh 100W", "Android",
+                    cameraTechnology: "DetailMax Engine, OIS, telephoto, AI image processing",
+                    video: "4K HDR, chống rung",
+                    gpu: "Adreno 840",
+                    highlights: "Máy cân bằng cho chơi game, pin lâu và camera tốt, dễ tư vấn hơn gaming phone thuần")),
+            new DemoProductSeed(
                 "OnePlus", "OnePlus 12", "OnePlus 12",
                 "Flagship cân bằng hiệu năng, camera Hasselblad và sạc nhanh.",
                 "DEMO-OP12-256-NEW", 20_990_000, 18_490_000, 2,
@@ -1415,6 +1485,15 @@ public static class DbInitializer
                     gpu: "Immortalis-G925",
                     highlights: "Flagship OPPO thiên camera, zoom và pin lớn")),
             new DemoProductSeed(
+                "OPPO", "Find X9 Series", "OPPO Find X9 Ultra",
+                "Flagship camera OPPO cao cấp, rất mạnh về telephoto, macro, màu Hasselblad và cảm biến lớn.",
+                "DEMO-FX9U-512-NEW", 39_990_000, 37_490_000, 2,
+                Specs("6.82 inch LTPO AMOLED 120Hz", "Snapdragon 8 Elite Gen 5", "16GB", "512GB", "200MP OIS main + 50MP ultrawide + 200MP telephoto 3x + 50MP telephoto 10x", "32MP", "6000mAh", "Sạc nhanh 100W, sạc không dây", "Android",
+                    cameraTechnology: "Hasselblad tuning, 10x optical telephoto, periscope zoom, macro telephoto, OIS, Master Mode",
+                    video: "4K HDR, chống rung, chế độ Master",
+                    gpu: "Adreno 840",
+                    highlights: "Ưu tiên hàng đầu cho khách hỏi zoom xa, concert, macro và ảnh tự nhiên")),
+            new DemoProductSeed(
                 "OPPO", "Reno Series", "OPPO Reno13 5G",
                 "Điện thoại tầm trung có thiết kế đẹp, camera chân dung và pin tốt.",
                 "DEMO-RENO13-256-NEW", 15_990_000, 14_490_000, 3,
@@ -1422,7 +1501,43 @@ public static class DbInitializer
                     cameraTechnology: "AI portrait, OIS, camera trước 50MP",
                     video: "4K",
                     gpu: "Mali-G615",
-                    highlights: "Tầm trung thiết kế đẹp, selfie tốt và pin ổn"))
+                    highlights: "Tầm trung thiết kế đẹp, selfie tốt và pin ổn")),
+            new DemoProductSeed(
+                "REDMAGIC", "RedMagic 11 Series", "REDMAGIC 11 Pro",
+                "Gaming phone thuần hiệu năng với Snapdragon mới, tản nhiệt chủ động, pin rất lớn và màn 144Hz.",
+                "DEMO-RM11P-512-NEW", 23_990_000, 21_990_000, 3,
+                Specs("6.85 inch AMOLED 144Hz", "Snapdragon 8 Elite Gen 5", "16GB", "512GB", "50MP + 50MP + 2MP", "16MP under-display", "7500mAh", "Sạc nhanh 80W", "Android",
+                    cameraTechnology: "Camera đủ dùng, không phải trọng tâm; ưu tiên hiệu năng và tản nhiệt",
+                    video: "4K",
+                    gpu: "Adreno 840, active fan, liquid cooling, shoulder triggers",
+                    highlights: "Ưu tiên game nặng, pin trâu, tản nhiệt chủ động và giá/hiệu năng; camera chỉ ở mức đủ dùng")),
+            new DemoProductSeed(
+                "ASUS ROG", "ROG Phone", "ASUS ROG Phone 9 Pro",
+                "Gaming flagship cao cấp với màn nhanh, loa tốt, phụ kiện tản nhiệt và tối ưu game sâu.",
+                "DEMO-ROG9P-512-NEW", 29_990_000, 27_990_000, 2,
+                Specs("6.78 inch LTPO AMOLED 185Hz", "Snapdragon 8 Elite", "16GB", "512GB", "50MP gimbal OIS + 32MP telephoto + 13MP ultrawide", "32MP", "5800mAh", "Sạc nhanh 65W", "Android",
+                    cameraTechnology: "Gimbal OIS, camera đa dụng hơn nhiều gaming phone thuần",
+                    video: "8K, 4K chống rung",
+                    gpu: "Adreno 830, AeroActive Cooler support, AirTriggers",
+                    highlights: "Hợp khách muốn máy gaming cao cấp nhưng vẫn cần camera và trải nghiệm dùng hằng ngày tốt")),
+            new DemoProductSeed(
+                "Sony", "Xperia 1 Series", "Sony Xperia 1 VII",
+                "Flagship Sony dành cho người thích chỉnh tay, màu tự nhiên và trải nghiệm gần máy ảnh Alpha.",
+                "DEMO-XPERIA1VII-512-NEW", 34_990_000, 32_990_000, 1,
+                Specs("6.5 inch LTPO OLED 120Hz", "Snapdragon 8 Elite", "12GB", "512GB", "48MP Exmor T OIS + 12MP ultrawide + 12MP variable telephoto", "12MP", "5000mAh", "USB-C, sạc nhanh, sạc không dây", "Android",
+                    cameraTechnology: "Sony Exmor T, ZEISS optics, Eye AF, Photography Pro, variable telephoto",
+                    video: "4K 120fps, S-Cinetone, chống rung",
+                    gpu: "Adreno 830",
+                    highlights: "Hợp người biết chỉnh tay, thích màu tự nhiên và quay/chụp kiểu máy ảnh")),
+            new DemoProductSeed(
+                "Huawei", "Pura Ultra", "Huawei Pura 80 Ultra",
+                "Flagship camera XMAGE với cảm biến lớn và telephoto mạnh, phù hợp khách ưu tiên ảnh hơn hệ sinh thái Google.",
+                "DEMO-PURA80U-512-NEW", 38_990_000, 36_990_000, 1,
+                Specs("6.8 inch LTPO OLED 120Hz", "Kirin flagship", "16GB", "512GB", "50MP XMAGE variable aperture + ultrawide + dual telephoto", "13MP", "5700mAh", "Sạc nhanh 100W, sạc không dây", "HarmonyOS",
+                    cameraTechnology: "XMAGE, variable aperture, large sensor, telephoto macro, OIS",
+                    video: "4K HDR, chống rung",
+                    gpu: "Maleoon GPU",
+                    highlights: "Camera rất mạnh nhưng cần tư vấn kỹ vì hệ sinh thái Google có thể hạn chế"))
         };
         demoProducts.AddRange(CreateAdditionalDemoVariants(demoProducts.ToList()));
 
@@ -1659,6 +1774,10 @@ public static class DbInitializer
             "honor" => "honor",
             "oneplus" => "oneplus",
             "oppo" => "oppo",
+            "sony" => "sony",
+            "huawei" => "huawei",
+            "asus rog" => "asus-rog",
+            "redmagic" => "redmagic",
             _ => "phone"
         };
 

@@ -264,6 +264,8 @@ namespace ECommerceBackend.Controllers
                     .Include(p => p.Series)
                     .Include(p => p.Productvariants)
                         .ThenInclude(v => v.Productimages)
+                    .Include(p => p.Productvariants)
+                        .ThenInclude(v => v.Inventoryitems)
                     .Where(p => p.Brandid == product.Brandid && p.Productid != product.Productid)
                     .Take(5)
                     .ToListAsync();

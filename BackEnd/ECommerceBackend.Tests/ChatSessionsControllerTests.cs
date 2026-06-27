@@ -287,8 +287,9 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.Equal(
             1,
             message?.Messagecontent.Split("/products/200").Length - 1);
-        Assert.Contains("chỉ hiển thị tối đa 3 sản phẩm", message?.Messagecontent);
-        Assert.Equal(2, message?.Recommendations?.Count);
+        Assert.DoesNotContain("tối đa 3 sản phẩm", message?.Messagecontent);
+        Assert.Contains("gợi ý chính xác hơn", message?.Messagecontent);
+        Assert.Equal(1, message?.Recommendations?.Count);
         Assert.All(message!.Recommendations!, item => Assert.Equal(200, item.Productid));
         Assert.Equal(2001, message.Recommendations![0].Variantid);
         Assert.Equal("/uploads/products/xiaomi-14t.jpg", message.Recommendations[0].Imageurl);
@@ -310,6 +311,70 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
             .SingleAsync(item =>
                 item.Recommendationid == message.Recommendations[0].Recommendationid);
         Assert.NotNull(trackedRecommendation.Addedtocartat);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithMultipleVariantsPerProduct_ReturnsOneCardPerProduct()
+    {
+        var products = new[]
+        {
+            new ProductConsultationResult(
+                1, 11, "OnePlus 12", "OnePlus", "Dien thoai", "New Seal", "OP12-256",
+                18_490_000, 20_990_000, 2, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 8 Gen 3",
+                    ["Camera sau"] = "Hasselblad Color Calibration"
+                }),
+            new ProductConsultationResult(
+                1, 12, "OnePlus 12", "OnePlus", "Dien thoai", "New Seal", "OP12-512",
+                19_990_000, 22_990_000, 2, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 8 Gen 3",
+                    ["Camera sau"] = "Hasselblad Color Calibration"
+                }),
+            new ProductConsultationResult(
+                2, 21, "vivo V40 5G", "vivo", "Dien thoai", "New Seal", "V40-256",
+                13_990_000, 15_990_000, 2, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 7 Gen 3",
+                    ["Camera sau"] = "ZEISS Portrait"
+                }),
+            new ProductConsultationResult(
+                2, 22, "vivo V40 5G", "vivo", "Dien thoai", "New Seal", "V40-512",
+                15_490_000, 17_990_000, 2, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Snapdragon 7 Gen 3",
+                    ["Camera sau"] = "ZEISS Portrait"
+                }),
+            new ProductConsultationResult(
+                3, 31, "Xiaomi 14T Pro", "Xiaomi", "Dien thoai", "New Seal", "14TP-256",
+                15_490_000, 16_990_000, 2, string.Empty,
+                new Dictionary<string, string>
+                {
+                    ["Chipset"] = "Dimensity 9300+",
+                    ["Camera sau"] = "Leica Summilux"
+                })
+        };
+        var provider = new GroundedAiProvider(
+            new StubProductConsultationService(products),
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "Tim may chup anh dep tu 10 den 20 trieu",
+            Array.Empty<AiConversationMessage>()));
+
+        Assert.Equal(ChatResponseTypes.Recommendation, response.ResponseType);
+        Assert.Equal(new[] { 1, 2, 3 }, response.Recommendations.Select(item => item.ProductId));
+        Assert.Contains("3 s", response.Text);
+        Assert.Contains("5 phi", response.Text);
+        Assert.Equal(3, response.Text.Split("Lý do gợi ý").Length - 1);
     }
 
     [Fact]
@@ -464,7 +529,8 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
             "Tư vấn Pixel 10 Pro",
             products);
 
-        Assert.Contains("/products/google-pixel-10-pro", response);
+        Assert.Contains("[Google Pixel 10 Pro](/products/google-pixel-10-pro)", response);
+        Assert.DoesNotContain("Xem chi tiết: /products/google-pixel-10-pro", response);
         Assert.DoesNotContain("/products/10", response);
     }
 
@@ -495,7 +561,8 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.Contains("Test Phone 1", response);
         Assert.Contains("Test Phone 3", response);
         Assert.DoesNotContain("Test Phone 4", response);
-        Assert.Contains("chỉ hiển thị tối đa 3 sản phẩm", response);
+        Assert.DoesNotContain("tối đa 3 sản phẩm", response);
+        Assert.Contains("gợi ý chính xác hơn", response);
     }
 
     [Fact]
@@ -639,6 +706,30 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
     }
 
     [Fact]
+    public async Task GetResponseAsync_WithComparisonConnectorButOnlyOneMatchedProduct_AsksForSpecificModels()
+    {
+        var products = new[]
+        {
+            CreateConsultationResult(1, "Xiaomi 14T Pro")
+        };
+        var provider = new GroundedAiProvider(
+            new StubProductConsultationService(products),
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "so sanh xiaomi 14T voi redmagic",
+            Array.Empty<AiConversationMessage>()));
+
+        Assert.Equal(ChatResponseTypes.Clarification, response.ResponseType);
+        Assert.Empty(response.Recommendations);
+        Assert.Contains("model", ProductConsultationService.Normalize(response.Text));
+        Assert.Contains("Xiaomi 14T Pro", response.QuickReplies ?? []);
+    }
+
+    [Fact]
     public async Task GetResponseAsync_WithCameraNeedWithoutBudget_AsksForBudget()
     {
         var consultationService = new StubProductConsultationService(
@@ -656,6 +747,28 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
 
         Assert.Equal(ChatResponseTypes.Clarification, response.ResponseType);
         Assert.Contains("ngân sách", response.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(consultationService.LastQuery);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithBudgetInstructionButNoAmount_AsksForBudget()
+    {
+        var consultationService = new StubProductConsultationService(
+            new[] { CreateConsultationResult(1, "OnePlus 15") });
+        var provider = new GroundedAiProvider(
+            consultationService,
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "Hay tu van dien thoai theo ngan sach cua toi. Neu toi chua noi ngan sach, hay hoi lai truoc khi goi y.",
+            Array.Empty<AiConversationMessage>()));
+
+        Assert.Equal(ChatResponseTypes.Clarification, response.ResponseType);
+        Assert.Contains("ngan sach", ProductConsultationService.Normalize(response.Text));
+        Assert.Empty(response.Recommendations);
         Assert.Null(consultationService.LastQuery);
     }
 

@@ -118,15 +118,11 @@ const StaffShipments: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="ops-hero flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-[#4f46e5]">Vận chuyển giả lập</p>
-          <h1 className="mt-1 text-2xl font-black text-slate-900">Theo dõi giao hàng</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Mô phỏng trạng thái GHN, GHTK, Viettel Post và J&T; đồng bộ đơn hàng, thanh toán và IMEI.
-          </p>
+          <h1 className="ops-hero-title">Theo dõi giao hàng</h1>
         </div>
-        <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600">
+        <button type="button" onClick={load} className="ops-hero-action">
           <RefreshCcw size={16} /> Làm mới
         </button>
       </div>

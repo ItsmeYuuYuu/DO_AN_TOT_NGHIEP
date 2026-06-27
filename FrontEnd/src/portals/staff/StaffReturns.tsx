@@ -214,14 +214,11 @@ const StaffReturns: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="ops-hero flex flex-wrap items-center justify-between gap-4 p-6">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">Đổi trả & hoàn tiền</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Duyệt yêu cầu, tiếp nhận đúng IMEI, phân loại hàng hoàn và ghi nhận hoàn tiền.
-          </p>
+          <h1 className="ops-hero-title">Đổi trả & hoàn tiền</h1>
         </div>
-        <Button variant="secondary" onClick={loadRequests}>
+        <Button variant="secondary" onClick={loadRequests} className="border-red-100 bg-white text-[#c4000b] hover:bg-red-50">
           <RefreshCcw size={16} className="mr-2" /> Làm mới
         </Button>
       </div>

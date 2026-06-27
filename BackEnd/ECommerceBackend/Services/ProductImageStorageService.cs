@@ -82,6 +82,19 @@ public sealed class ProductImageStorageService
     public bool DeleteByFileName(string fileName) =>
         DeleteByFileName(fileName, _productUploadDirectory);
 
+    public IReadOnlyList<FileInfo> GetProductUploadFiles()
+    {
+        if (!Directory.Exists(_productUploadDirectory))
+        {
+            return Array.Empty<FileInfo>();
+        }
+
+        return new DirectoryInfo(_productUploadDirectory)
+            .EnumerateFiles()
+            .Where(file => AllowedExtensions.Contains(file.Extension))
+            .ToList();
+    }
+
     public bool DeleteWarrantyByFileName(string fileName) =>
         DeleteByFileName(fileName, _warrantyUploadDirectory);
 

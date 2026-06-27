@@ -69,6 +69,14 @@ export interface UploadedProductImage {
   size: number;
 }
 
+export interface ProductImageCleanupResult {
+  scannedFiles: number;
+  referencedFiles: number;
+  deletedFiles: number;
+  freedBytes: number;
+  deletedFileNames: string[];
+}
+
 export interface CreateFullProductVariant {
   condition?: string;
   sku: string;
@@ -127,6 +135,10 @@ export const productsApi = {
   },
   deleteUploadedImage: (fileName: string) =>
     apiClient.delete(`/ProductImages/uploaded/${encodeURIComponent(fileName)}`),
+  cleanupUnusedImages: (olderThanHours = 24) =>
+    apiClient.post<ProductImageCleanupResult>('/ProductImages/cleanup-unused', null, {
+      params: { olderThanHours },
+    }),
   update: (id: number, data: Partial<Product>) => apiClient.put(`/Products/${id}`, data),
   delete: (id: number) => apiClient.delete(`/Products/${id}`),
 };

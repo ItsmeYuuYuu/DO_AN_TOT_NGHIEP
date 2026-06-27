@@ -144,15 +144,11 @@ export const AdminHomepageSections: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+      <div className="ops-hero flex flex-col justify-between gap-4 p-6 lg:flex-row lg:items-end">
         <div>
-          <p className="ops-label">Homepage merchandising</p>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Sản phẩm hiển thị trang chủ</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Chọn sản phẩm cho các vùng Khuyến mãi shock, Bán chạy và Flagship trên trang khách hàng.
-          </p>
+          <h1 className="ops-hero-title">Sản phẩm hiển thị trang chủ</h1>
         </div>
-        <Button onClick={handleSave} disabled={!activeSection || saving}>
+        <Button onClick={handleSave} disabled={!activeSection || saving} className="bg-[#e30613] hover:bg-[#c4000b]">
           <Save size={16} />
           {saving ? 'Đang lưu...' : 'Lưu cấu hình'}
         </Button>

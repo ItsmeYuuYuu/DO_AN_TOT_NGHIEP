@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { Boxes, Package, Plus, Search, Tags, Trash2, Wrench } from 'lucide-react';
+import { Boxes, ImageOff, Package, Plus, Search, Tags, Trash2, Wrench } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { DataTable } from '@/components/DataTable';
 import { Pagination } from '@/components/Pagination';
@@ -13,7 +13,7 @@ import { ProductEditModal } from './ProductEditModal';
 import { brandsApi } from '@/features/brands/api/brandsApi';
 import { categoriesApi } from '@/features/categories/api/categoriesApi';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { confirmAction, notifyError } from '@/utils/notifications';
+import { confirmAction, notifyError, notifySuccess } from '@/utils/notifications';
 
 
 const PAGE_SIZE = 10;
@@ -28,6 +28,7 @@ const AdminProducts: React.FC = () => {
   const [filterBrand, setFilterBrand] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterDiscount, setFilterDiscount] = useState(false);
+  const [cleaningImages, setCleaningImages] = useState(false);
   const [brands, setBrands] = useState<{ brandid: number; brandname: string }[]>([]);
   const [categories, setCategories] = useState<{ categoryid: number; categoryname: string }[]>([]);
 
@@ -69,6 +70,30 @@ const AdminProducts: React.FC = () => {
     } catch (err) {
       const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
       notifyError(message || 'Không thể xóa sản phẩm này.');
+    }
+  };
+
+  const handleCleanupUnusedImages = async () => {
+    const confirmed = await confirmAction(
+      'Dọn các file ảnh sản phẩm không còn được database tham chiếu và đã cũ hơn 24 giờ?',
+      {
+        title: 'Dọn ảnh không dùng',
+        confirmLabel: 'Dọn ảnh',
+        danger: true,
+      },
+    );
+    if (!confirmed) return;
+
+    setCleaningImages(true);
+    try {
+      const response = await productsApi.cleanupUnusedImages(24);
+      const freedMb = (response.data.freedBytes / 1024 / 1024).toFixed(2);
+      notifySuccess(`Đã dọn ${response.data.deletedFiles} ảnh không dùng, giải phóng ${freedMb} MB.`);
+    } catch (err) {
+      const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
+      notifyError(message || 'Không thể dọn ảnh không dùng lúc này.');
+    } finally {
+      setCleaningImages(false);
     }
   };
 
@@ -188,17 +213,24 @@ const AdminProducts: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-5">
-      <section className="ops-card overflow-hidden">
-        <div className="grid gap-6 bg-[#172033] p-6 text-white lg:grid-cols-[1fr_auto] lg:items-end">
+      <section className="ops-hero">
+        <div className="grid gap-3 p-6 sm:grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_auto] lg:items-end">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-200">Product operations</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight">Quản lý sản phẩm</h1>
-            <p className="mt-2 max-w-2xl text-sm font-medium text-indigo-100">
-              Kiểm soát sản phẩm, biến thể, hình ảnh, tồn kho và chương trình giảm giá trước khi bán ra website.
-            </p>
+            <h1 className="ops-hero-title">Quản lý sản phẩm</h1>
           </div>
+          {(user?.rolename === 'Admin' || user?.rolename === 'Manager') && (
+            <Button
+              onClick={() => { void handleCleanupUnusedImages(); }}
+              size="sm"
+              variant="secondary"
+              isLoading={cleaningImages}
+              className="inline-flex items-center gap-2 border-red-100 bg-white text-[#c4000b] hover:bg-red-50"
+            >
+              <ImageOff size={16} /> Dọn ảnh không dùng
+            </Button>
+          )}
           {user?.rolename !== 'Content' && (
-            <Button onClick={() => setWizardOpen(true)} size="sm" className="inline-flex items-center gap-2 bg-[#4f46e5] hover:bg-[#4338ca]">
+            <Button onClick={() => setWizardOpen(true)} size="sm" className="inline-flex items-center gap-2 bg-[#e30613] hover:bg-[#c4000b]">
               <Plus size={16} /> Thêm sản phẩm
             </Button>
           )}

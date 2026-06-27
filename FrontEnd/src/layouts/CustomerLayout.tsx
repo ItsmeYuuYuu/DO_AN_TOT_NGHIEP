@@ -129,19 +129,23 @@ export const CustomerLayout: React.FC = () => {
   };
 
   const renderMiniChatText = (content: string) =>
-    content.split(/(\/products\/\d+)/g).map((part, index) =>
-      /^\/products\/\d+$/.test(part) ? (
+    content.split(/(\[[^\]]+\]\(\/products\/[A-Za-z0-9-]+\)|\/products\/[A-Za-z0-9-]+)/g).map((part, index) => {
+      const markdownLink = part.match(/^\[([^\]]+)\]\((\/products\/[A-Za-z0-9-]+)\)$/);
+      const rawProductLink = part.match(/^\/products\/[A-Za-z0-9-]+$/);
+      if (!markdownLink && !rawProductLink) return part;
+
+      const to = markdownLink?.[2] ?? part;
+      const label = markdownLink?.[1] ?? part;
+      return (
         <Link
           key={`${part}-${index}`}
-          to={part}
+          to={to}
           className="font-black text-[#c4000b] underline underline-offset-2"
         >
-          {part}
+          {label}
         </Link>
-      ) : (
-        part
-      ),
-    );
+      );
+    });
 
   const ensureAiWidgetSession = async () => {
     if (aiWidgetSession) return aiWidgetSession;
@@ -608,14 +612,14 @@ export const CustomerLayout: React.FC = () => {
 
                           {message.responsetype === 'comparison' && message.recommendations && (
                             <div className="-mx-1">
-                              <ChatComparisonTable recommendations={message.recommendations.slice(0, 3)} />
+                              <ChatComparisonTable recommendations={message.recommendations} />
                             </div>
                           )}
 
                           {message.recommendations && message.recommendations.length > 0 && aiWidgetSession && (
                             <ChatRecommendationCards
                               sessionId={aiWidgetSession.sessionid}
-                              recommendations={message.recommendations.slice(0, 3)}
+                              recommendations={message.recommendations}
                               allowAddToCart
                             />
                           )}

@@ -209,12 +209,20 @@ public sealed class GroundedAiProvider : IAiProvider
             scopedRecommendation && !isComparison
                 ? BuildScopedRecommendationResponse(userMessage, products)
                 : BuildCatalogResponse(userMessage, products),
-            products,
+            SelectRecommendationCards(products),
             isComparison
                 ? ChatResponseTypes.Comparison
                 : ChatResponseTypes.Recommendation,
             isComparison ? ComparisonQuickReplies : Array.Empty<string>());
     }
+
+    private static IReadOnlyList<ProductConsultationResult> SelectRecommendationCards(
+        IReadOnlyList<ProductConsultationResult> products) =>
+        products
+            .GroupBy(product => product.ProductId)
+            .Take(MaxDisplayedProducts)
+            .Select(group => group.First())
+            .ToList();
 
     private static IReadOnlyList<ProductConsultationResult> GetExplicitlyNamedComparedProducts(
         string userMessage,
@@ -284,10 +292,13 @@ public sealed class GroundedAiProvider : IAiProvider
         if (partialMentionCount >= 2)
             return true;
 
+        if (ContainsAny(normalized, " voi ", " va ", " vs", "versus", "poco", "redmi", "series", "dong"))
+            return true;
+
         if (productCount <= 2)
             return false;
 
-        return ContainsAny(normalized, " voi ", " va ", " vs", "versus", "poco", "redmi", "series", "dong");
+        return false;
     }
 
     private static bool HasPartialCatalogMention(
@@ -491,25 +502,24 @@ public sealed class GroundedAiProvider : IAiProvider
                 var specsText = string.IsNullOrWhiteSpace(keySpecs)
                     ? string.Empty
                     : $"\n     Thông số: {keySpecs}";
-                var reason = BuildRecommendationReason(variant, normalized);
-                var reasonText = string.IsNullOrWhiteSpace(reason)
-                    ? string.Empty
-                    : $"\n     Lý do gợi ý: {reason}";
 
                 return $"   - {variant.Condition}: {FormatCurrency(variant.Price)}" +
                        $"{saleNote}; {stockText}." +
-                       specsText +
-                       reasonText;
+                       specsText;
             });
+            var reason = BuildRecommendationReason(product, normalized);
+            var reasonText = string.IsNullOrWhiteSpace(reason)
+                ? string.Empty
+                : $"\n   Lý do gợi ý: {reason}";
 
             return $"{index + 1}. {product.ProductName}\n" +
                    string.Join("\n", variants) +
-                   $"\n   Xem chi tiết: {ProductPath(product)}";
+                   reasonText +
+                   $"\n   Xem chi tiết: [{product.ProductName}]({ProductPath(product)})";
         });
 
         return heading + "\n\n" + string.Join("\n\n", lines) +
-               "\n\nTôi chỉ hiển thị tối đa 3 sản phẩm phù hợp nhất mỗi lần. " +
-               "Bạn có thể bổ sung ngân sách, thương hiệu, RAM, bộ nhớ hoặc nhu cầu sử dụng để lọc chính xác hơn.";
+               "\n\nBạn có thể bổ sung ngân sách, thương hiệu, RAM, bộ nhớ hoặc nhu cầu sử dụng để tôi có thể gợi ý chính xác hơn.";
     }
 
     private static ClarificationPrompt? GetClarification(AiConversationRequest request)
@@ -636,7 +646,9 @@ public sealed class GroundedAiProvider : IAiProvider
             "ngan", "sach", "tim", "chon",
             "choi", "game", "gaming", "chup", "anh", "quay", "video", "camera", "pin",
             "lau", "trau", "hoc", "tap", "sinh", "vien", "van", "phong", "lam", "viec",
-            "goi", "y", "dep", "tot", "muot", "manh"
+            "goi", "y", "dep", "tot", "muot", "manh",
+            "hay", "cua", "neu", "chua", "noi", "hoi", "lai", "truoc", "khi", "theo",
+            "dung", "nhu", "cau", "su", "uu", "tien", "khong", "ro", "rang"
         };
         return Regex.Matches(normalized, @"[\p{L}\p{N}]+")
             .Select(match => match.Value)

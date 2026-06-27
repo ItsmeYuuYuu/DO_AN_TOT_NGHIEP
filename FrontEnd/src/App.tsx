@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AuthGuard from '@/components/AuthGuard';
 import { useAuth } from '@/features/auth/context/AuthContext';
 
@@ -85,10 +85,22 @@ const StaffHomeRedirect = () => {
   return <Navigate to={destinations[user?.rolename ?? ''] ?? '/unauthorized'} replace />;
 };
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  React.useEffect(() => {
+    if (pathname === '/chat') return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
+
+  return null;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 const App: React.FC = () => {
   return (
     <Suspense fallback={<PageLoader />}>
+      <ScrollToTop />
       <Routes>
 
         {/* ═══ PUBLIC — Customer Portal ════════════════════════════════════ */}

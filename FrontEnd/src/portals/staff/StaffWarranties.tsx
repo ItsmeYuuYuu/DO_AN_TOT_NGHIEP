@@ -183,19 +183,16 @@ const StaffWarranties: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="ops-hero flex flex-wrap items-center justify-between gap-4 p-6">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">Trung tâm bảo hành</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Tiếp nhận thiết bị, phân công kỹ thuật và theo dõi toàn bộ lịch sử sửa chữa.
-          </p>
+          <h1 className="ops-hero-title">Trung tâm bảo hành</h1>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={loadClaims}>
+          <Button variant="secondary" onClick={loadClaims} className="border-red-100 bg-white text-[#c4000b] hover:bg-red-50">
             <RefreshCcw size={16} className="mr-2" /> Làm mới
           </Button>
           {canCreate && (
-            <Button onClick={() => setCreateOpen(true)}>
+            <Button onClick={() => setCreateOpen(true)} className="bg-[#e30613] hover:bg-[#c4000b]">
               <Plus size={16} className="mr-2" /> Tạo phiếu
             </Button>
           )}

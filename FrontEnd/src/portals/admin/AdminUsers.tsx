@@ -206,16 +206,18 @@ const AdminUsers: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="ops-hero flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-black text-slate-800">Quản lý Tài khoản</h2>
-          <p className="text-sm text-slate-500">
-            {staffUsers.length} nhân viên · {customerUsers.length} khách hàng
-          </p>
+          <h2 className="ops-hero-title">Quản lý tài khoản</h2>
         </div>
-        <Button size="sm" onClick={openCreate}>
-          + Thêm {tab === 'staff' ? 'nhân viên' : 'khách hàng'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-red-100 bg-white px-4 py-2 text-sm font-black text-[#c4000b] shadow-sm">
+            {staffUsers.length} nhân viên · {customerUsers.length} khách hàng
+          </span>
+          <Button size="sm" onClick={openCreate} className="bg-[#e30613] hover:bg-[#c4000b]">
+            + Thêm {tab === 'staff' ? 'nhân viên' : 'khách hàng'}
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}

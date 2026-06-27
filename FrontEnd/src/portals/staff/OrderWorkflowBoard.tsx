@@ -164,17 +164,15 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
 
   return (
     <div className="space-y-5">
-      <section className={`overflow-hidden rounded-3xl bg-gradient-to-br ${copy.accent} text-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]`}>
+      <section className="ops-hero">
         <div className="grid gap-6 p-6 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.28em] text-white/65">{copy.label}</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight">{copy.title}</h1>
-            <p className="mt-2 max-w-2xl text-sm font-medium text-white/75">{copy.description}</p>
+            <h1 className="ops-hero-title">{copy.title}</h1>
           </div>
           <button
             type="button"
             onClick={loadQueue}
-            className="inline-flex items-center justify-center gap-2 border border-white/20 bg-white/10 px-4 py-2 text-sm font-black text-white backdrop-blur hover:bg-white/20"
+            className="ops-hero-action"
           >
             <RefreshCcw size={16} /> Làm mới
           </button>

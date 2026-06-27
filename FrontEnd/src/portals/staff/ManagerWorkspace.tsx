@@ -14,12 +14,8 @@ const shortcuts = [
 
 const ManagerWorkspace: React.FC = () => (
   <div className="space-y-8">
-    <section>
-      <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">Manager workspace</p>
-      <h1 className="mt-1 text-2xl font-black text-slate-900">Trung tâm điều phối cửa hàng</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Một điểm vào để theo dõi doanh thu và chuyển nhanh tới từng bộ phận vận hành.
-      </p>
+    <section className="ops-hero p-6">
+      <h1 className="ops-hero-title">Trung tâm điều phối cửa hàng</h1>
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {shortcuts.map(({ label, description, to, Icon }) => (
           <Link

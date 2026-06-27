@@ -1,5 +1,5 @@
 import React from 'react';
-import { PackageCheck, Sparkles } from 'lucide-react';
+import { PackageCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Product } from '../api/productsApi';
 import { getProductPath } from '../utils/productLinks';
@@ -22,9 +22,10 @@ const getVariantSummary = (product: Product) => {
   const variants = product.productvariants ?? [];
   const hasStockData = variants.some(variant => variant.stockquantity != null);
   const stock = variants.reduce((total, variant) => total + (variant.stockquantity ?? 0), 0);
+  const displayVariant = variants.find(variant => (variant.stockquantity ?? 0) > 0) ?? variants[0];
 
   return {
-    firstVariant: variants[0],
+    displayVariant,
     hasStockData,
     stock,
     availabilityLabel: hasStockData
@@ -33,13 +34,13 @@ const getVariantSummary = (product: Product) => {
   };
 };
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = false }) => {
-  const { firstVariant, hasStockData, stock, availabilityLabel } = getVariantSummary(product);
-  const mainImage = firstVariant?.productimages?.find(image => image.ismain)?.imageurl
-    ?? firstVariant?.productimages?.[0]?.imageurl;
-  const discount = getDiscountPercent(firstVariant?.baseprice, firstVariant?.saleprice);
+export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const { displayVariant, hasStockData, stock, availabilityLabel } = getVariantSummary(product);
+  const mainImage = displayVariant?.productimages?.find(image => image.ismain)?.imageurl
+    ?? displayVariant?.productimages?.[0]?.imageurl;
+  const discount = getDiscountPercent(displayVariant?.baseprice, displayVariant?.saleprice);
   const imageTone = imageTones[product.productid % imageTones.length];
-  const price = firstVariant ? firstVariant.saleprice ?? firstVariant.baseprice : undefined;
+  const price = displayVariant ? displayVariant.saleprice ?? displayVariant.baseprice : undefined;
   const isAvailable = !hasStockData || stock > 0;
   const productPath = getProductPath(product);
 
@@ -56,10 +57,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = fal
           {discount ? (
             <span className="rounded-full bg-[#e30613] px-2 py-1 text-[9px] font-black text-white shadow-sm sm:px-2.5 sm:text-[10px]">
               -{discount}%
-            </span>
-          ) : !compact ? (
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#1f2937]/10 bg-white/80 text-[#c4000b] shadow-sm">
-              <Sparkles size={13} />
             </span>
           ) : null}
         </div>
@@ -78,11 +75,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = fal
           </div>
         )}
 
-        {!compact && (
-          <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border border-[#1f2937]/10 bg-white text-[#1f2937] shadow-sm transition group-hover:bg-[#e30613] group-hover:text-white">
-            <Sparkles size={15} />
-          </span>
-        )}
       </Link>
 
       <div className="flex flex-1 flex-col p-3 sm:p-4">
@@ -105,7 +97,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = fal
         </Link>
 
         <div className="mt-auto flex items-end justify-between gap-2 border-t border-[#e5e7eb] pt-3 sm:gap-3 sm:pt-4">
-          {firstVariant && price != null ? (
+          {displayVariant && price != null ? (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Giá từ
@@ -113,9 +105,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = fal
               <p className="mt-0.5 text-base font-black tracking-tight text-[#c4000b] sm:text-lg">
                 {formatCurrency(price)}
               </p>
-              {firstVariant.saleprice && firstVariant.saleprice < firstVariant.baseprice && (
+              {displayVariant.saleprice && displayVariant.saleprice < displayVariant.baseprice && (
                 <p className="text-[11px] text-slate-400 line-through">
-                  {formatCurrency(firstVariant.baseprice)}
+                  {formatCurrency(displayVariant.baseprice)}
                 </p>
               )}
             </div>

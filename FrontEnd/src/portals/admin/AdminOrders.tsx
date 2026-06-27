@@ -279,16 +279,12 @@ const AdminOrders: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-5">
-      <section className="ops-card p-6">
+      <section className="ops-hero p-6">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
-            <p className="ops-label">Order control room</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#172033]">Quản lý đơn hàng</h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Theo dõi đơn, xác nhận thanh toán, cập nhật trạng thái và xuất dữ liệu phục vụ vận hành.
-            </p>
+            <h1 className="ops-hero-title">Quản lý đơn hàng</h1>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="inline-flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="inline-flex items-center gap-2 border-red-100 bg-white text-[#c4000b] hover:bg-red-50">
             <Download size={16} /> Xuất CSV
           </Button>
         </div>

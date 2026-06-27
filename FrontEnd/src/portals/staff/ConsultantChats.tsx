@@ -105,16 +105,12 @@ const ConsultantChats = () => {
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl bg-[#172033] text-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+      <section className="ops-hero">
         <div className="grid gap-6 p-6 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.28em] text-teal-200">AI handoff desk</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight">Tư vấn trực tiếp</h1>
-            <p className="mt-2 max-w-2xl text-sm font-medium text-indigo-100">
-              Tiếp nhận khách được chatbot chuyển sang, xem lại ngữ cảnh gợi ý sản phẩm và tư vấn tiếp như một nhân viên thật.
-            </p>
+            <h1 className="ops-hero-title">Tư vấn trực tiếp</h1>
           </div>
-          <div className="border border-white/15 bg-white/10 px-4 py-3 text-sm font-black">
+          <div className="rounded-full border border-red-100 bg-white px-4 py-2 text-sm font-black text-[#c4000b] shadow-sm">
             {sessions.length} phiên đang chờ xử lý
           </div>
         </div>

@@ -11,6 +11,7 @@ import type {
   CreateFullProductVariant,
   UploadedProductImage,
 } from '@/features/products/api/productsApi';
+import { PRODUCT_CONDITION_OPTIONS } from '@/features/products/constants/productOptions';
 import { 
   AlertCircle, 
   CheckCircle, 
@@ -91,7 +92,6 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   const [allColors, setAllColors] = useState<string[]>(['Đen', 'Trắng', 'Xanh', 'Vàng', 'Hồng', 'Xám']);
   const allRams = ['8GB', '12GB', '16GB', '24GB'];
   const allRoms = ['64GB', '128GB', '256GB', '512GB', '1TB'];
-  const allConditions = ['98% Fullbox', 'New Seal', 'Likenew Fullbox', 'Likenew', 'Xước nhẹ 98%'];
   const allOrigins = ['Chính hãng', 'Nội địa'];
 
   // Current variant configuration state
@@ -762,7 +762,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tình trạng máy</label>
                   <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#4f46e5] bg-white font-medium" value={activeCondition} onChange={e => setActiveCondition(e.target.value)}>
-                    {allConditions.map(cond => <option key={cond} value={cond}>{cond}</option>)}
+                    {PRODUCT_CONDITION_OPTIONS.map(cond => <option key={cond} value={cond}>{cond}</option>)}
                   </select>
                 </div>
 

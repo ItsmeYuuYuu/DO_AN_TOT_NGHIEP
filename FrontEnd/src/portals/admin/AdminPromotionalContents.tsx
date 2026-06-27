@@ -160,10 +160,9 @@ export const AdminPromotionalContents: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="ops-hero flex items-center justify-between p-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Quản lý nội dung quảng cáo</h1>
-          <p className="text-sm text-slate-500 mt-1">Cấu hình các banner trang chủ và thanh trượt slider quảng cáo sản phẩm.</p>
+          <h1 className="ops-hero-title">Quản lý nội dung quảng cáo</h1>
         </div>
       </div>
 

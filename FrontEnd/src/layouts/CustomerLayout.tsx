@@ -23,6 +23,7 @@ import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '@/features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
+import { ChatAssistantSegments } from '@/features/chat/components/ChatAssistantSegments';
 import { brandsApi, type Brand } from '@/features/brands/api/brandsApi';
 import { categoriesApi, type Category } from '@/features/categories/api/categoriesApi';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
@@ -45,8 +46,10 @@ export const CustomerLayout: React.FC = () => {
   const [aiWidgetSession, setAiWidgetSession] = useState<ChatSession | null>(null);
   const [aiWidgetMessages, setAiWidgetMessages] = useState<ChatMessage[]>([]);
   const [aiWidgetLoading, setAiWidgetLoading] = useState(false);
+  const [aiWidgetConsultantTyping, setAiWidgetConsultantTyping] = useState(false);
   const [aiWidgetError, setAiWidgetError] = useState<string | null>(null);
   const aiWidgetMessagesRef = useRef<HTMLDivElement>(null);
+  const aiWidgetTypingSentRef = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { totalItems } = useCart();
@@ -190,9 +193,40 @@ export const CustomerLayout: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (!aiWidgetSession?.sessionid || aiWidgetSession.handoffstatus !== 'InProgress') return;
+
+    const timer = window.setInterval(async () => {
+      try {
+        const [session, latestMessages, typing] = await Promise.all([
+          chatSessionsApi.getSession(aiWidgetSession.sessionid),
+          chatSessionsApi.getMessages(aiWidgetSession.sessionid),
+          chatSessionsApi.getTypingStatus(aiWidgetSession.sessionid),
+        ]);
+        setAiWidgetSession(session);
+        setAiWidgetMessages(latestMessages);
+        setAiWidgetConsultantTyping(typing.consultantTyping);
+      } catch {
+        // Keep the current widget state during transient polling errors.
+      }
+    }, 3000);
+
+    return () => window.clearInterval(timer);
+  }, [aiWidgetSession?.handoffstatus, aiWidgetSession?.sessionid]);
+
   const handleAiWidgetSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     void startAiChat();
+  };
+
+  const handleAiWidgetInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setAiWidgetMessage(event.target.value);
+    if (!aiWidgetSession || !event.target.value.trim()) return;
+
+    const now = Date.now();
+    if (now - aiWidgetTypingSentRef.current < 2500) return;
+    aiWidgetTypingSentRef.current = now;
+    void chatSessionsApi.setTyping(aiWidgetSession.sessionid).catch(() => undefined);
   };
 
   const requestAiWidgetConsultant = async () => {
@@ -203,7 +237,7 @@ export const CustomerLayout: React.FC = () => {
     try {
       const session = await ensureAiWidgetSession();
       if (aiWidgetMessages.length === 0) {
-        const message = 'Tôi muốn gặp nhân viên tư vấn để được hỗ trợ rõ hơn.';
+        const message = 'Mình muốn gặp nhân viên tư vấn để được hỗ trợ rõ hơn.';
         setAiWidgetMessages([{
           messageid: Date.now(),
           sessionid: session.sessionid,
@@ -559,13 +593,13 @@ export const CustomerLayout: React.FC = () => {
                   {aiWidgetMessages.length === 0 && !aiWidgetLoading && (
                     <>
                       <div className="rounded-2xl bg-white p-3 text-sm leading-6 text-[#1f2937] shadow-sm">
-                        Em là trợ lý AI của Cuồng Điện Thoại. Bạn cần tìm máy theo nhu cầu, ngân sách hay muốn so sánh sản phẩm nào?
+                        Em là trợ lý AI của Cuồng Điện Thoại. Anh/chị đang muốn tìm máy theo nhu cầu, ngân sách hay cần so sánh vài mẫu đang phân vân?
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {[
-                          'Tư vấn máy chụp ảnh đẹp',
-                          'Máy chơi game dưới 20 triệu',
-                          'So sánh iPhone với Pixel',
+                          'Máy chụp ảnh đẹp',
+                          'Máy chơi game mượt',
+                          'So sánh sản phẩm',
                         ].map(prompt => (
                           <button
                             key={prompt}
@@ -583,6 +617,7 @@ export const CustomerLayout: React.FC = () => {
 
                   {aiWidgetMessages.map((message, index) => {
                     const isUserMessage = message.sendertype === 'user';
+                    const isAssistantMessage = message.sendertype === 'assistant';
                     if (message.sendertype === 'system') {
                       return (
                         <div key={message.messageid || index} className="text-center text-[11px] font-bold text-slate-400">
@@ -601,14 +636,29 @@ export const CustomerLayout: React.FC = () => {
                         }`}>
                           {isUserMessage ? <User size={14} /> : message.sendertype === 'consultant' ? <Headphones size={14} /> : <Bot size={14} />}
                         </div>
-                        <div className={`min-w-0 max-w-[82%] rounded-2xl border p-3 text-sm leading-6 ${
+                        <div className={`min-w-0 max-w-[82%] ${
                           isUserMessage
-                            ? 'border-[#e30613] bg-[#e30613] text-white'
-                            : 'border-[#e5e7eb] bg-white text-slate-700 shadow-sm'
+                            ? 'rounded-2xl border border-[#e30613] bg-[#e30613] p-3 text-sm leading-6 text-white'
+                            : isAssistantMessage
+                              ? 'space-y-2'
+                              : 'rounded-2xl border border-[#e5e7eb] bg-white p-3 text-sm leading-6 text-slate-700 shadow-sm'
                         }`}>
-                          <div className="whitespace-pre-wrap">
-                            {renderMiniChatText(message.messagecontent)}
-                          </div>
+                          {isAssistantMessage ? (
+                            <ChatAssistantSegments
+                              content={message.messagecontent}
+                              compact
+                              progressive={
+                                index === aiWidgetMessages.length - 1 &&
+                                !aiWidgetLoading &&
+                                Boolean(message.sentat) &&
+                                Date.now() - new Date(message.sentat).getTime() < 20_000
+                              }
+                            />
+                          ) : (
+                            <div className="whitespace-pre-wrap">
+                              {renderMiniChatText(message.messagecontent)}
+                            </div>
+                          )}
 
                           {message.responsetype === 'comparison' && message.recommendations && (
                             <div className="-mx-1">
@@ -664,6 +714,17 @@ export const CustomerLayout: React.FC = () => {
                     </div>
                   )}
 
+                  {aiWidgetConsultantTyping && aiWidgetSession?.handoffstatus === 'InProgress' && (
+                    <div className="flex gap-2">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1f2937] text-[#ffd166]">
+                        <Headphones size={14} />
+                      </div>
+                      <div className="rounded-2xl border border-[#e5e7eb] bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-sm">
+                        Nhân viên đang nhập...
+                      </div>
+                    </div>
+                  )}
+
                   {aiWidgetError && (
                     <div className="rounded-2xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
                       {aiWidgetError}
@@ -675,7 +736,7 @@ export const CustomerLayout: React.FC = () => {
                   <form onSubmit={handleAiWidgetSubmit} className="flex gap-2">
                     <input
                       value={aiWidgetMessage}
-                      onChange={event => setAiWidgetMessage(event.target.value)}
+                      onChange={handleAiWidgetInputChange}
                       placeholder="Nhập nhu cầu của bạn..."
                       maxLength={500}
                       className="min-w-0 flex-1 rounded-full border border-[#e5e7eb] px-4 py-3 text-sm outline-none focus:border-[#e30613] focus:ring-4 focus:ring-[#e30613]/10"

@@ -30,8 +30,8 @@ const ForgotPasswordPage: React.FC = () => {
   return (
     <main className="customer-shell min-h-screen px-4 py-8">
       <Seo
-        title="Quen mat khau - Cuong Dien Thoai"
-        description="Khoi phuc tai khoan Cuong Dien Thoai."
+        title="Quên mật khẩu - Cuồng Điện Thoại"
+        description="Khôi phục tài khoản Cuồng Điện Thoại."
         noIndex
       />
       <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">

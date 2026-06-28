@@ -46,12 +46,12 @@ const NewsPage: React.FC = () => {
   }, [slug]);
 
   if (slug) {
-    const description = buildSeoDescription(detailPost?.summary || detailPost?.content, 'Tin tuc cong nghe moi nhat tu Cuong Dien Thoai.');
+    const description = buildSeoDescription(detailPost?.summary || detailPost?.content, 'Tin tức công nghệ mới nhất từ Cuồng Điện Thoại.');
 
     return (
       <div className="customer-shell min-h-screen pb-16">
         <Seo
-          title={detailPost ? `${detailPost.title} - Cuong Dien Thoai` : 'Tin tuc cong nghe - Cuong Dien Thoai'}
+          title={detailPost ? `${detailPost.title} - Cuồng Điện Thoại` : 'Tin tức công nghệ - Cuồng Điện Thoại'}
           description={description}
           image={detailPost?.thumbnail}
           canonicalPath={`/news/${detailPost?.slug ?? slug}`}
@@ -123,7 +123,7 @@ const NewsPage: React.FC = () => {
   return (
     <div className="customer-shell min-h-screen pb-16">
       <Seo
-        title="Tin tuc cong nghe - Cuong Dien Thoai"
+        title="Tin tức công nghệ - Cuồng Điện Thoại"
         description="Cap nhat tin tuc smartphone, xu huong cong nghe va noi dung giup ban chon dien thoai phu hop hon."
         canonicalPath="/news"
         type="article"

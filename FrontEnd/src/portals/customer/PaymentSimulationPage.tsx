@@ -1,10 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Clock3, CreditCard, Loader2, RefreshCcw, XCircle } from 'lucide-react';
-import { ordersApi, type PaymentCheckout } from '@/features/orders/api/ordersApi';
-import { formatCurrency } from '@/utils/formatters';
-import { getApiErrorMessage } from '@/utils/apiError';
 import { Seo } from '@/components/Seo';
+import { ordersApi, type PaymentCheckout } from '@/features/orders/api/ordersApi';
+import { getApiErrorMessage } from '@/utils/apiError';
+import { formatCurrency } from '@/utils/formatters';
+
+const providerLabel: Record<string, string> = {
+  MOMO: 'Momo',
+  VNPAY: 'VNPay',
+  BANK: 'Chuyển khoản ngân hàng',
+};
 
 const PaymentSimulationPage: React.FC = () => {
   const { orderId } = useParams();
@@ -75,8 +81,8 @@ const PaymentSimulationPage: React.FC = () => {
       setResult('success');
       setMessage(
         response.data.paymentstatus === 'Paid'
-          ? 'Đơn hàng đã được thanh toán đầy đủ.'
-          : 'Đã ghi nhận tiền cọc. Đơn hàng có thể được nhân viên tiếp nhận xử lý.',
+          ? 'Đơn hàng đã được ghi nhận thanh toán đầy đủ.'
+          : 'Đã ghi nhận tiền cọc. Nhân viên sẽ tiếp nhận và xử lý đơn hàng.',
       );
       setCheckout(current => current ? {
         ...current,
@@ -95,8 +101,8 @@ const PaymentSimulationPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Seo title="Thanh toan don hang - Cuong Dien Thoai" description="Trang thanh toan gia lap don hang Cuong Dien Thoai." noIndex />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Seo title="Thanh toán đơn hàng - Cuồng Điện Thoại" description="Trang thanh toán đơn hàng Cuồng Điện Thoại." noIndex />
         <Loader2 size={36} className="animate-spin text-[#e30613]" />
       </div>
     );
@@ -104,12 +110,12 @@ const PaymentSimulationPage: React.FC = () => {
 
   if (!checkout) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-20 text-center">
-        <Seo title="Thanh toan don hang - Cuong Dien Thoai" description="Trang thanh toan gia lap don hang Cuong Dien Thoai." noIndex />
-        <XCircle size={56} className="mx-auto text-red-500 mb-4" />
+      <div className="mx-auto max-w-lg px-4 py-20 text-center">
+        <Seo title="Thanh toán đơn hàng - Cuồng Điện Thoại" description="Trang thanh toán đơn hàng Cuồng Điện Thoại." noIndex />
+        <XCircle size={56} className="mx-auto mb-4 text-red-500" />
         <h1 className="text-2xl font-black text-slate-900">Không thể thanh toán</h1>
-        <p className="text-slate-500 mt-2 mb-6">{message}</p>
-        <Link to="/" className="inline-flex px-5 py-3 rounded-2xl bg-[#e30613] text-white font-bold">
+        <p className="mb-6 mt-2 text-slate-500">{message}</p>
+        <Link to="/" className="inline-flex rounded-2xl bg-[#e30613] px-5 py-3 font-bold text-white">
           Về trang chủ
         </Link>
       </div>
@@ -119,40 +125,67 @@ const PaymentSimulationPage: React.FC = () => {
   const isPaid = checkout.paymentstatus === 'Paid';
   const isDepositPaid = checkout.paymentstatus === 'DepositPaid';
   const expired = checkout.reservationexpiresat ? remainingSeconds <= 0 : false;
+  const provider = providerLabel[(checkout.paymentmethod ?? '').toUpperCase()] ?? checkout.paymentmethod ?? 'Thanh toán';
 
   return (
     <div className="customer-shell min-h-screen px-4 py-12">
-      <Seo title="Thanh toan don hang - Cuong Dien Thoai" description="Trang thanh toan gia lap don hang Cuong Dien Thoai." noIndex />
+      <Seo title="Thanh toán đơn hàng - Cuồng Điện Thoại" description="Trang thanh toán đơn hàng Cuồng Điện Thoại." noIndex />
       <div className="customer-panel mx-auto max-w-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-[#1f2937] to-[#e30613] text-white p-7">
+        <div className="bg-gradient-to-r from-[#1f2937] to-[#e30613] p-7 text-white">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-white/70 text-sm font-semibold">Thanh toán đơn hàng</p>
-              <h1 className="text-2xl font-black mt-1">#{checkout.orderid}</h1>
+              <p className="text-sm font-semibold text-white/70">Thanh toán đơn hàng</p>
+              <h1 className="mt-1 text-2xl font-black">#{checkout.orderid}</h1>
             </div>
             <CreditCard size={38} className="text-white/70" />
           </div>
         </div>
 
-        <div className="p-7 space-y-5">
+        <div className="space-y-5 p-7">
           {!isPaid && !isDepositPaid && checkout.reservationexpiresat && (
             <div className={`flex items-center justify-between rounded-2xl px-4 py-3 ${expired ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
               <span className="flex items-center gap-2 font-bold"><Clock3 size={18} /> Thời gian giữ hàng</span>
-              <span className="font-black tabular-nums text-lg">{countdown}</span>
+              <span className="font-mono text-lg font-black tabular-nums">{countdown}</span>
             </div>
           )}
 
           <div className="space-y-3 text-sm">
-            <div className="flex justify-between"><span className="text-slate-500">Người nhận</span><span className="font-bold text-slate-800">{checkout.shippingname ?? 'Khách hàng'}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">Phương thức</span><span className="font-bold text-slate-800">{checkout.paymentmethod}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">Giá trị đơn</span><span className="font-bold text-slate-800">{formatCurrency(checkout.finalamount)}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">Đã thanh toán</span><span className="font-bold text-emerald-600">{formatCurrency(checkout.paidamount)}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-slate-500">Người nhận</span><span className="text-right font-bold text-slate-800">{checkout.shippingname ?? 'Khách hàng'}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-slate-500">Phương thức</span><span className="text-right font-bold text-slate-800">{provider}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-slate-500">Giá trị đơn</span><span className="font-bold text-slate-800">{formatCurrency(checkout.finalamount)}</span></div>
+            <div className="flex justify-between gap-4"><span className="text-slate-500">Đã thanh toán</span><span className="font-bold text-emerald-600">{formatCurrency(checkout.paidamount)}</span></div>
           </div>
 
-          <div className="rounded-2xl bg-red-50 border border-red-100 p-5 text-center">
-            <p className="text-sm text-[#c4000b] font-semibold">Số tiền cần thanh toán</p>
-            <p className="text-3xl font-black text-[#c4000b] mt-1">{formatCurrency(checkout.requiredpayment)}</p>
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-center">
+            <p className="text-sm font-semibold text-[#c4000b]">Số tiền cần thanh toán</p>
+            <p className="mt-1 text-3xl font-black text-[#c4000b]">{formatCurrency(checkout.requiredpayment)}</p>
           </div>
+
+          {!isPaid && !isDepositPaid && checkout.qrImageUrl && (
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 text-center shadow-sm">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Quét mã thanh toán</p>
+              <img
+                src={checkout.qrImageUrl}
+                alt={`QR thanh toán đơn hàng #${checkout.orderid}`}
+                className="mx-auto mt-4 h-56 w-56 rounded-2xl border border-slate-100 bg-white object-contain p-2"
+              />
+              {checkout.qrContent && (
+                <div className="mx-auto mt-4 max-w-sm rounded-2xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
+                  Nội dung chuyển khoản: <span className="font-black text-[#1f2937]">{checkout.qrContent}</span>
+                </div>
+              )}
+              {checkout.paymentInstructions && (
+                <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
+                  {checkout.paymentInstructions}
+                </p>
+              )}
+              {checkout.requiresStaffConfirmation && (
+                <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700">
+                  Chuyển khoản ngân hàng cần nhân viên Sales xác nhận sau khi đối soát.
+                </p>
+              )}
+            </div>
+          )}
 
           {message && (
             <div className={`rounded-2xl p-4 text-sm font-semibold ${result === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
@@ -161,27 +194,29 @@ const PaymentSimulationPage: React.FC = () => {
           )}
 
           {result === 'success' || isPaid || isDepositPaid ? (
-            <div className="text-center py-2">
-              <CheckCircle2 size={48} className="mx-auto text-emerald-500 mb-3" />
-              <Link to="/order-lookup" className="inline-flex px-5 py-3 bg-[#e30613] text-white font-bold rounded-2xl">
+            <div className="py-2 text-center">
+              <CheckCircle2 size={48} className="mx-auto mb-3 text-emerald-500" />
+              <Link to="/order-lookup" className="inline-flex rounded-2xl bg-[#e30613] px-5 py-3 font-bold text-white">
                 Tra cứu đơn hàng
               </Link>
             </div>
           ) : (
             <div className="space-y-3">
-              <button
-                onClick={() => submitPayment(true)}
-                disabled={submitting || expired}
-                className="w-full py-3.5 bg-[#e30613] hover:bg-[#c4000b] disabled:bg-slate-300 text-white font-black rounded-2xl transition-colors"
-              >
-                {submitting ? 'Đang xử lý...' : `Mô phỏng thanh toán ${formatCurrency(checkout.requiredpayment)}`}
-              </button>
+              {!checkout.requiresStaffConfirmation && (
+                <button
+                  onClick={() => submitPayment(true)}
+                  disabled={submitting || expired}
+                  className="w-full rounded-2xl bg-[#e30613] py-3.5 font-black text-white transition-colors hover:bg-[#c4000b] disabled:bg-slate-300"
+                >
+                  {submitting ? 'Đang xử lý...' : 'Xác nhận đã thanh toán'}
+                </button>
+              )}
               <button
                 onClick={() => submitPayment(false)}
                 disabled={submitting || expired}
-                className="w-full py-3 border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50"
+                className="w-full rounded-2xl border border-slate-200 py-3 font-bold text-slate-600 hover:bg-slate-50"
               >
-                Mô phỏng giao dịch thất bại
+                Báo giao dịch không thành công
               </button>
               {result === 'failed' && !expired && (
                 <button onClick={loadPayment} className="mx-auto flex items-center gap-2 text-sm font-bold text-[#e30613]">
@@ -192,8 +227,8 @@ const PaymentSimulationPage: React.FC = () => {
           )}
         </div>
       </div>
-      <p className="text-xs text-slate-400 text-center mt-4">
-        Đây là cổng thanh toán giả lập phục vụ trình diễn khóa luận, không phát sinh giao dịch thật.
+      <p className="mt-4 text-center text-xs text-slate-400">
+        Thanh toán đang chạy ở chế độ sandbox phục vụ demo khóa luận, không phát sinh giao dịch thật.
       </p>
     </div>
   );

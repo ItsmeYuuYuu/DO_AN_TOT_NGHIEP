@@ -84,7 +84,7 @@ const OrderLookupPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen">
-      <Seo title="Tra cuu don hang - Cuong Dien Thoai" description="Tra cuu trang thai don hang va van don tai Cuong Dien Thoai." noIndex />
+      <Seo title="Tra cứu đơn hàng - Cuồng Điện Thoại" description="Tra cứu trạng thái đơn hàng và vận đơn tại Cuồng Điện Thoại." noIndex />
       {/* Header */}
       <div className="border-b customer-rule bg-white">
         <div className="max-w-2xl mx-auto px-4 py-8 text-center">
@@ -108,7 +108,10 @@ const OrderLookupPage: React.FC = () => {
                 id="lookup-phone"
                 type="tel"
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
+                onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                inputMode="numeric"
+                pattern="0[0-9]{9}"
+                maxLength={10}
                 placeholder="VD: 0901234567"
                 className="w-full border border-slate-200 focus:border-[#e30613] rounded-2xl px-4 py-3 text-sm font-medium outline-none transition-colors"
               />
@@ -121,7 +124,8 @@ const OrderLookupPage: React.FC = () => {
                 id="lookup-orderid"
                 type="number"
                 value={orderId}
-                onChange={e => setOrderId(e.target.value)}
+                onChange={e => setOrderId(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                inputMode="numeric"
                 placeholder="VD: 12345"
                 className="w-full border border-slate-200 focus:border-[#e30613] rounded-2xl px-4 py-3 text-sm font-medium outline-none transition-colors"
               />

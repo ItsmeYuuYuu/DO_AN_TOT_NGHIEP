@@ -1,5 +1,5 @@
 const DEFAULT_DESCRIPTION =
-  'Cuong Dien Thoai giup khach hang tim smartphone phu hop theo nhu cau, ngan sach, thong so va tu van AI.';
+  'Cuồng Điện Thoại giúp khách hàng tìm smartphone phù hợp theo nhu cầu, ngân sách, thông số và tư vấn AI.';
 
 const stripHtml = (value: string) =>
   value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();

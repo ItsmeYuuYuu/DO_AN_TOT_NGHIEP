@@ -203,7 +203,7 @@ namespace ECommerceBackend.Controllers
             {
                 return Conflict(new
                 {
-                    message = "Khong the xoa IMEI da co lich su giao dich kho."
+                    message = "Không thể xóa IMEI đã có lịch sử giao dịch kho."
                 });
             }
             _context.Inventoryitems.Remove(item);

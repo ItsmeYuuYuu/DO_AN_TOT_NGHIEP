@@ -38,8 +38,8 @@ const SearchPage: React.FC = () => {
   return (
     <div className="customer-shell min-h-screen pb-16">
       <Seo
-        title={query ? `Tim kiem "${query}" - Cuong Dien Thoai` : 'Tim kiem san pham - Cuong Dien Thoai'}
-        description="Trang ket qua tim kiem san pham noi bo cua Cuong Dien Thoai."
+        title={query ? `Tìm kiếm "${query}" - Cuồng Điện Thoại` : 'Tìm kiếm sản phẩm - Cuồng Điện Thoại'}
+        description="Trang kết quả tìm kiếm sản phẩm nội bộ của Cuồng Điện Thoại."
         noIndex
       />
       <section className="border-b customer-rule bg-[#ffffff] px-4 py-8 md:py-10">

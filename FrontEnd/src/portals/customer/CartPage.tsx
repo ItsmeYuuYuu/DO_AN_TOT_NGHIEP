@@ -12,7 +12,7 @@ const CartPage: React.FC = () => {
   if (items.length === 0) {
     return (
       <div className="customer-shell min-h-screen px-4 py-16">
-        <Seo title="Gio hang - Cuong Dien Thoai" description="Gio hang mua smartphone tai Cuong Dien Thoai." noIndex />
+        <Seo title="Giỏ hàng - Cuồng Điện Thoại" description="Giỏ hàng mua smartphone tại Cuồng Điện Thoại." noIndex />
         <div className="customer-panel-soft mx-auto max-w-2xl px-6 py-20 text-center">
           <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center bg-[#1f2937] text-white">
             <ShoppingBag size={42} />
@@ -42,7 +42,7 @@ const CartPage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
-      <Seo title="Gio hang - Cuong Dien Thoai" description="Gio hang mua smartphone tai Cuong Dien Thoai." noIndex />
+      <Seo title="Giỏ hàng - Cuồng Điện Thoại" description="Giỏ hàng mua smartphone tại Cuồng Điện Thoại." noIndex />
       <section className="border-b customer-rule bg-[#ffffff] px-3 py-6 sm:px-4 sm:py-8">
         <div className="customer-container flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>

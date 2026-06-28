@@ -122,7 +122,7 @@ const ProductDetailPage: React.FC = () => {
     '/favicon.svg';
   const seoDescription = buildSeoDescription(
     product.description,
-    `${product.productname}${product.brand?.name ? ` thuong hieu ${product.brand.name}` : ''}, gia tu ${formatCurrency(currentPrice)} tai Cuong Dien Thoai. Tu van AI, thong so ro rang va ho tro bao hanh theo IMEI.`,
+    `${product.productname}${product.brand?.name ? ` thương hiệu ${product.brand.name}` : ''}, giá từ ${formatCurrency(currentPrice)} tại Cuồng Điện Thoại. Tư vấn AI, thông số rõ ràng và hỗ trợ bảo hành theo IMEI.`,
   );
 
   const askAi = () => {
@@ -142,7 +142,7 @@ const ProductDetailPage: React.FC = () => {
   return (
     <div className="customer-shell pb-28 lg:pb-20">
       <Seo
-        title={`${product.productname} - Cuong Dien Thoai`}
+        title={`${product.productname} - Cuồng Điện Thoại`}
         description={seoDescription}
         image={mainImage}
         type="product"

@@ -129,7 +129,7 @@ const CustomerPolicyPage: React.FC = () => {
   return (
     <div className="customer-shell min-h-screen pb-16">
       <Seo
-        title={`${content.eyebrow} - Cuong Dien Thoai`}
+        title={`${content.eyebrow} - Cuồng Điện Thoại`}
         description={content.description}
         canonicalPath={location.pathname}
       />

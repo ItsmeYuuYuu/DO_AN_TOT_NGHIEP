@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { Bot, CheckCircle2, Headphones, MessageSquare, Send, ShoppingCart, TrendingUp, User } from 'lucide-react';
 import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatRecommendationMetrics, ChatSession } from '@/features/chat/api/chatSessionsApi';
@@ -18,8 +18,10 @@ const ConsultantChats = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [customerTyping, setCustomerTyping] = useState(false);
   const [metrics, setMetrics] = useState<ChatRecommendationMetrics | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastTypingSentRef = useRef(0);
 
   const loadQueue = useCallback(async () => {
     const data = await chatSessionsApi.getHandoffs();
@@ -51,6 +53,9 @@ const ConsultantChats = () => {
       loadQueue().catch(() => undefined);
       if (activeSession?.handoffstatus === 'InProgress') {
         loadMessages(activeSession.sessionid).catch(() => undefined);
+        chatSessionsApi.getTypingStatus(activeSession.sessionid)
+          .then(status => setCustomerTyping(status.userTyping))
+          .catch(() => undefined);
       }
     }, 3000);
     return () => window.clearInterval(timer);
@@ -88,6 +93,16 @@ const ConsultantChats = () => {
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setInput(event.target.value);
+    if (!activeSession || !event.target.value.trim()) return;
+
+    const now = Date.now();
+    if (now - lastTypingSentRef.current < 2500) return;
+    lastTypingSentRef.current = now;
+    void chatSessionsApi.setTyping(activeSession.sessionid).catch(() => undefined);
   };
 
   const close = async () => {
@@ -273,6 +288,16 @@ const ConsultantChats = () => {
                     </div>
                   );
                 })}
+                {customerTyping && activeSession.handoffstatus === 'InProgress' && (
+                  <div className="flex gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#4f46e5] text-white">
+                      <User size={16} />
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-500 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+                      Khách hàng đang nhập...
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -280,7 +305,7 @@ const ConsultantChats = () => {
                 <form onSubmit={send} className="flex gap-3 border-t border-slate-200 bg-white p-4">
                   <input
                     value={input}
-                    onChange={event => setInput(event.target.value)}
+                    onChange={handleInputChange}
                     placeholder="Nhập nội dung tư vấn..."
                     className="flex-1 border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:bg-white"
                   />

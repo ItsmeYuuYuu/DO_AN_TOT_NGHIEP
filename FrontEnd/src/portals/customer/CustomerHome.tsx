@@ -151,8 +151,8 @@ const CustomerHome: React.FC = () => {
   return (
     <div className="customer-shell min-h-screen pb-20">
       <Seo
-        title="Cuong Dien Thoai - Tu van smartphone bang AI"
-        description="Mua smartphone chinh hang, xem khuyen mai, so sanh san pham va nhan tu van AI theo nhu cau tai Cuong Dien Thoai."
+        title="Cuồng Điện Thoại - Tư vấn smartphone bằng AI"
+        description="Mua smartphone chính hãng, xem khuyến mãi, so sánh sản phẩm và nhận tư vấn AI theo nhu cầu tại Cuồng Điện Thoại."
         canonicalPath="/"
       />
 

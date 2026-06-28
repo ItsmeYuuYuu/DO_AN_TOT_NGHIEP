@@ -34,7 +34,7 @@ public class CheckoutAbuseProtectionService : ICheckoutAbuseProtectionService
             $"checkout:ip:{ip}",
             limit: 5,
             window: TimeSpan.FromMinutes(10),
-            "Ban tao don qua nhanh. Vui long thu lai sau it phut.");
+            "Bạn tạo đơn quá nhanh. Vui lòng thử lại sau ít phút.");
         if (!ipResult.Allowed) return ipResult;
 
         var normalizedPhone = Normalize(phone);
@@ -42,7 +42,7 @@ public class CheckoutAbuseProtectionService : ICheckoutAbuseProtectionService
             $"checkout:phone:{normalizedPhone}",
             limit: 3,
             window: TimeSpan.FromMinutes(30),
-            "So dien thoai nay dang tao qua nhieu don trong thoi gian ngan.");
+            "Số điện thoại này đang tạo quá nhiều đơn trong thời gian ngắn.");
         if (!phoneResult.Allowed) return phoneResult;
 
         if (isGuest)
@@ -53,7 +53,7 @@ public class CheckoutAbuseProtectionService : ICheckoutAbuseProtectionService
             {
                 return new CheckoutAbuseResult(
                     false,
-                    "Khach vang lai dang co mot don cho thanh toan. Vui long hoan tat hoac doi het thoi gian giu hang.");
+                    "Khách vãng lai đang có một đơn chờ thanh toán. Vui lòng hoàn tất hoặc đợi hết thời gian giữ hàng.");
             }
         }
 

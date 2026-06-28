@@ -9,7 +9,7 @@ namespace ECommerceBackend.Services.Chat;
 public sealed class GroundedAiProvider : IAiProvider
 {
     private const int MaxDisplayedProducts = 3;
-    private const int MaxDisplayedVariantsPerProduct = 2;
+    private const int MaxDisplayedVariantsPerProduct = 1;
     private static readonly string[] BudgetQuickReplies =
     {
         "Dưới 10 triệu",
@@ -39,6 +39,14 @@ public sealed class GroundedAiProvider : IAiProvider
     private static readonly HashSet<string> GenericModelQualifiers = new()
     {
         "pro", "max", "plus", "ultra", "mini", "new", "seal", "5g", "4g"
+    };
+    private static readonly HashSet<string> GenericComparisonWords = new()
+    {
+        "so", "sanh", "nhanh", "san", "pham", "dien", "thoai", "phone", "smartphone",
+        "may", "model", "mau", "dong", "nao", "hon", "tot", "dang", "mua",
+        "khac", "nhau", "doi", "chieu", "dat", "len", "ban", "can", "nen", "chon",
+        "giup", "em", "anh", "chi", "toi", "minh", "voi", "va", "vs", "versus",
+        "hai", "ba", "bon", "nam", "cac", "nhung", "nay", "do", "tren"
     };
 
     private readonly IProductConsultationService _productConsultation;
@@ -75,6 +83,11 @@ public sealed class GroundedAiProvider : IAiProvider
         var comparisonRequested = IsComparisonRequest(request.UserMessage);
         var referentialComparison = comparisonRequested &&
             IsReferentialComparison(request.UserMessage);
+        if (comparisonRequested && !referentialComparison && IsGenericComparisonRequest(request.UserMessage))
+        {
+            return BuildGenericComparisonClarification();
+        }
+
         var scopedProductIds = GetScopedProductIds(request);
         var useConversationContext =
             scopedProductIds.Count == 0 &&
@@ -333,12 +346,19 @@ public sealed class GroundedAiProvider : IAiProvider
             : string.Empty;
 
         return new AiAssistantResponse(
-            "Bạn đang muốn so sánh dòng hoặc model cụ thể nào? Mỗi hãng/dòng có nhiều phiên bản nên tôi cần tên máy rõ hơn để so sánh chính xác." +
+            "Anh/chị đang muốn so sánh dòng hoặc model cụ thể nào? Mỗi hãng/dòng có nhiều phiên bản nên em cần tên máy rõ hơn để so sánh chính xác." +
             exampleText,
             Array.Empty<ProductConsultationResult>(),
             ChatResponseTypes.Clarification,
             examples);
     }
+
+    private static AiAssistantResponse BuildGenericComparisonClarification() =>
+        new(
+            "Anh/chị muốn so sánh những mẫu máy nào ạ? Anh/chị gửi giúp em tên 2-3 sản phẩm cụ thể, ví dụ: Xiaomi 14T Pro với RedMagic 10 Pro, hoặc iPhone 16 với Google Pixel 10 Pro.",
+            Array.Empty<ProductConsultationResult>(),
+            ChatResponseTypes.Clarification,
+            Array.Empty<string>());
 
     private async Task<IReadOnlyList<int>> GetLanguageModelSelectionAsync(
         AiConversationRequest request,
@@ -454,16 +474,22 @@ public sealed class GroundedAiProvider : IAiProvider
         IReadOnlyList<ProductConsultationResult> products)
     {
         var normalized = ProductConsultationService.Normalize(userMessage);
+        var comparison = IsComparisonRequest(normalized);
         if (products.Count == 0)
         {
+            if (comparison)
+            {
+                return "Anh/chị muốn so sánh những mẫu máy nào? Anh/chị gửi giúp em tên 2-3 sản phẩm cụ thể, ví dụ: Xiaomi 14T Pro với RedMagic 10 Pro, hoặc iPhone 16 với Google Pixel 10 Pro.";
+            }
+
             if (normalized.Contains("xin chao") ||
                 normalized.Contains("chao ban") ||
                 normalized is "hi" or "hello")
             {
-                return "Xin chào! Tôi có thể tìm sản phẩm theo ngân sách, thương hiệu, RAM, bộ nhớ, tình trạng và tồn kho. Bạn đang cần sản phẩm như thế nào?";
+                return "Em chào anh/chị! Em có thể gợi ý máy theo ngân sách, nhu cầu chụp ảnh, chơi game, pin, thương hiệu hoặc so sánh các mẫu đang phân vân. Anh/chị đang cần tìm máy như thế nào ạ?";
             }
 
-            return "Tôi chưa tìm thấy sản phẩm khớp chính xác với yêu cầu này trong dữ liệu cửa hàng. Bạn có thể cho tôi thêm ngân sách, thương hiệu, RAM hoặc bộ nhớ mong muốn; hoặc bấm \"Gặp nhân viên tư vấn\" để được hỗ trợ trực tiếp.";
+            return "Em chưa tìm thấy sản phẩm khớp chính xác với yêu cầu này trong dữ liệu cửa hàng. Anh/chị có thể cho em thêm ngân sách, thương hiệu, RAM, bộ nhớ hoặc nhu cầu sử dụng; hoặc bấm \"Gặp nhân viên tư vấn\" để được hỗ trợ trực tiếp.";
         }
 
         var productGroups = products
@@ -473,14 +499,18 @@ public sealed class GroundedAiProvider : IAiProvider
         var productCount = productGroups.Count;
         var variantCount = productGroups.Sum(group =>
             Math.Min(group.Count(), MaxDisplayedVariantsPerProduct));
-        var comparison = IsComparisonRequest(normalized);
+        if (comparison && productGroups.Count < 2)
+        {
+            return "Em mới xác định được một sản phẩm trong yêu cầu so sánh. Anh/chị cho em thêm tên máy còn lại rõ hơn nhé, ví dụ: Redmi K70, POCO F6 Pro, RedMagic 10 Pro hoặc ROG Phone 9.";
+        }
+
         if (comparison && productGroups.Count >= 2)
         {
             return BuildComparisonResponse(productGroups);
         }
         var heading = comparison
-            ? $"Dưới đây là {productCount} sản phẩm với {variantCount} phiên bản để bạn so sánh:"
-            : $"Tôi tìm thấy {productCount} sản phẩm với {variantCount} phiên bản phù hợp:";
+            ? $"Em đã lọc ra {productCount} sản phẩm với {variantCount} phiên bản để anh/chị so sánh trước. Em sẽ đặt các điểm quan trọng cạnh nhau để mình dễ chọn hơn:"
+            : $"Em đã lọc theo nhu cầu của anh/chị và thấy {productCount} sản phẩm với {variantCount} phiên bản khá phù hợp. Em chọn mỗi máy một phiên bản đại diện, ưu tiên giá và tồn kho rõ ràng để mình dễ cân nhắc:";
         var lines = productGroups.Select((group, index) =>
         {
             var product = group.First();
@@ -519,7 +549,7 @@ public sealed class GroundedAiProvider : IAiProvider
         });
 
         return heading + "\n\n" + string.Join("\n\n", lines) +
-               "\n\nBạn có thể bổ sung ngân sách, thương hiệu, RAM, bộ nhớ hoặc nhu cầu sử dụng để tôi có thể gợi ý chính xác hơn.";
+               "\n\nNếu anh/chị muốn em lọc sát hơn nữa, mình có thể bổ sung ngân sách, thương hiệu, RAM, bộ nhớ hoặc nhu cầu sử dụng để em gợi ý chính xác hơn.";
     }
 
     private static ClarificationPrompt? GetClarification(AiConversationRequest request)
@@ -585,6 +615,13 @@ public sealed class GroundedAiProvider : IAiProvider
                 "moi 100%");
         var hasSpecificName = HasSpecificCatalogTerm(normalized);
 
+        if (!hasBudget && ContainsAny(normalized, "ngan sach", "tam gia", "khoang gia", "gia bao nhieu"))
+        {
+            return new ClarificationPrompt(
+                "Anh/chị muốn mua trong khoảng giá nào? Có ngân sách rồi em sẽ lọc máy sát nhu cầu hơn.",
+                BudgetQuickReplies);
+        }
+
         if (hasTechnicalConstraint || hasSpecificName || hasBudget && hasUsage)
             return null;
 
@@ -592,15 +629,15 @@ public sealed class GroundedAiProvider : IAiProvider
         {
             return new ClarificationPrompt(
                 hasUsage
-                    ? "Tôi đã hiểu nhu cầu chính của bạn. Ngân sách dự kiến là bao nhiêu để tôi lọc đúng các máy phù hợp?"
-                    : "Để bắt đầu, bạn muốn tìm điện thoại trong khoảng ngân sách nào?",
+                    ? "Em đã hiểu nhu cầu chính của anh/chị rồi. Ngân sách dự kiến là khoảng bao nhiêu để em lọc đúng các máy phù hợp hơn ạ?"
+                    : "Để bắt đầu, anh/chị muốn tìm điện thoại trong khoảng ngân sách nào?",
                 BudgetQuickReplies);
         }
 
         if (!hasUsage)
         {
             return new ClarificationPrompt(
-                "Trong khoảng ngân sách đó, nhu cầu bạn ưu tiên nhất là gì?",
+                "Trong khoảng ngân sách đó, anh/chị ưu tiên nhu cầu nào nhất ạ?",
                 UsageQuickReplies);
         }
 
@@ -671,6 +708,22 @@ public sealed class GroundedAiProvider : IAiProvider
             "may nao hon",
             "may nao tot hon",
             "may nao dang mua hon");
+    }
+
+    private static bool IsGenericComparisonRequest(string message)
+    {
+        var normalized = ProductConsultationService.Normalize(message);
+        if (!IsComparisonRequest(normalized) || IsReferentialComparison(normalized))
+            return false;
+
+        var targetTokens = Regex.Matches(normalized, @"[\p{L}\p{N}]+")
+            .Select(match => match.Value)
+            .Where(token =>
+                !GenericComparisonWords.Contains(token) &&
+                !int.TryParse(token, out _))
+            .ToList();
+
+        return targetTokens.Count == 0;
     }
 
     private static bool IsReferentialComparison(string message)
@@ -1088,7 +1141,7 @@ public sealed class GroundedAiProvider : IAiProvider
                $"\n\nGợi ý theo từng tiêu chí:\n{highlights}\n\n" +
                $"Nếu chưa có ưu tiên cụ thể, {balancedWinner.ProductName} là lựa chọn cân bằng nhất theo dữ liệu hiện có.\n" +
                availabilityNote +
-               "\nBạn ưu tiên camera, hiệu năng hay pin để tôi chốt một lựa chọn phù hợp nhất?";
+               "\nAnh/chị ưu tiên camera, hiệu năng hay pin để em chốt một lựa chọn phù hợp nhất?";
     }
 
     private static string ProductPath(ProductConsultationResult product) =>

@@ -76,8 +76,8 @@ const LoginPage: React.FC = () => {
   return (
     <main className="customer-shell min-h-screen px-4 py-8">
       <Seo
-        title="Dang nhap - Cuong Dien Thoai"
-        description="Dang nhap tai khoan thanh vien Cuong Dien Thoai."
+        title="Đăng nhập - Cuồng Điện Thoại"
+        description="Đăng nhập tài khoản thành viên Cuồng Điện Thoại."
         noIndex
       />
       <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">

@@ -26,7 +26,8 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 - Giỏ hàng hoạt động cho cả người đã đăng nhập và khách vãng lai.
 - Đặt hàng bằng COD, Momo, VNPay hoặc chuyển khoản ngân hàng.
 - Tra cứu đơn hàng, xem lịch sử và trạng thái đơn.
-- Đăng ký, đăng nhập, cập nhật hồ sơ và đổi mật khẩu.
+- Đăng ký có thể gửi mã xác nhận qua Gmail SMTP, đăng nhập, cập nhật hồ sơ và
+  đổi mật khẩu.
 
 ### Checkout và thanh toán
 
@@ -303,6 +304,46 @@ Nếu chuỗi kết nối Redis để trống, backend vẫn chạy bằng memor
 cache chỉ phù hợp cho một instance local và mất dữ liệu khi backend khởi động
 lại.
 
+## Cấu hình Gmail SMTP
+
+Email là tùy chọn khi chạy local. Khi chưa cấu hình SMTP, backend vẫn chạy và
+mã đăng ký demo được ghi ra console. Khi muốn gửi Gmail thật, dùng Gmail App
+Password, không dùng mật khẩu Gmail chính.
+
+Các bước:
+
+1. Vào tài khoản Gmail dùng để gửi mail.
+2. Bật xác thực 2 bước.
+3. Tạo App Password cho ứng dụng Mail.
+4. Sao chép App Password 16 ký tự, bỏ khoảng trắng nếu có.
+
+Thiết lập bằng User Secrets:
+
+```powershell
+cd BackEnd/ECommerceBackend
+dotnet user-secrets set "Email:Enabled" "true"
+dotnet user-secrets set "Email:RequireRegistrationOtp" "true"
+dotnet user-secrets set "Email:Host" "smtp.gmail.com"
+dotnet user-secrets set "Email:Port" "587"
+dotnet user-secrets set "Email:EnableSsl" "true"
+dotnet user-secrets set "Email:Username" "your-sender@gmail.com"
+dotnet user-secrets set "Email:Password" "YOUR_GMAIL_APP_PASSWORD"
+dotnet user-secrets set "Email:FromEmail" "your-sender@gmail.com"
+dotnet user-secrets set "Email:FromName" "Cuồng Điện Thoại"
+```
+
+Sau đó restart backend. Có thể kiểm tra bằng Swagger:
+
+```text
+POST /api/auth/email-test
+Authorization: Bearer <Admin JWT>
+Body: { "email": "mail-rac-can-test@gmail.com" }
+```
+
+Khi bật `Email:RequireRegistrationOtp=true`, khách đăng ký phải bấm `Gửi mã`
+và nhập mã 6 số nhận trong email. Email thông báo đơn hàng, cập nhật thanh toán
+và cập nhật trạng thái đơn cũng sẽ được gửi đến email nhận hàng.
+
 ## Cấu hình chatbot
 
 Cấu hình mặc định dùng API tương thích OpenAI của Ollama:
@@ -357,18 +398,19 @@ npm run lint
 Frontend hiện build production thành công. Tuy nhiên, cấu hình ESLint 10 vẫn
 được chạy trong quy trình kiểm tra và hiện đạt `0 lỗi, 0 cảnh báo`.
 
-Backend hiện có `67/67` integration test chạy qua, bao phủ đăng ký/đăng nhập,
+Backend hiện có `106/106` integration test chạy qua, bao phủ đăng ký/đăng nhập,
 chatbot, tranh chấp nhận tư vấn, checkout thành viên và khách vãng lai, thanh
 toán/cọc, hoàn kho, Sales/Warehouse, phân quyền API, attribution chatbot và
 nghiệp vụ bảo hành, đổi trả, hoàn tiền, vận chuyển, hỏi lại và so sánh sản phẩm.
 
 ## Trạng thái và giới hạn hiện tại
 
-- Thanh toán Momo, VNPay và ngân hàng đang là mô phỏng, chưa kết nối sandbox
-  hoặc cổng thanh toán production.
+- Thanh toán Momo, VNPay và ngân hàng đang là mô phỏng có QR demo/VietQR,
+  chưa kết nối sandbox hoặc cổng thanh toán production.
 - IMEI được tạo tạm khi Admin tạo sản phẩm để phục vụ demo. Khi vận hành thực
   tế, IMEI phải được nhập hoặc quét từ lô hàng thật.
-- Forgot password chưa gửi email khôi phục thật.
+- Forgot password chưa có token reset thật; email SMTP/OTP đăng ký có thể bật
+  qua cấu hình local.
 - Redis và Ollama đều là thành phần tùy chọn khi chạy local.
 - Dự án chưa cấu hình quy trình deploy production.
 - Vận chuyển đang dùng mô phỏng nội bộ, chưa kết nối API thật của hãng vận chuyển.
@@ -379,3 +421,5 @@ Hướng dẫn migration chi tiết nằm tại
 [docs/database_migration_guide.md](docs/database_migration_guide.md).
 Hướng dẫn backup PostgreSQL local nằm tại
 [docs/database/backup_postgres.md](docs/database/backup_postgres.md).
+Hướng dẫn email Gmail, QR thanh toán và chat realtime demo nằm tại
+[docs/integrations/email_payment_chat_demo.md](docs/integrations/email_payment_chat_demo.md).

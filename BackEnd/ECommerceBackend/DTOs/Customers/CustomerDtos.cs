@@ -9,7 +9,13 @@ namespace ECommerceBackend.DTOs.Customers
         string Phone,
         string? Email,
         string? Address,
-        DateTime? Createdat
+        DateTime? Createdat,
+        int? Userid,
+        bool? Accountisactive
+    );
+
+    public record UpdateCustomerAccountStatusDto(
+        bool Isactive
     );
 
     public record CreateCustomerRequestDto(
@@ -18,7 +24,7 @@ namespace ECommerceBackend.DTOs.Customers
         string Fullname,
 
         [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
-        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
+        [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0")]
         string Phone,
 
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]
@@ -34,7 +40,7 @@ namespace ECommerceBackend.DTOs.Customers
         string Fullname,
 
         [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
-        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
+        [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0")]
         string Phone,
 
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]

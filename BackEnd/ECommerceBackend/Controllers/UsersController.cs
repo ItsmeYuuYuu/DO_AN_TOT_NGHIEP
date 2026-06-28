@@ -165,6 +165,13 @@ namespace ECommerceBackend.Controllers
                 .FirstOrDefaultAsync(item => item.Userid == id);
             if (user == null) return NotFound();
 
+            if (user.Role?.Rolename == "Customer")
+            {
+                return Conflict(new ApiErrorDto(
+                    "Tài khoản khách hàng không nên xóa hẳn. Hãy vô hiệu hóa tài khoản để giữ lại hồ sơ, đơn hàng và lịch sử bảo hành.",
+                    null));
+            }
+
             if (CurrentUserId == user.Userid)
                 return Conflict(new ApiErrorDto("Bạn không thể tự xóa tài khoản đang đăng nhập.", null));
 

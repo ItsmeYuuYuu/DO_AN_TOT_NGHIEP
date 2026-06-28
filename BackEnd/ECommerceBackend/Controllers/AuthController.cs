@@ -1,12 +1,15 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Auth;
 using ECommerceBackend.DTOs.Common;
+using ECommerceBackend.Services.Email;
 
 namespace ECommerceBackend.Controllers
 {
@@ -16,11 +19,19 @@ namespace ECommerceBackend.Controllers
     {
         private readonly ECommerceContext _context;
         private readonly IConfiguration _config;
+        private readonly IRegistrationOtpService _registrationOtpService;
+        private readonly IEmailService _emailService;
 
-        public AuthController(ECommerceContext context, IConfiguration config)
+        public AuthController(
+            ECommerceContext context,
+            IConfiguration config,
+            IRegistrationOtpService registrationOtpService,
+            IEmailService emailService)
         {
             _context = context;
             _config  = config;
+            _registrationOtpService = registrationOtpService;
+            _emailService = emailService;
         }
 
         // ── POST /api/auth/login ──────────────────────────────────────────────
@@ -156,6 +167,57 @@ namespace ECommerceBackend.Controllers
             return Ok(new ApiMessageDto("Đổi mật khẩu thành công."));
         }
 
+        [HttpPost("registration-code")]
+        public async Task<IActionResult> RequestRegistrationCode([FromBody] RegistrationOtpRequestDto req)
+        {
+            var email = req.Email.Trim().ToLowerInvariant();
+            if (await _context.Users.AnyAsync(user =>
+                    user.Email != null && user.Email.ToLower() == email))
+            {
+                return Conflict(new ApiErrorDto("Email đã được sử dụng cho tài khoản khác.", null));
+            }
+
+            try
+            {
+                await _registrationOtpService.SendCodeAsync(email, HttpContext.RequestAborted);
+            }
+            catch (SmtpException)
+            {
+                return StatusCode(502, new ApiErrorDto(
+                    "Không gửi được mã xác nhận qua email. Vui lòng kiểm tra cấu hình Gmail SMTP hoặc App Password.",
+                    null));
+            }
+            catch (InvalidOperationException)
+            {
+                return StatusCode(502, new ApiErrorDto(
+                    "Không gửi được mã xác nhận qua email. Vui lòng kiểm tra cấu hình Gmail SMTP hoặc App Password.",
+                    null));
+            }
+
+            return Ok(new ApiMessageDto(
+                _emailService.IsConfigured
+                    ? "Mã xác nhận đã được gửi đến email của bạn."
+                    : "Mã xác nhận đã được tạo. Do chưa cấu hình SMTP, vui lòng xem console backend để lấy mã demo."));
+        }
+
+        [HttpPost("email-test")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SendTestEmail([FromBody] TestEmailRequestDto req)
+        {
+            if (!_emailService.IsConfigured)
+            {
+                return BadRequest(new ApiErrorDto(
+                    "SMTP chưa được cấu hình. Vui lòng cấu hình Email:Enabled, Username và Password trước khi gửi thử.",
+                    null));
+            }
+
+            await _emailService.SendTestEmailAsync(
+                req.Email.Trim().ToLowerInvariant(),
+                HttpContext.RequestAborted);
+
+            return Ok(new ApiMessageDto("Email kiểm thử đã được gửi. Vui lòng kiểm tra hộp thư đến hoặc mục spam."));
+        }
+
         // ── POST /api/auth/register ───────────────────────────────────────────
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto req)
@@ -180,6 +242,12 @@ namespace ECommerceBackend.Controllers
             if (await _context.Users.AnyAsync(user => user.Phone == phone))
             {
                 return Conflict(new ApiErrorDto("Số điện thoại đã được sử dụng cho tài khoản khác.", null));
+            }
+
+            if (_emailService.RequireRegistrationOtp &&
+                !await _registrationOtpService.ValidateAsync(email, req.VerificationCode, HttpContext.RequestAborted))
+            {
+                return BadRequest(new ApiErrorDto("Mã xác nhận email không đúng hoặc đã hết hạn.", null));
             }
 
             var customerRole = await _context.Roles.FirstOrDefaultAsync(r => r.Rolename == "Customer");
@@ -244,8 +312,10 @@ namespace ECommerceBackend.Controllers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
             if (user != null)
             {
-                // TODO P5: integrate email service (SMTP/SendGrid) to send reset link
-                Console.WriteLine($"[ForgotPassword-Stub] User {user.Username} requested password reset.");
+                await _emailService.SendRegistrationOtpAsync(
+                    user.Email!,
+                    "RESET-DEMO",
+                    HttpContext.RequestAborted);
             }
             return Ok(new ApiMessageDto("Nếu email này tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu."));
         }

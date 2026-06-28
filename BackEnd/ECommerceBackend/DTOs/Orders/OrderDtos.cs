@@ -118,13 +118,14 @@ namespace ECommerceBackend.DTOs.Orders
 
     public record CreateOrderRequestDto(
         int? Userid,
-        [Required(ErrorMessage = "Phuong thuc thanh toan la bat buoc")] string? Paymentmethod,
+        [Required(ErrorMessage = "Phương thức thanh toán là bắt buộc")] string? Paymentmethod,
         string? Vouchercode,
-        [Required, MinLength(1, ErrorMessage = "Don hang phai co it nhat 1 san pham")] List<CreateOrderItemRequestDto> Items,
+        [Required, MinLength(1, ErrorMessage = "Đơn hàng phải có ít nhất 1 sản phẩm")] List<CreateOrderItemRequestDto> Items,
         string? Shippingaddress,
         string? Note,
         string? Paymentoption = null,
         string? Customername = null,
+        [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại nhận hàng phải gồm 10 chữ số và bắt đầu bằng 0")]
         string? Customerphone = null,
         string? Customeremail = null
     );
@@ -156,7 +157,11 @@ namespace ECommerceBackend.DTOs.Orders
         decimal Requiredpayment,
         decimal Paidamount,
         DateTime? Reservationexpiresat,
-        string? Shippingname
+        string? Shippingname,
+        string? QrImageUrl,
+        string? QrContent,
+        string? PaymentInstructions,
+        bool RequiresStaffConfirmation
     );
 
     public record PaymentActionResultDto(
@@ -197,8 +202,8 @@ namespace ECommerceBackend.DTOs.Orders
     );
 
     public record BulkUpdateStatusRequestDto(
-        [Required, MinLength(1, ErrorMessage = "Can chon it nhat 1 don hang")] List<int> OrderIds,
-        [Required(ErrorMessage = "Trang thai la bat buoc")] string Status
+        [Required, MinLength(1, ErrorMessage = "Cần chọn ít nhất 1 đơn hàng")] List<int> OrderIds,
+        [Required(ErrorMessage = "Trạng thái là bắt buộc")] string Status
     );
 
     public record BulkUpdateFailedItemDto(int OrderId, string Reason);

@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { buildSeoDescription } from '@/utils/seoUtils';
 
-const SITE_NAME = 'Cuong Dien Thoai';
-const DEFAULT_TITLE = 'Cuong Dien Thoai - Tu van va mua smartphone chinh hang';
+const SITE_NAME = 'Cuồng Điện Thoại';
+const DEFAULT_TITLE = 'Cuồng Điện Thoại - Tư vấn và mua smartphone chính hãng';
 const DEFAULT_DESCRIPTION =
-  'Cuong Dien Thoai giup khach hang tim smartphone phu hop theo nhu cau, ngan sach, thong so va tu van AI.';
+  'Cuồng Điện Thoại giúp khách hàng tìm smartphone phù hợp theo nhu cầu, ngân sách, thông số và tư vấn AI.';
 const DEFAULT_IMAGE = '/favicon.svg';
 
 interface SeoProps {

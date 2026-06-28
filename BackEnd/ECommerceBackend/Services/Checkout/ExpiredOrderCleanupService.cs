@@ -92,7 +92,7 @@ public class ExpiredOrderCleanupService : BackgroundService
 
                 order.Orderstatus = "Cancelled";
                 order.Paymentstatus = "Expired";
-                order.Cancellationreason = "Qua 15 phut chua hoan tat thanh toan.";
+                order.Cancellationreason = "Quá 15 phút chưa hoàn tất thanh toán.";
 
                 if (!string.IsNullOrWhiteSpace(order.Shippingphone))
                 {

@@ -14,12 +14,12 @@ public record ProfileDto(
 
 public record UpdateProfileRequestDto(
     [Required(ErrorMessage = "Ho ten la bat buoc")]
-    [StringLength(100, MinimumLength = 2, ErrorMessage = "Ho ten tu 2 den 100 ky tu")]
+    [StringLength(100, MinimumLength = 2, ErrorMessage = "Họ tên từ 2 đến 100 ký tự")]
     string Fullname,
 
-    [EmailAddress(ErrorMessage = "Email khong hop le")]
+    [EmailAddress(ErrorMessage = "Email không hợp lệ")]
     string? Email,
 
-    [Phone(ErrorMessage = "So dien thoai khong hop le")]
+    [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0")]
     string? Phone
 );

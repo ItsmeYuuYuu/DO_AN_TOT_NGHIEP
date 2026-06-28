@@ -124,7 +124,7 @@ export const AdminLayout: React.FC = () => {
 
   return (
     <div className="ops-shell min-h-screen">
-      <Seo title="Admin Portal - Cuong Dien Thoai" description="Khu vuc quan tri noi bo cua Cuong Dien Thoai." noIndex />
+      <Seo title="Admin Portal - Cuồng Điện Thoại" description="Khu vực quản trị nội bộ của Cuồng Điện Thoại." noIndex />
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
         <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
           <Link to="/admin" className="flex min-w-0 items-center gap-3">

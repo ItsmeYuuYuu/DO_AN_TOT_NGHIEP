@@ -2,6 +2,7 @@ using ECommerceBackend.DTOs.Common;
 using ECommerceBackend.DTOs.Orders;
 using ECommerceBackend.Models;
 using ECommerceBackend.Services.Checkout;
+using ECommerceBackend.Services.Email;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,13 +21,19 @@ namespace ECommerceBackend.Controllers
 
         private readonly ECommerceContext _context;
         private readonly ICheckoutAbuseProtectionService _checkoutAbuseProtection;
+        private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
 
         public OrdersController(
             ECommerceContext context,
-            ICheckoutAbuseProtectionService checkoutAbuseProtection)
+            ICheckoutAbuseProtectionService checkoutAbuseProtection,
+            IEmailService emailService,
+            IConfiguration configuration)
         {
             _context = context;
             _checkoutAbuseProtection = checkoutAbuseProtection;
+            _emailService = emailService;
+            _configuration = configuration;
         }
 
         private static OrderListItemDto MapToDto(Order o)
@@ -250,6 +257,47 @@ namespace ECommerceBackend.Controllers
         private static decimal RemainingAmount(Order order) =>
             Math.Max(0, order.Finalamount - (order.Paidamount ?? 0));
 
+        private (string? QrImageUrl, string QrContent, string Instructions, bool RequiresStaffConfirmation) BuildPaymentQr(
+            Order order,
+            decimal amountDue)
+        {
+            var content = $"CDT{order.Orderid}";
+            var encodedContent = Uri.EscapeDataString(content);
+            var encodedAmount = Uri.EscapeDataString(((long)amountDue).ToString());
+
+            if (order.Paymentmethod == "BANK")
+            {
+                var bankId = _configuration["PaymentQr:BankId"] ?? "970436";
+                var accountNo = _configuration["PaymentQr:AccountNo"] ?? "0123456789";
+                var accountName = Uri.EscapeDataString(_configuration["PaymentQr:AccountName"] ?? "CUONG DIEN THOAI");
+                var qrUrl =
+                    $"https://img.vietqr.io/image/{bankId}-{accountNo}-compact2.png?amount={encodedAmount}&addInfo={encodedContent}&accountName={accountName}";
+
+                return (
+                    qrUrl,
+                    content,
+                    "Chuyển khoản đúng số tiền và nội dung để nhân viên đối soát nhanh hơn. Đơn sẽ được giữ trong thời gian chờ thanh toán.",
+                    true);
+            }
+
+            if (order.Paymentmethod is "MOMO" or "VNPAY")
+            {
+                var provider = order.Paymentmethod == "VNPAY" ? "VNPay" : "Momo";
+                var qrPayload = order.Paymentmethod == "VNPAY"
+                    ? $"https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?order={order.Orderid}&amount={amountDue:0}&content={encodedContent}&token={order.Paymenttoken}"
+                    : $"momo://payment?orderId={order.Orderid}&amount={amountDue:0}&content={encodedContent}&token={order.Paymenttoken}";
+                var qrUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=260x260&data={Uri.EscapeDataString(qrPayload)}";
+
+                return (
+                    qrUrl,
+                    content,
+                    $"Quét mã QR bằng ứng dụng {provider}, kiểm tra đúng số tiền và mã đơn trước khi xác nhận thanh toán.",
+                    false);
+            }
+
+            return (null, content, "Đơn COD không cần thanh toán online.", false);
+        }
+
         private async Task<PaymentActionResultDto> RecordSuccessfulPaymentAsync(
             Order order,
             decimal amount,
@@ -314,7 +362,7 @@ namespace ECommerceBackend.Controllers
             }
             order.Orderstatus = StatusCancelled;
             order.Paymentstatus = "Expired";
-            order.Cancellationreason = "Qua 15 phut chua hoan tat thanh toan.";
+            order.Cancellationreason = "Quá 15 phút chưa hoàn tất thanh toán.";
 
             if (!string.IsNullOrWhiteSpace(order.Shippingphone))
             {
@@ -480,7 +528,10 @@ namespace ECommerceBackend.Controllers
             [FromQuery] int? orderid)
         {
             if (string.IsNullOrWhiteSpace(phone))
-                return BadRequest(new ApiErrorDto("Vui long nhap so dien thoai de tra cuu.", null));
+                return BadRequest(new ApiErrorDto("Vui lòng nhập số điện thoại để tra cứu.", null));
+            phone = phone.Trim();
+            if (!System.Text.RegularExpressions.Regex.IsMatch(phone, @"^0\d{9}$"))
+                return BadRequest(new ApiErrorDto("Số điện thoại tra cứu phải gồm 10 chữ số và bắt đầu bằng 0.", null));
 
             var query = _context.Orders
                 .Include(o => o.Customer)
@@ -532,7 +583,7 @@ namespace ECommerceBackend.Controllers
         public async Task<ActionResult<OrderDetailDto>> PostOrder([FromBody] CreateOrderRequestDto dto)
         {
             if (dto.Items == null || dto.Items.Count == 0)
-                return BadRequest(new ApiErrorDto("Don hang phai co it nhat 1 san pham.", null));
+                return BadRequest(new ApiErrorDto("Đơn hàng phải có ít nhất 1 sản phẩm.", null));
 
             var claimUserId = GetClaimUserId();
             var isAuthenticated = claimUserId.HasValue;
@@ -543,7 +594,7 @@ namespace ECommerceBackend.Controllers
             {
                 if (!CanManageOrdersForOtherUsers(User))
                 {
-                    return StatusCode(403, new ApiErrorDto("Ban khong co quyen tao don cho nguoi dung khac.", null));
+                    return StatusCode(403, new ApiErrorDto("Bạn không có quyền tạo đơn cho người dùng khác.", null));
                 }
                 userId = dto.Userid.Value;
                 isGuest = false;
@@ -551,17 +602,17 @@ namespace ECommerceBackend.Controllers
 
             var paymentMethod = NormalizePaymentMethod(dto.Paymentmethod);
             if (!IsValidPaymentMethod(paymentMethod))
-                return BadRequest(new ApiErrorDto("Phuong thuc thanh toan khong hop le.", null));
+                return BadRequest(new ApiErrorDto("Phương thức thanh toán không hợp lệ.", null));
 
             if (isGuest && paymentMethod == "COD")
-                return BadRequest(new ApiErrorDto("Khach vang lai khong the chon COD. Vui long dat coc 30% hoac thanh toan truoc 100%.", null));
+                return BadRequest(new ApiErrorDto("Khách vãng lai không thể chọn COD. Vui lòng đặt cọc 30% hoặc thanh toán trước 100%.", null));
 
             User? user = null;
             if (!isGuest)
             {
                 user = await _context.Users.FindAsync(userId!.Value);
                 if (user == null)
-                    return BadRequest(new ApiErrorDto("User khong ton tai.", null));
+                    return BadRequest(new ApiErrorDto("Người dùng không tồn tại.", null));
             }
 
             var shippingName = (dto.Customername ?? user?.Fullname ?? string.Empty).Trim();
@@ -574,7 +625,11 @@ namespace ECommerceBackend.Controllers
                 string.IsNullOrWhiteSpace(shippingPhone) ||
                 string.IsNullOrWhiteSpace(shippingAddress))
             {
-                return BadRequest(new ApiErrorDto("Vui long nhap day du ho ten, so dien thoai va dia chi nhan hang.", null));
+                return BadRequest(new ApiErrorDto("Vui lòng nhập đầy đủ họ tên, số điện thoại và địa chỉ nhận hàng.", null));
+            }
+            if (!System.Text.RegularExpressions.Regex.IsMatch(shippingPhone, @"^0\d{9}$"))
+            {
+                return BadRequest(new ApiErrorDto("Số điện thoại nhận hàng phải gồm 10 chữ số và bắt đầu bằng 0.", null));
             }
 
             var abuseCheck = await _checkoutAbuseProtection.CheckAsync(
@@ -622,7 +677,7 @@ namespace ECommerceBackend.Controllers
                 {
                     var variant = await _context.Productvariants.FindAsync(reqItem.Variantid);
                     if (variant == null)
-                        return BadRequest(new ApiErrorDto($"VariantId {reqItem.Variantid} khong ton tai.", null));
+                        return BadRequest(new ApiErrorDto($"VariantId {reqItem.Variantid} không tồn tại.", null));
 
                     var availableItems = await _context.Inventoryitems
                         .Where(i => i.Variantid == reqItem.Variantid && i.Status == "InStock")
@@ -633,7 +688,7 @@ namespace ECommerceBackend.Controllers
                     if (availableItems.Count < reqItem.Quantity)
                     {
                         return BadRequest(new ApiErrorDto(
-                            $"San pham VariantId {reqItem.Variantid} khong du ton kho. Chi con {availableItems.Count}.",
+                            $"Sản phẩm VariantId {reqItem.Variantid} không đủ tồn kho. Chỉ còn {availableItems.Count}.",
                             null));
                     }
 
@@ -644,7 +699,7 @@ namespace ECommerceBackend.Controllers
                     {
                         package = await _context.Warrantypackages.FindAsync(reqItem.Packageid);
                         if (package == null)
-                            return BadRequest(new ApiErrorDto($"Goi bao hanh ID {reqItem.Packageid} khong ton tai.", null));
+                            return BadRequest(new ApiErrorDto($"Gói bảo hành ID {reqItem.Packageid} không tồn tại.", null));
                     }
 
                     var packagePrice = package?.Price ?? 0;
@@ -677,12 +732,12 @@ namespace ECommerceBackend.Controllers
                     var voucher = await _context.Vouchers.FirstOrDefaultAsync(v =>
                         v.Vouchercode == dto.Vouchercode && v.Isactive == true);
                     if (voucher == null)
-                        return BadRequest(new ApiErrorDto("Voucher khong hop le hoac khong hoat dong.", null));
+                        return BadRequest(new ApiErrorDto("Voucher không hợp lệ hoặc không hoạt động.", null));
 
                     if (voucher.Validfrom.HasValue && voucher.Validfrom > DateTime.UtcNow)
-                        return BadRequest(new ApiErrorDto("Voucher chua den thoi gian ap dung.", null));
+                        return BadRequest(new ApiErrorDto("Voucher chưa đến thời gian áp dụng.", null));
                     if (voucher.Validto.HasValue && voucher.Validto < DateTime.UtcNow)
-                        return BadRequest(new ApiErrorDto("Voucher da het han.", null));
+                        return BadRequest(new ApiErrorDto("Voucher đã hết hạn.", null));
 
                     if (voucher.Discountpercentage.HasValue && voucher.Discountpercentage > 0)
                     {
@@ -699,7 +754,7 @@ namespace ECommerceBackend.Controllers
                 var paymentOption = NormalizePaymentOption(dto.Paymentoption);
                 if (isGuest && string.IsNullOrEmpty(paymentOption))
                 {
-                    return BadRequest(new ApiErrorDto("Khach vang lai phai chon dat coc 30% hoac thanh toan truoc 100%.", null));
+                    return BadRequest(new ApiErrorDto("Khách vãng lai phải chọn đặt cọc 30% hoặc thanh toán trước 100%.", null));
                 }
                 if (!isGuest && string.IsNullOrEmpty(paymentOption))
                 {
@@ -770,13 +825,15 @@ namespace ECommerceBackend.Controllers
                     .Include(o => o.Orderpayments)
                     .FirstOrDefaultAsync(o => o.Orderid == order.Orderid);
 
+                await _emailService.SendOrderCreatedAsync(created!, HttpContext.RequestAborted);
+
                 return CreatedAtAction(nameof(GetOrder), new { id = order.Orderid }, MapToDetailDto(created!));
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
                 return StatusCode(500, new ApiErrorDto(
-                    "Loi he thong khi tao don hang.",
+                    "Lỗi hệ thống khi tạo đơn hàng.",
                     new Dictionary<string, string[]> { { "Error", new[] { ex.Message } } }));
             }
         }
@@ -791,9 +848,9 @@ namespace ECommerceBackend.Controllers
                 .Include(item => item.Orderitems)
                 .Include(item => item.Orderpayments)
                 .FirstOrDefaultAsync(item => item.Orderid == id);
-            if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
+            if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
             if (string.IsNullOrWhiteSpace(token) || token != order.Paymenttoken)
-                return StatusCode(403, new ApiErrorDto("Ma thanh toan khong hop le.", null));
+                return StatusCode(403, new ApiErrorDto("Mã thanh toán không hợp lệ.", null));
 
             if (order.Reservationexpiresat.HasValue &&
                 order.Reservationexpiresat <= DateTime.UtcNow &&
@@ -801,12 +858,13 @@ namespace ECommerceBackend.Controllers
             {
                 await ExpireOrderAsync(order);
                 await _context.SaveChangesAsync();
-                return StatusCode(410, new ApiErrorDto("Don hang da het thoi gian thanh toan va da duoc huy.", null));
+                return StatusCode(410, new ApiErrorDto("Đơn hàng đã hết thời gian thanh toán và đã được hủy.", null));
             }
 
             var amountDue = order.Paymentstatus == "DepositPaid"
                 ? RemainingAmount(order)
                 : order.Requiredpayment ?? RemainingAmount(order);
+            var qr = BuildPaymentQr(order, amountDue);
             return Ok(new PaymentCheckoutDto(
                 order.Orderid,
                 order.Paymentmethod,
@@ -815,7 +873,11 @@ namespace ECommerceBackend.Controllers
                 amountDue,
                 order.Paidamount ?? 0,
                 order.Reservationexpiresat,
-                order.Shippingname));
+                order.Shippingname,
+                qr.QrImageUrl,
+                qr.QrContent,
+                qr.Instructions,
+                qr.RequiresStaffConfirmation));
         }
 
         [HttpPost("{id}/simulate-payment")]
@@ -830,13 +892,13 @@ namespace ECommerceBackend.Controllers
                     .ThenInclude(item => item.Package)
                 .Include(item => item.Orderpayments)
                 .FirstOrDefaultAsync(item => item.Orderid == id);
-            if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
+            if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
             if (dto.Paymenttoken != order.Paymenttoken)
-                return StatusCode(403, new ApiErrorDto("Ma thanh toan khong hop le.", null));
+                return StatusCode(403, new ApiErrorDto("Mã thanh toán không hợp lệ.", null));
             if (order.Orderstatus == StatusCancelled)
-                return Conflict(new ApiErrorDto("Don hang da bi huy.", null));
+                return Conflict(new ApiErrorDto("Đơn hàng đã bị hủy.", null));
             if (order.Paymentmethod == "COD")
-                return BadRequest(new ApiErrorDto("Don COD khong su dung cong thanh toan online.", null));
+                return BadRequest(new ApiErrorDto("Đơn COD không sử dụng cổng thanh toán online.", null));
 
             if (order.Reservationexpiresat.HasValue &&
                 order.Reservationexpiresat <= DateTime.UtcNow &&
@@ -845,7 +907,7 @@ namespace ECommerceBackend.Controllers
                 await ExpireOrderAsync(order);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return StatusCode(410, new ApiErrorDto("Don hang da het thoi gian thanh toan va da duoc huy.", null));
+                return StatusCode(410, new ApiErrorDto("Đơn hàng đã hết thời gian thanh toán và đã được hủy.", null));
             }
 
             if (!dto.Success)
@@ -863,11 +925,11 @@ namespace ECommerceBackend.Controllers
                 });
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return BadRequest(new ApiErrorDto("Thanh toan gia lap that bai. Ban co the thu lai truoc khi het han.", null));
+                return BadRequest(new ApiErrorDto("Giao dịch chưa thành công. Bạn có thể thử lại trước khi hết thời gian giữ hàng.", null));
             }
 
             if (order.Paymentstatus == "Paid")
-                return Conflict(new ApiErrorDto("Don hang da thanh toan du.", null));
+                return Conflict(new ApiErrorDto("Đơn hàng đã thanh toán đủ.", null));
 
             var amount = order.Paymentstatus == "DepositPaid"
                 ? RemainingAmount(order)
@@ -875,6 +937,7 @@ namespace ECommerceBackend.Controllers
             var result = await RecordSuccessfulPaymentAsync(order, amount, null, "SIM");
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+            await _emailService.SendPaymentUpdatedAsync(order, HttpContext.RequestAborted);
             return Ok(result);
         }
 
@@ -888,26 +951,27 @@ namespace ECommerceBackend.Controllers
             var order = await _context.Orders
                 .Include(item => item.Orderpayments)
                 .FirstOrDefaultAsync(item => item.Orderid == id);
-            if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
+            if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
             if (order.Orderstatus == StatusCancelled)
-                return Conflict(new ApiErrorDto("Khong the xac nhan thanh toan cho don da huy.", null));
+                return Conflict(new ApiErrorDto("Không thể xác nhận thanh toán cho đơn đã hủy.", null));
             if (order.Paymentmethod == "COD")
-                return BadRequest(new ApiErrorDto("COD duoc ghi nhan thanh toan khi don hoan thanh.", null));
+                return BadRequest(new ApiErrorDto("COD được ghi nhận thanh toán khi đơn hoàn thành.", null));
             if (order.Paymentstatus == "Paid")
-                return Conflict(new ApiErrorDto("Don hang da thanh toan du.", null));
+                return Conflict(new ApiErrorDto("Đơn hàng đã thanh toán đủ.", null));
 
             var minimumAmount = order.Paymentstatus == "DepositPaid"
                 ? RemainingAmount(order)
                 : order.Requiredpayment ?? RemainingAmount(order);
             var amount = dto.Amount ?? minimumAmount;
             if (amount <= 0 || amount > RemainingAmount(order))
-                return BadRequest(new ApiErrorDto("So tien xac nhan khong hop le.", null));
+                return BadRequest(new ApiErrorDto("Số tiền xác nhận không hợp lệ.", null));
             if (order.Paymentstatus is "AwaitingDeposit" or "AwaitingFullPayment" && amount < minimumAmount)
-                return BadRequest(new ApiErrorDto("So tien chua dat muc thanh toan bat buoc cua don hang.", null));
+                return BadRequest(new ApiErrorDto("Số tiền chưa đạt mức thanh toán bắt buộc của đơn hàng.", null));
 
             var result = await RecordSuccessfulPaymentAsync(order, amount, dto.Transactionref, "STAFF");
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+            await _emailService.SendPaymentUpdatedAsync(order, HttpContext.RequestAborted);
             return Ok(result);
         }
 
@@ -958,18 +1022,18 @@ namespace ECommerceBackend.Controllers
 
                 if (currentStatus == StatusCancelled || currentStatus == StatusCompleted)
                 {
-                    return BadRequest(new ApiErrorDto($"Don hang da ket thuc o trang thai {currentStatus}.", null));
+                    return BadRequest(new ApiErrorDto($"Đơn hàng đã kết thúc ở trạng thái {currentStatus}.", null));
                 }
 
                 if (!validTransitions.ContainsKey(currentStatus) || !validTransitions[currentStatus].Contains(newStatus))
                 {
-                    return BadRequest(new ApiErrorDto($"Khong the chuyen trang thai tu {currentStatus} sang {newStatus}.", null));
+                    return BadRequest(new ApiErrorDto($"Không thể chuyển trạng thái từ {currentStatus} sang {newStatus}.", null));
                 }
 
                 if (newStatus == StatusProcessing && !IsPaymentReadyForProcessing(order))
                 {
                     return BadRequest(new ApiErrorDto(
-                        "Don hang chua dat coc/thanh toan du dieu kien de chuyen sang xu ly.",
+                        "Đơn hàng chưa đặt cọc/thanh toán đủ điều kiện để chuyển sang xử lý.",
                         null));
                 }
 
@@ -978,7 +1042,7 @@ namespace ECommerceBackend.Controllers
                     order.Paymentstatus != "Paid")
                 {
                     return BadRequest(new ApiErrorDto(
-                        "Don hang online phai thanh toan du truoc khi hoan thanh.",
+                        "Đơn hàng online phải thanh toán đủ trước khi hoàn thành.",
                         null));
                 }
 
@@ -1005,6 +1069,7 @@ namespace ECommerceBackend.Controllers
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                await _emailService.SendOrderStatusUpdatedAsync(order, HttpContext.RequestAborted);
 
                 return Ok(new UpdateOrderStatusResponseDto(order.Orderid, order.Orderstatus));
             }
@@ -1012,7 +1077,7 @@ namespace ECommerceBackend.Controllers
             {
                 await transaction.RollbackAsync();
                 return StatusCode(500, new ApiErrorDto(
-                    "Loi khi cap nhat trang thai don hang.",
+                    "Lỗi khi cập nhật trạng thái đơn hàng.",
                     new Dictionary<string, string[]> { { "Error", new[] { ex.Message } } }));
             }
         }
@@ -1036,7 +1101,7 @@ namespace ECommerceBackend.Controllers
                     .ToListAsync();
 
                 if (!orders.Any())
-                    return BadRequest(new ApiErrorDto("Khong tim thay don hang nao.", null));
+                    return BadRequest(new ApiErrorDto("Không tìm thấy đơn hàng nào.", null));
 
                 var updatedOrderIds = new List<int>();
                 var failed = new List<BulkUpdateFailedItemDto>();
@@ -1048,13 +1113,13 @@ namespace ECommerceBackend.Controllers
 
                     if (currentStatus == StatusCancelled || currentStatus == StatusCompleted)
                     {
-                        failed.Add(new BulkUpdateFailedItemDto(order.Orderid, $"Don hang da ket thuc o trang thai {currentStatus}."));
+                        failed.Add(new BulkUpdateFailedItemDto(order.Orderid, $"Đơn hàng đã kết thúc ở trạng thái {currentStatus}."));
                         continue;
                     }
 
                     if (!validTransitions.ContainsKey(currentStatus) || !validTransitions[currentStatus].Contains(newStatus))
                     {
-                        failed.Add(new BulkUpdateFailedItemDto(order.Orderid, $"Khong the chuyen tu {currentStatus} sang {newStatus}."));
+                        failed.Add(new BulkUpdateFailedItemDto(order.Orderid, $"Không thể chuyển từ {currentStatus} sang {newStatus}."));
                         continue;
                     }
 
@@ -1062,7 +1127,7 @@ namespace ECommerceBackend.Controllers
                     {
                         failed.Add(new BulkUpdateFailedItemDto(
                             order.Orderid,
-                            "Don hang chua dat coc/thanh toan du dieu kien."));
+                            "Đơn hàng chưa đặt cọc/thanh toán đủ điều kiện."));
                         continue;
                     }
 
@@ -1072,7 +1137,7 @@ namespace ECommerceBackend.Controllers
                     {
                         failed.Add(new BulkUpdateFailedItemDto(
                             order.Orderid,
-                            "Don online chua thanh toan du."));
+                            "Đơn online chưa thanh toán đủ."));
                         continue;
                     }
 
@@ -1102,8 +1167,8 @@ namespace ECommerceBackend.Controllers
                 await transaction.CommitAsync();
 
                 var message = failed.Any()
-                    ? $"Cap nhat thanh cong {updatedOrderIds.Count} don hang, {failed.Count} loi."
-                    : $"Da cap nhat thanh cong {updatedOrderIds.Count} don hang.";
+                    ? $"Cập nhật thành công {updatedOrderIds.Count} đơn hàng, {failed.Count} lỗi."
+                    : $"Đã cập nhật thành công {updatedOrderIds.Count} đơn hàng.";
 
                 return Ok(new BulkUpdateStatusResponseDto(updatedOrderIds, failed, message));
             }
@@ -1111,7 +1176,7 @@ namespace ECommerceBackend.Controllers
             {
                 logger.LogError(ex, "Bulk order status update failed.");
                 await transaction.RollbackAsync();
-                return StatusCode(500, new ApiErrorDto("Loi he thong khi cap nhat trang thai.", null));
+                return StatusCode(500, new ApiErrorDto("Lỗi hệ thống khi cập nhật trạng thái.", null));
             }
         }
 

@@ -72,6 +72,10 @@ export interface PaymentCheckout {
   paidamount: number;
   reservationexpiresat?: string;
   shippingname?: string;
+  qrImageUrl?: string;
+  qrContent?: string;
+  paymentInstructions?: string;
+  requiresStaffConfirmation: boolean;
 }
 
 export interface PaymentActionResult {

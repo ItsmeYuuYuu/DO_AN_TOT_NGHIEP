@@ -62,6 +62,11 @@ export interface ChatRecommendationMetrics {
   }>;
 }
 
+export interface ChatTypingStatus {
+  userTyping: boolean;
+  consultantTyping: boolean;
+}
+
 const GUEST_TOKEN_KEY = 'ec_guest_checkout_token';
 const LEGACY_GUEST_TOKEN_KEY = 'guest_chat_token';
 
@@ -108,6 +113,15 @@ export const chatSessionsApi = {
       { messagecontent: content },
       { headers: getHeaders(), timeout: 120_000 },
     );
+    return response.data;
+  },
+
+  setTyping: async (id: number): Promise<void> => {
+    await apiClient.post(`/chatsessions/${id}/typing`, {}, { headers: getHeaders() });
+  },
+
+  getTypingStatus: async (id: number): Promise<ChatTypingStatus> => {
+    const response = await apiClient.get(`/chatsessions/${id}/typing-status`, { headers: getHeaders() });
     return response.data;
   },
 

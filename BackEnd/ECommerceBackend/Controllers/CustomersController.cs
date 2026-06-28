@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Customers;
+using ECommerceBackend.DTOs.Common;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using System;
@@ -16,22 +17,116 @@ namespace ECommerceBackend.Controllers
 
         public CustomersController(ECommerceContext context) => _context = context;
 
-        private static CustomerDto MapToDto(Customer c) => new CustomerDto(
+        private static string? NormalizeEmail(string? email) =>
+            string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+
+        private static string? NormalizePhone(string? phone) =>
+            string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
+
+        private static CustomerDto MapToDto(Customer c, User? account = null) => new CustomerDto(
             c.Customerid,
             c.Fullname,
             c.Phone,
             c.Email,
             c.Address,
-            c.Createdat
+            c.Createdat,
+            account?.Userid,
+            account?.Isactive
         );
+
+        private async Task<List<int>> GetCustomerRoleIdsAsync() =>
+            await _context.Roles
+                .AsNoTracking()
+                .Where(role => role.Rolename == "Customer")
+                .Select(role => role.Roleid)
+                .ToListAsync();
+
+        private async Task<User?> FindLinkedCustomerAccountAsync(Customer customer, bool track = false)
+        {
+            var customerRoleIds = await GetCustomerRoleIdsAsync();
+            if (customerRoleIds.Count == 0)
+                return null;
+
+            var email = NormalizeEmail(customer.Email);
+            var phone = NormalizePhone(customer.Phone);
+
+            if (email == null && phone == null)
+                return null;
+
+            IQueryable<User> query = _context.Users
+                .Where(user => user.Roleid.HasValue && customerRoleIds.Contains(user.Roleid.Value));
+
+            if (!track)
+                query = query.AsNoTracking();
+
+            return await query.FirstOrDefaultAsync(user =>
+                (email != null && user.Email != null && user.Email.ToLower() == email) ||
+                (phone != null && user.Phone == phone));
+        }
 
         // GET: api/Customers
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant")]
         public async Task<ActionResult<IEnumerable<CustomerDto>>> GetCustomers()
         {
-            var customers = await _context.Customers.ToListAsync();
-            return Ok(customers.Select(MapToDto));
+            var customerRoleIds = await GetCustomerRoleIdsAsync();
+
+            var nonCustomerUsers = await _context.Users
+                .AsNoTracking()
+                .Where(user => !user.Roleid.HasValue || !customerRoleIds.Contains(user.Roleid.Value))
+                .Select(user => new { user.Email, user.Phone })
+                .ToListAsync();
+
+            var customerUsers = await _context.Users
+                .AsNoTracking()
+                .Where(user => user.Roleid.HasValue && customerRoleIds.Contains(user.Roleid.Value))
+                .Select(user => new { user.Userid, user.Email, user.Phone, user.Isactive })
+                .ToListAsync();
+
+            var internalEmails = nonCustomerUsers
+                .Where(user => !string.IsNullOrWhiteSpace(user.Email))
+                .Select(user => user.Email!.Trim().ToLowerInvariant())
+                .ToHashSet();
+            var internalPhones = nonCustomerUsers
+                .Where(user => !string.IsNullOrWhiteSpace(user.Phone))
+                .Select(user => user.Phone!.Trim())
+                .ToHashSet();
+
+            var customers = await _context.Customers
+                .AsNoTracking()
+                .OrderByDescending(customer => customer.Createdat ?? DateTime.MinValue)
+                .ThenByDescending(customer => customer.Customerid)
+                .ToListAsync();
+
+            var visibleCustomers = customers.Where(customer =>
+            {
+                var email = NormalizeEmail(customer.Email);
+                var phone = NormalizePhone(customer.Phone);
+                var matchesInternalEmail = !string.IsNullOrWhiteSpace(email) && internalEmails.Contains(email);
+                var matchesInternalPhone = !string.IsNullOrWhiteSpace(phone) && internalPhones.Contains(phone);
+                return !matchesInternalEmail && !matchesInternalPhone;
+            }).ToList();
+
+            User? FindLinkedAccount(Customer customer)
+            {
+                var email = NormalizeEmail(customer.Email);
+                var phone = NormalizePhone(customer.Phone);
+                var match = customerUsers.FirstOrDefault(user =>
+                    (!string.IsNullOrWhiteSpace(email) && NormalizeEmail(user.Email) == email) ||
+                    (!string.IsNullOrWhiteSpace(phone) && NormalizePhone(user.Phone) == phone));
+
+                return match == null
+                    ? null
+                    : new User
+                    {
+                        Userid = match.Userid,
+                        Email = match.Email,
+                        Phone = match.Phone,
+                        Isactive = match.Isactive
+                    };
+            }
+
+            return Ok(visibleCustomers.Select(customer => MapToDto(customer, FindLinkedAccount(customer))));
         }
 
         // GET: api/Customers/5
@@ -65,7 +160,8 @@ namespace ECommerceBackend.Controllers
                 if (!matchesEmail && !matchesPhone) return Forbid();
             }
 
-            return Ok(MapToDto(customer));
+            var account = await FindLinkedCustomerAccountAsync(customer);
+            return Ok(MapToDto(customer, account));
         }
 
         // POST: api/Customers
@@ -129,7 +225,30 @@ namespace ECommerceBackend.Controllers
                 throw;
             }
 
-            return Ok(MapToDto(customer));
+            var account = await FindLinkedCustomerAccountAsync(customer);
+            return Ok(MapToDto(customer, account));
+        }
+
+        // PATCH: api/Customers/5/account-status
+        [HttpPatch("{id}/account-status")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> UpdateCustomerAccountStatus(int id, [FromBody] UpdateCustomerAccountStatusDto dto)
+        {
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null) return NotFound();
+
+            var account = await FindLinkedCustomerAccountAsync(customer, track: true);
+            if (account == null)
+            {
+                return BadRequest(new ApiErrorDto(
+                    "Khách hàng này chưa có tài khoản đăng nhập để khóa hoặc mở khóa.",
+                    null));
+            }
+
+            account.Isactive = dto.Isactive;
+            await _context.SaveChangesAsync();
+
+            return Ok(MapToDto(customer, account));
         }
 
         // DELETE: api/Customers/5

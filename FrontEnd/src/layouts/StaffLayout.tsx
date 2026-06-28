@@ -82,7 +82,7 @@ export const StaffLayout: React.FC = () => {
 
   return (
     <div className="ops-shell flex h-screen overflow-hidden">
-      <Seo title="Staff Portal - Cuong Dien Thoai" description="Khu vuc nhan vien noi bo cua Cuong Dien Thoai." noIndex />
+      <Seo title="Staff Portal - Cuồng Điện Thoại" description="Khu vực nhân viên nội bộ của Cuồng Điện Thoại." noIndex />
       <aside className="flex w-72 shrink-0 flex-col border-r border-slate-200 bg-[#172033] text-white">
         <div className="flex h-20 items-center border-b border-white/10 px-5">
           <div className="flex min-w-0 items-center gap-3">

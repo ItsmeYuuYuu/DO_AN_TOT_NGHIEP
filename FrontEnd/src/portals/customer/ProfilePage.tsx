@@ -24,6 +24,9 @@ import { notifyError, notifySuccess } from '@/utils/notifications';
 import { MyReviews } from './MyReviews';
 import { Seo } from '@/components/Seo';
 
+const digitsOnly = (value: string, maxLength = 10) =>
+  value.replace(/\D/g, '').slice(0, maxLength);
+
 interface Order {
   orderid: number;
   orderdate: string;
@@ -183,7 +186,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="customer-shell min-h-screen pb-16">
-      <Seo title="Tai khoan cua toi - Cuong Dien Thoai" description="Trang tai khoan va lich su don hang cua khach hang Cuong Dien Thoai." noIndex />
+      <Seo title="Tài khoản của tôi - Cuồng Điện Thoại" description="Trang tài khoản và lịch sử đơn hàng của khách hàng Cuồng Điện Thoại." noIndex />
       <section className="border-b customer-rule bg-[#ffffff] px-3 py-6 sm:px-4 sm:py-8">
         <div className="customer-container">
           <p className="customer-label">Member account</p>
@@ -344,8 +347,12 @@ const ProfilePage: React.FC = () => {
                 <label className="block">
                   <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Số điện thoại</span>
                   <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="0[0-9]{9}"
+                    maxLength={10}
                     value={profileForm.phone}
-                    onChange={event => setProfileForm(prev => ({ ...prev, phone: event.target.value }))}
+                    onChange={event => setProfileForm(prev => ({ ...prev, phone: digitsOnly(event.target.value) }))}
                     className="mt-2 w-full rounded-2xl border border-[#e5e7eb] px-4 py-3 text-sm font-bold outline-none focus:border-[#e30613]"
                   />
                 </label>

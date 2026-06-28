@@ -6,11 +6,13 @@ export interface RegisterRequest {
   fullname: string;
   email: string;
   phone: string;
+  verificationCode?: string;
 }
 
 export const authApi = {
   login: (username: string, password: string) =>
     apiClient.post('/auth/login', { username, password }),
+  requestRegistrationCode: (email: string) => apiClient.post('/auth/registration-code', { email }),
   register: (data: RegisterRequest) => apiClient.post('/auth/register', data),
   forgotPassword: (email: string) => apiClient.post('/auth/forgot-password', { email }),
   logout: () => apiClient.post('/auth/logout'),

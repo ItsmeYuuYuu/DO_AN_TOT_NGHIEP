@@ -66,7 +66,7 @@ namespace ECommerceBackend.Controllers
         public async Task<ActionResult<NewsDto>> GetNewsItemBySlug(string slug)
         {
             if (string.IsNullOrWhiteSpace(slug))
-                return NotFound(new ApiErrorDto("Tin tuc khong ton tai.", null));
+                return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
 
             var normalizedSlug = slug.Trim().ToLowerInvariant();
             var news = await _context.News
@@ -78,7 +78,7 @@ namespace ECommerceBackend.Controllers
                     .Include(n => n.User)
                     .FirstOrDefaultAsync(n => n.Postid == legacyId && n.Isactive == true);
             }
-            if (news == null) return NotFound(new ApiErrorDto("Tin tuc khong ton tai.", null));
+            if (news == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
             return Ok(MapToDto(news));
         }
 

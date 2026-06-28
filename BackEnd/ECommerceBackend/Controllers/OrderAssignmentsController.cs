@@ -96,7 +96,7 @@ public class OrderAssignmentsController : ControllerBase
     {
         department = NormalizeDepartment(department);
         if (department.Length == 0)
-            return BadRequest(new ApiErrorDto("Bo phan khong hop le.", null));
+            return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
         if (!CanWorkDepartment(department)) return Forbid();
 
         var query = _context.Orders
@@ -129,7 +129,7 @@ public class OrderAssignmentsController : ControllerBase
     {
         department = NormalizeDepartment(department);
         if (department.Length == 0)
-            return BadRequest(new ApiErrorDto("Bo phan khong hop le.", null));
+            return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
 
         var employees = await _context.Users
             .AsNoTracking()
@@ -154,32 +154,32 @@ public class OrderAssignmentsController : ControllerBase
     {
         var department = NormalizeDepartment(dto.Department);
         if (department.Length == 0)
-            return BadRequest(new ApiErrorDto("Bo phan khong hop le.", null));
+            return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
         if (!CanWorkDepartment(department)) return Forbid();
 
         var userId = GetClaimUserId();
         if (!userId.HasValue)
-            return Unauthorized(new ApiErrorDto("Khong xac dinh duoc nhan vien.", null));
+            return Unauthorized(new ApiErrorDto("Không xác định được nhân viên.", null));
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
         var order = await _context.Orders
             .Include(order => order.Orderassignments)
             .FirstOrDefaultAsync(order => order.Orderid == orderId);
-        if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
+        if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
 
         if (department == SalesDepartment && order.Orderstatus != "Pending")
             return BadRequest(new ApiErrorDto("Sales chi co the nhan don dang cho xu ly.", null));
         if (department == WarehouseDepartment &&
             (order.Orderstatus != "Processing" ||
              !order.Orderassignments.Any(item => item.Department == WarehouseDepartment)))
-            return BadRequest(new ApiErrorDto("Don hang chua duoc ban giao cho kho.", null));
+            return BadRequest(new ApiErrorDto("Đơn hàng chưa được bàn giao cho kho.", null));
 
         var assignment = order.Orderassignments
             .FirstOrDefault(item => item.Department == department);
         if (assignment?.Status == "Assigned" && assignment.Assigneduserid != userId)
-            return Conflict(new ApiErrorDto("Don hang da co nhan vien khac phu trach.", null));
+            return Conflict(new ApiErrorDto("Đơn hàng đã có nhân viên khác phụ trách.", null));
         if (assignment?.Status == "Completed")
-            return Conflict(new ApiErrorDto("Cong viec cua bo phan nay da hoan tat.", null));
+            return Conflict(new ApiErrorDto("Công việc của bộ phận này đã hoàn tất.", null));
 
         if (assignment == null)
         {
@@ -206,7 +206,7 @@ public class OrderAssignmentsController : ControllerBase
         catch (DbUpdateException)
         {
             await transaction.RollbackAsync();
-            return Conflict(new ApiErrorDto("Don hang vua duoc nhan vien khac tiep nhan.", null));
+            return Conflict(new ApiErrorDto("Đơn hàng vừa được nhân viên khác tiếp nhận.", null));
         }
 
         await _context.Entry(assignment).Reference(item => item.Assigneduser).LoadAsync();
@@ -222,25 +222,25 @@ public class OrderAssignmentsController : ControllerBase
     {
         var department = NormalizeDepartment(dto.Department);
         if (department.Length == 0)
-            return BadRequest(new ApiErrorDto("Bo phan khong hop le.", null));
+            return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
 
         var assignedByUserId = GetClaimUserId();
         var target = await _context.Users
             .Include(user => user.Role)
             .FirstOrDefaultAsync(user => user.Userid == dto.Assigneduserid);
         if (target == null || target.Isactive != true)
-            return BadRequest(new ApiErrorDto("Nhan vien duoc chon khong hoat dong.", null));
+            return BadRequest(new ApiErrorDto("Nhân viên được chọn không hoạt động.", null));
         if (target.Role?.Rolename != department)
-            return BadRequest(new ApiErrorDto("Nhan vien khong thuoc bo phan duoc phan cong.", null));
+            return BadRequest(new ApiErrorDto("Nhân viên không thuộc bộ phận được phân công.", null));
 
         var order = await _context.Orders
             .Include(item => item.Orderassignments)
             .FirstOrDefaultAsync(item => item.Orderid == orderId);
-        if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
+        if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
 
         var assignment = order.Orderassignments.FirstOrDefault(item => item.Department == department);
         if (assignment?.Status == "Completed")
-            return Conflict(new ApiErrorDto("Cong viec cua bo phan nay da hoan tat.", null));
+            return Conflict(new ApiErrorDto("Công việc của bộ phận này đã hoàn tất.", null));
 
         if (assignment == null)
         {
@@ -281,11 +281,11 @@ public class OrderAssignmentsController : ControllerBase
                         .ThenInclude(item => item!.Product)
             .Include(item => item.Orderassignments)
             .FirstOrDefaultAsync(item => item.Orderid == orderId);
-        if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
+        if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
         if (order.Orderstatus != "Pending")
             return BadRequest(new ApiErrorDto("Chi don dang cho moi co the ban giao.", null));
         if (!IsPaymentReady(order))
-            return BadRequest(new ApiErrorDto("Don hang chua dat coc/thanh toan du dieu kien.", null));
+            return BadRequest(new ApiErrorDto("Đơn hàng chưa đặt cọc/thanh toán đủ điều kiện.", null));
 
         var salesAssignment = order.Orderassignments
             .FirstOrDefault(item => item.Department == SalesDepartment);
@@ -293,7 +293,7 @@ public class OrderAssignmentsController : ControllerBase
             (salesAssignment == null ||
              salesAssignment.Assigneduserid != userId ||
              salesAssignment.Status != "Assigned"))
-            return StatusCode(403, new ApiErrorDto("Ban phai nhan don truoc khi ban giao.", null));
+            return StatusCode(403, new ApiErrorDto("Bạn phải nhận đơn trước khi bàn giao.", null));
 
         if (salesAssignment != null)
         {
@@ -349,9 +349,9 @@ public class OrderAssignmentsController : ControllerBase
             .Include(item => item.Orderassignments)
                 .ThenInclude(item => item.Assigneduser)
             .FirstOrDefaultAsync(item => item.Orderid == orderId);
-        if (order == null) return NotFound(new ApiErrorDto("Don hang khong ton tai.", null));
+        if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
         if (order.Orderstatus != "Processing")
-            return BadRequest(new ApiErrorDto("Don hang khong o trang thai dang xu ly.", null));
+            return BadRequest(new ApiErrorDto("Đơn hàng không ở trạng thái đang xử lý.", null));
         if (await _context.Shipments.AnyAsync(item => item.Orderid == orderId))
             return Conflict(new ApiErrorDto("Đơn hàng đã có vận đơn.", null));
 
@@ -366,10 +366,10 @@ public class OrderAssignmentsController : ControllerBase
         var assignment = order.Orderassignments
             .FirstOrDefault(item => item.Department == WarehouseDepartment);
         if (assignment == null)
-            return BadRequest(new ApiErrorDto("Don hang chua duoc ban giao cho kho.", null));
+            return BadRequest(new ApiErrorDto("Đơn hàng chưa được bàn giao cho kho.", null));
         if (User.IsInRole("Warehouse") &&
             (assignment.Assigneduserid != userId || assignment.Status != "Assigned"))
-            return StatusCode(403, new ApiErrorDto("Ban phai nhan don truoc khi xac nhan giao.", null));
+            return StatusCode(403, new ApiErrorDto("Bạn phải nhận đơn trước khi xác nhận giao.", null));
 
         var expectedImeis = order.Orderitems
             .Where(item => !string.IsNullOrWhiteSpace(item.Imei))
@@ -386,7 +386,7 @@ public class OrderAssignmentsController : ControllerBase
             !expectedImeis.SetEquals(confirmedSet))
         {
             return BadRequest(new ApiErrorDto(
-                "Danh sach IMEI xac nhan khong khop voi thiet bi cua don hang.",
+                "Danh sách IMEI xác nhận không khớp với thiết bị của đơn hàng.",
                 null));
         }
 
@@ -399,7 +399,7 @@ public class OrderAssignmentsController : ControllerBase
             inventoryItems.Any(item => item.Status != "Reserved"))
         {
             return Conflict(new ApiErrorDto(
-                "Co thiet bi khong con o trang thai Reserved. Vui long kiem tra lai kho.",
+                "Có thiết bị không còn ở trạng thái Reserved. Vui lòng kiểm tra lại kho.",
                 null));
         }
 

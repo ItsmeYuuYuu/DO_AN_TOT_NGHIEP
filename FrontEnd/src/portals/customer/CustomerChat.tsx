@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Bot,
@@ -17,6 +17,7 @@ import { chatSessionsApi } from '../../features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '../../features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
+import { ChatAssistantSegments } from '@/features/chat/components/ChatAssistantSegments';
 import { formatDateTime } from '../../utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
@@ -24,9 +25,9 @@ import { Seo } from '@/components/Seo';
 
 
 const quickPrompts = [
-  { label: 'Chụp ảnh đẹp', prompt: 'Tôi cần điện thoại chụp ảnh đẹp trong tầm giá hợp lý', icon: Camera },
+  { label: 'Chụp ảnh đẹp', prompt: 'Tìm máy chụp ảnh đẹp trong tầm giá hợp lý', icon: Camera },
   { label: 'Pin dùng lâu', prompt: 'Gợi ý điện thoại pin lâu, sạc nhanh, dùng cả ngày', icon: Zap },
-  { label: 'Chơi game', prompt: 'Tôi cần điện thoại chơi game mượt, máy mát, RAM tốt', icon: Sparkles },
+  { label: 'Chơi game', prompt: 'Tìm máy chơi game mượt, máy mát, hiệu năng tốt', icon: Sparkles },
   { label: 'So sánh 3 máy', prompt: 'So sánh 3 điện thoại đáng mua theo giá, camera, pin và cấu hình', icon: Search },
 ];
 
@@ -37,8 +38,10 @@ export default function CustomerChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMsg, setInputMsg] = useState(() => (searchParams.get('q') ?? '').slice(0, 500));
   const [loading, setLoading] = useState(false);
+  const [consultantTyping, setConsultantTyping] = useState(false);
   const messagesPaneRef = useRef<HTMLDivElement>(null);
   const initialPromptSentRef = useRef(false);
+  const lastTypingSentRef = useRef(0);
 
   const scrollToBottom = () => {
     window.setTimeout(() => {
@@ -93,6 +96,8 @@ export default function CustomerChat() {
         setActiveSession(session);
         setSessions(prev => prev.map(item => item.sessionid === session.sessionid ? session : item));
         setMessages(latestMessages);
+        const typing = await chatSessionsApi.getTypingStatus(activeSession.sessionid);
+        setConsultantTyping(typing.consultantTyping);
       } catch {
         // Ignore transient polling errors and keep the conversation visible.
       }
@@ -169,6 +174,16 @@ export default function CustomerChat() {
   const sendMessage = async (event: FormEvent) => {
     event.preventDefault();
     await submitMessage(inputMsg);
+  };
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setInputMsg(event.target.value);
+    if (!activeSession || !event.target.value.trim()) return;
+
+    const now = Date.now();
+    if (now - lastTypingSentRef.current < 2500) return;
+    lastTypingSentRef.current = now;
+    void chatSessionsApi.setTyping(activeSession.sessionid).catch(() => undefined);
   };
 
   useEffect(() => {
@@ -261,7 +276,7 @@ export default function CustomerChat() {
 
   return (
     <div className="customer-shell px-0 py-0 md:px-4 md:py-6">
-      <Seo title="Tro ly mua sam AI - Cuong Dien Thoai" description="Tro ly tu van AI cua Cuong Dien Thoai." noIndex />
+      <Seo title="Trợ lý mua sắm AI - Cuồng Điện Thoại" description="Trợ lý tư vấn AI của Cuồng Điện Thoại." noIndex />
       <div className="customer-container grid h-[calc(100dvh-8.75rem)] min-h-[460px] overflow-hidden border border-[#dde3ea] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.12)] md:h-[calc(100vh-12rem)] md:min-h-[560px] md:max-h-[calc(100vh-8rem)] md:rounded-[24px] lg:grid-cols-[310px_1fr]">
         <aside className="hidden min-h-0 bg-[#1f2937] text-white lg:flex lg:flex-col">
           <div className="border-b border-white/10 p-5">
@@ -442,6 +457,7 @@ export default function CustomerChat() {
 
             {messages.map((message, index) => {
               const isUser = message.sendertype === 'user';
+              const isAssistant = message.sendertype === 'assistant';
               if (message.sendertype === 'system') {
                 return (
                   <div key={message.messageid || index} className="text-center text-xs font-bold text-slate-400">
@@ -457,15 +473,27 @@ export default function CustomerChat() {
                   }`}>
                     {isUser ? <User size={16} /> : message.sendertype === 'consultant' ? <Headphones size={16} /> : <Bot size={16} />}
                   </div>
-                  <div className={`${message.recommendations?.length ? 'max-w-[88vw] md:max-w-[92%]' : 'max-w-[82%] md:max-w-[76%]'} rounded-[22px] border p-3 md:p-4 ${
+                  <div className={`${message.recommendations?.length ? 'max-w-[88vw] md:max-w-[92%]' : 'max-w-[82%] md:max-w-[76%]'} ${
                     isUser
-                      ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_16px_36px_rgba(227,6,19,0.16)]'
-                      : 'border-white bg-white text-slate-700 shadow-[0_16px_40px_rgba(15,23,42,0.08)]'
+                      ? 'rounded-[22px] border border-[#e30613] bg-[#e30613] p-3 text-white shadow-[0_16px_36px_rgba(227,6,19,0.16)] md:p-4'
+                      : isAssistant
+                        ? 'space-y-3'
+                        : 'rounded-[22px] border border-white bg-white p-3 text-slate-700 shadow-[0_16px_40px_rgba(15,23,42,0.08)] md:p-4'
                   }`}>
                     {isUser ? (
                       <p className="whitespace-pre-wrap text-sm leading-7">
                         {renderMessageContent(message.messagecontent)}
                       </p>
+                    ) : isAssistant ? (
+                      <ChatAssistantSegments
+                        content={message.messagecontent}
+                        progressive={
+                          index === messages.length - 1 &&
+                          !loading &&
+                          Boolean(message.sentat) &&
+                          Date.now() - new Date(message.sentat).getTime() < 20_000
+                        }
+                      />
                     ) : (
                       renderAssistantMessageContent(message.messagecontent)
                     )}
@@ -528,13 +556,24 @@ export default function CustomerChat() {
                 </div>
               </div>
             )}
+
+            {consultantTyping && activeSession?.handoffstatus === 'InProgress' && (
+              <div className="flex gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] bg-[#1f2937] text-[#ffd166]">
+                  <Headphones size={16} />
+                </div>
+                <div className="rounded-[22px] border border-white bg-white px-4 py-3 text-sm font-bold text-slate-500 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+                  Nhân viên tư vấn đang nhập...
+                </div>
+              </div>
+            )}
           </div>
 
           <form onSubmit={sendMessage} className="shrink-0 flex items-center gap-2 border-t border-[#e5e7eb] bg-white p-3 md:gap-3 md:p-4">
             <input
               type="text"
               value={inputMsg}
-              onChange={event => setInputMsg(event.target.value)}
+              onChange={handleInputChange}
               placeholder="Nhập nhu cầu, ngân sách hoặc tên máy bạn muốn so sánh..."
               maxLength={500}
               className="customer-input"

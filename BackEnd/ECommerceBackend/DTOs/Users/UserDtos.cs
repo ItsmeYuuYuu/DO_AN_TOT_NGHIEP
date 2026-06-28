@@ -25,7 +25,7 @@ namespace ECommerceBackend.DTOs.Users
         [Required(ErrorMessage = "Họ tên là bắt buộc")] string Fullname,
         
         [EmailAddress(ErrorMessage = "Email không hợp lệ")] string? Email,
-        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")] string? Phone,
+        [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0")] string? Phone,
         int? Roleid,
         bool? Isactive
     );
@@ -33,7 +33,7 @@ namespace ECommerceBackend.DTOs.Users
     public record UpdateUserRequestDto(
         [Required(ErrorMessage = "Họ tên là bắt buộc")] string Fullname,
         [EmailAddress(ErrorMessage = "Email không hợp lệ")] string? Email,
-        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")] string? Phone,
+        [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0")] string? Phone,
         int? Roleid,
         bool? Isactive,
         [MinLength(6, ErrorMessage = "Mật khẩu mới tối thiểu 6 ký tự")] string? NewPassword

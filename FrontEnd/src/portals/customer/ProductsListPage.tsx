@@ -129,8 +129,8 @@ const ProductsListPage: React.FC = () => {
   return (
     <div className="customer-shell min-h-screen pb-16">
       <Seo
-        title="Tat ca san pham - Cuong Dien Thoai"
-        description="Danh sach smartphone tai Cuong Dien Thoai, loc theo danh muc, thuong hieu, dong may, gia ban va sap xep theo nhu cau."
+        title="Tất cả sản phẩm - Cuồng Điện Thoại"
+        description="Danh sách smartphone tại Cuồng Điện Thoại, lọc theo danh mục, thương hiệu, dòng máy, giá bán và sắp xếp theo nhu cầu."
         canonicalPath="/products"
       />
       <section className="border-b customer-rule bg-white px-3 py-3 sm:px-4 sm:py-4">

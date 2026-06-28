@@ -13,6 +13,9 @@ import { confirmAction, notifyError } from '@/utils/notifications';
 
 const PAGE_SIZE = 10;
 
+const digitsOnly = (value: string, maxLength = 10) =>
+  value.replace(/\D/g, '').slice(0, maxLength);
+
 const roleColors: Record<string, string> = {
   Admin:    'bg-purple-50 text-purple-700 border border-purple-200',
   Manager:  'bg-indigo-50 text-indigo-700 border border-indigo-200',
@@ -189,7 +192,7 @@ const AdminUsers: React.FC = () => {
       render: (u: UserItem) => (
         <div className="flex items-center gap-1">
           <button onClick={() => openEdit(u)} className="px-2.5 py-1.5 text-xs text-[#4f46e5] bg-indigo-50 hover:bg-indigo-100 rounded-xl font-semibold">Sửa</button>
-          {u.roleid !== 1 && (
+          {u.roleid !== 1 && u.roleid !== 3 && (
             <button onClick={() => handleDelete(u.userid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-xl font-semibold">Xóa</button>
           )}
         </div>
@@ -278,7 +281,16 @@ const AdminUsers: React.FC = () => {
           </div>
           <Input label="Họ và tên *" value={editing?.fullname ?? ''} onChange={e => setEditing(p => ({ ...p, fullname: e.target.value }))} placeholder="Nguyễn Văn A" />
           <Input label="Email" type="email" value={editing?.email ?? ''} onChange={e => setEditing(p => ({ ...p, email: e.target.value }))} placeholder="example@email.com" />
-          <Input label="Số điện thoại" value={editing?.phone ?? ''} onChange={e => setEditing(p => ({ ...p, phone: e.target.value }))} placeholder="0901234567" />
+          <Input
+            label="Số điện thoại"
+            type="tel"
+            inputMode="numeric"
+            pattern="0[0-9]{9}"
+            maxLength={10}
+            value={editing?.phone ?? ''}
+            onChange={e => setEditing(p => ({ ...p, phone: digitsOnly(e.target.value) }))}
+            placeholder="0901234567"
+          />
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1.5">Vai trò</label>
             <select

@@ -59,10 +59,25 @@ namespace ECommerceBackend.DTOs.Auth
 
         [Required(ErrorMessage = "Số điện thoại không được để trống")]
         [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0")]
-        string Phone
+        string Phone,
+
+        [StringLength(6, MinimumLength = 6, ErrorMessage = "Mã xác nhận gồm 6 chữ số")]
+        string? VerificationCode = null
+    );
+
+    public record RegistrationOtpRequestDto(
+        [Required(ErrorMessage = "Email không được để trống")]
+        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        string Email
     );
 
     public record ForgotPasswordRequestDto(
+        [Required(ErrorMessage = "Email không được để trống")]
+        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        string Email
+    );
+
+    public record TestEmailRequestDto(
         [Required(ErrorMessage = "Email không được để trống")]
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]
         string Email

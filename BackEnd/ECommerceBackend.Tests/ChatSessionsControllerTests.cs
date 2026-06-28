@@ -278,10 +278,10 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var message = await response.Content.ReadFromJsonAsync<ChatMessageDto>();
         Assert.Equal("assistant", message?.Sendertype);
-        Assert.Contains("1 sản phẩm với 2 phiên bản", message?.Messagecontent);
+        Assert.Contains("1 sản phẩm với 1 phiên bản", message?.Messagecontent);
         Assert.Contains("Xiaomi 14T", message?.Messagecontent);
         Assert.Contains("14.000.000đ", message?.Messagecontent);
-        Assert.Contains("14.500.000đ", message?.Messagecontent);
+        Assert.DoesNotContain("14.500.000đ", message?.Messagecontent);
         Assert.Contains("còn 1 máy", message?.Messagecontent);
         Assert.Contains("/products/200", message?.Messagecontent);
         Assert.Equal(
@@ -373,7 +373,7 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.Equal(ChatResponseTypes.Recommendation, response.ResponseType);
         Assert.Equal(new[] { 1, 2, 3 }, response.Recommendations.Select(item => item.ProductId));
         Assert.Contains("3 s", response.Text);
-        Assert.Contains("5 phi", response.Text);
+        Assert.Contains("3 phi", response.Text);
         Assert.Equal(3, response.Text.Split("Lý do gợi ý").Length - 1);
     }
 
@@ -470,7 +470,7 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.Contains("Hiệu năng: Gaming Phone", response);
         Assert.Contains("Pin và sạc: Gaming Phone", response);
         Assert.Contains("Giá dễ tiếp cận nhất: Gaming Phone", response);
-        Assert.Contains("Bạn ưu tiên camera, hiệu năng hay pin", response);
+        Assert.Contains("Anh/chị ưu tiên camera, hiệu năng hay pin", response);
     }
 
     [Fact]
@@ -703,6 +703,31 @@ public class ChatSessionsControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.Empty(response.Recommendations);
         Assert.Contains("model cụ thể", response.Text);
         Assert.Contains("POCO F6 Pro", response.QuickReplies ?? []);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithGenericComparisonPrompt_AsksForProductNamesWithoutSearching()
+    {
+        var consultationService = new StubProductConsultationService(new[]
+        {
+            CreateConsultationResult(1, "iQOO 13"),
+            CreateConsultationResult(2, "OnePlus 12")
+        });
+        var provider = new GroundedAiProvider(
+            consultationService,
+            new StubHttpClientFactory(),
+            Options.Create(new AiAssistantOptions { Provider = "Catalog" }),
+            NullLogger<GroundedAiProvider>.Instance);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "So sánh sản phẩm",
+            Array.Empty<AiConversationMessage>()));
+
+        Assert.Equal(ChatResponseTypes.Clarification, response.ResponseType);
+        Assert.Empty(response.Recommendations);
+        Assert.Contains("tên 2-3 sản phẩm", response.Text);
+        Assert.Null(consultationService.LastQuery);
     }
 
     [Fact]

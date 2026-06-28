@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,20 +13,23 @@ import {
   User,
 } from 'lucide-react';
 import apiClient from '@/api/apiClient';
-import { useAuth } from '@/features/auth/context/AuthContext';
-import { useCart } from '@/features/orders/context/CartContext';
-import { warrantyPackagesApi } from '@/features/orders/api/warrantyPackagesApi';
-import type { WarrantyPackage } from '@/features/orders/api/warrantyPackagesApi';
-import { formatCurrency } from '@/utils/formatters';
-import { getApiErrorMessage } from '@/utils/apiError';
 import { Seo } from '@/components/Seo';
+import { FALLBACK_PROVINCES, loadVietnamAdministrativeUnits, type ProvinceOption } from '@/data/vietnamAdministrativeUnits';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { warrantyPackagesApi, type WarrantyPackage } from '@/features/orders/api/warrantyPackagesApi';
+import { useCart } from '@/features/orders/context/CartContext';
+import { getApiErrorMessage } from '@/utils/apiError';
+import { formatCurrency } from '@/utils/formatters';
 
 interface CheckoutForm {
   fullname: string;
   phone: string;
   email: string;
   address: string;
-  city: string;
+  provinceCode: string;
+  provinceName: string;
+  wardCode: string;
+  wardName: string;
   note: string;
   paymentMethod: 'COD' | 'MOMO' | 'VNPAY' | 'BANK';
   paymentOption: 'Deposit30' | 'Full';
@@ -42,16 +45,22 @@ interface CreatedOrder {
   reservationexpiresat?: string;
 }
 
+const phonePattern = /^0\d{9}$/;
+
 const CheckoutPage: React.FC = () => {
   const { items, totalPrice, totalItems, clearCart } = useCart();
   const { user, isLoggedIn } = useAuth();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState<CheckoutForm>({
     fullname: user?.fullname ?? '',
     phone: '',
     email: user?.email ?? '',
     address: '',
-    city: '',
+    provinceCode: '',
+    provinceName: '',
+    wardCode: '',
+    wardName: '',
     note: '',
     paymentMethod: isLoggedIn ? 'COD' : 'MOMO',
     paymentOption: 'Deposit30',
@@ -61,9 +70,26 @@ const CheckoutPage: React.FC = () => {
   const [error, setError] = useState('');
   const [packages, setPackages] = useState<WarrantyPackage[]>([]);
   const [selectedPackages, setSelectedPackages] = useState<Record<number, number>>({});
+  const [provinces, setProvinces] = useState<ProvinceOption[]>(FALLBACK_PROVINCES);
+  const [loadingAddressData, setLoadingAddressData] = useState(true);
 
   useEffect(() => {
     warrantyPackagesApi.getAll().then(setPackages).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    loadVietnamAdministrativeUnits()
+      .then(data => {
+        if (active) setProvinces(data);
+      })
+      .finally(() => {
+        if (active) setLoadingAddressData(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -74,6 +100,12 @@ const CheckoutPage: React.FC = () => {
       paymentMethod: !isLoggedIn && prev.paymentMethod === 'COD' ? 'MOMO' : prev.paymentMethod,
     }));
   }, [isLoggedIn, user]);
+
+  const selectedProvince = useMemo(
+    () => provinces.find(item => item.code === form.provinceCode),
+    [form.provinceCode, provinces],
+  );
+  const wards = selectedProvince?.wards ?? [];
 
   const shipping = totalPrice >= 2_000_000 ? 0 : 30_000;
   const totalWarrantyPrice = useMemo(() => items.reduce((sum, item) => {
@@ -93,7 +125,7 @@ const CheckoutPage: React.FC = () => {
   if (items.length === 0 && !createdOrder) {
     return (
       <div className="customer-shell min-h-screen px-4 py-16">
-        <Seo title="Thanh toan - Cuong Dien Thoai" description="Hoan tat thong tin dat hang tai Cuong Dien Thoai." noIndex />
+        <Seo title="Thanh toán - Cuồng Điện Thoại" description="Hoàn tất thông tin đặt hàng tại Cuồng Điện Thoại." noIndex />
         <div className="customer-panel-soft mx-auto max-w-2xl px-6 py-20 text-center">
           <ShoppingBag className="mx-auto mb-5 text-[#1f2937]/25" size={58} />
           <h2 className="customer-display text-4xl font-bold text-[#1f2937]">Giỏ hàng trống</h2>
@@ -112,7 +144,7 @@ const CheckoutPage: React.FC = () => {
     const isGuestOrder = createdOrder.checkouttype === 'Guest';
     return (
       <div className="customer-shell min-h-screen px-4 py-16">
-        <Seo title="Dat hang thanh cong - Cuong Dien Thoai" description="Ket qua dat hang tai Cuong Dien Thoai." noIndex />
+        <Seo title="Đặt hàng thành công - Cuồng Điện Thoại" description="Kết quả đặt hàng tại Cuồng Điện Thoại." noIndex />
         <div className="customer-panel-soft mx-auto max-w-2xl px-6 py-16 text-center">
           <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center bg-emerald-100 text-emerald-700">
             <CheckCircle size={50} />
@@ -124,18 +156,7 @@ const CheckoutPage: React.FC = () => {
           <p className="mt-3 text-sm text-slate-500">
             Mã đơn hàng của bạn là <span className="font-black text-[#c4000b]">#{createdOrder.orderid}</span>.
           </p>
-          {createdOrder.requiredpayment && createdOrder.requiredpayment > 0 && (
-            <div className="mx-auto mt-6 max-w-md border border-[#e5e7eb] bg-white p-4 text-sm text-[#1f2937]">
-              Cần thanh toán trước <span className="font-black text-[#c4000b]">{formatCurrency(createdOrder.requiredpayment)}</span>.
-              Hàng được giữ trong 15 phút trong lúc bạn hoàn tất thanh toán.
-            </div>
-          )}
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            {createdOrder.paymenttoken && (
-              <Link to={`/payment/${createdOrder.orderid}?token=${createdOrder.paymenttoken}`} className="customer-button-dark">
-                Thanh toán ngay <ArrowRight size={15} />
-              </Link>
-            )}
             <Link to={isGuestOrder ? '/order-lookup' : '/profile'} className="customer-button-outline">
               Xem đơn hàng
             </Link>
@@ -148,17 +169,61 @@ const CheckoutPage: React.FC = () => {
     );
   }
 
+  const updateFormValue = (name: keyof CheckoutForm, value: string) => {
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = event.target;
+
+    if (name === 'phone') {
+      updateFormValue('phone', value.replace(/\D/g, '').slice(0, 10));
+      return;
+    }
+
+    if (name === 'provinceCode') {
+      const province = provinces.find(item => item.code === value);
+      setForm(prev => ({
+        ...prev,
+        provinceCode: value,
+        provinceName: province?.name ?? '',
+        wardCode: '',
+        wardName: '',
+      }));
+      return;
+    }
+
+    if (name === 'wardCode') {
+      const ward = wards.find(item => item.code === value);
+      setForm(prev => ({
+        ...prev,
+        wardCode: value,
+        wardName: ward?.name ?? '',
+      }));
+      return;
+    }
+
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!form.fullname.trim() || !form.phone.trim() || !form.address.trim()) {
-      setError('Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ nhận hàng.');
+
+    if (!form.fullname.trim() || !form.phone.trim() || !form.address.trim() || !form.provinceCode) {
+      setError('Vui lòng điền đầy đủ họ tên, số điện thoại, địa chỉ và tỉnh/thành phố nhận hàng.');
       return;
     }
+
+    if (!phonePattern.test(form.phone)) {
+      setError('Số điện thoại nhận hàng phải gồm 10 chữ số và bắt đầu bằng 0.');
+      return;
+    }
+
+    if (wards.length > 0 && !form.wardCode) {
+      setError('Vui lòng chọn phường/xã nhận hàng.');
+      return;
+    }
+
     if (!isLoggedIn && form.paymentMethod === 'COD') {
       setError('Khách vãng lai không thể chọn COD. Vui lòng chọn đặt cọc hoặc thanh toán trước.');
       return;
@@ -167,7 +232,7 @@ const CheckoutPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const shippingAddress = [form.address, form.city].filter(Boolean).join(', ');
+      const shippingAddress = [form.address.trim(), form.wardName, form.provinceName].filter(Boolean).join(', ');
       const response = await apiClient.post<CreatedOrder>('/Orders', {
         userid: user ? parseInt(user.userid) : null,
         customername: form.fullname,
@@ -183,7 +248,14 @@ const CheckoutPage: React.FC = () => {
           packageid: selectedPackages[item.variantId] || null,
         })),
       });
+
       await clearCart();
+
+      if (response.data.paymenttoken) {
+        navigate(`/payment/${response.data.orderid}?token=${response.data.paymenttoken}`, { replace: true });
+        return;
+      }
+
       setCreatedOrder(response.data);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Đặt hàng thất bại. Vui lòng thử lại.'));
@@ -198,12 +270,12 @@ const CheckoutPage: React.FC = () => {
     ...(isLoggedIn ? [{ value: 'COD', label: 'Thanh toán khi nhận hàng (COD)', desc: 'Dành cho tài khoản đã đăng nhập' }] : []),
     { value: 'MOMO', label: 'Momo', desc: 'Đặt cọc hoặc thanh toán trước qua ví Momo' },
     { value: 'VNPAY', label: 'VNPay', desc: 'Quét mã QR hoặc thanh toán qua cổng VNPay' },
-    { value: 'BANK', label: 'Chuyển khoản ngân hàng', desc: 'Nhân viên đối soát và xác nhận thanh toán' },
+    { value: 'BANK', label: 'Chuyển khoản ngân hàng', desc: 'Chuyển khoản theo mã QR, nhân viên sẽ đối soát sau' },
   ] as const;
 
   return (
     <div className="customer-shell min-h-screen pb-16">
-      <Seo title="Thanh toan - Cuong Dien Thoai" description="Hoan tat thong tin dat hang tai Cuong Dien Thoai." noIndex />
+      <Seo title="Thanh toán - Cuồng Điện Thoại" description="Hoàn tất thông tin đặt hàng tại Cuồng Điện Thoại." noIndex />
       <section className="border-b customer-rule bg-[#ffffff] px-3 py-6 sm:px-4 sm:py-8">
         <div className="customer-container">
           <p className="customer-label">Checkout desk</p>
@@ -252,25 +324,66 @@ const CheckoutPage: React.FC = () => {
               </label>
               <label>
                 <span className={labelClass}><Phone size={12} className="mr-1 inline" />Số điện thoại *</span>
-                <input name="phone" value={form.phone} onChange={handleChange} placeholder="0901234567" className={inputClass} required />
+                <input
+                  name="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="0[0-9]{9}"
+                  maxLength={10}
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="0901234567"
+                  className={inputClass}
+                  required
+                />
               </label>
               <label className="md:col-span-2">
                 <span className={labelClass}>Email</span>
                 <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="email@example.com" className={inputClass} />
               </label>
               <label className="md:col-span-2">
-                <span className={labelClass}>Địa chỉ *</span>
-                <input name="address" value={form.address} onChange={handleChange} placeholder="Số nhà, tên đường, phường/xã" className={inputClass} required />
+                <span className={labelClass}>Địa chỉ cụ thể *</span>
+                <input name="address" value={form.address} onChange={handleChange} placeholder="Số nhà, tên đường, tòa nhà..." className={inputClass} required />
               </label>
               <label>
-                <span className={labelClass}>Thành phố / Tỉnh</span>
-                <input name="city" value={form.city} onChange={handleChange} placeholder="Hồ Chí Minh" className={inputClass} />
+                <span className={labelClass}>Tỉnh / Thành phố *</span>
+                <select name="provinceCode" value={form.provinceCode} onChange={handleChange} className={inputClass} required>
+                  <option value="">{loadingAddressData ? 'Đang tải dữ liệu...' : 'Chọn tỉnh/thành phố'}</option>
+                  {provinces.map(province => (
+                    <option key={province.code} value={province.code}>{province.name}</option>
+                  ))}
+                </select>
               </label>
               <label>
+                <span className={labelClass}>Phường / Xã {wards.length > 0 ? '*' : ''}</span>
+                <select
+                  name="wardCode"
+                  value={form.wardCode}
+                  onChange={handleChange}
+                  className={inputClass}
+                  disabled={!form.provinceCode || wards.length === 0}
+                  required={wards.length > 0}
+                >
+                  <option value="">
+                    {!form.provinceCode
+                      ? 'Chọn tỉnh/thành phố trước'
+                      : wards.length > 0
+                        ? 'Chọn phường/xã'
+                        : 'Chưa có dữ liệu phường/xã'}
+                  </option>
+                  {wards.map(ward => (
+                    <option key={ward.code} value={ward.code}>{ward.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="md:col-span-2">
                 <span className={labelClass}>Ghi chú</span>
                 <input name="note" value={form.note} onChange={handleChange} placeholder="Giao giờ hành chính..." className={inputClass} />
               </label>
             </div>
+            <p className="mt-3 text-xs font-semibold text-slate-400">
+              Dữ liệu tỉnh/phường được lấy theo danh mục hành chính mới; nếu mất mạng hệ thống sẽ dùng dữ liệu dự phòng để vẫn đặt hàng được.
+            </p>
           </section>
 
           <section className="customer-panel p-4 sm:p-6">
@@ -289,7 +402,7 @@ const CheckoutPage: React.FC = () => {
                   key={method.value}
                   className={`flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition ${
                     form.paymentMethod === method.value
-                    ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_12px_28px_rgba(227,6,19,0.18)]'
+                      ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_12px_28px_rgba(227,6,19,0.18)]'
                       : 'border-[#e5e7eb] bg-white text-[#1f2937] hover:border-[#1f2937]'
                   }`}
                 >
@@ -433,7 +546,11 @@ const CheckoutPage: React.FC = () => {
               disabled={loading}
               className="customer-button-dark mt-6 w-full disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              {loading ? 'Đang xử lý...' : 'Xác nhận đặt hàng'} <ArrowRight size={15} />
+              {loading
+                ? 'Đang xử lý...'
+                : form.paymentMethod === 'COD'
+                  ? 'Xác nhận đặt hàng'
+                  : 'Xác nhận và nhận mã QR'} <ArrowRight size={15} />
             </button>
           </div>
         </aside>

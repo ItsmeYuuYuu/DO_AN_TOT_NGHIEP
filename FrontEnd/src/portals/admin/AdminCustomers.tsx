@@ -3,11 +3,14 @@ import {
   CheckCircle2,
   Eye,
   LoaderCircle,
+  Lock,
   Mail,
   MapPin,
   PackageOpen,
   Phone,
+  ShieldCheck,
   ShoppingBag,
+  Unlock,
   UserRound,
   Wallet,
 } from 'lucide-react';
@@ -18,6 +21,7 @@ import apiClient from '@/api/apiClient';
 import { ordersApi } from '@/features/orders/api/ordersApi';
 import type { Order } from '@/features/orders/api/ordersApi';
 import { formatCurrency, formatDate, formatDateTime, generateOrderCode } from '@/utils/formatters';
+import { confirmAction, notifyError, notifySuccess } from '@/utils/notifications';
 
 const PAGE_SIZE = 10;
 
@@ -28,6 +32,8 @@ interface Customer {
   phone?: string;
   address?: string;
   createdat?: string;
+  userid?: number | null;
+  accountisactive?: boolean | null;
 }
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -56,13 +62,18 @@ const AdminCustomers: React.FC = () => {
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [accountUpdatingId, setAccountUpdatingId] = useState<number | null>(null);
 
-  useEffect(() => {
+  const loadCustomers = () => {
     setLoading(true);
     apiClient.get<Customer[]>('/Customers')
       .then(res => setCustomers(res.data))
       .catch(() => setError('Không thể tải danh sách khách hàng.'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadCustomers();
   }, []);
 
   const filtered = customers.filter(c =>
@@ -95,6 +106,42 @@ const AdminCustomers: React.FC = () => {
       setOrdersError('Không thể tải lịch sử đơn hàng của khách hàng này.');
     } finally {
       setOrdersLoading(false);
+    }
+  };
+
+  const toggleCustomerAccount = async (customer: Customer) => {
+    if (!customer.userid) {
+      notifyError('Khách hàng này chưa có tài khoản đăng nhập để khóa hoặc mở khóa.');
+      return;
+    }
+
+    const nextActive = customer.accountisactive !== true;
+    const confirmed = await confirmAction(
+      nextActive
+        ? `Mở khóa tài khoản đăng nhập của ${customer.fullname}?`
+        : `Vô hiệu hóa tài khoản đăng nhập của ${customer.fullname}? Khách vẫn giữ hồ sơ và lịch sử đơn hàng.`,
+      {
+        title: nextActive ? 'Mở khóa tài khoản khách' : 'Vô hiệu hóa tài khoản khách',
+        confirmLabel: nextActive ? 'Mở khóa' : 'Vô hiệu hóa',
+        danger: !nextActive,
+      },
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setAccountUpdatingId(customer.customerid);
+      const response = await apiClient.patch<Customer>(`/Customers/${customer.customerid}/account-status`, {
+        isactive: nextActive,
+      });
+      const updated = response.data;
+      setCustomers(prev => prev.map(item => item.customerid === updated.customerid ? updated : item));
+      setSelectedCustomer(prev => prev?.customerid === updated.customerid ? updated : prev);
+      notifySuccess(nextActive ? 'Đã mở khóa tài khoản khách hàng.' : 'Đã vô hiệu hóa tài khoản khách hàng.');
+    } catch {
+      notifyError('Không thể cập nhật trạng thái tài khoản khách hàng.');
+    } finally {
+      setAccountUpdatingId(null);
     }
   };
 
@@ -136,10 +183,56 @@ const AdminCustomers: React.FC = () => {
       render: (c: Customer) => <span className="text-xs text-slate-500">{c.createdat ? formatDate(c.createdat) : '—'}</span>,
     },
     {
+      key: 'account',
+      header: 'Tài khoản',
+      render: (c: Customer) => {
+        if (!c.userid) {
+          return (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
+              Hồ sơ mua hàng
+            </span>
+          );
+        }
+
+        return (
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+            c.accountisactive === true
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-red-50 text-red-700'
+          }`}>
+            <ShieldCheck size={13} />
+            {c.accountisactive === true ? 'Đang hoạt động' : 'Đã vô hiệu hóa'}
+          </span>
+        );
+      },
+    },
+    {
       key: 'actions',
       header: '',
-      className: 'w-32 text-right',
+      className: 'w-56 text-right',
       render: (c: Customer) => (
+        <div className="inline-flex items-center justify-end gap-2">
+          {c.userid && (
+            <button
+              type="button"
+              onClick={() => toggleCustomerAccount(c)}
+              disabled={accountUpdatingId === c.customerid}
+              className={`inline-flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                c.accountisactive === true
+                  ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              }`}
+            >
+              {accountUpdatingId === c.customerid ? (
+                <LoaderCircle size={14} className="animate-spin" />
+              ) : c.accountisactive === true ? (
+                <Lock size={14} />
+              ) : (
+                <Unlock size={14} />
+              )}
+              {c.accountisactive === true ? 'Khóa' : 'Mở'}
+            </button>
+          )}
         <button
           type="button"
           onClick={() => openCustomerDetail(c)}
@@ -148,6 +241,7 @@ const AdminCustomers: React.FC = () => {
           <Eye size={15} />
           Chi tiết
         </button>
+        </div>
       ),
     },
   ];

@@ -13,6 +13,9 @@ const isStrongPassword = (password: string) =>
   /\d/.test(password) &&
   /[^A-Za-z0-9]/.test(password);
 
+const digitsOnly = (value: string, maxLength: number) =>
+  value.replace(/\D/g, '').slice(0, maxLength);
+
 interface AuthInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon: React.ReactNode;
 }
@@ -38,14 +41,43 @@ const RegisterPage: React.FC = () => {
     fullname: '',
     email: '',
     phone: '',
+    verificationCode: '',
   });
   const [loading, setLoading] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [codeMessage, setCodeMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [event.target.name]: event.target.value });
+    const { name, value } = event.target;
+    const nextValue =
+      name === 'phone' ? digitsOnly(value, 10) :
+      name === 'verificationCode' ? digitsOnly(value, 6) :
+      value;
+    setFormData({ ...formData, [name]: nextValue });
     if (error) setError(null);
+  };
+
+  const requestCode = async () => {
+    const email = formData.email.trim();
+    if (!email) {
+      setError('Vui lòng nhập email trước khi gửi mã xác nhận.');
+      return;
+    }
+
+    setSendingCode(true);
+    setError(null);
+    setCodeMessage(null);
+    try {
+      const response = await authApi.requestRegistrationCode(email);
+      setCodeMessage(response.data.message || 'Đã gửi mã xác nhận đến email của bạn.');
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      setError(data?.message || 'Không thể gửi mã xác nhận lúc này.');
+    } finally {
+      setSendingCode(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -75,6 +107,7 @@ const RegisterPage: React.FC = () => {
         fullname: formData.fullname.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
+        verificationCode: formData.verificationCode.trim() || undefined,
       });
       setSuccess(response.data.message || 'Đăng ký thành công!');
       window.setTimeout(() => {
@@ -96,8 +129,8 @@ const RegisterPage: React.FC = () => {
   return (
     <main className="customer-shell min-h-screen px-4 py-8">
       <Seo
-        title="Dang ky tai khoan - Cuong Dien Thoai"
-        description="Tao tai khoan mua hang tai Cuong Dien Thoai."
+        title="Đăng ký tài khoản - Cuồng Điện Thoại"
+        description="Tạo tài khoản mua hàng tại Cuồng Điện Thoại."
         noIndex
       />
       <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">
@@ -178,6 +211,29 @@ const RegisterPage: React.FC = () => {
                     onChange={handleChange}
                     autoComplete="email"
                   />
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                    <AuthInput
+                      icon={<Mail size={18} />}
+                      type="text"
+                      name="verificationCode"
+                      placeholder="Mã xác nhận email"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={formData.verificationCode}
+                      onChange={handleChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={requestCode}
+                      disabled={sendingCode}
+                      className="rounded-full border border-[#e5e7eb] px-4 py-3 text-xs font-black text-[#1f2937] transition hover:border-[#e30613] hover:text-[#c4000b] disabled:opacity-60"
+                    >
+                      {sendingCode ? 'Đang gửi...' : 'Gửi mã'}
+                    </button>
+                  </div>
+                  {codeMessage && (
+                    <p className="-mt-1 text-xs font-bold text-emerald-600">{codeMessage}</p>
+                  )}
                   <AuthInput
                     icon={<Phone size={18} />}
                     type="tel"

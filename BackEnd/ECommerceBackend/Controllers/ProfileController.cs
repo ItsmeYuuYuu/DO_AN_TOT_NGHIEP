@@ -75,14 +75,14 @@ public class ProfileController : ControllerBase
                 item.Email != null &&
                 item.Email.ToLower() == email))
         {
-            return Conflict(new ApiErrorDto("Email da duoc su dung cho tai khoan khac.", null));
+            return Conflict(new ApiErrorDto("Email đã được sử dụng cho tài khoản khác.", null));
         }
 
         if (!string.IsNullOrWhiteSpace(phone) && await _context.Users.AnyAsync(item =>
                 item.Userid != user.Userid &&
                 item.Phone == phone))
         {
-            return Conflict(new ApiErrorDto("So dien thoai da duoc su dung cho tai khoan khac.", null));
+            return Conflict(new ApiErrorDto("Số điện thoại đã được sử dụng cho tài khoản khác.", null));
         }
 
         var oldEmail = user.Email;

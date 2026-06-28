@@ -60,8 +60,8 @@ const PromotionsPage: React.FC = () => {
   return (
     <div className="customer-shell min-h-screen pb-16">
       <Seo
-        title="Uu dai hien tai - Cuong Dien Thoai"
-        description="Cap nhat voucher va cac chuong trinh uu dai dang ap dung tai Cuong Dien Thoai."
+        title="Ưu đãi hiện tại - Cuồng Điện Thoại"
+        description="Cập nhật voucher và các chương trình ưu đãi đang áp dụng tại Cuồng Điện Thoại."
         canonicalPath="/promotions"
       />
       <main className="customer-container px-4 py-8">

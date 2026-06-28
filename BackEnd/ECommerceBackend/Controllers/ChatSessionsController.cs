@@ -22,11 +22,16 @@ namespace ECommerceBackend.Controllers
         private static readonly ConcurrentDictionary<int, SemaphoreSlim> HandoffLocks = new();
         private readonly ECommerceContext _context;
         private readonly IChatOrchestratorService _chatOrchestrator;
+        private readonly IChatTypingService _chatTypingService;
 
-        public ChatSessionsController(ECommerceContext context, IChatOrchestratorService chatOrchestrator)
+        public ChatSessionsController(
+            ECommerceContext context,
+            IChatOrchestratorService chatOrchestrator,
+            IChatTypingService chatTypingService)
         {
             _context = context;
             _chatOrchestrator = chatOrchestrator;
+            _chatTypingService = chatTypingService;
         }
 
         private async Task<int?> GetCurrentCustomerIdAsync()
@@ -362,6 +367,32 @@ namespace ECommerceBackend.Controllers
                 .ToListAsync();
 
             return Ok(messages.Select(MapMessageToDto));
+        }
+
+        [HttpPost("{id}/typing")]
+        public async Task<IActionResult> SetTyping(int id)
+        {
+            var session = await _context.Chatsessions.FindAsync(id);
+            if (session == null) return NotFound(new ApiErrorDto("Phiên chat không tồn tại.", null));
+            if (!CanManageHandoff(session) && !await IsOwnerAsync(session))
+                return StatusCode(403, new ApiErrorDto("Bạn không có quyền cập nhật phiên chat này.", null));
+
+            var actor = CanManageHandoff(session) && !await IsOwnerAsync(session)
+                ? "consultant"
+                : "user";
+            await _chatTypingService.SetTypingAsync(id, actor, HttpContext.RequestAborted);
+            return Ok(new ApiMessageDto("Typing status updated."));
+        }
+
+        [HttpGet("{id}/typing-status")]
+        public async Task<ActionResult<ChatTypingStatusDto>> GetTypingStatus(int id)
+        {
+            var session = await _context.Chatsessions.FindAsync(id);
+            if (session == null) return NotFound(new ApiErrorDto("Phiên chat không tồn tại.", null));
+            if (!CanManageHandoff(session) && !await IsOwnerAsync(session))
+                return StatusCode(403, new ApiErrorDto("Bạn không có quyền xem phiên chat này.", null));
+
+            return Ok(await _chatTypingService.GetStatusAsync(id, HttpContext.RequestAborted));
         }
 
         [HttpPost("{id}/messages")]

@@ -107,10 +107,15 @@ builder.Services.AddRateLimiter(options =>
 // ── Audit Log (Singleton background service + scoped filter) ─────────────────────
 builder.Services.Configure<ECommerceBackend.Services.Chat.AiAssistantOptions>(
     builder.Configuration.GetSection(ECommerceBackend.Services.Chat.AiAssistantOptions.SectionName));
+builder.Services.Configure<ECommerceBackend.Services.Email.EmailOptions>(
+    builder.Configuration.GetSection(ECommerceBackend.Services.Email.EmailOptions.SectionName));
 builder.Services.AddHttpClient("AiAssistant");
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IProductConsultationService, ECommerceBackend.Services.Chat.ProductConsultationService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IAiProvider, ECommerceBackend.Services.Chat.GroundedAiProvider>();
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatOrchestratorService, ECommerceBackend.Services.Chat.ChatOrchestratorService>();
+builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatTypingService, ECommerceBackend.Services.Chat.ChatTypingService>();
+builder.Services.AddScoped<ECommerceBackend.Services.Email.IEmailService, ECommerceBackend.Services.Email.SmtpEmailService>();
+builder.Services.AddScoped<ECommerceBackend.Services.Email.IRegistrationOtpService, ECommerceBackend.Services.Email.RegistrationOtpService>();
 builder.Services.AddSingleton<ProductImageStorageService>();
 var redisConnection = builder.Configuration.GetConnectionString("Redis");
 if (!string.IsNullOrWhiteSpace(redisConnection))

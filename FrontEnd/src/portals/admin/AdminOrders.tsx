@@ -210,8 +210,8 @@ const AdminOrders: React.FC = () => {
       render: (order: Order) => (
         <div>
           <p className="font-black text-[#172033]">{formatCurrency(order.finalamount ?? 0)}</p>
-          {order.discountamount && order.discountamount > 0 && (
-            <p className="text-xs font-bold text-emerald-600">-{formatCurrency(order.discountamount)}</p>
+          {(order.discountamount ?? 0) > 0 && (
+            <p className="text-xs font-bold text-emerald-600">-{formatCurrency(order.discountamount!)}</p>
           )}
         </div>
       ),

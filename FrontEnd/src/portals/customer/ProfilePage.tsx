@@ -10,7 +10,6 @@ import {
   Package,
   RotateCcw,
   Save,
-  ShieldCheck,
   Star,
   User,
   X,
@@ -27,18 +26,29 @@ import { Seo } from '@/components/Seo';
 const digitsOnly = (value: string, maxLength = 10) =>
   value.replace(/\D/g, '').slice(0, maxLength);
 
+
 interface Order {
   orderid: number;
   orderdate: string;
   orderstatus: string;
   totalamount: number;
+  discountamount?: number;
+  finalamount?: number;
+  paymentmethod?: string;
+  paymentstatus?: string;
+  shippingname?: string;
+  shippingphone?: string;
+  shippingemail?: string;
   shippingaddress: string;
+  customernote?: string;
   orderitems?: {
     orderitemid: number;
     imei?: string;
     sellingprice: number;
     warrantyprice?: number;
     packagename?: string;
+    productname?: string;
+    variantsku?: string;
   }[];
 }
 
@@ -83,7 +93,6 @@ const ProfilePage: React.FC = () => {
   const reviewsRef = useRef<HTMLDivElement>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [profileForm, setProfileForm] = useState({ fullname: '', email: '', phone: '' });
   const [editingProfile, setEditingProfile] = useState(false);
@@ -415,10 +424,9 @@ const ProfilePage: React.FC = () => {
               <div className="space-y-3">
                 {orders.map(order => (
                   <article key={order.orderid} className="border border-[#e5e7eb] bg-[#ffffff]">
-                    <button
-                      type="button"
-                      className="flex w-full flex-col gap-3 p-4 text-left sm:flex-row sm:items-center sm:gap-4"
-                      onClick={() => setExpandedId(expandedId === order.orderid ? null : order.orderid)}
+                    <Link
+                      to={`/order-lookup?phone=${order.shippingphone ?? currentProfile.phone ?? ''}&orderId=${order.orderid}&mode=detail`}
+                      className="flex w-full flex-col gap-3 p-4 text-left sm:flex-row sm:items-center sm:gap-4 hover:bg-slate-50 transition-colors"
                     >
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-white text-[#1f2937]">
                         <Package size={19} />
@@ -436,26 +444,8 @@ const ProfilePage: React.FC = () => {
                         </span>
                         <p className="mt-0 text-sm font-black text-[#c4000b] sm:mt-1">{formatCurrency(order.totalamount)}</p>
                       </div>
-                      <ChevronRight size={16} className={`text-slate-400 transition-transform ${expandedId === order.orderid ? 'rotate-90' : ''}`} />
-                    </button>
-
-                    {expandedId === order.orderid && order.orderitems && (
-                      <div className="space-y-2 border-t border-[#e5e7eb] bg-white px-4 py-3">
-                        {order.orderitems.map(item => (
-                          <div key={item.orderitemid} className="flex items-center justify-between gap-4 py-1 text-sm">
-                            <div>
-                              <p className="font-bold text-[#1f2937]">IMEI: {item.imei || 'Đang chờ'}</p>
-                              {(item.warrantyprice ?? 0) > 0 && (
-                                <p className="mt-1 flex items-center gap-1 text-xs font-bold text-[#c4000b]">
-                                  <ShieldCheck size={12} /> {item.packagename} (+{formatCurrency(item.warrantyprice!)})
-                                </p>
-                              )}
-                            </div>
-                            <span className="font-black text-[#1f2937]">{formatCurrency(item.sellingprice)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                      <ChevronRight size={16} className="text-slate-400" />
+                    </Link>
                   </article>
                 ))}
               </div>

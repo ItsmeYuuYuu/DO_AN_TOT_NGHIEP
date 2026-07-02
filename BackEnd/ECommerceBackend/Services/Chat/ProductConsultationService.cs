@@ -64,6 +64,38 @@ public sealed class ProductConsultationService : IProductConsultationService
         var requestedStorage = ExtractStorage(normalizedQuery);
         var usageProfile = DetectUsageProfile(normalizedQuery);
 
+        // Nhận diện các thương hiệu được đề cập trong truy vấn của người dùng
+        var dbBrands = await _context.Brands.AsNoTracking().ToListAsync(cancellationToken);
+        var brandSynonyms = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Google Pixel", new[] { "google", "pixel" } },
+            { "ASUS ROG", new[] { "asus", "rog", "rog phone" } },
+            { "Nothing Phone", new[] { "nothing" } },
+            { "REDMAGIC", new[] { "red magic", "redmagic" } }
+        };
+
+        var mentionedBrands = dbBrands
+            .Where(b => {
+                var normalizedBrand = Normalize(b.Brandname);
+                if (Regex.IsMatch(normalizedQuery, $@"\b{Regex.Escape(normalizedBrand)}\b", RegexOptions.IgnoreCase))
+                {
+                    return true;
+                }
+                if (brandSynonyms.TryGetValue(b.Brandname, out var synonyms))
+                {
+                    foreach (var synonym in synonyms)
+                    {
+                        var normalizedSynonym = Normalize(synonym);
+                        if (Regex.IsMatch(normalizedQuery, $@"\b{Regex.Escape(normalizedSynonym)}\b", RegexOptions.IgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            })
+            .ToList();
+
         var productQuery = _context.Products
             .AsNoTracking()
             .Include(product => product.Brand)
@@ -74,6 +106,13 @@ public sealed class ProductConsultationService : IProductConsultationService
             .Include(product => product.Productvariants)
                 .ThenInclude(variant => variant.Productimages)
             .AsSplitQuery();
+
+        if (mentionedBrands.Count > 0)
+        {
+            var brandIds = mentionedBrands.Select(b => b.Brandid).ToList();
+            productQuery = productQuery.Where(product => product.Brandid.HasValue && brandIds.Contains(product.Brandid.Value));
+        }
+
         if (productIds is { Count: > 0 })
         {
             productQuery = productQuery.Where(product =>

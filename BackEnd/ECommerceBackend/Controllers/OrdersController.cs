@@ -65,6 +65,22 @@ namespace ECommerceBackend.Controllers
                     payment.Paidat))
                 .ToList();
 
+            var shipment = o.Shipment == null
+                ? null
+                : new ShipmentLookupDto(
+                    o.Shipment.Carrier,
+                    o.Shipment.Trackingcode,
+                    o.Shipment.Status,
+                    o.Shipment.Estimateddeliveryat,
+                    o.Shipment.Deliveryattempts,
+                    o.Shipment.Histories
+                        .OrderBy(history => history.Createdat)
+                        .Select(history => new ShipmentLookupHistoryDto(
+                            history.Tostatus,
+                            history.Note,
+                            history.Createdat))
+                        .ToList());
+
             return new OrderListItemDto(
                 o.Orderid,
                 o.Customerid,
@@ -89,7 +105,8 @@ namespace ECommerceBackend.Controllers
                 o.Cancellationreason,
                 customer,
                 items,
-                payments
+                payments,
+                shipment
             );
         }
 
@@ -248,7 +265,7 @@ namespace ECommerceBackend.Controllers
         {
             if (order.Paymentmethod == "COD")
             {
-                return order.Checkouttype == "Registered" && order.Paymentstatus == "CODPending";
+                return order.Paymentstatus == "CODPending";
             }
 
             return order.Paymentstatus is "DepositPaid" or "Paid";
@@ -276,8 +293,8 @@ namespace ECommerceBackend.Controllers
                 return (
                     qrUrl,
                     content,
-                    "Chuyển khoản đúng số tiền và nội dung để nhân viên đối soát nhanh hơn. Đơn sẽ được giữ trong thời gian chờ thanh toán.",
-                    true);
+                    "Chuyển khoản qua VietQR. Hệ thống sẽ tự động quét giao dịch và xác nhận thanh toán real-time sau 10-30 giây.",
+                    false);
             }
 
             if (order.Paymentmethod is "MOMO" or "VNPAY")
@@ -489,6 +506,8 @@ namespace ECommerceBackend.Controllers
                         .ThenInclude(inv => inv!.Variant)
                             .ThenInclude(v => v!.Product)
                 .Include(o => o.Orderpayments)
+                .Include(o => o.Shipment)
+                    .ThenInclude(s => s!.Histories)
                 .Where(o => o.Customerid == customerId)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
@@ -515,6 +534,8 @@ namespace ECommerceBackend.Controllers
                         .ThenInclude(inv => inv!.Variant)
                             .ThenInclude(v => v!.Product)
                 .Include(o => o.Orderpayments)
+                .Include(o => o.Shipment)
+                    .ThenInclude(s => s!.Histories)
                 .Where(o => o.Userid == userId)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
@@ -536,6 +557,11 @@ namespace ECommerceBackend.Controllers
             var query = _context.Orders
                 .Include(o => o.Customer)
                 .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Package)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.ImeiNavigation)
+                        .ThenInclude(inv => inv!.Variant)
+                            .ThenInclude(v => v!.Product)
                 .Include(o => o.Shipment)
                     .ThenInclude(shipment => shipment!.Histories)
                 .Where(o => o.Customer != null && o.Customer.Phone == phone);
@@ -572,7 +598,19 @@ namespace ECommerceBackend.Controllers
                                 history.Tostatus,
                                 history.Note,
                                 history.Createdat))
-                            .ToList())
+                            .ToList()),
+                o.Orderitems.Select(oi => new OrderItemLookupDto(
+                    oi.ImeiNavigation?.Variant?.Product?.Productname,
+                    oi.ImeiNavigation?.Variant?.Sku,
+                    oi.Sellingprice,
+                    oi.Package?.Packagename,
+                    oi.Warrantyprice
+                )).ToList(),
+                o.Shippingname,
+                o.Shippingphone,
+                o.Shippingemail,
+                o.Shippingaddress,
+                o.Customernote
             ));
 
             return Ok(result);
@@ -738,6 +776,14 @@ namespace ECommerceBackend.Controllers
                         return BadRequest(new ApiErrorDto("Voucher chưa đến thời gian áp dụng.", null));
                     if (voucher.Validto.HasValue && voucher.Validto < DateTime.UtcNow)
                         return BadRequest(new ApiErrorDto("Voucher đã hết hạn.", null));
+
+                    // Verify reuse!
+                    var alreadyUsed = await _context.Orders.AnyAsync(o =>
+                        ((user != null && o.Userid == user.Userid) || (o.Customer != null && o.Customer.Phone == customer.Phone))
+                        && o.Vouchercode == dto.Vouchercode
+                        && o.Orderstatus != "Cancelled");
+                    if (alreadyUsed)
+                        return BadRequest(new ApiErrorDto("Bạn đã sử dụng mã giảm giá này rồi. Mỗi khách hàng chỉ được dùng 1 lần.", null));
 
                     if (voucher.Discountpercentage.HasValue && voucher.Discountpercentage > 0)
                     {

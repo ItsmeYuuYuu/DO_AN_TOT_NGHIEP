@@ -62,7 +62,7 @@ const CheckoutPage: React.FC = () => {
     wardCode: '',
     wardName: '',
     note: '',
-    paymentMethod: isLoggedIn ? 'COD' : 'MOMO',
+    paymentMethod: isLoggedIn ? 'COD' : 'BANK',
     paymentOption: 'Deposit30',
   });
   const [loading, setLoading] = useState(false);
@@ -72,6 +72,12 @@ const CheckoutPage: React.FC = () => {
   const [selectedPackages, setSelectedPackages] = useState<Record<number, number>>({});
   const [provinces, setProvinces] = useState<ProvinceOption[]>(FALLBACK_PROVINCES);
   const [loadingAddressData, setLoadingAddressData] = useState(true);
+
+  // Voucher state
+  const [voucherCodeInput, setVoucherCodeInput] = useState('');
+  const [appliedVoucher, setAppliedVoucher] = useState<any | null>(null);
+  const [validatingVoucher, setValidatingVoucher] = useState(false);
+  const [voucherError, setVoucherError] = useState('');
 
   useEffect(() => {
     warrantyPackagesApi.getAll().then(setPackages).catch(console.error);
@@ -97,7 +103,7 @@ const CheckoutPage: React.FC = () => {
       ...prev,
       fullname: prev.fullname || user?.fullname || '',
       email: prev.email || user?.email || '',
-      paymentMethod: !isLoggedIn && prev.paymentMethod === 'COD' ? 'MOMO' : prev.paymentMethod,
+      paymentMethod: !isLoggedIn && prev.paymentMethod === 'COD' ? 'BANK' : prev.paymentMethod,
     }));
   }, [isLoggedIn, user]);
 
@@ -115,12 +121,42 @@ const CheckoutPage: React.FC = () => {
     return sum + (warrantyPackage?.price || 0) * item.quantity;
   }, 0), [items, packages, selectedPackages]);
 
-  const grandTotal = totalPrice + shipping + totalWarrantyPrice;
+  const discountAmount = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    if (appliedVoucher.discountpercentage) {
+      return Math.round(totalPrice * (appliedVoucher.discountpercentage / 100));
+    }
+    return appliedVoucher.discountamount || 0;
+  }, [appliedVoucher, totalPrice]);
+
+  const grandTotal = Math.max(0, totalPrice + shipping + totalWarrantyPrice - discountAmount);
   const requiredPayment = form.paymentMethod === 'COD'
     ? 0
     : form.paymentOption === 'Deposit30'
       ? Math.round(grandTotal * 0.3)
       : grandTotal;
+
+  const handleApplyVoucher = async () => {
+    if (!voucherCodeInput.trim()) return;
+    setValidatingVoucher(true);
+    setVoucherError('');
+    try {
+      const res = await apiClient.get(`/Vouchers/validate/${voucherCodeInput.trim().toUpperCase()}`);
+      setAppliedVoucher(res.data);
+      setVoucherCodeInput('');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Mã giảm giá không hợp lệ hoặc đã hết hạn.';
+      setVoucherError(msg);
+      setAppliedVoucher(null);
+    } finally {
+      setValidatingVoucher(false);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherError('');
+  };
 
   if (items.length === 0 && !createdOrder) {
     return (
@@ -144,25 +180,55 @@ const CheckoutPage: React.FC = () => {
     const isGuestOrder = createdOrder.checkouttype === 'Guest';
     return (
       <div className="customer-shell min-h-screen px-4 py-16">
-        <Seo title="Đặt hàng thành công - Cuồng Điện Thoại" description="Kết quả đặt hàng tại Cuồng Điện Thoại." noIndex />
-        <div className="customer-panel-soft mx-auto max-w-2xl px-6 py-16 text-center">
-          <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center bg-emerald-100 text-emerald-700">
-            <CheckCircle size={50} />
+        <Seo title="Đặt hàng thành công - Cuồng Điện Thoại" description="Đặt hàng thành công tại Cuồng Điện Thoại." noIndex />
+        <div className="customer-panel mx-auto max-w-xl overflow-hidden shadow-md">
+          {/* Banner chúc mừng màu xanh lá chuyên nghiệp */}
+          <div className="bg-emerald-600 p-8 text-center text-white">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/20 text-white">
+              <CheckCircle size={36} />
+            </div>
+            <h2 className="text-2xl font-black">Đặt hàng thành công</h2>
+            <p className="mt-2 text-sm text-white/80">
+              Cảm ơn bạn đã tin tưởng mua sắm tại Cuồng Điện Thoại!
+            </p>
           </div>
-          <p className="customer-label">Order created</p>
-          <h2 className="customer-display mt-2 text-4xl font-bold text-[#1f2937]">
-            Đặt hàng thành công
-          </h2>
-          <p className="mt-3 text-sm text-slate-500">
-            Mã đơn hàng của bạn là <span className="font-black text-[#c4000b]">#{createdOrder.orderid}</span>.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link to={isGuestOrder ? '/order-lookup' : '/profile'} className="customer-button-outline">
-              Xem đơn hàng
-            </Link>
-            <Link to="/products" className="customer-button-outline">
-              Tiếp tục mua sắm
-            </Link>
+
+          <div className="space-y-6 p-7 bg-white">
+            <p className="text-center text-sm text-slate-500 leading-6">
+              Đơn hàng của quý khách đã được ghi nhận và chuyển cho bộ phận vận hành xử lý. Nhân viên sẽ liên hệ xác nhận trong thời gian sớm nhất.
+            </p>
+
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-5 space-y-3.5 text-sm">
+              <div className="flex justify-between border-b border-slate-100 pb-2">
+                <span className="text-slate-500 font-semibold">Mã đơn hàng</span>
+                <span className="font-black text-[#c4000b]">#{createdOrder.orderid}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-100 pb-2">
+                <span className="text-slate-500 font-semibold">Hình thức thanh toán</span>
+                <span className="font-bold text-slate-800">Thanh toán khi nhận hàng (COD)</span>
+              </div>
+              {createdOrder.finalamount && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-semibold">Số tiền cần trả khi nhận hàng</span>
+                  <span className="font-black text-[#c4000b] text-base">{formatCurrency(createdOrder.finalamount)}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              <Link
+                to={isGuestOrder ? `/order-lookup` : '/profile'}
+                className="w-full sm:w-auto text-center rounded-2xl bg-[#e30613] px-6 py-3 font-black text-white transition hover:bg-[#c4000b]"
+              >
+                Theo dõi đơn hàng
+              </Link>
+              <Link
+                to="/products"
+                className="w-full sm:w-auto text-center rounded-2xl border border-slate-200 px-6 py-3 font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Tiếp tục mua sắm
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -241,6 +307,7 @@ const CheckoutPage: React.FC = () => {
         shippingaddress: shippingAddress,
         paymentmethod: form.paymentMethod,
         paymentoption: form.paymentMethod === 'COD' ? null : form.paymentOption,
+        vouchercode: appliedVoucher?.vouchercode || null,
         note: form.note,
         items: items.map(item => ({
           variantid: item.variantId,
@@ -268,9 +335,7 @@ const CheckoutPage: React.FC = () => {
   const labelClass = 'mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500';
   const paymentMethods = [
     ...(isLoggedIn ? [{ value: 'COD', label: 'Thanh toán khi nhận hàng (COD)', desc: 'Dành cho tài khoản đã đăng nhập' }] : []),
-    { value: 'MOMO', label: 'Momo', desc: 'Đặt cọc hoặc thanh toán trước qua ví Momo' },
-    { value: 'VNPAY', label: 'VNPay', desc: 'Quét mã QR hoặc thanh toán qua cổng VNPay' },
-    { value: 'BANK', label: 'Chuyển khoản ngân hàng', desc: 'Chuyển khoản theo mã QR, nhân viên sẽ đối soát sau' },
+    { value: 'BANK', label: 'Chuyển khoản ngân hàng', desc: 'Chuyển khoản qua VietQR, hệ thống xác nhận tự động tức thì (Real-time)' },
   ] as const;
 
   return (
@@ -513,6 +578,45 @@ const CheckoutPage: React.FC = () => {
               ))}
             </div>
 
+            {/* Voucher Input */}
+            <div className="mt-5 border-t border-[#e5e7eb] pt-4">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">Mã giảm giá (Voucher)</span>
+              {appliedVoucher ? (
+                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs">
+                  <div className="flex items-center gap-2 text-emerald-800">
+                    <span className="font-bold bg-emerald-600 text-white px-2 py-0.5 rounded text-[10px] tracking-wider uppercase">
+                      {appliedVoucher.vouchercode}
+                    </span>
+                    <span className="font-semibold">
+                      - {appliedVoucher.discountpercentage ? `${appliedVoucher.discountpercentage}%` : formatCurrency(appliedVoucher.discountamount || 0)}
+                    </span>
+                  </div>
+                  <button type="button" onClick={handleRemoveVoucher} className="text-red-500 hover:text-red-700 font-bold">Gỡ</button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nhập mã giảm giá..."
+                      value={voucherCodeInput}
+                      onChange={e => setVoucherCodeInput(e.target.value.toUpperCase())}
+                      className="flex-1 border border-slate-200 focus:border-[#e30613] rounded-2xl px-3 py-2 text-xs outline-none transition-colors font-bold uppercase"
+                    />
+                    <button
+                      type="button"
+                      disabled={validatingVoucher || !voucherCodeInput.trim()}
+                      onClick={handleApplyVoucher}
+                      className="bg-[#1f2937] hover:bg-[#c4000b] text-white px-4 py-2 text-xs font-black rounded-2xl disabled:opacity-50 transition-colors"
+                    >
+                      {validatingVoucher ? 'Đang kiểm tra...' : 'Áp dụng'}
+                    </button>
+                  </div>
+                  {voucherError && <p className="text-[11px] font-semibold text-red-600">{voucherError}</p>}
+                </div>
+              )}
+            </div>
+
             <div className="mt-5 space-y-2 border-t border-[#e5e7eb] pt-4 text-sm">
               <div className="flex justify-between text-slate-600">
                 <span>Tạm tính</span><span>{formatCurrency(totalPrice)}</span>
@@ -527,6 +631,12 @@ const CheckoutPage: React.FC = () => {
                 <div className="flex justify-between text-slate-600">
                   <span>Gói bảo hành</span>
                   <span className="font-bold text-[#1f2937]">{formatCurrency(totalWarrantyPrice)}</span>
+                </div>
+              )}
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-emerald-600">
+                  <span>Giảm giá (Voucher)</span>
+                  <span className="font-bold">-{formatCurrency(discountAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t border-[#e5e7eb] pt-3 text-base font-black text-[#1f2937]">

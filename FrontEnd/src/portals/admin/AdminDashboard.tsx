@@ -66,7 +66,7 @@ const buildAreaPath = (data: RevenueBreakdownItem[], width: number, height: numb
   const step = data.length > 1 ? width / (data.length - 1) : width;
   const points = data.map((item, index) => {
     const x = data.length > 1 ? index * step : width / 2;
-    const y = height - (item.revenue / max) * (height - 18) - 9;
+    const y = height - (item.revenue / max) * (height - 50) - 10;
     return { x, y };
   });
   const linePath = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
@@ -232,6 +232,7 @@ const AdminDashboard: React.FC = () => {
   const [orderStatusPeriod, setOrderStatusPeriod] = useState('30d');
 
   const [refreshKey, setRefreshKey] = useState(0);
+  const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; label: string; revenue: number } | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(searchQuery), 300);
@@ -450,28 +451,53 @@ const AdminDashboard: React.FC = () => {
               </div>
             ) : (
               <div className="relative h-full w-full overflow-hidden rounded-[24px] border border-slate-100 bg-gradient-to-br from-white via-[#fff7f7] to-[#f8fafc] p-3">
-                <svg viewBox="0 0 720 260" preserveAspectRatio="none" className="h-[calc(100%-36px)] w-full">
-                  <defs>
-                    <linearGradient id="revenue-area-gradient" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#e30613" stopOpacity="0.34" />
-                      <stop offset="60%" stopColor="#f59e0b" stopOpacity="0.16" />
-                      <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-                    </linearGradient>
-                    <linearGradient id="revenue-line-gradient" x1="0" x2="1" y1="0" y2="0">
-                      <stop offset="0%" stopColor="#e30613" />
-                      <stop offset="100%" stopColor="#f59e0b" />
-                    </linearGradient>
-                  </defs>
-                  <path d={areaChart.areaPath} fill="url(#revenue-area-gradient)" />
-                  <path d={areaChart.linePath} fill="none" stroke="url(#revenue-line-gradient)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="6" />
-                  {revenueData.map((item, index) => {
-                    const x = revenueData.length > 1 ? (index * 720) / (revenueData.length - 1) : 360;
-                    const y = 260 - (item.revenue / chartHeightLimit) * (260 - 18) - 9;
-                    return (
-                      <circle key={`${item.label}-${index}`} cx={x} cy={y} r="5" fill="#fff" stroke="#e30613" strokeWidth="4" />
-                    );
-                  })}
-                </svg>
+                <div className="relative h-[calc(100%-36px)] w-full">
+                  <svg viewBox="0 0 720 260" preserveAspectRatio="none" className="h-full w-full">
+                    <defs>
+                      <linearGradient id="revenue-area-gradient" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="#e30613" stopOpacity="0.34" />
+                        <stop offset="60%" stopColor="#f59e0b" stopOpacity="0.16" />
+                        <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+                      </linearGradient>
+                      <linearGradient id="revenue-line-gradient" x1="0" x2="1" y1="0" y2="0">
+                        <stop offset="0%" stopColor="#e30613" />
+                        <stop offset="100%" stopColor="#f59e0b" />
+                      </linearGradient>
+                    </defs>
+                    <path d={areaChart.areaPath} fill="url(#revenue-area-gradient)" />
+                    <path d={areaChart.linePath} fill="none" stroke="url(#revenue-line-gradient)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="6" />
+                    {revenueData.map((item, index) => {
+                      const x = revenueData.length > 1 ? (index * 720) / (revenueData.length - 1) : 360;
+                      const y = 260 - (item.revenue / chartHeightLimit) * (260 - 50) - 10;
+                      return (
+                        <circle
+                          key={`${item.label}-${index}`}
+                          cx={x}
+                          cy={y}
+                          r="6"
+                          fill="#fff"
+                          stroke="#e30613"
+                          strokeWidth="4"
+                          className="cursor-pointer transition-all duration-150 hover:r-8 hover:stroke-[#f59e0b]"
+                          onMouseEnter={() => setHoveredPoint({ x, y, label: item.label, revenue: item.revenue })}
+                          onMouseLeave={() => setHoveredPoint(null)}
+                        />
+                      );
+                    })}
+                  </svg>
+                  {hoveredPoint && (
+                    <div
+                      className="absolute pointer-events-none rounded-2xl bg-[#172033]/95 px-3 py-2 text-xs font-bold text-white shadow-xl -translate-x-1/2 -translate-y-full mb-3 backdrop-blur-sm transition-all duration-150"
+                      style={{
+                        left: `${(hoveredPoint.x / 720) * 100}%`,
+                        top: `${(hoveredPoint.y / 260) * 100}%`,
+                      }}
+                    >
+                      <div className="text-[10px] text-slate-400 font-semibold">{hoveredPoint.label}</div>
+                      <div className="mt-0.5 text-xs font-black text-[#ffd166]">{formatCurrency(hoveredPoint.revenue)}</div>
+                    </div>
+                  )}
+                </div>
                 <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
                   {revenueData.map((item, index) => (
                     <div key={`${item.label}-${index}`} className="group relative min-w-12 flex-1 text-center">

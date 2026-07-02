@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   BarChart3,
   Box,
@@ -77,8 +77,30 @@ const navigationByRole: Record<string, StaffNavItem[]> = {
 
 export const StaffLayout: React.FC = () => {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const staffNav = navigationByRole[user?.rolename ?? ''] ?? [];
   const roleName = roleLabels[user?.rolename ?? ''] ?? user?.rolename ?? 'Nhân viên';
+
+  const pageTitleMap: Record<string, string> = {
+    '/staff/manager': 'Trung tâm điều phối',
+    '/staff/orders': 'Quản lý đơn hàng',
+    '/staff/sales-orders': 'Xác nhận đơn & thanh toán',
+    '/staff/warehouse-orders': 'Đóng gói & xuất kho',
+    '/staff/shipments': 'Theo dõi giao hàng',
+    '/staff/returns': 'Đổi trả & hoàn tiền',
+    '/staff/products': 'Quản lý sản phẩm',
+    '/staff/inventory': 'Quản lý IMEI tồn kho',
+    '/staff/customers': 'Quản lý khách hàng',
+    '/staff/vouchers': 'Quản lý Voucher',
+    '/staff/homepage-sections': 'Sản phẩm trang chủ',
+    '/staff/consultations': 'Tư vấn trực tiếp',
+    '/staff/warranties': 'Trung tâm bảo hành',
+    '/staff/content': 'Trung tâm nội dung',
+    '/staff/news': 'Quản lý tin tức',
+    '/staff/promotional-contents': 'Banner & slider',
+  };
+
+  const pageTitle = pageTitleMap[location.pathname] ?? roleName;
 
   return (
     <div className="ops-shell flex h-screen overflow-hidden">
@@ -144,8 +166,8 @@ export const StaffLayout: React.FC = () => {
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
           <div>
-            <p className="ops-label">Trung tâm vận hành</p>
-            <h1 className="mt-1 text-xl font-black text-[#172033]">{roleName}</h1>
+            <p className="ops-label">Trung tâm vận hành · {roleName}</p>
+            <h1 className="mt-1 text-xl font-black text-[#172033]">{pageTitle}</h1>
           </div>
           <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-500">
             {new Date().toLocaleString('vi-VN')}

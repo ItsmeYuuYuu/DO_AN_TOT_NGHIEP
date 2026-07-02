@@ -22,7 +22,6 @@ import { useAuth } from '@/features/auth/context/AuthContext';
 import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '@/features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
-import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
 import { ChatAssistantSegments } from '@/features/chat/components/ChatAssistantSegments';
 import { brandsApi, type Brand } from '@/features/brands/api/brandsApi';
 import { categoriesApi, type Category } from '@/features/categories/api/categoriesApi';
@@ -666,13 +665,7 @@ export const CustomerLayout: React.FC = () => {
                             </div>
                           )}
 
-                          {message.recommendations && message.recommendations.length > 0 && aiWidgetSession && (
-                            <ChatRecommendationCards
-                              sessionId={aiWidgetSession.sessionid}
-                              recommendations={message.recommendations}
-                              allowAddToCart
-                            />
-                          )}
+
 
                           {!isUserMessage &&
                             index === aiWidgetMessages.length - 1 &&

@@ -53,7 +53,8 @@ namespace ECommerceBackend.DTOs.Orders
         string? Cancellationreason,
         CustomerLiteDto? Customer,
         List<OrderItemDto>? Orderitems,
-        List<OrderPaymentDto>? Orderpayments
+        List<OrderPaymentDto>? Orderpayments,
+        ShipmentLookupDto? Shipment
     );
 
     public record OrderDetailDto : OrderListItemDto
@@ -82,7 +83,8 @@ namespace ECommerceBackend.DTOs.Orders
             string? Cancellationreason,
             CustomerLiteDto? Customer,
             List<OrderItemDto>? Orderitems,
-            List<OrderPaymentDto>? Orderpayments
+            List<OrderPaymentDto>? Orderpayments,
+            ShipmentLookupDto? Shipment = null
         ) : base(
             Orderid,
             Customerid,
@@ -107,7 +109,8 @@ namespace ECommerceBackend.DTOs.Orders
             Cancellationreason,
             Customer,
             Orderitems,
-            Orderpayments) { }
+            Orderpayments,
+            Shipment) { }
     }
 
     public record CreateOrderItemRequestDto(
@@ -188,6 +191,14 @@ namespace ECommerceBackend.DTOs.Orders
         List<ShipmentLookupHistoryDto> Histories
     );
 
+    public record OrderItemLookupDto(
+        string? Productname,
+        string? Sku,
+        decimal Sellingprice,
+        string? Packagename,
+        decimal? Warrantyprice
+    );
+
     public record OrderLookupDto(
         int Orderid,
         DateTime? Orderdate,
@@ -198,7 +209,13 @@ namespace ECommerceBackend.DTOs.Orders
         string? Paymentmethod,
         string? Vouchercode,
         int ItemCount,
-        ShipmentLookupDto? Shipment
+        ShipmentLookupDto? Shipment,
+        List<OrderItemLookupDto> Orderitems,
+        string? Shippingname,
+        string? Shippingphone,
+        string? Shippingemail,
+        string? Shippingaddress,
+        string? Customernote
     );
 
     public record BulkUpdateStatusRequestDto(

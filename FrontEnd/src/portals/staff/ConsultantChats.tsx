@@ -3,7 +3,6 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { Bot, CheckCircle2, Headphones, MessageSquare, Send, ShoppingCart, TrendingUp, User } from 'lucide-react';
 import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatRecommendationMetrics, ChatSession } from '@/features/chat/api/chatSessionsApi';
-import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 
 const statusLabel: Record<string, string> = {
@@ -169,7 +168,7 @@ const ConsultantChats = () => {
                 key={session.sessionid}
                 type="button"
                 onClick={() => selectSession(session)}
-                className={`w-full border p-3 text-left transition ${
+                className={`w-full rounded-2xl border p-3 text-left transition ${
                   activeSession?.sessionid === session.sessionid
                     ? 'border-teal-400 bg-teal-50 shadow-[0_10px_28px_rgba(15,23,42,0.06)]'
                     : 'border-slate-200 bg-white hover:border-slate-300'
@@ -221,7 +220,7 @@ const ConsultantChats = () => {
                     type="button"
                     disabled={busy}
                     onClick={accept}
-                    className="inline-flex items-center gap-2 bg-teal-600 px-4 py-2 text-sm font-black text-white hover:bg-teal-700 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-2xl bg-teal-600 px-4 py-2 text-sm font-black text-white hover:bg-teal-700 disabled:opacity-50"
                   >
                     <Headphones size={17} /> Tiếp nhận
                   </button>
@@ -230,7 +229,7 @@ const ConsultantChats = () => {
                     type="button"
                     disabled={busy}
                     onClick={close}
-                    className="inline-flex items-center gap-2 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
                   >
                     <CheckCircle2 size={17} /> Hoàn tất
                   </button>
@@ -262,7 +261,7 @@ const ConsultantChats = () => {
                       }`}>
                         {fromCustomer ? <User size={16} /> : fromAssistant ? <Bot size={16} /> : <Headphones size={16} />}
                       </div>
-                      <div className={`max-w-[78%] border px-4 py-3 text-sm shadow-[0_10px_28px_rgba(15,23,42,0.06)] ${
+                      <div className={`max-w-[78%] rounded-2xl border px-4 py-3 text-sm shadow-[0_10px_28px_rgba(15,23,42,0.06)] ${
                         fromCustomer
                           ? 'border-slate-200 bg-white text-slate-700'
                           : fromAssistant
@@ -273,12 +272,7 @@ const ConsultantChats = () => {
                         {message.responsetype === 'comparison' && message.recommendations && (
                           <ChatComparisonTable recommendations={message.recommendations} />
                         )}
-                        {message.recommendations && message.recommendations.length > 0 && (
-                          <ChatRecommendationCards
-                            sessionId={activeSession.sessionid}
-                            recommendations={message.recommendations}
-                          />
-                        )}
+
                         <p className={`mt-2 text-[10px] font-black uppercase tracking-wide ${
                           fromCustomer ? 'text-slate-400' : fromAssistant ? 'text-violet-400' : 'text-teal-100'
                         }`}>
@@ -307,12 +301,12 @@ const ConsultantChats = () => {
                     value={input}
                     onChange={handleInputChange}
                     placeholder="Nhập nội dung tư vấn..."
-                    className="flex-1 border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:bg-white"
+                    className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:bg-white"
                   />
                   <button
                     type="submit"
                     disabled={busy || !input.trim()}
-                    className="bg-teal-600 p-3 text-white hover:bg-teal-700 disabled:opacity-50"
+                    className="bg-teal-600 p-3 text-white hover:bg-teal-700 disabled:opacity-50 rounded-full flex items-center justify-center h-11 w-11 shrink-0"
                   >
                     <Send size={20} />
                   </button>

@@ -45,7 +45,7 @@ public class OrderAssignmentsController : ControllerBase
 
     private static bool IsPaymentReady(Order order) =>
         order.Paymentmethod == "COD"
-            ? order.Checkouttype == "Registered" && order.Paymentstatus == "CODPending"
+            ? order.Paymentstatus == "CODPending"
             : order.Paymentstatus is "DepositPaid" or "Paid";
 
     private static OrderAssignmentDto MapAssignment(Orderassignment assignment) => new(

@@ -16,7 +16,6 @@ import {
 import { chatSessionsApi } from '../../features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '../../features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
-import { ChatRecommendationCards } from '@/features/chat/components/ChatRecommendationCards';
 import { ChatAssistantSegments } from '@/features/chat/components/ChatAssistantSegments';
 import { formatDateTime } from '../../utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
@@ -502,20 +501,7 @@ export default function CustomerChat() {
                       <ChatComparisonTable recommendations={message.recommendations} />
                     )}
 
-                    {message.recommendations && message.recommendations.length > 0 && activeSession && (
-                      <>
-                        {message.responsetype === 'comparison' && (
-                          <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                            Chọn mua nhanh
-                          </p>
-                        )}
-                        <ChatRecommendationCards
-                          sessionId={activeSession.sessionid}
-                          recommendations={message.recommendations}
-                          allowAddToCart
-                        />
-                      </>
-                    )}
+
 
                     {!isUser &&
                       index === messages.length - 1 &&

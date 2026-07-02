@@ -5,6 +5,18 @@ import type { Review } from '@/features/products/api/reviewsApi';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
 
+const formatSkuToAttributes = (sku?: string) => {
+  if (!sku) return 'Sản phẩm';
+  const parts = sku.split('-');
+  if (parts.length <= 1) return sku;
+  const startIndex = parts[0].toLowerCase() === 'demo' ? 1 : 0;
+  return parts.slice(startIndex).map(p => {
+    if (p.toLowerCase() === 'newseal') return 'New Seal';
+    if (p.toLowerCase() === 'chínhhãng') return 'Chính hãng';
+    return p;
+  }).join(' / ');
+};
+
 
 export const MyReviews: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -113,7 +125,7 @@ export const MyReviews: React.FC = () => {
                 <>
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <p className="text-sm font-bold text-slate-800">SKU: {rev.variantSku || 'Sản phẩm'}</p>
+                      <p className="text-sm font-bold text-slate-800">{formatSkuToAttributes(rev.variantSku)}</p>
                       <p className="text-xs text-slate-400">{rev.createdat ? new Date(rev.createdat).toLocaleDateString('vi-VN') : ''}</p>
                     </div>
                     <div className="flex items-center gap-3">

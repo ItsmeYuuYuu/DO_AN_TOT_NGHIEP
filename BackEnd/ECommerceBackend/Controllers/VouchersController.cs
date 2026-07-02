@@ -40,12 +40,30 @@ namespace ECommerceBackend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<IEnumerable<VoucherDto>>> GetActiveVouchers()
         {
-            var now = DateTime.Now;
-            var vouchers = await _context.Vouchers
+            var now = DateTime.UtcNow;
+
+            var usedVouchers = new List<string>();
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdClaim, out int userId))
+            {
+                usedVouchers = await _context.Orders
+                    .Where(o => o.Userid == userId && o.Vouchercode != null && o.Orderstatus != "Cancelled")
+                    .Select(o => o.Vouchercode!)
+                    .Distinct()
+                    .ToListAsync();
+            }
+
+            var query = _context.Vouchers
                 .Where(v => v.Isactive == true
                     && (v.Validfrom == null || v.Validfrom <= now)
-                    && (v.Validto == null || v.Validto >= now))
-                .ToListAsync();
+                    && (v.Validto == null || v.Validto >= now));
+
+            if (usedVouchers.Any())
+            {
+                query = query.Where(v => !usedVouchers.Contains(v.Vouchercode));
+            }
+
+            var vouchers = await query.ToListAsync();
             return Ok(vouchers.Select(MapToDto));
         }
 
@@ -65,9 +83,22 @@ namespace ECommerceBackend.Controllers
             var voucher = await _context.Vouchers.FindAsync(code);
             if (voucher == null) return NotFound(new ApiErrorDto("Voucher không tồn tại."));
             if (voucher.Isactive == false) return BadRequest(new ApiErrorDto("Voucher đã hết hiệu lực."));
-            var now = DateTime.Now;
+            
+            var now = DateTime.UtcNow;
             if (voucher.Validfrom.HasValue && now < voucher.Validfrom) return BadRequest(new ApiErrorDto("Voucher chưa có hiệu lực."));
             if (voucher.Validto.HasValue && now > voucher.Validto) return BadRequest(new ApiErrorDto("Voucher đã hết hạn."));
+            
+            // Check reuse!
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdClaim, out int userId))
+            {
+                var alreadyUsed = await _context.Orders.AnyAsync(o =>
+                    o.Userid == userId
+                    && o.Vouchercode == code
+                    && o.Orderstatus != "Cancelled");
+                if (alreadyUsed)
+                    return BadRequest(new ApiErrorDto("Bạn đã sử dụng mã giảm giá này rồi. Mỗi khách hàng chỉ được dùng 1 lần."));
+            }
             
             return Ok(MapToDto(voucher));
         }

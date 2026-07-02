@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import apiClient from '@/api/apiClient';
-import { Search, Package, CheckCircle2, Clock, Truck, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Package, CheckCircle2, Clock, Truck, XCircle, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import { Seo } from '@/components/Seo';
+import { Link, useSearchParams } from 'react-router-dom';
 
 interface OrderLookup {
   orderid: number;
@@ -25,6 +26,18 @@ interface OrderLookup {
       createdat?: string;
     }>;
   };
+  orderitems?: Array<{
+    productname?: string;
+    sku?: string;
+    sellingprice: number;
+    packagename?: string;
+    warrantyprice?: number;
+  }>;
+  shippingname?: string;
+  shippingphone?: string;
+  shippingemail?: string;
+  shippingaddress?: string;
+  customernote?: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -34,6 +47,19 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
   Completed: { label: 'Đã giao',      color: 'bg-green-100 text-green-700',  icon: <CheckCircle2 size={13} /> },
   Returned:  { label: 'Đã hoàn hàng', color: 'bg-slate-200 text-slate-700', icon: <Package size={13} /> },
   Cancelled: { label: 'Đã hủy',       color: 'bg-red-100 text-red-600',      icon: <XCircle size={13} /> },
+};
+
+const formatSkuToAttributes = (productName: string, sku?: string) => {
+  if (!sku) return productName;
+  const parts = sku.split('-');
+  if (parts.length <= 1) return productName;
+  const startIndex = parts[0].toLowerCase() === 'demo' || parts[0].toLowerCase() === productName.toLowerCase() ? 1 : 0;
+  const attrs = parts.slice(startIndex).map(p => {
+    if (p.toLowerCase() === 'newseal') return 'New Seal';
+    if (p.toLowerCase() === 'chínhhãng') return 'Chính hãng';
+    return p;
+  });
+  return `${productName} - ${attrs.join(' / ')}`;
 };
 
 const SHIPMENT_STATUS_LABELS: Record<string, string> = {
@@ -55,6 +81,42 @@ const OrderLookupPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [searchParams] = useSearchParams();
+  const isDetailMode = searchParams.get('mode') === 'detail';
+
+  React.useEffect(() => {
+    const qPhone = searchParams.get('phone');
+    const qOrderId = searchParams.get('orderId') || searchParams.get('orderid');
+
+    if (qPhone) {
+      setPhone(qPhone);
+      if (qOrderId) {
+        setOrderId(qOrderId);
+      }
+
+      setLoading(true);
+      setError(null);
+      setResults(null);
+
+      const params: Record<string, string> = { phone: qPhone.trim() };
+      if (qOrderId) params.orderid = qOrderId.trim();
+
+      apiClient.get<OrderLookup[]>('/Orders/lookup', { params })
+        .then(res => {
+          setResults(res.data);
+          if (qOrderId && res.data.length > 0) {
+            setExpandedId(Number(qOrderId));
+          }
+        })
+        .catch(err => {
+          const msg = err?.response?.data?.message;
+          setError(msg || 'Không thể tự động tra cứu vận đơn.');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [searchParams]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,19 +148,32 @@ const OrderLookupPage: React.FC = () => {
     <div className="customer-shell min-h-screen">
       <Seo title="Tra cứu đơn hàng - Cuồng Điện Thoại" description="Tra cứu trạng thái đơn hàng và vận đơn tại Cuồng Điện Thoại." noIndex />
       {/* Header */}
-      <div className="border-b customer-rule bg-white">
-        <div className="max-w-2xl mx-auto px-4 py-8 text-center">
-          <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Search className="text-[#e30613]" size={24} />
+      {isDetailMode ? (
+        <div className="border-b customer-rule bg-white">
+          <div className="max-w-2xl mx-auto px-4 py-5 flex items-center gap-3">
+            <Link to="/profile" className="text-slate-500 hover:text-[#e30613] flex items-center gap-1.5 text-sm font-bold">
+              <ArrowLeft size={16} /> Quay lại Lịch sử đơn
+            </Link>
+            <span className="text-slate-300">|</span>
+            <h1 className="text-base font-black text-slate-800">Chi tiết đơn hàng #{orderId}</h1>
           </div>
-          <h1 className="text-2xl font-black text-slate-800 mb-2">Tra cứu đơn hàng</h1>
-          <p className="text-slate-400 text-sm">Nhập số điện thoại đặt hàng để kiểm tra tình trạng đơn</p>
         </div>
-      </div>
+      ) : (
+        <div className="border-b customer-rule bg-white">
+          <div className="max-w-2xl mx-auto px-4 py-8 text-center">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="text-[#e30613]" size={24} />
+            </div>
+            <h1 className="text-2xl font-black text-slate-800 mb-2">Tra cứu đơn hàng</h1>
+            <p className="text-slate-400 text-sm">Nhập số điện thoại đặt hàng để kiểm tra tình trạng đơn</p>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Search Form */}
-        <form onSubmit={handleSearch} className="customer-panel mb-6 p-6">
+        {!isDetailMode && (
+          <form onSubmit={handleSearch} className="customer-panel mb-6 p-6">
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5" htmlFor="lookup-phone">
@@ -152,6 +227,7 @@ const OrderLookupPage: React.FC = () => {
             </button>
           </div>
         </form>
+        )}
 
         {/* Results */}
         {results !== null && (
@@ -163,9 +239,11 @@ const OrderLookupPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="text-sm text-slate-500 font-medium">
-                Tìm thấy <span className="text-[#e30613] font-black">{results.length}</span> đơn hàng
-              </p>
+              {!isDetailMode && (
+                <p className="text-sm text-slate-500 font-medium">
+                  Tìm thấy <span className="text-[#e30613] font-black">{results.length}</span> đơn hàng
+                </p>
+              )}
               {results.map(order => {
                 const st = getStatus(order.orderstatus);
                 const isExpanded = expandedId === order.orderid;
@@ -197,31 +275,72 @@ const OrderLookupPage: React.FC = () => {
 
                     {isExpanded && (
                       <div className="border-t border-slate-100 px-5 pb-5 pt-4 animate-in fade-in duration-200">
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div className="bg-slate-50 rounded-2xl p-3">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Tổng tiền</p>
-                            <p className="font-black text-slate-700">{fmtMoney(order.totalamount)}</p>
-                          </div>
-                          {(order.discountamount ?? 0) > 0 && (
-                            <div className="bg-green-50 rounded-2xl p-3">
-                              <p className="text-[10px] font-bold text-green-500 uppercase mb-1">Giảm giá</p>
-                              <p className="font-black text-green-700">-{fmtMoney(order.discountamount ?? 0)}</p>
+                        {/* 1. Grid Info: Shipping & Payment */}
+                        <div className="grid gap-4 md:grid-cols-2 text-xs mb-4">
+                          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 shadow-sm">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Thông tin nhận hàng</h4>
+                            <div className="space-y-1.5 text-slate-700">
+                              <p><span className="font-semibold text-slate-500">Người nhận:</span> {order.shippingname ?? '—'}</p>
+                              <p><span className="font-semibold text-slate-500">Số điện thoại:</span> {order.shippingphone ?? '—'}</p>
+                              {order.shippingemail && <p><span className="font-semibold text-slate-500">Email:</span> {order.shippingemail}</p>}
+                              <p><span className="font-semibold text-slate-500">Địa chỉ:</span> {order.shippingaddress ?? '—'}</p>
+                              {order.customernote && (
+                                <p className="mt-2 bg-amber-50 text-amber-800 border border-amber-100 p-2 rounded-xl">
+                                  <span className="font-bold">Ghi chú:</span> {order.customernote}
+                                </p>
+                              )}
                             </div>
-                          )}
-                          <div className="bg-red-50 rounded-2xl p-3">
-                            <p className="text-[10px] font-bold text-[#e30613] uppercase mb-1">Thanh toán</p>
-                            <p className="font-black text-[#c4000b]">{fmtMoney(order.finalamount)}</p>
                           </div>
-                          <div className="bg-slate-50 rounded-2xl p-3">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Số sản phẩm</p>
-                            <p className="font-black text-slate-700">{order.itemCount} sản phẩm</p>
+
+                          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 shadow-sm">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Thông tin Thanh toán</h4>
+                            <div className="space-y-1.5 text-slate-700">
+                              <p><span className="font-semibold text-slate-500">Hình thức:</span> {order.paymentmethod ?? '—'}</p>
+                              {order.vouchercode && (
+                                <p><span className="font-semibold text-slate-500">Mã giảm giá (Voucher):</span> <span className="text-[#e30613] font-bold">{order.vouchercode}</span></p>
+                              )}
+                              <div className="mt-3 pt-2 border-t border-slate-200 space-y-1 text-slate-600">
+                                <div className="flex justify-between">
+                                  <span>Giá trị hàng hóa:</span>
+                                  <span className="font-semibold text-slate-800">{fmtMoney(order.totalamount)}</span>
+                                </div>
+                                {order.discountamount && order.discountamount > 0 ? (
+                                  <div className="flex justify-between text-emerald-600">
+                                    <span>Giảm giá (Voucher):</span>
+                                    <span className="font-semibold">-{fmtMoney(order.discountamount)}</span>
+                                  </div>
+                                ) : null}
+                                <div className="flex justify-between font-black text-sm text-[#c4000b] pt-1">
+                                  <span>Tổng thanh toán:</span>
+                                  <span>{fmtMoney(order.finalamount)}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        {order.paymentmethod && (
-                          <p className="text-xs text-slate-400 mt-3">
-                            Phương thức: <span className="text-slate-600 font-bold">{order.paymentmethod}</span>
-                            {order.vouchercode && <> · Mã giảm: <span className="text-[#e30613] font-bold">{order.vouchercode}</span></>}
-                          </p>
+
+                        {/* Products list in details */}
+                        {order.orderitems && order.orderitems.length > 0 && (
+                          <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Danh sách sản phẩm</p>
+                            <div className="divide-y divide-slate-200">
+                              {order.orderitems.map((item, idx) => (
+                                <div key={idx} className="flex justify-between items-center py-2.5 first:pt-0 last:pb-0 text-xs">
+                                  <div>
+                                    <p className="font-bold text-slate-800">
+                                      {formatSkuToAttributes(item.productname ?? 'Sản phẩm', item.sku)}
+                                    </p>
+                                    {item.packagename && (
+                                      <p className="text-[10px] font-semibold text-[#c4000b] mt-0.5">
+                                        🛡️ Gói bảo hành: {item.packagename} (+{fmtMoney(item.warrantyprice ?? 0)})
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span className="font-black text-slate-700">{fmtMoney(item.sellingprice)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         )}
                         {order.shipment && (
                           <div className="mt-4 rounded-2xl border border-red-100 bg-red-50/60 p-4">

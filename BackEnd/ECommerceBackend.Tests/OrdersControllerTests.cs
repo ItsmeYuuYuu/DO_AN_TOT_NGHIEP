@@ -341,7 +341,7 @@ namespace ECommerceBackend.Tests
                 "123 Street",
                 "Chat-attributed order",
                 Customername: "Test User",
-                Customerphone: "123",
+                Customerphone: "0912345678",
                 Customeremail: "test@test.com"));
             var order = await response.Content.ReadFromJsonAsync<OrderDetailDto>();
 
@@ -375,7 +375,7 @@ namespace ECommerceBackend.Tests
             
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var err = await response.Content.ReadFromJsonAsync<ApiErrorDto>();
-            Assert.Contains("khong du ton kho", err!.Message);
+            Assert.Contains("không đủ tồn kho", err!.Message);
         }
 
         [Fact]
@@ -424,7 +424,7 @@ namespace ECommerceBackend.Tests
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var err = await response.Content.ReadFromJsonAsync<ApiErrorDto>();
-            Assert.Contains("Khach vang lai khong the chon COD", err!.Message);
+            Assert.Contains("Khách vãng lai không thể chọn COD", err!.Message);
         }
 
         [Fact]
@@ -572,7 +572,7 @@ namespace ECommerceBackend.Tests
 
             Assert.Equal(HttpStatusCode.BadRequest, statusResponse.StatusCode);
             var error = await statusResponse.Content.ReadFromJsonAsync<ApiErrorDto>();
-            Assert.Contains("chua dat coc", error!.Message);
+            Assert.Contains("chưa đặt cọc", error!.Message);
         }
 
         [Fact]

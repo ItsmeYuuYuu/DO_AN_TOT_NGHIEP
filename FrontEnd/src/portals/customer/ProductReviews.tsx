@@ -7,6 +7,18 @@ import { Button } from '@/components/Button';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
 
+const formatSkuToAttributes = (sku?: string) => {
+  if (!sku) return 'Sản phẩm';
+  const parts = sku.split('-');
+  if (parts.length <= 1) return sku;
+  const startIndex = parts[0].toLowerCase() === 'demo' ? 1 : 0;
+  return parts.slice(startIndex).map(p => {
+    if (p.toLowerCase() === 'newseal') return 'New Seal';
+    if (p.toLowerCase() === 'chínhhãng') return 'Chính hãng';
+    return p;
+  }).join(' / ');
+};
+
 
 interface Props {
   productId?: number;
@@ -198,7 +210,7 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
                       <p className="font-bold text-slate-800">{rev.customerName || 'Khách hàng'}</p>
                       {rev.variantSku && (
                          <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
-                           {rev.variantSku}
+                           {formatSkuToAttributes(rev.variantSku)}
                          </span>
                       )}
                     </div>

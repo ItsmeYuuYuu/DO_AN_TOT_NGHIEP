@@ -260,7 +260,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                               ...current,
                               [item.orderid]: Number(event.target.value),
                             }))}
-                            className="max-w-44 border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold text-[#172033]"
+                            className="max-w-44 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold text-[#172033]"
                           >
                             <option value="">Chọn nhân viên</option>
                             {employees.map(employee => (
@@ -272,7 +272,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                             disabled={!selectedEmployees[item.orderid] || workingId === item.orderid}
                             onClick={() => runAction(item.orderid, () =>
                               orderAssignmentsApi.assign(item.orderid, department, selectedEmployees[item.orderid]))}
-                            className="bg-[#172033] px-3 py-1.5 text-xs font-black text-white disabled:opacity-40"
+                            className="rounded-xl bg-[#172033] px-3 py-1.5 text-xs font-black text-white disabled:opacity-40"
                           >
                             Giao việc
                           </button>
@@ -288,7 +288,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                             type="button"
                             disabled={workingId === item.orderid}
                             onClick={() => runAction(item.orderid, () => orderAssignmentsApi.claim(item.orderid, department))}
-                            className="inline-flex items-center gap-2 bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700 disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700 disabled:opacity-50"
                           >
                             <UserCheck size={14} /> Nhận việc
                           </button>
@@ -299,7 +299,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                             type="button"
                             disabled={workingId === item.orderid}
                             onClick={() => runAction(item.orderid, () => ordersApi.confirmPayment(item.orderid))}
-                            className="inline-flex items-center gap-2 border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-[#4338ca] hover:bg-indigo-100"
+                            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-[#4338ca] hover:bg-indigo-100"
                           >
                             <CircleDollarSign size={14} /> Xác nhận thanh toán
                           </button>
@@ -310,7 +310,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                             type="button"
                             disabled={workingId === item.orderid}
                             onClick={() => runAction(item.orderid, () => orderAssignmentsApi.handoffToWarehouse(item.orderid))}
-                            className="inline-flex items-center gap-2 bg-[#4f46e5] px-3 py-2 text-xs font-black text-white hover:bg-[#4338ca] disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#4f46e5] px-3 py-2 text-xs font-black text-white hover:bg-[#4338ca] disabled:opacity-50"
                           >
                             <Truck size={14} /> Bàn giao sang kho
                           </button>
@@ -321,7 +321,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                             type="button"
                             disabled={workingId === item.orderid}
                             onClick={() => openImeiVerification(item)}
-                            className="inline-flex items-center gap-2 bg-[#4f46e5] px-3 py-2 text-xs font-black text-white hover:bg-[#4338ca] disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#4f46e5] px-3 py-2 text-xs font-black text-white hover:bg-[#4338ca] disabled:opacity-50"
                           >
                             <ScanLine size={14} /> Kiểm tra IMEI
                           </button>
@@ -420,14 +420,14 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                   value={shippingNote}
                   onChange={event => setShippingNote(event.target.value)}
                   placeholder="Ví dụ: Đã kiểm tra ngoại hình, niêm phong và phụ kiện..."
-                  className="min-h-24 w-full border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#4f46e5]"
+                  className="min-h-24 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#4f46e5]"
                 />
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <label className="text-xs font-black uppercase text-slate-500">
                   Đơn vị vận chuyển
-                  <select value={carrier} onChange={event => setCarrier(event.target.value)} className="mt-1.5 w-full border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case text-[#172033]">
+                  <select value={carrier} onChange={event => setCarrier(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case text-[#172033]">
                     <option value="GHN">GHN</option>
                     <option value="GHTK">GHTK</option>
                     <option value="VIETTELPOST">Viettel Post</option>
@@ -436,11 +436,11 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                 </label>
                 <label className="text-xs font-black uppercase text-slate-500">
                   Phí vận chuyển
-                  <input type="number" min={0} value={shippingFee} onChange={event => setShippingFee(Number(event.target.value))} className="mt-1.5 w-full border border-slate-200 px-3 py-3 text-sm font-bold normal-case text-[#172033]" />
+                  <input type="number" min={0} value={shippingFee} onChange={event => setShippingFee(Number(event.target.value))} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold normal-case text-[#172033]" />
                 </label>
                 <label className="text-xs font-black uppercase text-slate-500">
                   Ngày giao dự kiến
-                  <input type="date" value={estimatedDeliveryDate} onChange={event => setEstimatedDeliveryDate(event.target.value)} className="mt-1.5 w-full border border-slate-200 px-3 py-3 text-sm font-bold normal-case text-[#172033]" />
+                  <input type="date" value={estimatedDeliveryDate} onChange={event => setEstimatedDeliveryDate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold normal-case text-[#172033]" />
                 </label>
               </div>
             </div>
@@ -453,7 +453,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                 <button
                   type="button"
                   onClick={closeImeiVerification}
-                  className="border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-600"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50"
                 >
                   Hủy
                 </button>
@@ -467,7 +467,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                     shippingFee < 0
                   }
                   onClick={confirmShipment}
-                  className="inline-flex items-center gap-2 bg-[#4f46e5] px-5 py-2.5 text-sm font-black text-white hover:bg-[#4338ca] disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#4f46e5] px-5 py-2.5 text-sm font-black text-white hover:bg-[#4338ca] disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   <PackageCheck size={17} />
                   {workingId === verificationOrder.orderid ? 'Đang xuất kho...' : 'Xác nhận xuất giao'}

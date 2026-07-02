@@ -68,22 +68,18 @@ namespace ECommerceBackend.Controllers
 
             var orders = await _context.Orders
                 .Where(o => o.Orderdate != null && o.Orderdate >= sameDayLastMonth && o.Orderdate < tomorrow)
-                .Select(o => new { o.Orderdate, o.Orderstatus, o.Finalamount })
+                .Select(o => new { o.Orderdate, o.Orderstatus, o.Finalamount, o.Paidamount, o.Paymentstatus })
                 .ToListAsync();
 
             var todayOrders = orders.Where(o => o.Orderdate >= today && o.Orderdate < tomorrow).ToList();
             var yesterdayOrders = orders.Where(o => o.Orderdate >= yesterday && o.Orderdate < today).ToList();
             var lastMonthOrders = orders.Where(o => o.Orderdate >= sameDayLastMonth && o.Orderdate < sameDayLastMonthNext).ToList();
 
-            var completedToday = todayOrders.Where(o => o.Orderstatus == "Completed").ToList();
-            var completedYesterday = yesterdayOrders.Where(o => o.Orderstatus == "Completed").ToList();
-            var completedLastMonth = lastMonthOrders.Where(o => o.Orderstatus == "Completed").ToList();
+            decimal revenueToday = todayOrders.Sum(o => o.Paidamount ?? 0);
+            decimal revenueYesterday = yesterdayOrders.Sum(o => o.Paidamount ?? 0);
+            decimal revenueLastMonth = lastMonthOrders.Sum(o => o.Paidamount ?? 0);
 
-            decimal revenueToday = completedToday.Sum(o => o.Finalamount);
-            decimal revenueYesterday = completedYesterday.Sum(o => o.Finalamount);
-            decimal revenueLastMonth = completedLastMonth.Sum(o => o.Finalamount);
-
-            int invoicesToday = completedToday.Count;
+            int invoicesToday = todayOrders.Count(o => o.Orderstatus == "Completed" || o.Paymentstatus == "Paid" || o.Paymentstatus == "DepositPaid");
             int returnsToday = todayOrders.Count(o => o.Orderstatus == "Cancelled");
 
             decimal changeVsYesterday = 0;
@@ -125,8 +121,8 @@ namespace ECommerceBackend.Controllers
             var (start, end) = GetPeriodRanges(period);
 
             var orders = await _context.Orders
-                .Where(o => o.Orderstatus == "Completed" && o.Orderdate != null && o.Orderdate >= start && o.Orderdate < end)
-                .Select(o => new { o.Orderdate, o.Finalamount })
+                .Where(o => (o.Orderstatus == "Completed" || o.Paymentstatus == "Paid" || o.Paymentstatus == "DepositPaid") && o.Orderdate != null && o.Orderdate >= start && o.Orderdate < end)
+                .Select(o => new { o.Orderdate, Finalamount = o.Paidamount ?? 0 })
                 .ToListAsync();
 
             var result = new List<RevenueBreakdownItemDto>();
@@ -281,7 +277,7 @@ namespace ECommerceBackend.Controllers
             var (start, end) = GetPeriodRanges(period);
 
             var rawData = await _context.Orderitems
-                .Where(oi => oi.Order != null && oi.Order.Orderstatus == "Completed" && oi.Order.Orderdate != null && oi.Order.Orderdate >= start && oi.Order.Orderdate < end)
+                .Where(oi => oi.Order != null && (oi.Order.Orderstatus == "Completed" || oi.Order.Paymentstatus == "Paid" || oi.Order.Paymentstatus == "DepositPaid") && oi.Order.Orderdate != null && oi.Order.Orderdate >= start && oi.Order.Orderdate < end)
                 .Where(oi => oi.ImeiNavigation != null && oi.ImeiNavigation.Variant != null && oi.ImeiNavigation.Variant.Product != null)
                 .Select(oi => new {
                     oi.ImeiNavigation!.Variant!.Product!.Productid,
@@ -314,7 +310,7 @@ namespace ECommerceBackend.Controllers
 
             var rawData = await _context.Orders
                 .Include(o => o.Customer)
-                .Where(o => o.Orderstatus == "Completed" && o.Orderdate != null && o.Orderdate >= start && o.Orderdate < end && o.Customer != null)
+                .Where(o => (o.Orderstatus == "Completed" || o.Paymentstatus == "Paid" || o.Paymentstatus == "DepositPaid") && o.Orderdate != null && o.Orderdate >= start && o.Orderdate < end && o.Customer != null)
                 .ToListAsync();
 
             var topCustomers = rawData
@@ -323,7 +319,7 @@ namespace ECommerceBackend.Controllers
                     g.Key!.Customerid,
                     g.Key.Fullname,
                     g.Key.Phone,
-                    g.Sum(o => o.Finalamount),
+                    g.Sum(o => o.Paidamount ?? 0),
                     g.Count()
                 ))
                 .OrderByDescending(c => c.TotalSpent)
@@ -331,6 +327,24 @@ namespace ECommerceBackend.Controllers
                 .ToList();
 
             return Ok(topCustomers);
+        }
+
+        [HttpGet("order-status-distribution")]
+        public async Task<ActionResult<IEnumerable<OrderStatusDistributionDto>>> GetOrderStatusDistribution(
+            [FromQuery] string period = "7d")
+        {
+            var (start, end) = GetPeriodRanges(period);
+
+            var rawData = await _context.Orders
+                .Where(o => o.Orderdate != null && o.Orderdate >= start && o.Orderdate < end)
+                .GroupBy(o => o.Orderstatus)
+                .Select(g => new OrderStatusDistributionDto(
+                    g.Key ?? "Unknown",
+                    g.Count()
+                ))
+                .ToListAsync();
+
+            return Ok(rawData);
         }
     }
 }

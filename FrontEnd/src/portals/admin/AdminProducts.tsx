@@ -193,7 +193,7 @@ const AdminProducts: React.FC = () => {
           <button
             type="button"
             onClick={() => setEditingProductId(product.productid)}
-            className="inline-flex items-center gap-1 bg-indigo-50 px-2.5 py-1.5 text-xs font-black text-[#4338ca] hover:bg-indigo-100"
+            className="inline-flex items-center gap-1 rounded-xl bg-indigo-50 px-2.5 py-1.5 text-xs font-black text-[#4338ca] hover:bg-indigo-100"
           >
             <Wrench size={12} /> Sửa
           </button>
@@ -201,7 +201,7 @@ const AdminProducts: React.FC = () => {
             <button
               type="button"
               onClick={() => handleDelete(product.productid)}
-              className="inline-flex items-center gap-1 bg-red-50 px-2.5 py-1.5 text-xs font-black text-red-600 hover:bg-red-100"
+              className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1.5 text-xs font-black text-red-600 hover:bg-red-100"
             >
               <Trash2 size={12} /> Xóa
             </button>
@@ -266,14 +266,14 @@ const AdminProducts: React.FC = () => {
               value={search}
               onChange={event => { setSearch(event.target.value); setPage(1); }}
               placeholder="Tìm sản phẩm, thương hiệu, dòng máy..."
-              className="w-full border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm font-semibold outline-none focus:border-[#172033] focus:bg-white"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm font-semibold outline-none focus:border-[#172033] focus:bg-white"
             />
           </div>
-          <select className="border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]" value={filterBrand} onChange={event => { setFilterBrand(event.target.value); setPage(1); }}>
+          <select className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]" value={filterBrand} onChange={event => { setFilterBrand(event.target.value); setPage(1); }}>
             <option value="">Tất cả thương hiệu</option>
             {brands.map(brand => <option key={brand.brandid} value={brand.brandid}>{brand.brandname}</option>)}
           </select>
-          <select className="border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]" value={filterCategory} onChange={event => { setFilterCategory(event.target.value); setPage(1); }}>
+          <select className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]" value={filterCategory} onChange={event => { setFilterCategory(event.target.value); setPage(1); }}>
             <option value="">Tất cả danh mục</option>
             {categories.map(category => <option key={category.categoryid} value={category.categoryid}>{category.categoryname}</option>)}
           </select>

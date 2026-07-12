@@ -22,5 +22,9 @@ public partial class Orderpayment
 
     public DateTime? Paidat { get; set; }
 
+    public string? Transactiontype { get; set; }
+
+    public int? Returnrequestid { get; set; }
+
     public virtual Order Order { get; set; } = null!;
 }

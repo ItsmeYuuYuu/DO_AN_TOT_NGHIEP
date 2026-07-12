@@ -190,11 +190,16 @@ namespace ECommerceBackend.Controllers
             Chatproductrecommendation recommendation)
         {
             var variant = recommendation.Variant;
-            var imageUrl = variant.Productimages
-                .OrderByDescending(image => image.Ismain == true)
-                .ThenBy(image => image.Imageid)
-                .Select(image => image.Imageurl)
-                .FirstOrDefault() ?? string.Empty;
+            var imageUrl = "";
+            if (!string.IsNullOrWhiteSpace(variant.Imageurls))
+            {
+                try
+                {
+                    var urls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(variant.Imageurls);
+                    imageUrl = urls?.FirstOrDefault() ?? string.Empty;
+                }
+                catch { }
+            }
 
             return new ChatRecommendationDto(
                 recommendation.Recommendationid,
@@ -358,9 +363,6 @@ namespace ECommerceBackend.Controllers
                         .ThenInclude(product => product.Brand)
                 .Include(message => message.Chatproductrecommendations)
                     .ThenInclude(recommendation => recommendation.Variant)
-                        .ThenInclude(variant => variant.Productimages)
-                .Include(message => message.Chatproductrecommendations)
-                    .ThenInclude(recommendation => recommendation.Variant)
                         .ThenInclude(variant => variant.Inventoryitems)
                 .Where(m => m.Sessionid == id)
                 .OrderBy(m => m.Sentat)
@@ -445,8 +447,6 @@ namespace ECommerceBackend.Controllers
                 .Include(item => item.Message)
                 .Include(item => item.Product)
                     .ThenInclude(product => product.Brand)
-                .Include(item => item.Variant)
-                    .ThenInclude(variant => variant.Productimages)
                 .Include(item => item.Variant)
                     .ThenInclude(variant => variant.Inventoryitems)
                 .FirstOrDefaultAsync(item =>

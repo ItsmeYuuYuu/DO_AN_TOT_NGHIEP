@@ -26,6 +26,8 @@ const statusLabels: Record<string, string> = {
   Returning: 'Đang hoàn về',
   ReturnedToWarehouse: 'Đã hoàn kho',
   Delivered: 'Giao thành công',
+  DamageClaim: 'Khiếu nại hàng hư hỏng',
+  LostClaim: 'Khiếu nại thất lạc hàng',
 };
 
 const statusClasses: Record<string, string> = {
@@ -38,16 +40,20 @@ const statusClasses: Record<string, string> = {
   Returning: 'bg-purple-50 text-purple-700',
   ReturnedToWarehouse: 'bg-slate-200 text-slate-700',
   Delivered: 'bg-emerald-50 text-emerald-700',
+  DamageClaim: 'bg-rose-50 text-rose-700',
+  LostClaim: 'bg-rose-50 text-rose-700',
 };
 
 const transitions: Record<string, string[]> = {
   AwaitingPickup: ['PickedUp'],
   PickedUp: ['InTransit'],
-  InTransit: ['OutForDelivery', 'DeliveryFailed', 'Returning'],
-  OutForDelivery: ['Delivered', 'DeliveryFailed'],
+  InTransit: ['OutForDelivery', 'DeliveryFailed', 'Returning', 'DamageClaim', 'LostClaim'],
+  OutForDelivery: ['Delivered', 'DeliveryFailed', 'DamageClaim', 'LostClaim'],
   DeliveryFailed: ['RedeliveryScheduled', 'Returning'],
   RedeliveryScheduled: ['OutForDelivery'],
   Returning: ['ReturnedToWarehouse'],
+  DamageClaim: ['Returning', 'ReturnedToWarehouse'],
+  LostClaim: ['ReturnedToWarehouse'],
 };
 
 const StaffShipments: React.FC = () => {
@@ -84,7 +90,7 @@ const StaffShipments: React.FC = () => {
   const stats = useMemo(() => ({
     total: shipments.length,
     delivering: shipments.filter(item => ['PickedUp', 'InTransit', 'OutForDelivery', 'RedeliveryScheduled'].includes(item.status)).length,
-    failed: shipments.filter(item => ['DeliveryFailed', 'Returning'].includes(item.status)).length,
+    failed: shipments.filter(item => ['DeliveryFailed', 'Returning', 'DamageClaim', 'LostClaim'].includes(item.status)).length,
     completed: shipments.filter(item => item.status === 'Delivered').length,
   }), [shipments]);
 
@@ -248,7 +254,7 @@ const StaffShipments: React.FC = () => {
                       onClick={() => updateStatus(status)}
                       className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black text-white disabled:opacity-50 ${
                         status === 'Delivered' ? 'bg-emerald-600' :
-                        status === 'DeliveryFailed' || status === 'Returning' ? 'bg-red-600' :
+                        status === 'DeliveryFailed' || status === 'Returning' || status === 'DamageClaim' || status === 'LostClaim' ? 'bg-red-600' :
                         status === 'ReturnedToWarehouse' ? 'bg-purple-600' : 'bg-[#4f46e5]'
                       }`}
                     >

@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ECommerceBackend.Models;
-using ECommerceBackend.Data;
-using ECommerceBackend.Services;
-using ECommerceBackend.Services.Checkout;
-using ECommerceBackend.Filters;
+//using ECommerceBackend.Data;
+//using ECommerceBackend.Services;
+//using ECommerceBackend.Services.Checkout;
+//using ECommerceBackend.Filters;
 using ECommerceBackend.Middlewares;
 using ECommerceBackend.DTOs.Common;
 using Microsoft.AspNetCore.Mvc;
@@ -105,6 +105,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // ── Audit Log (Singleton background service + scoped filter) ─────────────────────
+/*
 builder.Services.Configure<ECommerceBackend.Services.Chat.AiAssistantOptions>(
     builder.Configuration.GetSection(ECommerceBackend.Services.Chat.AiAssistantOptions.SectionName));
 builder.Services.Configure<ECommerceBackend.Services.Email.EmailOptions>(
@@ -135,6 +136,11 @@ builder.Services.AddHostedService<ExpiredOrderCleanupService>();
 builder.Services.AddSingleton<AuditLogService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AuditLogService>());
 builder.Services.AddScoped<AuditActionFilter>();
+*/
+
+// ── Singleton Services ────────────────────────────────────────────────────────
+// ProductImageStorageService: quản lý file ảnh upload trên server (sản phẩm, tin tức, bảo hành, đổi trả)
+builder.Services.AddSingleton<ECommerceBackend.Services.ProductImageStorageService>();
 
 // ── Health Checks ─────────────────────────────────────────────────────────────
 builder.Services.AddHealthChecks();
@@ -143,7 +149,7 @@ builder.Services.AddHealthChecks();
 builder.Services.AddControllers(options =>
     {
         // Áp dụng AuditActionFilter cho TOÀN BỘ controllers
-        options.Filters.AddService<AuditActionFilter>();
+        //options.Filters.AddService<AuditActionFilter>();
     })
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.ReferenceHandler =
@@ -221,10 +227,12 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // ── Seed Database ─────────────────────────────────────────────────────────────
+/*
 if (!app.Environment.IsEnvironment("Testing"))
 {
     await DbInitializer.SeedAsync(app.Services);
 }
+*/
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();

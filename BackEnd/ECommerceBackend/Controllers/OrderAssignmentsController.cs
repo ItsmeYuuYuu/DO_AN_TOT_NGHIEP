@@ -1,3 +1,4 @@
+/*
 using ECommerceBackend.DTOs.Common;
 using ECommerceBackend.DTOs.Orders;
 using ECommerceBackend.Models;
@@ -14,8 +15,9 @@ public class OrderAssignmentsController : ControllerBase
 {
     private const string SalesDepartment = "Sales";
     private const string WarehouseDepartment = "Warehouse";
+    private const string InternalDeliveryCarrier = "STORE_DELIVERY";
     private static readonly HashSet<string> DemoCarriers =
-        new(["GHN", "GHTK", "VIETTELPOST", "J&T"], StringComparer.OrdinalIgnoreCase);
+        new(["GHN", "GHTK", "VIETTELPOST", "J&T", InternalDeliveryCarrier], StringComparer.OrdinalIgnoreCase);
     private readonly ECommerceContext _context;
 
     public OrderAssignmentsController(ECommerceContext context)
@@ -358,6 +360,9 @@ public class OrderAssignmentsController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Carrier))
             return BadRequest(new ApiErrorDto("Vui lòng chọn đơn vị vận chuyển.", null));
         var carrier = dto.Carrier.Trim().ToUpperInvariant();
+        if (order.Checkouttype == "Guest" && carrier != InternalDeliveryCarrier)
+            return BadRequest(new ApiErrorDto(
+                "ÄÆ¡n khÃ¡ch vÃ£ng lai pháº£i do nhÃ¢n viÃªn cá»­a hÃ ng giao ná»™i thÃ nh TP.HCM.", null));
         if (!DemoCarriers.Contains(carrier))
             return BadRequest(new ApiErrorDto("Đơn vị vận chuyển không hợp lệ.", null));
         if (dto.Estimateddeliveryat.HasValue && dto.Estimateddeliveryat.Value.Date < DateTime.UtcNow.Date)
@@ -452,3 +457,5 @@ public class OrderAssignmentsController : ControllerBase
         return Ok(MapWorkflow(order, WarehouseDepartment));
     }
 }
+
+*/

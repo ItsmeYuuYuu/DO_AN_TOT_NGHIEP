@@ -76,17 +76,7 @@ public class WarrantyClaimsController : ControllerBase
             claim.Completedat,
             claim.Createdat,
             claim.Updatedat,
-            claim.Histories
-                .OrderByDescending(history => history.Createdat)
-                .Select(history => new WarrantyClaimHistoryDto(
-                    history.Historyid,
-                    history.Userid,
-                    history.User?.Fullname,
-                    history.Fromstatus,
-                    history.Tostatus,
-                    history.Note,
-                    history.Createdat))
-                .ToList());
+            new List<WarrantyClaimHistoryDto>());
     }
 
     private IQueryable<Warrantyclaim> ClaimQuery() =>
@@ -95,9 +85,7 @@ public class WarrantyClaimsController : ControllerBase
             .Include(claim => claim.Assigneduser)
             .Include(claim => claim.Inventoryitem)
                 .ThenInclude(inventory => inventory.Variant)
-                    .ThenInclude(variant => variant!.Product)
-            .Include(claim => claim.Histories)
-                .ThenInclude(history => history.User);
+                    .ThenInclude(variant => variant!.Product);
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<WarrantyClaimDto>>> GetClaims(
@@ -213,8 +201,13 @@ public class WarrantyClaimsController : ControllerBase
             Createdat = now,
             Updatedat = now
         };
-        claim.Histories.Add(new Warrantyclaimhistory
+        _context.Warrantyclaims.Add(claim);
+        await _context.SaveChangesAsync();
+
+        _context.Statuslogs.Add(new Statuslog
         {
+            Entitytype = "WarrantyClaim",
+            Entityid = claim.Claimid,
             Userid = currentUserId,
             Tostatus = "Received",
             Note = isWarrantyEmployee
@@ -224,7 +217,6 @@ public class WarrantyClaimsController : ControllerBase
         });
 
         inventory.Warrantystatus = "InService";
-        _context.Warrantyclaims.Add(claim);
         await _context.SaveChangesAsync();
 
         var created = await ClaimQuery()
@@ -251,9 +243,10 @@ public class WarrantyClaimsController : ControllerBase
 
         claim.Assigneduserid = userId;
         claim.Updatedat = DateTime.UtcNow;
-        _context.Warrantyclaimhistories.Add(new Warrantyclaimhistory
+        _context.Statuslogs.Add(new Statuslog
         {
-            Claimid = claim.Claimid,
+            Entitytype = "WarrantyClaim",
+            Entityid = claim.Claimid,
             Userid = userId,
             Fromstatus = claim.Status,
             Tostatus = claim.Status,
@@ -288,9 +281,10 @@ public class WarrantyClaimsController : ControllerBase
         var actorId = GetCurrentUserId();
         claim.Assigneduserid = employee.Userid;
         claim.Updatedat = DateTime.UtcNow;
-        _context.Warrantyclaimhistories.Add(new Warrantyclaimhistory
+        _context.Statuslogs.Add(new Statuslog
         {
-            Claimid = claim.Claimid,
+            Entitytype = "WarrantyClaim",
+            Entityid = claim.Claimid,
             Userid = actorId,
             Fromstatus = claim.Status,
             Tostatus = claim.Status,
@@ -357,9 +351,10 @@ public class WarrantyClaimsController : ControllerBase
                     : "Expired";
         }
 
-        _context.Warrantyclaimhistories.Add(new Warrantyclaimhistory
+        _context.Statuslogs.Add(new Statuslog
         {
-            Claimid = claim.Claimid,
+            Entitytype = "WarrantyClaim",
+            Entityid = claim.Claimid,
             Userid = actorId,
             Fromstatus = previousStatus,
             Tostatus = newStatus,

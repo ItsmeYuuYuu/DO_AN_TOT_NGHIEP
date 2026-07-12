@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import { brandsApi } from '@/features/brands/api/brandsApi';
 import { categoriesApi } from '@/features/categories/api/categoriesApi';
 import { productsApi } from '@/features/products/api/productsApi';
-import { productSeriesApi, type ProductSeries } from '@/features/productSeries/api/productSeriesApi';
 import type {
   CreateFullProduct,
   CreateFullProductVariant,
@@ -69,13 +69,12 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   // Lookups
   const [brands, setBrands] = useState<{ brandid: number; brandname: string }[]>([]);
   const [categories, setCategories] = useState<{ categoryid: number; categoryname: string }[]>([]);
-  const [seriesList, setSeriesList] = useState<ProductSeries[]>([]);
 
   // Step 1: Base Info
   const [productname, setProductname] = useState('');
   const [brandid, setBrandid] = useState<number | ''>('');
   const [categoryid, setCategoryid] = useState<number | ''>('');
-  const [seriesid, setSeriesid] = useState<number | ''>('');
+  const [seriesname, setSeriesname] = useState('');
   const [baseprice, setBaseprice] = useState<number | ''>('');
   const [hasDiscount, setHasDiscount] = useState(false);
   const [saleprice, setSaleprice] = useState<number | ''>('');
@@ -85,7 +84,6 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   const [description, setDescription] = useState('');
   const [descriptionImages, setDescriptionImages] = useState<UploadedProductImage[]>([]);
   const [uploadingDescriptionImages, setUploadingDescriptionImages] = useState(false);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const descriptionImageInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3: Options (Lựa chọn) - Configure one variant at a time
@@ -133,23 +131,9 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     if (isOpen) {
       brandsApi.getAll().then(res => setBrands(res.data));
       categoriesApi.getAll().then(res => setCategories(res.data));
-      productSeriesApi.getAll({ activeOnly: true }).then(res => setSeriesList(res.data));
       resetForm();
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    if (seriesid && brandid) {
-      const selected = seriesList.find(series => series.seriesid === seriesid);
-      if (selected && selected.brandid !== brandid) {
-        setSeriesid('');
-      }
-    }
-  }, [brandid, seriesid, seriesList]);
-
-  const filteredSeries = brandid
-    ? seriesList.filter(series => series.brandid === brandid)
-    : [];
 
   // Sync default values from Step 1 to active variant when Step 1 changes
   useEffect(() => {
@@ -182,7 +166,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     setProductname('');
     setBrandid('');
     setCategoryid('');
-    setSeriesid('');
+    setSeriesname('');
     setBaseprice('');
     setHasDiscount(false);
     setSaleprice('');
@@ -210,24 +194,10 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
 
   // Step 2 Helpers
   const insertDescriptionImageMarkdown = (images: UploadedProductImage[]) => {
-    const textarea = descriptionRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const before = text.substring(0, start);
-    const after = text.substring(end, text.length);
     const insertText = images
-      .map(image => `\n![Hình ảnh sản phẩm](${image.url})\n`)
+      .map(image => `<p><img src="${image.url}" alt="Hình ảnh sản phẩm" /></p>`)
       .join('');
-
-    setDescription(before + insertText + after);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
-    }, 50);
+    setDescription(current => `${current}${insertText}`);
   };
 
   const handleUploadDescriptionImages = async (files: File[]) => {
@@ -520,7 +490,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
         description: description.trim(),
         categoryid: Number(categoryid),
         brandid: Number(brandid),
-        seriesid: seriesid ? Number(seriesid) : undefined,
+        seriesname: seriesname.trim() || undefined,
         totalquantity: totalBatchStock,
         variants: parsedVariants
       };
@@ -588,7 +558,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Thương hiệu *</label>
                 <select className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-[#4f46e5] bg-white" value={brandid} onChange={e => {
                   setBrandid(e.target.value ? Number(e.target.value) : '');
-                  setSeriesid('');
+                  setSeriesname('');
                 }}>
                   <option value="">-- Chọn thương hiệu --</option>
                   {brands.map(b => <option key={b.brandid} value={b.brandid}>{b.brandname}</option>)}
@@ -596,15 +566,11 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Dòng máy</label>
-                <select
-                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-[#4f46e5] bg-white disabled:bg-slate-100"
-                  value={seriesid}
-                  disabled={!brandid || filteredSeries.length === 0}
-                  onChange={e => setSeriesid(e.target.value ? Number(e.target.value) : '')}
-                >
-                  <option value="">{brandid ? '-- Chọn dòng máy --' : '-- Chọn thương hiệu trước --'}</option>
-                  {filteredSeries.map(series => <option key={series.seriesid} value={series.seriesid}>{series.seriesname}</option>)}
-                </select>
+                <Input
+                  value={seriesname}
+                  onChange={event => setSeriesname(event.target.value)}
+                  placeholder="VD: Galaxy S, iPhone Pro"
+                />
               </div>
             </div>
 
@@ -660,16 +626,13 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 {uploadingDescriptionImages ? 'Đang tải ảnh...' : 'Chèn ảnh từ máy'}
               </button>
             </div>
-            <textarea
-              id="description-textarea"
-              ref={descriptionRef}
-              className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-sm h-64 focus:outline-none focus:border-[#4f46e5] font-medium placeholder:text-slate-400"
-              placeholder="Nhập mô tả sản phẩm ở đây. Bạn có thể sử dụng markdown hoặc chèn hình ảnh bằng nút chèn ảnh phía trên."
+            <RichTextEditor
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              onChange={setDescription}
+              placeholder="Nhập mô tả sản phẩm và định dạng nội dung…"
             />
             <p className="text-xs leading-5 text-slate-500">
-              Đặt con trỏ tại vị trí muốn chèn rồi chọn ảnh từ máy. Hỗ trợ JPG, PNG, WebP; tối đa 5 MB mỗi ảnh.
+              Ảnh được thêm cuối nội dung. Hỗ trợ JPG, PNG, WebP; tối đa 5 MB mỗi ảnh.
             </p>
             {descriptionImages.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -989,7 +952,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 </div>
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase">Dòng máy</span>
-                  <p className="font-bold text-slate-800 mt-0.5">{seriesList.find(series => series.seriesid === seriesid)?.seriesname || '—'}</p>
+                  <p className="font-bold text-slate-800 mt-0.5">{seriesname || '—'}</p>
                 </div>
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase">Phân bổ lô hàng</span>

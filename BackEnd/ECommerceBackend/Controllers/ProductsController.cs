@@ -56,7 +56,7 @@ namespace ECommerceBackend.Controllers
                 v.Baseprice,
                 v.Saleprice,
                 !string.IsNullOrEmpty(v.Condition) ? new ConditionDto(Math.Abs(v.Condition.GetHashCode()), v.Condition) : null,
-                v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList(),
+                (!string.IsNullOrEmpty(v.Imageurls) ? JsonSerializer.Deserialize<List<string>>(v.Imageurls) ?? new List<string>() : new List<string>()).Select((url, idx) => new ProductImageDto(idx, url, idx == 0)).ToList(),
                 null,
                 v.Inventoryitems.Count(item => item.Status == "InStock")
             )).ToList();
@@ -69,7 +69,7 @@ namespace ECommerceBackend.Controllers
                 p.Createdat,
                 p.Brand != null ? new LookupDto(p.Brand.Brandid, p.Brand.Brandname) : null,
                 p.Category != null ? new LookupDto(p.Category.Categoryid, p.Category.Categoryname) : null,
-                p.Series != null ? new LookupDto(p.Series.Seriesid, p.Series.Seriesname) : null,
+                p.Seriesname,
                 variants
             );
         }
@@ -83,7 +83,7 @@ namespace ECommerceBackend.Controllers
                 v.Baseprice,
                 v.Saleprice,
                 !string.IsNullOrEmpty(v.Condition) ? new ConditionDto(Math.Abs(v.Condition.GetHashCode()), v.Condition) : null,
-                v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList(),
+                (!string.IsNullOrEmpty(v.Imageurls) ? JsonSerializer.Deserialize<List<string>>(v.Imageurls) ?? new List<string>() : new List<string>()).Select((url, idx) => new ProductImageDto(idx, url, idx == 0)).ToList(),
                 null,
                 v.Inventoryitems.Count(item => item.Status == "InStock")
             )).ToList();
@@ -96,7 +96,7 @@ namespace ECommerceBackend.Controllers
                 p.Createdat,
                 p.Brand != null ? new LookupDto(p.Brand.Brandid, p.Brand.Brandname) : null,
                 p.Category != null ? new LookupDto(p.Category.Categoryid, p.Category.Categoryname) : null,
-                p.Series != null ? new LookupDto(p.Series.Seriesid, p.Series.Seriesname) : null,
+                p.Seriesname,
                 variants
             );
         }
@@ -112,9 +112,9 @@ namespace ECommerceBackend.Controllers
             _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
-                .Include(p => p.Series)
+                
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Productimages)
+                    
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Inventoryitems);
 
@@ -122,9 +122,9 @@ namespace ECommerceBackend.Controllers
             _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
-                .Include(p => p.Series)
+                
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Productimages)
+                    
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Reviews)
                 .Include(p => p.Productvariants)
@@ -137,9 +137,9 @@ namespace ECommerceBackend.Controllers
             var products = await _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
-                .Include(p => p.Series)
+                
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Productimages)
+                    
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Inventoryitems)
                 .ToListAsync();
@@ -153,16 +153,16 @@ namespace ECommerceBackend.Controllers
             [FromQuery] string? q,
             [FromQuery] int? categoryId,
             [FromQuery] int? brandId,
-            [FromQuery] int? seriesId,
+            [FromQuery] string? seriesName,
             [FromQuery] decimal? minPrice,
             [FromQuery] decimal? maxPrice)
         {
             var query = _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
-                .Include(p => p.Series)
+                
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Productimages)
+                    
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Inventoryitems)
                 .AsQueryable();
@@ -174,7 +174,7 @@ namespace ECommerceBackend.Controllers
                     p.Productname.ToLower().Contains(searchTerm) ||
                     (p.Description != null && p.Description.ToLower().Contains(searchTerm)) ||
                     (p.Brand != null && p.Brand.Brandname.ToLower().Contains(searchTerm)) ||
-                    (p.Series != null && p.Series.Seriesname.ToLower().Contains(searchTerm)));
+                    (p.Seriesname != null && p.Seriesname.ToLower().Contains(searchTerm)));
             }
 
             if (categoryId.HasValue)
@@ -183,8 +183,8 @@ namespace ECommerceBackend.Controllers
             if (brandId.HasValue)
                 query = query.Where(p => p.Brandid == brandId);
 
-            if (seriesId.HasValue)
-                query = query.Where(p => p.Seriesid == seriesId);
+            if (!string.IsNullOrEmpty(seriesName))
+                query = query.Where(p => p.Seriesname == seriesName);
 
             if (minPrice.HasValue)
                 query = query.Where(p => p.Productvariants.Any(v => (v.Saleprice ?? v.Baseprice) >= minPrice));
@@ -261,9 +261,9 @@ namespace ECommerceBackend.Controllers
                 var related = await _context.Products
                     .Include(p => p.Brand)
                     .Include(p => p.Category)
-                    .Include(p => p.Series)
+                    
                     .Include(p => p.Productvariants)
-                        .ThenInclude(v => v.Productimages)
+                        
                     .Include(p => p.Productvariants)
                         .ThenInclude(v => v.Inventoryitems)
                     .Where(p => p.Brandid == product.Brandid && p.Productid != product.Productid)
@@ -279,7 +279,7 @@ namespace ECommerceBackend.Controllers
                 v.Baseprice,
                 v.Saleprice,
                 !string.IsNullOrEmpty(v.Condition) ? new ConditionDto(Math.Abs(v.Condition.GetHashCode()), v.Condition) : null,
-                v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList(),
+                (!string.IsNullOrEmpty(v.Imageurls) ? JsonSerializer.Deserialize<List<string>>(v.Imageurls) ?? new List<string>() : new List<string>()).Select((url, idx) => new ProductImageDto(idx, url, idx == 0)).ToList(),
                 ParseSpecifications(v.Specifications),
                 v.Inventoryitems.Count(item => item.Status == "InStock")
             )).ToList();
@@ -292,7 +292,7 @@ namespace ECommerceBackend.Controllers
                 product.Createdat,
                 product.Brand != null ? new LookupDto(product.Brand.Brandid, product.Brand.Brandname) : null,
                 product.Category != null ? new LookupDto(product.Category.Categoryid, product.Category.Categoryname) : null,
-                product.Series != null ? new LookupDto(product.Series.Seriesid, product.Series.Seriesname) : null,
+                product.Seriesname,
                 variants,
                 reviewSummary,
                 relatedProducts
@@ -306,13 +306,7 @@ namespace ECommerceBackend.Controllers
         [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse")]
         public async Task<ActionResult<ProductDetailDto>> PostProduct([FromBody] CreateProductRequestDto dto)
         {
-            if (dto.Seriesid.HasValue &&
-                !await _context.Productseries.AnyAsync(series =>
-                    series.Seriesid == dto.Seriesid.Value &&
-                    (!dto.Brandid.HasValue || series.Brandid == dto.Brandid.Value)))
-            {
-                return BadRequest(new ApiErrorDto("Dòng máy đã chọn không tồn tại hoặc không thuộc thương hiệu đã chọn.", null));
-            }
+            
 
             var product = new Product
             {
@@ -321,7 +315,7 @@ namespace ECommerceBackend.Controllers
                 Description = dto.Description,
                 Categoryid = dto.Categoryid,
                 Brandid = dto.Brandid,
-                Seriesid = dto.Seriesid,
+                Seriesname = dto.Seriesname,
                 Createdat = DateTime.Now
             };
 
@@ -332,9 +326,9 @@ namespace ECommerceBackend.Controllers
             var createdProduct = await _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
-                .Include(p => p.Series)
+                
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Productimages)
+                    
                 .FirstAsync(p => p.Productid == product.Productid);
 
             return CreatedAtAction(nameof(GetProduct), new { id = product.Productid }, MapToDetailDto(createdProduct));
@@ -351,13 +345,7 @@ namespace ECommerceBackend.Controllers
             if (dto.Brandid.HasValue && !await _context.Brands.AnyAsync(b => b.Brandid == dto.Brandid.Value))
                 return BadRequest(new ApiErrorDto("Thương hiệu đã chọn không tồn tại.", null));
 
-            if (dto.Seriesid.HasValue &&
-                !await _context.Productseries.AnyAsync(series =>
-                    series.Seriesid == dto.Seriesid.Value &&
-                    (!dto.Brandid.HasValue || series.Brandid == dto.Brandid.Value)))
-            {
-                return BadRequest(new ApiErrorDto("Dòng máy đã chọn không tồn tại hoặc không thuộc thương hiệu đã chọn.", null));
-            }
+            
 
             if (dto.Variants == null || dto.Variants.Count == 0)
                 return BadRequest(new ApiErrorDto("Sản phẩm phải có ít nhất một biến thể.", null));
@@ -413,7 +401,7 @@ namespace ECommerceBackend.Controllers
                     Description = dto.Description,
                     Categoryid = dto.Categoryid,
                     Brandid = dto.Brandid,
-                    Seriesid = dto.Seriesid,
+                    Seriesname = dto.Seriesname,
                     Createdat = DateTime.Now
                 };
 
@@ -450,22 +438,7 @@ namespace ECommerceBackend.Controllers
                         await _context.SaveChangesAsync();
 
                         var images = vDto.Images ?? new List<CreateProductImageDto>();
-                        var mainImageIndex = images.FindIndex(image => image.Ismain);
-                        if (mainImageIndex < 0)
-                        {
-                            mainImageIndex = 0;
-                        }
-
-                        for (int imageIndex = 0; imageIndex < images.Count; imageIndex++)
-                        {
-                            _context.Productimages.Add(new Productimage
-                            {
-                                Variantid = variant.Variantid,
-                                Imageurl = images[imageIndex].Imageurl.Trim(),
-                                Ismain = imageIndex == mainImageIndex
-                            });
-                        }
-                        await _context.SaveChangesAsync();
+                        var urls = images.OrderByDescending(i => i.Ismain).Select(i => i.Imageurl.Trim()).ToList(); variant.Imageurls = JsonSerializer.Serialize(urls); await _context.SaveChangesAsync();
 
                         // Auto-generate inventory items (stock) if Quantity is provided
                         if (vDto.Quantity.HasValue && vDto.Quantity.Value > 0)
@@ -491,9 +464,9 @@ namespace ECommerceBackend.Controllers
                 var createdProduct = await _context.Products
                     .Include(p => p.Brand)
                     .Include(p => p.Category)
-                    .Include(p => p.Series)
+                    
                     .Include(p => p.Productvariants)
-                        .ThenInclude(v => v.Productimages)
+                        
                     .FirstAsync(p => p.Productid == product.Productid);
 
                 return CreatedAtAction(nameof(GetProduct), new { id = product.Productid }, MapToDetailDto(createdProduct));
@@ -520,13 +493,7 @@ namespace ECommerceBackend.Controllers
             if (dto.Brandid.HasValue && !await _context.Brands.AnyAsync(b => b.Brandid == dto.Brandid.Value))
                 return BadRequest(new ApiErrorDto("Thương hiệu đã chọn không tồn tại.", null));
 
-            if (dto.Seriesid.HasValue &&
-                !await _context.Productseries.AnyAsync(series =>
-                    series.Seriesid == dto.Seriesid.Value &&
-                    (!dto.Brandid.HasValue || series.Brandid == dto.Brandid.Value)))
-            {
-                return BadRequest(new ApiErrorDto("Dòng máy đã chọn không tồn tại hoặc không thuộc thương hiệu đã chọn.", null));
-            }
+            
 
             var requestedSkus = dto.Variants.Select(variant => variant.Sku.Trim()).ToList();
             if (requestedSkus.Any(string.IsNullOrWhiteSpace))
@@ -557,7 +524,6 @@ namespace ECommerceBackend.Controllers
 
             var product = await _context.Products
                 .Include(p => p.Productvariants)
-                    .ThenInclude(variant => variant.Productimages)
                 .Include(p => p.Productvariants)
                     .ThenInclude(variant => variant.Inventoryitems)
                         .ThenInclude(item => item.Orderitems)
@@ -657,24 +623,18 @@ namespace ECommerceBackend.Controllers
                 product.Description = dto.Description?.Trim();
                 product.Categoryid = dto.Categoryid;
                 product.Brandid = dto.Brandid;
-                product.Seriesid = dto.Seriesid;
+                product.Seriesname = dto.Seriesname;
 
                 foreach (var variant in variantsToDelete)
                 {
-                    foreach (var image in variant.Productimages)
-                    {
-                        removedImageUrls.Add(image.Imageurl);
-                    }
+                    var oldUrls = !string.IsNullOrEmpty(variant.Imageurls) ? JsonSerializer.Deserialize<List<string>>(variant.Imageurls) : new List<string>(); foreach (var url in oldUrls!) { removedImageUrls.Add(url); }
 
-                    var cartItems = await _context.Cartitems
-                        .Where(item => item.Variantid == variant.Variantid)
-                        .ToListAsync();
                     var reviews = await _context.Reviews
                         .Where(review => review.Variantid == variant.Variantid)
                         .ToListAsync();
-                    _context.Cartitems.RemoveRange(cartItems);
+                    
                     _context.Reviews.RemoveRange(reviews);
-                    _context.Productimages.RemoveRange(variant.Productimages);
+                    
                     _context.Inventoryitems.RemoveRange(variant.Inventoryitems);
                     _context.Productvariants.Remove(variant);
                 }
@@ -716,31 +676,11 @@ namespace ECommerceBackend.Controllers
                         await _context.SaveChangesAsync();
                     }
 
-                    foreach (var oldImage in variant.Productimages)
-                    {
-                        if (!variantDto.Images!.Any(image =>
-                            string.Equals(image.Imageurl.Trim(), oldImage.Imageurl, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            removedImageUrls.Add(oldImage.Imageurl);
-                        }
-                    }
-                    _context.Productimages.RemoveRange(variant.Productimages);
+                    var oldUrls2 = !string.IsNullOrEmpty(variant.Imageurls) ? JsonSerializer.Deserialize<List<string>>(variant.Imageurls) : new List<string>(); foreach (var oldUrl in oldUrls2!) { if (!variantDto.Images!.Any(image => string.Equals(image.Imageurl.Trim(), oldUrl, StringComparison.OrdinalIgnoreCase))) { removedImageUrls.Add(oldUrl); } }
+                    
 
                     var images = variantDto.Images!;
-                    var mainImageIndex = images.FindIndex(image => image.Ismain);
-                    if (mainImageIndex < 0)
-                    {
-                        mainImageIndex = 0;
-                    }
-                    for (var imageIndex = 0; imageIndex < images.Count; imageIndex++)
-                    {
-                        _context.Productimages.Add(new Productimage
-                        {
-                            Variantid = variant.Variantid,
-                            Imageurl = images[imageIndex].Imageurl.Trim(),
-                            Ismain = imageIndex == mainImageIndex
-                        });
-                    }
+                    var urls2 = images.OrderByDescending(i => i.Ismain).Select(i => i.Imageurl.Trim()).ToList(); variant.Imageurls = JsonSerializer.Serialize(urls2);
 
                     var realInStock = variant.Inventoryitems.Count(item =>
                         item.Status == "InStock" &&
@@ -790,10 +730,7 @@ namespace ECommerceBackend.Controllers
 
             if (removedImageUrls.Count > 0)
             {
-                var stillReferenced = await _context.Productimages
-                    .Where(image => removedImageUrls.Contains(image.Imageurl))
-                    .Select(image => image.Imageurl)
-                    .ToListAsync();
+                var stillReferenced = new List<string>();
                 foreach (var imageUrl in removedImageUrls.Except(stillReferenced, StringComparer.OrdinalIgnoreCase))
                 {
                     try
@@ -850,7 +787,7 @@ namespace ECommerceBackend.Controllers
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
                 .Include(p => p.Productvariants)
-                    .ThenInclude(v => v.Productimages)
+                    
                 .FirstAsync(p => p.Productid == product.Productid);
 
             return Ok(MapToDetailDto(updatedProduct));
@@ -872,10 +809,10 @@ namespace ECommerceBackend.Controllers
                 .Where(i => i.Variantid.HasValue && variantIds.Contains(i.Variantid.Value))
                 .ToListAsync();
             var inventoryCodes = inventoryItems.Select(i => i.Imei).ToList();
-            var localImageUrls = await _context.Productimages
-                .Where(image => image.Variantid.HasValue && variantIds.Contains(image.Variantid.Value))
-                .Select(image => image.Imageurl)
-                .ToListAsync();
+            var localImageUrls = product.Productvariants
+                .Where(v => !string.IsNullOrEmpty(v.Imageurls))
+                .SelectMany(v => JsonSerializer.Deserialize<List<string>>(v.Imageurls) ?? new List<string>())
+                .ToList();
 
             var hasOrderHistory = inventoryCodes.Count > 0 &&
                 await _context.Orderitems.AnyAsync(oi => oi.Imei != null && inventoryCodes.Contains(oi.Imei));
@@ -892,19 +829,11 @@ namespace ECommerceBackend.Controllers
             {
                 if (variantIds.Count > 0)
                 {
-                    var cartItems = await _context.Cartitems
-                        .Where(ci => variantIds.Contains(ci.Variantid))
-                        .ToListAsync();
                     var reviews = await _context.Reviews
                         .Where(r => r.Variantid.HasValue && variantIds.Contains(r.Variantid.Value))
                         .ToListAsync();
-                    var images = await _context.Productimages
-                        .Where(pi => pi.Variantid.HasValue && variantIds.Contains(pi.Variantid.Value))
-                        .ToListAsync();
 
-                    _context.Cartitems.RemoveRange(cartItems);
                     _context.Reviews.RemoveRange(reviews);
-                    _context.Productimages.RemoveRange(images);
                     _context.Inventoryitems.RemoveRange(inventoryItems);
                     await _context.SaveChangesAsync();
 

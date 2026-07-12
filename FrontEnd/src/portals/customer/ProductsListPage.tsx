@@ -39,7 +39,7 @@ const ProductsListPage: React.FC = () => {
 
   const categoryId = parseNumberParam(searchParams.get('categoryId'));
   const brandId = parseNumberParam(searchParams.get('brandId'));
-  const seriesId = parseNumberParam(searchParams.get('seriesId'));
+  const seriesName = searchParams.get('seriesName') ?? '';
   const minPrice = parseNumberParam(searchParams.get('minPrice'));
   const maxPrice = parseNumberParam(searchParams.get('maxPrice'));
   const sortBy = (searchParams.get('sort') as SortOption | null) ?? 'default';
@@ -76,7 +76,7 @@ const ProductsListPage: React.FC = () => {
 
     if (categoryId) result = result.filter(product => product.category?.id === categoryId);
     if (brandId) result = result.filter(product => product.brand?.id === brandId);
-    if (seriesId) result = result.filter(product => product.series?.id === seriesId);
+    if (seriesName) result = result.filter(product => product.seriesname === seriesName);
     if (minPrice != null) result = result.filter(product => getProductPrice(product) >= minPrice);
     if (maxPrice != null) result = result.filter(product => getProductPrice(product) <= maxPrice);
     if (sortBy === 'newest') {
@@ -103,7 +103,7 @@ const ProductsListPage: React.FC = () => {
     });
 
     return result;
-  }, [allProducts, brandId, categoryId, maxPrice, minPrice, seriesId, sortBy]);
+  }, [allProducts, brandId, categoryId, maxPrice, minPrice, seriesName, sortBy]);
 
   const activeCategory = useMemo(
     () => categories.find(category => category.categoryid === categoryId),
@@ -124,7 +124,7 @@ const ProductsListPage: React.FC = () => {
   };
 
   const clearFilters = () => setSearchParams({});
-  const hasFilter = !!(categoryId || brandId || seriesId || minPrice != null || maxPrice != null || sortBy !== 'default');
+  const hasFilter = !!(categoryId || brandId || seriesName || minPrice != null || maxPrice != null || sortBy !== 'default');
 
   return (
     <div className="customer-shell min-h-screen pb-16">
@@ -148,9 +148,9 @@ const ProductsListPage: React.FC = () => {
                   {activeBrand.brandname}
                 </span>
               )}
-              {seriesId && (
+              {seriesName && (
                 <span className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[#1f2937]">
-                  Dòng #{seriesId}
+                  Dòng {seriesName}
                 </span>
               )}
               {minPrice != null && (

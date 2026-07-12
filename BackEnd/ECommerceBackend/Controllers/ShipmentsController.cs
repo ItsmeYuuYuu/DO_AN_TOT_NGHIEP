@@ -16,11 +16,13 @@ public class ShipmentsController : ControllerBase
     {
         ["AwaitingPickup"] = ["PickedUp"],
         ["PickedUp"] = ["InTransit"],
-        ["InTransit"] = ["OutForDelivery", "DeliveryFailed", "Returning"],
-        ["OutForDelivery"] = ["Delivered", "DeliveryFailed"],
+        ["InTransit"] = ["OutForDelivery", "DeliveryFailed", "Returning", "DamageClaim", "LostClaim"],
+        ["OutForDelivery"] = ["Delivered", "DeliveryFailed", "DamageClaim", "LostClaim"],
         ["DeliveryFailed"] = ["RedeliveryScheduled", "Returning"],
         ["RedeliveryScheduled"] = ["OutForDelivery"],
-        ["Returning"] = ["ReturnedToWarehouse"]
+        ["Returning"] = ["ReturnedToWarehouse"],
+        ["DamageClaim"] = ["Returning", "ReturnedToWarehouse"],
+        ["LostClaim"] = ["ReturnedToWarehouse"]
     };
 
     private readonly ECommerceContext _context;
@@ -43,9 +45,7 @@ public class ShipmentsController : ControllerBase
                     .ThenInclude(item => item.Package)
             .Include(item => item.Order)
                 .ThenInclude(order => order.Orderitems)
-                    .ThenInclude(item => item.ImeiNavigation)
-            .Include(item => item.Histories)
-                .ThenInclude(history => history.User);
+                    .ThenInclude(item => item.ImeiNavigation);
 
     private static ShipmentDto Map(Shipment shipment) => new(
         shipment.Shipmentid,
@@ -67,17 +67,7 @@ public class ShipmentsController : ControllerBase
         shipment.Pickedupat,
         shipment.Deliveredat,
         shipment.Returnedat,
-        shipment.Histories
-            .OrderBy(history => history.Createdat)
-            .Select(history => new ShipmentHistoryDto(
-                history.Historyid,
-                history.Userid,
-                history.User?.Fullname,
-                history.Fromstatus,
-                history.Tostatus,
-                history.Note,
-                history.Createdat))
-            .ToList());
+        new List<ShipmentHistoryDto>());
 
     [HttpGet]
     [Authorize(Roles = "Admin,Manager,Sales,Warehouse")]
@@ -162,12 +152,23 @@ public class ShipmentsController : ControllerBase
             await ReturnToWarehouseAsync(shipment.Order, now);
         }
 
-        shipment.Histories.Add(new Shipmenthistory
+        _context.Statuslogs.Add(new Statuslog
         {
+            Entitytype = "Shipment",
+            Entityid = shipment.Shipmentid,
+            Actiontype = nextStatus is "DamageClaim" or "LostClaim" ? "CarrierClaim" : "StatusChanged",
             Userid = CurrentUserId(),
             Fromstatus = previous,
             Tostatus = nextStatus,
             Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
+            Metadata = nextStatus is "DamageClaim" or "LostClaim"
+                ? System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    responsibleParty = "Carrier",
+                    claimStatus = "Open",
+                    compensationStatus = "Pending"
+                })
+                : null,
             Createdat = now
         });
 

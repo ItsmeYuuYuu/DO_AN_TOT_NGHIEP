@@ -114,11 +114,11 @@ export const CustomerLayout: React.FC = () => {
     phoneMenuBrands.find(brand => brand.brandid === activePhoneBrandId) ??
     phoneMenuBrands[0];
 
-  const buildPhoneBrandUrl = (brandId?: number, seriesId?: number) => {
+  const buildPhoneBrandUrl = (brandId?: number, seriesName?: string) => {
     const params = new URLSearchParams();
     if (phoneCategory) params.set('categoryId', String(phoneCategory.categoryid));
     if (brandId) params.set('brandId', String(brandId));
-    if (seriesId) params.set('seriesId', String(seriesId));
+    if (seriesName) params.set('seriesName', seriesName);
     const query = params.toString();
     return query ? `/products?${query}` : '/products';
   };
@@ -449,7 +449,7 @@ export const CustomerLayout: React.FC = () => {
                         {activePhoneBrand.phoneSeries.map(series => (
                           <NavLink
                             key={series.seriesid}
-                            to={buildPhoneBrandUrl(activePhoneBrand.brandid, series.seriesid)}
+                            to={buildPhoneBrandUrl(activePhoneBrand.brandid, series.seriesname)}
                             className="flex items-center justify-between border-b border-r customer-rule px-4 py-3 text-sm font-bold text-[#1f2937] hover:bg-[#ffd166]/30"
                           >
                             <span>{series.seriesname}</span>

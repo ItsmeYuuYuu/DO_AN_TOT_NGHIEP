@@ -60,10 +60,11 @@ public static class ProductSlugService
         var slug = baseSlug;
         var suffix = 2;
 
-        while (await context.News.AnyAsync(
-                   news =>
-                       news.Slug == slug &&
-                       (!currentPostId.HasValue || news.Postid != currentPostId.Value),
+        while (await context.Contents.AnyAsync(
+                   content =>
+                       content.Contenttype == "News" &&
+                       content.Slug == slug &&
+                       (!currentPostId.HasValue || content.Contentid != currentPostId.Value),
                    cancellationToken))
         {
             slug = $"{baseSlug}-{suffix++}";

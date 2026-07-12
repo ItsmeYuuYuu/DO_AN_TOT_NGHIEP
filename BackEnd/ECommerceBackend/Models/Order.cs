@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace ECommerceBackend.Models;
@@ -53,11 +53,17 @@ public partial class Order
 
     public string? Cancellationreason { get; set; }
 
+    public int? Salesuserid { get; set; }
+    
+    public DateTime? Salesconfirmedat { get; set; }
+
+    public int? Warehouseuserid { get; set; }
+
+    public DateTime? Warehousecompletedat { get; set; }
+
     public virtual Customer? Customer { get; set; }
 
     public virtual ICollection<Orderpayment> Orderpayments { get; set; } = new List<Orderpayment>();
-
-    public virtual ICollection<Orderassignment> Orderassignments { get; set; } = new List<Orderassignment>();
 
     public virtual ICollection<Inventorytransaction> Inventorytransactions { get; set; } = new List<Inventorytransaction>();
 
@@ -66,8 +72,6 @@ public partial class Order
     public virtual ICollection<Orderitem> Orderitems { get; set; } = new List<Orderitem>();
 
     public virtual ICollection<Returnrequest> Returnrequests { get; set; } = new List<Returnrequest>();
-
-    public virtual ICollection<Refundtransaction> Refundtransactions { get; set; } = new List<Refundtransaction>();
 
     public virtual Shipment? Shipment { get; set; }
 

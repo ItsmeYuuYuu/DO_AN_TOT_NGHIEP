@@ -44,6 +44,23 @@ namespace ECommerceBackend.Controllers
 
         private static ProductVariantDto MapToDto(Productvariant v)
         {
+            var images = new List<ProductImageDto>();
+            if (!string.IsNullOrWhiteSpace(v.Imageurls))
+            {
+                try
+                {
+                    var urls = JsonSerializer.Deserialize<List<string>>(v.Imageurls);
+                    if (urls != null)
+                    {
+                        for (int i = 0; i < urls.Count; i++)
+                        {
+                            images.Add(new ProductImageDto(i + 1, urls[i], i == 0));
+                        }
+                    }
+                }
+                catch { }
+            }
+
             return new ProductVariantDto(
                 v.Variantid,
                 v.Productid,
@@ -51,7 +68,7 @@ namespace ECommerceBackend.Controllers
                 v.Baseprice,
                 v.Saleprice,
                 !string.IsNullOrEmpty(v.Condition) ? new ConditionDto(Math.Abs(v.Condition.GetHashCode()), v.Condition) : null,
-                v.Productimages.Select(i => new ProductImageDto(i.Imageid, i.Imageurl, i.Ismain)).ToList(),
+                images,
                 ParseSpecifications(v.Specifications)
             );
         }
@@ -60,7 +77,6 @@ namespace ECommerceBackend.Controllers
         public async Task<ActionResult<IEnumerable<ProductVariantDto>>> GetProductVariants()
         {
             var variants = await _context.Productvariants
-                .Include(v => v.Productimages)
                 .ToListAsync();
             return Ok(variants.Select(MapToDto));
         }
@@ -69,7 +85,6 @@ namespace ECommerceBackend.Controllers
         public async Task<ActionResult<ProductVariantDto>> GetProductVariant(int id)
         {
             var variant = await _context.Productvariants
-                .Include(v => v.Productimages)
                 .FirstOrDefaultAsync(v => v.Variantid == id);
             
             if (variant == null) return NotFound();
@@ -80,7 +95,6 @@ namespace ECommerceBackend.Controllers
         public async Task<ActionResult<IEnumerable<ProductVariantDto>>> GetVariantsByProduct(int productId)
         {
             var variants = await _context.Productvariants
-                .Include(v => v.Productimages)
                 .Where(v => v.Productid == productId)
                 .ToListAsync();
             
@@ -105,7 +119,6 @@ namespace ECommerceBackend.Controllers
             await _context.SaveChangesAsync();
 
             var created = await _context.Productvariants
-                .Include(v => v.Productimages)
                 .FirstAsync(v => v.Variantid == variant.Variantid);
 
             return CreatedAtAction(nameof(GetProductVariant), new { id = variant.Variantid }, MapToDto(created));
@@ -132,7 +145,6 @@ namespace ECommerceBackend.Controllers
             }
 
             var updated = await _context.Productvariants
-                .Include(v => v.Productimages)
                 .FirstAsync(v => v.Variantid == variant.Variantid);
 
             return Ok(MapToDto(updated));

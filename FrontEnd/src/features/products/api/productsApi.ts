@@ -7,10 +7,11 @@ export interface Product {
   description?: string;
   brandid?: number;
   categoryid?: number;
-  seriesid?: number;
+  seriesname?: string;
   createdat?: string;
   brand?: { id: number; name: string };
   category?: { id: number; name: string };
+  /** Legacy optional shape retained while consumers migrate to seriesname. */
   series?: { id: number; name: string };
   productvariants?: ProductVariant[];
 }
@@ -92,7 +93,7 @@ export interface CreateFullProduct {
   description?: string;
   categoryid?: number;
   brandid?: number;
-  seriesid?: number;
+  seriesname?: string;
   totalquantity: number;
   variants?: CreateFullProductVariant[];
 }
@@ -107,7 +108,7 @@ export interface UpdateFullProduct {
   description?: string;
   categoryid?: number;
   brandid?: number;
-  seriesid?: number;
+  seriesname?: string;
   variants: UpdateFullProductVariant[];
 }
 
@@ -120,7 +121,7 @@ export const productsApi = {
       ? apiClient.get<FullProductDetail>(`/Products/${value}/full-detail`)
       : apiClient.get<FullProductDetail>(`/Products/by-slug/${encodeURIComponent(value)}/full-detail`);
   },
-  search: (params: { q?: string; categoryId?: number; brandId?: number; seriesId?: number; minPrice?: number; maxPrice?: number }) =>
+  search: (params: { q?: string; categoryId?: number; brandId?: number; seriesName?: string; minPrice?: number; maxPrice?: number }) =>
     apiClient.get<Product[]>('/Products/search', { params }),
   create: (data: Partial<Product>) => apiClient.post<Product>('/Products', data),
   createFull: (data: CreateFullProduct) => apiClient.post<Product>('/Products/full', data),

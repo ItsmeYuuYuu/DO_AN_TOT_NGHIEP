@@ -100,11 +100,8 @@ public sealed class ProductConsultationService : IProductConsultationService
             .AsNoTracking()
             .Include(product => product.Brand)
             .Include(product => product.Category)
-            .Include(product => product.Series)
             .Include(product => product.Productvariants)
                 .ThenInclude(variant => variant.Inventoryitems)
-            .Include(product => product.Productvariants)
-                .ThenInclude(variant => variant.Productimages)
             .AsSplitQuery();
 
         if (mentionedBrands.Count > 0)
@@ -130,7 +127,7 @@ public sealed class ProductConsultationService : IProductConsultationService
                 product.Productname,
                 product.Brand?.Brandname,
                 product.Category?.Categoryname,
-                product.Series?.Seriesname
+                product.Seriesname
             })
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => Normalize(value!))
@@ -171,7 +168,7 @@ public sealed class ProductConsultationService : IProductConsultationService
                     product.Productname,
                     product.Brand?.Brandname,
                     product.Category?.Categoryname,
-                    product.Series?.Seriesname,
+                    product.Seriesname,
                     product.Description,
                     variant.Condition,
                     variant.Sku,
@@ -203,8 +200,8 @@ public sealed class ProductConsultationService : IProductConsultationService
                 if (!string.IsNullOrWhiteSpace(product.Brand?.Brandname) &&
                     normalizedQuery.Contains(Normalize(product.Brand.Brandname)))
                     score += 8;
-                if (!string.IsNullOrWhiteSpace(product.Series?.Seriesname) &&
-                    normalizedQuery.Contains(Normalize(product.Series.Seriesname)))
+                if (!string.IsNullOrWhiteSpace(product.Seriesname) &&
+                    normalizedQuery.Contains(Normalize(product.Seriesname)))
                     score += 10;
                 if (stock > 0)
                     score += 2;
@@ -228,11 +225,7 @@ public sealed class ProductConsultationService : IProductConsultationService
                         price,
                         variant.Baseprice,
                         stock,
-                        variant.Productimages
-                            .OrderByDescending(image => image.Ismain == true)
-                            .ThenBy(image => image.Imageid)
-                            .Select(image => image.Imageurl)
-                            .FirstOrDefault() ?? string.Empty,
+                        ExtractFirstImage(variant.Imageurls),
                         specifications,
                         product.Description ?? string.Empty,
                         product.Slug),
@@ -557,4 +550,15 @@ public sealed class ProductConsultationService : IProductConsultationService
 
     private static bool ContainsAny(string value, params string[] terms) =>
         terms.Any(value.Contains);
+    private static string ExtractFirstImage(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return string.Empty;
+        try
+        {
+            var urls = JsonSerializer.Deserialize<List<string>>(json);
+            return urls?.FirstOrDefault() ?? string.Empty;
+        }
+        catch { return string.Empty; }
+    }
 }
+

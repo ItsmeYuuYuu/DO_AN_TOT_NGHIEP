@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 
+using System;
+using System.Collections.Generic;
+
 namespace ECommerceBackend.Models;
 
 public partial class Productvariant
@@ -10,6 +13,8 @@ public partial class Productvariant
     public int? Productid { get; set; }
 
     public string? Sku { get; set; }
+
+    public string? Imageurls { get; set; }
 
     public decimal Baseprice { get; set; }
 
@@ -25,9 +30,5 @@ public partial class Productvariant
 
     public virtual Product? Product { get; set; }
 
-    public virtual ICollection<Productimage> Productimages { get; set; } = new List<Productimage>();
-
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
-
-    public virtual ICollection<Cartitem> Cartitems { get; set; } = new List<Cartitem>();
 }

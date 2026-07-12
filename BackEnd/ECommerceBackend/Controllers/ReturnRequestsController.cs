@@ -59,11 +59,7 @@ public class ReturnRequestsController : ControllerBase
             .Include(request => request.Returnitems)
                 .ThenInclude(item => item.Inventoryitem)
                     .ThenInclude(inventory => inventory.Variant)
-                        .ThenInclude(variant => variant!.Product)
-            .Include(request => request.Histories)
-                .ThenInclude(history => history.User)
-            .Include(request => request.Refundtransactions)
-                .ThenInclude(refund => refund.Processedbyuser);
+                        .ThenInclude(variant => variant!.Product);
 
     private static ReturnRequestDto Map(Returnrequest request) =>
         new(
@@ -104,28 +100,8 @@ public class ReturnRequestsController : ControllerBase
                     item.Replacementimei,
                     item.Refundamount))
                 .ToList(),
-            request.Histories
-                .OrderByDescending(history => history.Createdat)
-                .Select(history => new ReturnRequestHistoryDto(
-                    history.Historyid,
-                    history.Userid,
-                    history.User?.Fullname,
-                    history.Fromstatus,
-                    history.Tostatus,
-                    history.Note,
-                    history.Createdat))
-                .ToList(),
-            request.Refundtransactions
-                .OrderByDescending(refund => refund.Processedat)
-                .Select(refund => new RefundTransactionDto(
-                    refund.Refundtransactionid,
-                    refund.Amount,
-                    refund.Provider,
-                    refund.Status,
-                    refund.Transactionref,
-                    refund.Processedbyuser?.Fullname,
-                    refund.Processedat))
-                .ToList());
+            new List<ReturnRequestHistoryDto>(),
+            new List<RefundTransactionDto>());
 
     [HttpGet]
     [Authorize(Roles = "Admin,Manager,Sales,Warehouse")]
@@ -278,15 +254,19 @@ public class ReturnRequestsController : ControllerBase
                     : 0
             });
         }
-        request.Histories.Add(new Returnrequesthistory
+        _context.Returnrequests.Add(request);
+        await _context.SaveChangesAsync();
+
+        _context.Statuslogs.Add(new Statuslog
         {
+            Entitytype = "ReturnRequest",
+            Entityid = request.Returnrequestid,
             Userid = currentUserId,
             Tostatus = "PendingReview",
             Note = "Khách hàng gửi yêu cầu đổi trả.",
             Createdat = now
         });
 
-        _context.Returnrequests.Add(request);
         await _context.SaveChangesAsync();
 
         var created = await RequestQuery().AsNoTracking()
@@ -510,8 +490,8 @@ public class ReturnRequestsController : ControllerBase
         var request = await _context.Returnrequests
             .Include(item => item.Order)
                 .ThenInclude(order => order.Orderitems)
-            .Include(item => item.Refundtransactions)
             .Include(item => item.Returnitems)
+            .Include(item => item.Order).ThenInclude(o => o.Orderpayments)
             .FirstOrDefaultAsync(item => item.Returnrequestid == id);
         if (request == null)
             return NotFound(new ApiErrorDto("Yêu cầu đổi trả không tồn tại.", null));
@@ -524,27 +504,26 @@ public class ReturnRequestsController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Provider))
             return BadRequest(new ApiErrorDto("Vui lòng chọn phương thức hoàn tiền.", null));
 
-        var refundedBefore = request.Refundtransactions
-            .Where(item => item.Status == "Completed")
-            .Sum(item => item.Amount);
+        var refundedBefore = request.Order.Orderpayments
+            .Where(p => p.Transactiontype == "Refund" && p.Returnrequestid == request.Returnrequestid)
+            .Sum(p => p.Amount);
         var remaining = request.Requestedrefundamount - refundedBefore;
         if (dto.Amount > remaining)
             return BadRequest(new ApiErrorDto("Số tiền hoàn vượt quá số tiền còn lại.", null));
 
         var now = DateTime.UtcNow;
-        request.Refundtransactions.Add(new Refundtransaction
+        request.Order.Orderpayments.Add(new Orderpayment
         {
-            Orderid = request.Orderid,
-            Processedbyuserid = CurrentUserId(),
             Amount = dto.Amount,
             Provider = dto.Provider.Trim(),
             Status = "Completed",
+            Transactiontype = "Refund",
+            Returnrequestid = request.Returnrequestid,
             Transactionref = string.IsNullOrWhiteSpace(dto.Transactionref)
                 ? $"REF-{request.Returnrequestid}-{now:yyyyMMddHHmmss}"
                 : dto.Transactionref.Trim(),
-            Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
             Createdat = now,
-            Processedat = now
+            Paidat = now
         });
 
         var refundedAfter = refundedBefore + dto.Amount;
@@ -559,11 +538,9 @@ public class ReturnRequestsController : ControllerBase
             request.Completedat = now;
         }
 
-        var previousOrderRefunds = await _context.Refundtransactions
-            .Where(item => item.Orderid == request.Orderid && item.Status == "Completed")
-            .Select(item => item.Amount)
-            .ToListAsync();
-        var totalOrderRefunds = previousOrderRefunds.Sum() + dto.Amount;
+        var totalOrderRefunds = request.Order.Orderpayments
+            .Where(p => p.Transactiontype == "Refund")
+            .Sum(p => p.Amount) + dto.Amount;
         var paidAmount = request.Order.Paidamount ?? request.Order.Finalamount;
         request.Order.Paymentstatus = totalOrderRefunds >= paidAmount
             ? "Refunded"
@@ -628,9 +605,10 @@ public class ReturnRequestsController : ControllerBase
         string toStatus,
         string? note)
     {
-        _context.Returnrequesthistories.Add(new Returnrequesthistory
+        _context.Statuslogs.Add(new Statuslog
         {
-            Returnrequestid = request.Returnrequestid,
+            Entitytype = "ReturnRequest",
+            Entityid = request.Returnrequestid,
             Userid = userId,
             Fromstatus = fromStatus,
             Tostatus = toStatus,

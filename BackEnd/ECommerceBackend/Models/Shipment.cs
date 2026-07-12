@@ -34,5 +34,5 @@ public partial class Shipment
 
     public virtual User? Createdbyuser { get; set; }
 
-    public virtual ICollection<Shipmenthistory> Histories { get; set; } = new List<Shipmenthistory>();
+    public virtual ICollection<Statuslog> Histories { get; set; } = new List<Statuslog>();
 }

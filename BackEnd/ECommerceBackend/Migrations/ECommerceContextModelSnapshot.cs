@@ -100,6 +100,10 @@ namespace ECommerceBackend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Cartid"));
 
+                    b.Property<string>("Cartcontent")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("Cartcontent");
+
                     b.Property<DateTime?>("Createdat")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
@@ -123,43 +127,6 @@ namespace ECommerceBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("carts", (string)null);
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Cartitem", b =>
-                {
-                    b.Property<int>("Cartitemid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("cartitemid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Cartitemid"));
-
-                    b.Property<int>("Cartid")
-                        .HasColumnType("integer")
-                        .HasColumnName("cartid");
-
-                    b.Property<DateTime?>("Createdat")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdat")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer")
-                        .HasColumnName("quantity");
-
-                    b.Property<int>("Variantid")
-                        .HasColumnType("integer")
-                        .HasColumnName("variantid");
-
-                    b.HasKey("Cartitemid")
-                        .HasName("cartitems_pkey");
-
-                    b.HasIndex("Cartid");
-
-                    b.HasIndex("Variantid");
-
-                    b.ToTable("cartitems", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Category", b =>
@@ -356,6 +323,88 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("chatsessions", (string)null);
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Content", b =>
+                {
+                    b.Property<int>("Contentid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("contentid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Contentid"));
+
+                    b.Property<string>("Contentdata")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("contentdata");
+
+                    b.Property<string>("Contenttype")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("contenttype");
+
+                    b.Property<DateTime?>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int?>("Createdbyuserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("createdbyuserid");
+
+                    b.Property<int?>("Displayorder")
+                        .HasColumnType("integer")
+                        .HasColumnName("displayorder");
+
+                    b.Property<string>("Htmlcontent")
+                        .HasColumnType("text")
+                        .HasColumnName("htmlcontent");
+
+                    b.Property<bool?>("Isactive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("isactive");
+
+                    b.Property<string>("Linkurl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("linkurl");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(220)
+                        .HasColumnType("character varying(220)")
+                        .HasColumnName("slug");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<string>("Thumbnailurl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("thumbnailurl");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Contentid")
+                        .HasName("contents_pkey");
+
+                    b.HasIndex("Createdbyuserid");
+
+                    b.HasIndex(new[] { "Contenttype", "Isactive", "Displayorder" }, "ix_contents_listing");
+
+                    b.HasIndex(new[] { "Slug" }, "ux_contents_slug")
+                        .IsUnique();
+
+                    b.ToTable("contents", (string)null);
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Customer", b =>
                 {
                     b.Property<int>("Customerid")
@@ -408,6 +457,78 @@ namespace ECommerceBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("customers", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Homepageproductsection", b =>
+                {
+                    b.Property<int>("Sectionid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("sectionid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Sectionid"));
+
+                    b.Property<string>("Bannercontent")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("Createdat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int?>("Displayorder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("displayorder");
+
+                    b.Property<bool?>("Isactive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("isactive");
+
+                    b.Property<string>("Productids")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Sectionkey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("sectionkey");
+
+                    b.Property<string>("Subtitle")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("subtitle");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("LightBlue")
+                        .HasColumnName("theme");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("Type")
+                        .HasColumnType("text");
+
+                    b.HasKey("Sectionid")
+                        .HasName("homepageproductsections_pkey");
+
+                    b.HasIndex(new[] { "Sectionkey" }, "homepageproductsections_sectionkey_key")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "Isactive", "Displayorder" }, "ix_homepageproductsections_active_order");
+
+                    b.ToTable("homepageproductsections", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Inventoryitem", b =>
@@ -521,68 +642,6 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("inventorytransactions", (string)null);
                 });
 
-            modelBuilder.Entity("ECommerceBackend.Models.News", b =>
-                {
-                    b.Property<int>("Postid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("postid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Postid"));
-
-                    b.Property<string>("Content")
-                        .HasColumnType("text")
-                        .HasColumnName("content");
-
-                    b.Property<DateTime?>("Createdat")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdat")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<bool?>("Isactive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("isactive");
-
-                    b.Property<string>("Summary")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("summary");
-
-                    b.Property<string>("Thumbnail")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("thumbnail");
-
-                    b.Property<string>("Slug")
-                        .HasMaxLength(220)
-                        .HasColumnType("character varying(220)")
-                        .HasColumnName("slug");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("title");
-
-                    b.Property<int?>("Userid")
-                        .HasColumnType("integer")
-                        .HasColumnName("userid");
-
-                    b.HasKey("Postid")
-                        .HasName("news_pkey");
-
-                    b.HasIndex("Userid");
-
-                    b.HasIndex("Slug")
-                        .IsUnique()
-                        .HasDatabaseName("news_slug_key");
-
-                    b.ToTable("news", (string)null);
-                });
-
             modelBuilder.Entity("ECommerceBackend.Models.Order", b =>
                 {
                     b.Property<int>("Orderid")
@@ -681,6 +740,12 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("reservationexpiresat");
 
+                    b.Property<DateTime?>("Salesconfirmedat")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("Salesuserid")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Shippingaddress")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -715,6 +780,12 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("vouchercode");
 
+                    b.Property<DateTime?>("Warehousecompletedat")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("Warehouseuserid")
+                        .HasColumnType("integer");
+
                     b.HasKey("Orderid")
                         .HasName("orders_pkey");
 
@@ -733,69 +804,6 @@ namespace ECommerceBackend.Migrations
                         .HasDatabaseName("ix_orders_customerid_orderdate");
 
                     b.ToTable("orders", (string)null);
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Orderassignment", b =>
-                {
-                    b.Property<int>("Assignmentid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("assignmentid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Assignmentid"));
-
-                    b.Property<DateTime?>("Assignedat")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("assignedat");
-
-                    b.Property<int?>("Assignedbyuserid")
-                        .HasColumnType("integer")
-                        .HasColumnName("assignedbyuserid");
-
-                    b.Property<int?>("Assigneduserid")
-                        .HasColumnType("integer")
-                        .HasColumnName("assigneduserid");
-
-                    b.Property<DateTime?>("Completedat")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("completedat");
-
-                    b.Property<string>("Department")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("department");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("note");
-
-                    b.Property<int>("Orderid")
-                        .HasColumnType("integer")
-                        .HasColumnName("orderid");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasDefaultValue("Pending")
-                        .HasColumnName("status");
-
-                    b.HasKey("Assignmentid")
-                        .HasName("orderassignments_pkey");
-
-                    b.HasIndex("Assignedbyuserid");
-
-                    b.HasIndex(new[] { "Assigneduserid" }, "ix_orderassignments_assigneduserid");
-
-                    b.HasIndex(new[] { "Department", "Status" }, "ix_orderassignments_department_status");
-
-                    b.HasIndex(new[] { "Orderid", "Department" }, "ux_orderassignments_order_department")
-                        .IsUnique();
-
-                    b.ToTable("orderassignments", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Orderitem", b =>
@@ -886,6 +894,9 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("provider");
 
+                    b.Property<int?>("Returnrequestid")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -896,6 +907,9 @@ namespace ECommerceBackend.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("transactionref");
+
+                    b.Property<string>("Transactiontype")
+                        .HasColumnType("text");
 
                     b.HasKey("Paymentid")
                         .HasName("orderpayments_pkey");
@@ -938,9 +952,15 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("productname");
 
-                    b.Property<int?>("Seriesid")
-                        .HasColumnType("integer")
-                        .HasColumnName("seriesid");
+                    b.Property<string>("Seriesname")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("seriesname");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(220)
+                        .HasColumnType("character varying(220)")
+                        .HasColumnName("slug");
 
                     b.HasKey("Productid")
                         .HasName("products_pkey");
@@ -954,91 +974,13 @@ namespace ECommerceBackend.Migrations
                     b.HasIndex("Productname")
                         .HasDatabaseName("ix_products_productname");
 
-                    b.HasIndex("Seriesid");
-
                     b.HasIndex("Categoryid", "Brandid")
                         .HasDatabaseName("ix_products_categoryid_brandid");
 
-                    b.ToTable("products", (string)null);
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Productimage", b =>
-                {
-                    b.Property<int>("Imageid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("imageid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Imageid"));
-
-                    b.Property<string>("Imageurl")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("imageurl");
-
-                    b.Property<bool?>("Ismain")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("ismain");
-
-                    b.Property<int?>("Variantid")
-                        .HasColumnType("integer")
-                        .HasColumnName("variantid");
-
-                    b.HasKey("Imageid")
-                        .HasName("productimages_pkey");
-
-                    b.HasIndex("Variantid");
-
-                    b.ToTable("productimages", (string)null);
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Productseries", b =>
-                {
-                    b.Property<int>("Seriesid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("seriesid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Seriesid"));
-
-                    b.Property<int>("Brandid")
-                        .HasColumnType("integer")
-                        .HasColumnName("brandid");
-
-                    b.Property<DateTime?>("Createdat")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdat")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int?>("Displayorder")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("displayorder");
-
-                    b.Property<bool?>("Isactive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("isactive");
-
-                    b.Property<string>("Seriesname")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("seriesname");
-
-                    b.HasKey("Seriesid")
-                        .HasName("productseries_pkey");
-
-                    b.HasIndex(new[] { "Brandid", "Seriesname" }, "ix_productseries_brandid_seriesname")
+                    b.HasIndex(new[] { "Slug" }, "products_slug_key")
                         .IsUnique();
 
-                    b.ToTable("productseries", (string)null);
+                    b.ToTable("products", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Productvariant", b =>
@@ -1060,6 +1002,10 @@ namespace ECommerceBackend.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("condition");
+
+                    b.Property<string>("Imageurls")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("Imageurls");
 
                     b.Property<int?>("Productid")
                         .HasColumnType("integer")
@@ -1100,131 +1046,6 @@ namespace ECommerceBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("productvariants", (string)null);
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Promotionalcontent", b =>
-                {
-                    b.Property<int>("Contentid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("contentid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Contentid"));
-
-                    b.Property<string>("Contenttype")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("contenttype");
-
-                    b.Property<DateTime?>("Createdat")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdat")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int?>("Displayorder")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("displayorder");
-
-                    b.Property<string>("Imageurl")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("imageurl");
-
-                    b.Property<bool?>("Isactive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("isactive");
-
-                    b.Property<string>("Linkurl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("linkurl");
-
-                    b.Property<string>("Title")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("title");
-
-                    b.HasKey("Contentid")
-                        .HasName("promotionalcontents_pkey");
-
-                    b.ToTable("promotionalcontents", (string)null);
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Refundtransaction", b =>
-                {
-                    b.Property<int>("Refundtransactionid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("refundtransactionid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Refundtransactionid"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<DateTime?>("Createdat")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdat")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("note");
-
-                    b.Property<int>("Orderid")
-                        .HasColumnType("integer")
-                        .HasColumnName("orderid");
-
-                    b.Property<DateTime?>("Processedat")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("processedat");
-
-                    b.Property<int?>("Processedbyuserid")
-                        .HasColumnType("integer")
-                        .HasColumnName("processedbyuserid");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("provider");
-
-                    b.Property<int>("Returnrequestid")
-                        .HasColumnType("integer")
-                        .HasColumnName("returnrequestid");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("status");
-
-                    b.Property<string>("Transactionref")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("transactionref");
-
-                    b.HasKey("Refundtransactionid")
-                        .HasName("refundtransactions_pkey");
-
-                    b.HasIndex("Processedbyuserid");
-
-                    b.HasIndex(new[] { "Orderid" }, "ix_refundtransactions_orderid");
-
-                    b.HasIndex(new[] { "Returnrequestid" }, "ix_refundtransactions_requestid");
-
-                    b.ToTable("refundtransactions", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Returnitem", b =>
@@ -1312,7 +1133,7 @@ namespace ECommerceBackend.Migrations
                         .HasColumnName("description");
 
                     b.Property<string>("Imageurls")
-                        .HasColumnType("text")
+                        .HasColumnType("jsonb")
                         .HasColumnName("imageurls");
 
                     b.Property<int>("Orderid")
@@ -1397,57 +1218,6 @@ namespace ECommerceBackend.Migrations
                     b.HasIndex(new[] { "Status", "Updatedat" }, "ix_returnrequests_status_updatedat");
 
                     b.ToTable("returnrequests", (string)null);
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Returnrequesthistory", b =>
-                {
-                    b.Property<int>("Historyid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("historyid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Historyid"));
-
-                    b.Property<DateTime?>("Createdat")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdat")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Fromstatus")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("fromstatus");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("note");
-
-                    b.Property<int>("Returnrequestid")
-                        .HasColumnType("integer")
-                        .HasColumnName("returnrequestid");
-
-                    b.Property<string>("Tostatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("tostatus");
-
-                    b.Property<int?>("Userid")
-                        .HasColumnType("integer")
-                        .HasColumnName("userid");
-
-                    b.HasKey("Historyid")
-                        .HasName("returnrequesthistories_pkey");
-
-                    b.HasIndex("Userid");
-
-                    b.HasIndex(new[] { "Createdat" }, "ix_returnrequesthistories_createdat");
-
-                    b.HasIndex(new[] { "Returnrequestid" }, "ix_returnrequesthistories_requestid");
-
-                    b.ToTable("returnrequesthistories", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Review", b =>
@@ -1602,14 +1372,22 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("shipments", (string)null);
                 });
 
-            modelBuilder.Entity("ECommerceBackend.Models.Shipmenthistory", b =>
+            modelBuilder.Entity("ECommerceBackend.Models.Statuslog", b =>
                 {
-                    b.Property<int>("Historyid")
+                    b.Property<int>("Logid")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
-                        .HasColumnName("historyid");
+                        .HasColumnName("logid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Historyid"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Logid"));
+
+                    b.Property<string>("Actiontype")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("StatusChanged")
+                        .HasColumnName("actiontype");
 
                     b.Property<DateTime?>("Createdat")
                         .ValueGeneratedOnAdd()
@@ -1617,38 +1395,54 @@ namespace ECommerceBackend.Migrations
                         .HasColumnName("createdat")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<int>("Entityid")
+                        .HasColumnType("integer")
+                        .HasColumnName("entityid");
+
+                    b.Property<string>("Entitytype")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("entitytype");
+
                     b.Property<string>("Fromstatus")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("fromstatus");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("metadata");
 
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("note");
 
-                    b.Property<int>("Shipmentid")
-                        .HasColumnType("integer")
-                        .HasColumnName("shipmentid");
+                    b.Property<int?>("Shipmentid")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Tostatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("tostatus");
 
                     b.Property<int?>("Userid")
                         .HasColumnType("integer")
                         .HasColumnName("userid");
 
-                    b.HasKey("Historyid")
-                        .HasName("shipmenthistories_pkey");
+                    b.HasKey("Logid")
+                        .HasName("statuslogs_pkey");
+
+                    b.HasIndex("Shipmentid");
 
                     b.HasIndex("Userid");
 
-                    b.HasIndex(new[] { "Shipmentid", "Createdat" }, "ix_shipmenthistories_shipment_createdat");
+                    b.HasIndex(new[] { "Entitytype", "Entityid" }, "ix_statuslogs_entity");
 
-                    b.ToTable("shipmenthistories", (string)null);
+                    b.ToTable("statuslogs", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.User", b =>
@@ -1819,7 +1613,7 @@ namespace ECommerceBackend.Migrations
                         .HasColumnName("finalcost");
 
                     b.Property<string>("Imageurls")
-                        .HasColumnType("text")
+                        .HasColumnType("jsonb")
                         .HasColumnName("imageurls");
 
                     b.Property<string>("Imei")
@@ -1858,57 +1652,6 @@ namespace ECommerceBackend.Migrations
                     b.HasIndex(new[] { "Status" }, "ix_warrantyclaims_status");
 
                     b.ToTable("warrantyclaims", (string)null);
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Warrantyclaimhistory", b =>
-                {
-                    b.Property<int>("Historyid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("historyid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Historyid"));
-
-                    b.Property<int>("Claimid")
-                        .HasColumnType("integer")
-                        .HasColumnName("claimid");
-
-                    b.Property<DateTime>("Createdat")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdat")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Fromstatus")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("fromstatus");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("note");
-
-                    b.Property<string>("Tostatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("tostatus");
-
-                    b.Property<int?>("Userid")
-                        .HasColumnType("integer")
-                        .HasColumnName("userid");
-
-                    b.HasKey("Historyid")
-                        .HasName("warrantyclaimhistories_pkey");
-
-                    b.HasIndex("Userid");
-
-                    b.HasIndex(new[] { "Claimid" }, "ix_warrantyclaimhistories_claimid");
-
-                    b.HasIndex(new[] { "Createdat" }, "ix_warrantyclaimhistories_createdat");
-
-                    b.ToTable("warrantyclaimhistories", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Warrantypackage", b =>
@@ -1961,27 +1704,6 @@ namespace ECommerceBackend.Migrations
                         .HasConstraintName("fk_carts_users");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Cartitem", b =>
-                {
-                    b.HasOne("ECommerceBackend.Models.Cart", "Cart")
-                        .WithMany("Cartitems")
-                        .HasForeignKey("Cartid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_cartitems_carts");
-
-                    b.HasOne("ECommerceBackend.Models.Productvariant", "Variant")
-                        .WithMany("Cartitems")
-                        .HasForeignKey("Variantid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_cartitems_productvariants");
-
-                    b.Navigation("Cart");
-
-                    b.Navigation("Variant");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Chatmessage", b =>
@@ -2042,6 +1764,16 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Customer");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Content", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.User", "Createdbyuser")
+                        .WithMany("Contents")
+                        .HasForeignKey("Createdbyuserid")
+                        .HasConstraintName("fk_news_users");
+
+                    b.Navigation("Createdbyuser");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Inventoryitem", b =>
                 {
                     b.HasOne("ECommerceBackend.Models.Productvariant", "Variant")
@@ -2080,16 +1812,6 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("ECommerceBackend.Models.News", b =>
-                {
-                    b.HasOne("ECommerceBackend.Models.User", "User")
-                        .WithMany("News")
-                        .HasForeignKey("Userid")
-                        .HasConstraintName("fk_news_users");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("ECommerceBackend.Models.Order", b =>
                 {
                     b.HasOne("ECommerceBackend.Models.Customer", "Customer")
@@ -2112,34 +1834,6 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("User");
 
                     b.Navigation("VouchercodeNavigation");
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Orderassignment", b =>
-                {
-                    b.HasOne("ECommerceBackend.Models.User", "Assignedbyuser")
-                        .WithMany("CreatedOrderassignments")
-                        .HasForeignKey("Assignedbyuserid")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_orderassignments_assignedby_users");
-
-                    b.HasOne("ECommerceBackend.Models.User", "Assigneduser")
-                        .WithMany("AssignedOrderassignments")
-                        .HasForeignKey("Assigneduserid")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_orderassignments_assigned_users");
-
-                    b.HasOne("ECommerceBackend.Models.Order", "Order")
-                        .WithMany("Orderassignments")
-                        .HasForeignKey("Orderid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_orderassignments_orders");
-
-                    b.Navigation("Assignedbyuser");
-
-                    b.Navigation("Assigneduser");
-
-                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Orderitem", b =>
@@ -2190,39 +1884,9 @@ namespace ECommerceBackend.Migrations
                         .HasForeignKey("Categoryid")
                         .HasConstraintName("fk_products_categories");
 
-                    b.HasOne("ECommerceBackend.Models.Productseries", "Series")
-                        .WithMany("Products")
-                        .HasForeignKey("Seriesid")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_products_productseries");
-
                     b.Navigation("Brand");
 
                     b.Navigation("Category");
-
-                    b.Navigation("Series");
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Productimage", b =>
-                {
-                    b.HasOne("ECommerceBackend.Models.Productvariant", "Variant")
-                        .WithMany("Productimages")
-                        .HasForeignKey("Variantid")
-                        .HasConstraintName("fk_images_variants");
-
-                    b.Navigation("Variant");
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Productseries", b =>
-                {
-                    b.HasOne("ECommerceBackend.Models.Brand", "Brand")
-                        .WithMany("Productseries")
-                        .HasForeignKey("Brandid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_productseries_brands");
-
-                    b.Navigation("Brand");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Productvariant", b =>
@@ -2233,35 +1897,6 @@ namespace ECommerceBackend.Migrations
                         .HasConstraintName("fk_variants_products");
 
                     b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Refundtransaction", b =>
-                {
-                    b.HasOne("ECommerceBackend.Models.Order", "Order")
-                        .WithMany("Refundtransactions")
-                        .HasForeignKey("Orderid")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_refundtransactions_orders");
-
-                    b.HasOne("ECommerceBackend.Models.User", "Processedbyuser")
-                        .WithMany("Refundtransactions")
-                        .HasForeignKey("Processedbyuserid")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_refundtransactions_users");
-
-                    b.HasOne("ECommerceBackend.Models.Returnrequest", "Returnrequest")
-                        .WithMany("Refundtransactions")
-                        .HasForeignKey("Returnrequestid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_refundtransactions_requests");
-
-                    b.Navigation("Order");
-
-                    b.Navigation("Processedbyuser");
-
-                    b.Navigation("Returnrequest");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Returnitem", b =>
@@ -2338,26 +1973,6 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Requestedbyuser");
                 });
 
-            modelBuilder.Entity("ECommerceBackend.Models.Returnrequesthistory", b =>
-                {
-                    b.HasOne("ECommerceBackend.Models.Returnrequest", "Returnrequest")
-                        .WithMany("Histories")
-                        .HasForeignKey("Returnrequestid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_returnrequesthistories_requests");
-
-                    b.HasOne("ECommerceBackend.Models.User", "User")
-                        .WithMany("Returnrequesthistories")
-                        .HasForeignKey("Userid")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_returnrequesthistories_users");
-
-                    b.Navigation("Returnrequest");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("ECommerceBackend.Models.Review", b =>
                 {
                     b.HasOne("ECommerceBackend.Models.Customer", "Customer")
@@ -2395,22 +2010,17 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Order");
                 });
 
-            modelBuilder.Entity("ECommerceBackend.Models.Shipmenthistory", b =>
+            modelBuilder.Entity("ECommerceBackend.Models.Statuslog", b =>
                 {
-                    b.HasOne("ECommerceBackend.Models.Shipment", "Shipment")
+                    b.HasOne("ECommerceBackend.Models.Shipment", null)
                         .WithMany("Histories")
-                        .HasForeignKey("Shipmentid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_shipmenthistories_shipments");
+                        .HasForeignKey("Shipmentid");
 
                     b.HasOne("ECommerceBackend.Models.User", "User")
-                        .WithMany("Shipmenthistories")
+                        .WithMany("Statuslogs")
                         .HasForeignKey("Userid")
                         .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_shipmenthistories_users");
-
-                    b.Navigation("Shipment");
+                        .HasConstraintName("fk_statuslogs_users");
 
                     b.Navigation("User");
                 });
@@ -2454,36 +2064,9 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Inventoryitem");
                 });
 
-            modelBuilder.Entity("ECommerceBackend.Models.Warrantyclaimhistory", b =>
-                {
-                    b.HasOne("ECommerceBackend.Models.Warrantyclaim", "Claim")
-                        .WithMany("Histories")
-                        .HasForeignKey("Claimid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_warrantyclaimhistories_claims");
-
-                    b.HasOne("ECommerceBackend.Models.User", "User")
-                        .WithMany("Warrantyclaimhistories")
-                        .HasForeignKey("Userid")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_warrantyclaimhistories_users");
-
-                    b.Navigation("Claim");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("ECommerceBackend.Models.Brand", b =>
                 {
                     b.Navigation("Products");
-
-                    b.Navigation("Productseries");
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Cart", b =>
-                {
-                    b.Navigation("Cartitems");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Category", b =>
@@ -2533,13 +2116,9 @@ namespace ECommerceBackend.Migrations
 
                     b.Navigation("Inventorytransactions");
 
-                    b.Navigation("Orderassignments");
-
                     b.Navigation("Orderitems");
 
                     b.Navigation("Orderpayments");
-
-                    b.Navigation("Refundtransactions");
 
                     b.Navigation("Returnrequests");
 
@@ -2558,30 +2137,17 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Productvariants");
                 });
 
-            modelBuilder.Entity("ECommerceBackend.Models.Productseries", b =>
-                {
-                    b.Navigation("Products");
-                });
-
             modelBuilder.Entity("ECommerceBackend.Models.Productvariant", b =>
                 {
-                    b.Navigation("Cartitems");
-
                     b.Navigation("Chatproductrecommendations");
 
                     b.Navigation("Inventoryitems");
-
-                    b.Navigation("Productimages");
 
                     b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Returnrequest", b =>
                 {
-                    b.Navigation("Histories");
-
-                    b.Navigation("Refundtransactions");
-
                     b.Navigation("Returnitems");
                 });
 
@@ -2597,8 +2163,6 @@ namespace ECommerceBackend.Migrations
 
             modelBuilder.Entity("ECommerceBackend.Models.User", b =>
                 {
-                    b.Navigation("AssignedOrderassignments");
-
                     b.Navigation("AssignedReturnrequests");
 
                     b.Navigation("AssignedWarrantyclaims");
@@ -2607,35 +2171,22 @@ namespace ECommerceBackend.Migrations
 
                     b.Navigation("Cart");
 
-                    b.Navigation("CreatedOrderassignments");
+                    b.Navigation("Contents");
 
                     b.Navigation("CreatedShipments");
 
                     b.Navigation("Inventorytransactions");
 
-                    b.Navigation("News");
-
                     b.Navigation("Orders");
-
-                    b.Navigation("Refundtransactions");
 
                     b.Navigation("RequestedReturnrequests");
 
-                    b.Navigation("Returnrequesthistories");
-
-                    b.Navigation("Shipmenthistories");
-
-                    b.Navigation("Warrantyclaimhistories");
+                    b.Navigation("Statuslogs");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Voucher", b =>
                 {
                     b.Navigation("Orders");
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Warrantyclaim", b =>
-                {
-                    b.Navigation("Histories");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Warrantypackage", b =>

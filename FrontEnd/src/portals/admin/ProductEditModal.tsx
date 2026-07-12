@@ -12,10 +12,10 @@ import {
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import { productsApi } from '@/features/products/api/productsApi';
 import type { UpdateFullProduct, UpdateFullProductVariant, UploadedProductImage } from '@/features/products/api/productsApi';
 import { PRODUCT_CONDITION_OPTIONS } from '@/features/products/constants/productOptions';
-import { productSeriesApi, type ProductSeries } from '@/features/productSeries/api/productSeriesApi';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { getApiErrorMessage } from '@/utils/apiError';
 
@@ -70,11 +70,9 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
   const [uploadingDescriptionImages, setUploadingDescriptionImages] = useState(false);
   const [categoryid, setCategoryid] = useState<number | ''>('');
   const [brandid, setBrandid] = useState<number | ''>('');
-  const [seriesid, setSeriesid] = useState<number | ''>('');
-  const [seriesList, setSeriesList] = useState<ProductSeries[]>([]);
+  const [seriesname, setSeriesname] = useState('');
   const [variants, setVariants] = useState<EditVariant[]>([]);
   const [uploadingVariant, setUploadingVariant] = useState<string | null>(null);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const descriptionImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -82,19 +80,15 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
 
     setLoading(true);
     setError(null);
-    Promise.all([
-      productsApi.getFullDetail(productId),
-      productSeriesApi.getAll({ activeOnly: true }),
-    ])
-      .then(([response, seriesResponse]) => {
+    productsApi.getFullDetail(productId)
+      .then(response => {
         const product = response.data;
-        setSeriesList(seriesResponse.data);
         setProductname(product.productname);
         setDescription(product.description ?? '');
         setDescriptionImages([]);
         setCategoryid(product.category?.id ?? '');
         setBrandid(product.brand?.id ?? '');
-        setSeriesid(product.series?.id ?? '');
+        setSeriesname(product.seriesname ?? '');
         setVariants((product.productvariants ?? []).map((variant, index) => ({
           clientId: newClientId(),
           variantid: variant.variantid,
@@ -114,19 +108,6 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
       .catch(() => setError('Không thể tải dữ liệu chi tiết sản phẩm.'))
       .finally(() => setLoading(false));
   }, [productId]);
-
-  useEffect(() => {
-    if (seriesid && brandid) {
-      const selected = seriesList.find(series => series.seriesid === seriesid);
-      if (selected && selected.brandid !== brandid) {
-        setSeriesid('');
-      }
-    }
-  }, [brandid, seriesid, seriesList]);
-
-  const filteredSeries = brandid
-    ? seriesList.filter(series => series.brandid === brandid)
-    : [];
 
   const updateVariant = (clientId: string, updater: (variant: EditVariant) => EditVariant) => {
     setVariants(current => current.map(variant =>
@@ -209,23 +190,10 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
   };
 
   const insertDescriptionImageMarkdown = (images: UploadedProductImage[]) => {
-    const textarea = descriptionRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const before = textarea.value.substring(0, start);
-    const after = textarea.value.substring(end);
     const insertText = images
-      .map(image => `\n![Hình ảnh sản phẩm](${image.url})\n`)
+      .map(image => `<p><img src="${image.url}" alt="Hình ảnh sản phẩm" /></p>`)
       .join('');
-
-    setDescription(before + insertText + after);
-
-    window.setTimeout(() => {
-      textarea.focus();
-      textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
-    }, 50);
+    setDescription(current => `${current}${insertText}`);
   };
 
   const uploadDescriptionImages = async (files: File[]) => {
@@ -346,7 +314,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
       description: description.trim(),
       categoryid: Number(categoryid),
       brandid: Number(brandid),
-      seriesid: seriesid ? Number(seriesid) : undefined,
+      seriesname: seriesname.trim() || undefined,
       variants: variants.map<UpdateFullProductVariant>(variant => ({
         variantid: variant.variantid,
         sku: variant.sku.trim(),
@@ -426,7 +394,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 <label className="mb-1 block text-xs font-bold text-slate-600">Thương hiệu *</label>
                 <select disabled={contentOnly} className={inputClass} value={brandid} onChange={event => {
                   setBrandid(Number(event.target.value) || '');
-                  setSeriesid('');
+                  setSeriesname('');
                 }}>
                   <option value="">Chọn thương hiệu</option>
                   {brands.map(brand => (
@@ -436,17 +404,13 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
               </div>
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-600">Dòng máy</label>
-                <select
+                <input
                   className={inputClass}
-                  value={seriesid}
-                  disabled={contentOnly || !brandid || filteredSeries.length === 0}
-                  onChange={event => setSeriesid(Number(event.target.value) || '')}
-                >
-                  <option value="">{brandid ? 'Chọn dòng máy' : 'Chọn thương hiệu trước'}</option>
-                  {filteredSeries.map(series => (
-                    <option key={series.seriesid} value={series.seriesid}>{series.seriesname}</option>
-                  ))}
-                </select>
+                  value={seriesname}
+                  disabled={contentOnly}
+                  onChange={event => setSeriesname(event.target.value)}
+                  placeholder="VD: Galaxy S, iPhone Pro"
+                />
               </div>
             </div>
             <div>
@@ -471,14 +435,14 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   />
                 </label>
               </div>
-              <textarea
-                ref={descriptionRef}
-                className={`${inputClass} min-h-28 resize-y`}
+              <RichTextEditor
                 value={description}
-                onChange={event => setDescription(event.target.value)}
+                onChange={setDescription}
+                disabled={contentOnly}
+                placeholder="Nhập mô tả sản phẩm và định dạng nội dung…"
               />
               <p className="mt-1 text-[11px] text-slate-500">
-                Ảnh sẽ được chèn vào vị trí con trỏ trong mô tả dưới dạng markdown.
+                Ảnh được thêm cuối nội dung dưới dạng HTML.
               </p>
               {descriptionImages.length > 0 && (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">

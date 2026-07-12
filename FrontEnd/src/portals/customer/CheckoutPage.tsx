@@ -112,6 +112,20 @@ const CheckoutPage: React.FC = () => {
     [form.provinceCode, provinces],
   );
   const wards = selectedProvince?.wards ?? [];
+  const isHoChiMinhCity = useMemo(() => {
+    const normalized = form.provinceName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    return normalized.includes('ho chi minh');
+  }, [form.provinceName]);
+  const guestCodAllowed = !isLoggedIn && isHoChiMinhCity;
+
+  useEffect(() => {
+    if (!isLoggedIn && form.paymentMethod === 'COD' && !isHoChiMinhCity) {
+      setForm(prev => ({ ...prev, paymentMethod: 'BANK' }));
+    }
+  }, [form.paymentMethod, isHoChiMinhCity, isLoggedIn]);
 
   const shipping = totalPrice >= 2_000_000 ? 0 : 30_000;
   const totalWarrantyPrice = useMemo(() => items.reduce((sum, item) => {
@@ -290,8 +304,8 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
-    if (!isLoggedIn && form.paymentMethod === 'COD') {
-      setError('Khách vãng lai không thể chọn COD. Vui lòng chọn đặt cọc hoặc thanh toán trước.');
+    if (!isLoggedIn && !isHoChiMinhCity) {
+      setError('Khách vãng lai hiện chỉ đặt giao nội thành TP.HCM. Vui lòng đăng nhập để giao qua đơn vị vận chuyển.');
       return;
     }
 
@@ -334,7 +348,11 @@ const CheckoutPage: React.FC = () => {
   const inputClass = 'customer-input';
   const labelClass = 'mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500';
   const paymentMethods = [
-    ...(isLoggedIn ? [{ value: 'COD', label: 'Thanh toán khi nhận hàng (COD)', desc: 'Dành cho tài khoản đã đăng nhập' }] : []),
+    ...(isLoggedIn || guestCodAllowed ? [{
+      value: 'COD',
+      label: 'Thanh toán khi nhận hàng (COD)',
+      desc: isLoggedIn ? 'Dành cho tài khoản đã đăng nhập' : 'Nhân viên cửa hàng giao nội thành TP.HCM',
+    }] : []),
     { value: 'BANK', label: 'Chuyển khoản ngân hàng', desc: 'Chuyển khoản qua VietQR, hệ thống xác nhận tự động tức thì (Real-time)' },
   ] as const;
 
@@ -367,7 +385,7 @@ const CheckoutPage: React.FC = () => {
               <ShieldCheck size={21} className="shrink-0" />
               <div>
                 <p className="font-black">Bạn đang mua với tư cách khách vãng lai.</p>
-                <p className="mt-1 leading-6">COD bị tắt để chống bom hàng. Bạn cần đặt cọc 30% hoặc thanh toán trước 100%.</p>
+                <p className="mt-1 leading-6">Khách vãng lai được COD hoặc chuyển khoản khi giao nội thành TP.HCM bởi nhân viên cửa hàng. Đơn ngoài TP.HCM cần đăng nhập để dùng đơn vị vận chuyển.</p>
               </div>
             </div>
           )}

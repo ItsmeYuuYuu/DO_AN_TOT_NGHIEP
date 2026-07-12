@@ -143,7 +143,14 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
     if (!selectedVariant || isOutOfStock) return false;
     const images = selectedVariant.productimages ?? [];
     const primary = images.find(image => image.ismain) ?? images[0];
-    const attrsName = selectedVariant.attributes?.map(attribute => attribute.valuename).join(' - ');
+
+    const selectedAttrs = selectedVariant.attributes
+      ?.filter(attr => SELECTABLE_ATTRIBUTE_NAMES.includes(attr.attributename))
+      .map(attr => attr.valuename) ?? [];
+    if (selectedVariant.condition) {
+      selectedAttrs.push(selectedVariant.condition.conditionname);
+    }
+    const attrsName = selectedAttrs.join(' - ');
 
     setCartError('');
     const added = await addToCart({

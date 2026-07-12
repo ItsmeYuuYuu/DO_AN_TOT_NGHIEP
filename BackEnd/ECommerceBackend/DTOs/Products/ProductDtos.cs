@@ -29,7 +29,7 @@ namespace ECommerceBackend.DTOs.Products
         DateTime? Createdat,
         LookupDto? Brand,
         LookupDto? Category,
-        LookupDto? Series,
+        string? Seriesname,
         List<ProductVariantDto>? Productvariants
     );
 
@@ -43,9 +43,9 @@ namespace ECommerceBackend.DTOs.Products
             DateTime? Createdat,
             LookupDto? Brand,
             LookupDto? Category,
-            LookupDto? Series,
+            string? Seriesname,
             List<ProductVariantDto>? Productvariants
-        ) : base(Productid, Slug, Productname, Description, Createdat, Brand, Category, Series, Productvariants) { }
+        ) : base(Productid, Slug, Productname, Description, Createdat, Brand, Category, Seriesname, Productvariants) { }
     }
 
     public record ReviewSummaryDto(double AvgRating, int TotalReviews, int Star5, int Star4, int Star3, int Star2, int Star1);
@@ -65,11 +65,11 @@ namespace ECommerceBackend.DTOs.Products
             DateTime? Createdat,
             LookupDto? Brand,
             LookupDto? Category,
-            LookupDto? Series,
+            string? Seriesname,
             List<ProductVariantDto>? Productvariants,
             ReviewSummaryDto? ReviewSummary = null,
             List<ProductListItemDto>? RelatedProducts = null
-        ) : base(Productid, Slug, Productname, Description, Createdat, Brand, Category, Series, Productvariants)
+        ) : base(Productid, Slug, Productname, Description, Createdat, Brand, Category, Seriesname, Productvariants)
         {
             this.ReviewSummary = ReviewSummary;
             this.RelatedProducts = RelatedProducts;
@@ -81,7 +81,7 @@ namespace ECommerceBackend.DTOs.Products
         string? Description,
         int? Categoryid,
         int? Brandid,
-        int? Seriesid
+        string? Seriesname
     );
 
     public record UpdateProductRequestDto(
@@ -89,7 +89,7 @@ namespace ECommerceBackend.DTOs.Products
         string? Description,
         int? Categoryid,
         int? Brandid,
-        int? Seriesid
+        string? Seriesname
     );
 
     public record CreateProductVariantRequestDto(
@@ -134,7 +134,7 @@ namespace ECommerceBackend.DTOs.Products
         string? Description,
         int? Categoryid,
         int? Brandid,
-        int? Seriesid,
+        string? Seriesname,
         [Range(0, 10000, ErrorMessage = "Tổng số lượng lô hàng phải từ 0 đến 10000")] int Totalquantity,
         List<CreateFullProductVariantDto>? Variants
     );
@@ -155,7 +155,7 @@ namespace ECommerceBackend.DTOs.Products
         string? Description,
         int? Categoryid,
         int? Brandid,
-        int? Seriesid,
+        string? Seriesname,
         [Required, MinLength(1)] List<UpdateFullProductVariantDto> Variants
     );
 }

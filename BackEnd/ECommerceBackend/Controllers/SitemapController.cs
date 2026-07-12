@@ -50,7 +50,8 @@ public class SitemapController : ControllerBase
             "weekly",
             product.Createdat)));
 
-        var newsList = await _context.News
+        var newsList = await _context.Contents
+            .Where(item => item.Contenttype == "News")
             .AsNoTracking()
             .Where(news => news.Isactive == true && news.Slug != null)
             .Select(news => new

@@ -15,138 +15,78 @@ public class ProductSeriesController : ControllerBase
 
     public ProductSeriesController(ECommerceContext context) => _context = context;
 
-    private static ProductSeriesDto MapToDto(Productseries series) => new(
-        series.Seriesid,
-        series.Brandid,
-        series.Brand.Brandname,
-        series.Seriesname,
-        series.Displayorder ?? 0,
-        series.Isactive ?? true,
-        series.Products.Count
-    );
-
+    // Compatibility read API. Series is now a label on Products, not its own table.
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProductSeriesDto>>> GetProductSeries(
         [FromQuery] int? brandId,
-        [FromQuery] bool activeOnly = false)
+        [FromQuery] bool? activeOnly)
     {
-        var query = _context.Productseries
-            .Include(series => series.Brand)
-            .Include(series => series.Products)
+        var query = _context.Products
+            .AsNoTracking()
+            .Where(product => product.Seriesname != null && product.Seriesname != "")
+            .Include(product => product.Brand)
             .AsQueryable();
 
         if (brandId.HasValue)
-            query = query.Where(series => series.Brandid == brandId.Value);
+            query = query.Where(product => product.Brandid == brandId.Value);
 
-        if (activeOnly)
-            query = query.Where(series => series.Isactive == true);
-
-        var seriesList = await query
-            .OrderBy(series => series.Displayorder)
-            .ThenBy(series => series.Seriesname)
+        var rows = await query
+            .GroupBy(product => new
+            {
+                product.Brandid,
+                BrandName = product.Brand != null ? product.Brand.Brandname : "",
+                product.Seriesname
+            })
+            .Select(group => new
+            {
+                SeriesId = group.Min(product => product.Productid),
+                group.Key.Brandid,
+                group.Key.BrandName,
+                SeriesName = group.Key.Seriesname!,
+                ProductCount = group.Count()
+            })
+            .OrderBy(item => item.Brandid)
+            .ThenBy(item => item.SeriesName)
             .ToListAsync();
 
-        return Ok(seriesList.Select(MapToDto));
+        return Ok(rows.Select(item => new ProductSeriesDto(
+            item.SeriesId,
+            item.Brandid ?? 0,
+            item.BrandName,
+            item.SeriesName,
+            0,
+            true,
+            item.ProductCount)));
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     public async Task<ActionResult<ProductSeriesDto>> GetProductSeriesById(int id)
     {
-        var series = await _context.Productseries
+        var product = await _context.Products.AsNoTracking()
             .Include(item => item.Brand)
-            .Include(item => item.Products)
-            .FirstOrDefaultAsync(item => item.Seriesid == id);
+            .FirstOrDefaultAsync(item => item.Productid == id && item.Seriesname != null);
+        if (product == null)
+            return NotFound(new ApiErrorDto("DÃ²ng mÃ¡y khÃ´ng tá»“n táº¡i.", null));
 
-        if (series == null)
-            return NotFound(new ApiErrorDto("Dòng máy không tồn tại.", null));
+        var productCount = await _context.Products.CountAsync(item =>
+            item.Brandid == product.Brandid && item.Seriesname == product.Seriesname);
 
-        return Ok(MapToDto(series));
+        return Ok(new ProductSeriesDto(product.Productid, product.Brandid ?? 0,
+            product.Brand?.Brandname ?? "", product.Seriesname!, 0, true, productCount));
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager,Warehouse,Content")]
-    public async Task<ActionResult<ProductSeriesDto>> PostProductSeries(CreateProductSeriesRequestDto dto)
-    {
-        if (!await _context.Brands.AnyAsync(brand => brand.Brandid == dto.Brandid))
-            return BadRequest(new ApiErrorDto("Thương hiệu đã chọn không tồn tại.", null));
+    [Authorize(Roles = "Admin,Manager")]
+    public ActionResult CreateProductSeries([FromBody] CreateProductSeriesRequestDto dto) =>
+        Conflict(new ApiErrorDto("DÃ²ng mÃ¡y Ä‘Æ°á»£c nháº­p trá»±c tiáº¿p khi táº¡o/sá»­a sáº£n pháº©m.", null));
 
-        var cleanName = dto.Seriesname.Trim();
-        var duplicated = await _context.Productseries.AnyAsync(series =>
-            series.Brandid == dto.Brandid &&
-            series.Seriesname.ToLower() == cleanName.ToLower());
-        if (duplicated)
-            return Conflict(new ApiErrorDto("Dòng máy này đã tồn tại trong thương hiệu đã chọn.", null));
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin,Manager")]
+    public ActionResult UpdateProductSeries(int id, [FromBody] UpdateProductSeriesRequestDto dto) =>
+        Conflict(new ApiErrorDto("DÃ²ng mÃ¡y Ä‘Æ°á»£c nháº­p trá»±c tiáº¿p khi táº¡o/sá»­a sáº£n pháº©m.", null));
 
-        var series = new Productseries
-        {
-            Brandid = dto.Brandid,
-            Seriesname = cleanName,
-            Displayorder = dto.Displayorder ?? 0,
-            Isactive = dto.Isactive ?? true,
-            Createdat = DateTime.Now
-        };
-
-        _context.Productseries.Add(series);
-        await _context.SaveChangesAsync();
-
-        var created = await _context.Productseries
-            .Include(item => item.Brand)
-            .Include(item => item.Products)
-            .FirstAsync(item => item.Seriesid == series.Seriesid);
-
-        return CreatedAtAction(nameof(GetProductSeriesById), new { id = created.Seriesid }, MapToDto(created));
-    }
-
-    [HttpPut("{id}")]
-    [Authorize(Roles = "Admin,Manager,Warehouse,Content")]
-    public async Task<IActionResult> PutProductSeries(int id, UpdateProductSeriesRequestDto dto)
-    {
-        var series = await _context.Productseries.FindAsync(id);
-        if (series == null)
-            return NotFound(new ApiErrorDto("Dòng máy không tồn tại.", null));
-
-        if (!await _context.Brands.AnyAsync(brand => brand.Brandid == dto.Brandid))
-            return BadRequest(new ApiErrorDto("Thương hiệu đã chọn không tồn tại.", null));
-
-        var cleanName = dto.Seriesname.Trim();
-        var duplicated = await _context.Productseries.AnyAsync(item =>
-            item.Seriesid != id &&
-            item.Brandid == dto.Brandid &&
-            item.Seriesname.ToLower() == cleanName.ToLower());
-        if (duplicated)
-            return Conflict(new ApiErrorDto("Dòng máy này đã tồn tại trong thương hiệu đã chọn.", null));
-
-        series.Brandid = dto.Brandid;
-        series.Seriesname = cleanName;
-        series.Displayorder = dto.Displayorder ?? 0;
-        series.Isactive = dto.Isactive ?? true;
-
-        await _context.SaveChangesAsync();
-
-        var updated = await _context.Productseries
-            .Include(item => item.Brand)
-            .Include(item => item.Products)
-            .FirstAsync(item => item.Seriesid == id);
-
-        return Ok(MapToDto(updated));
-    }
-
-    [HttpDelete("{id}")]
+    [HttpDelete("{id:int}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> DeleteProductSeries(int id)
-    {
-        var series = await _context.Productseries
-            .Include(item => item.Products)
-            .FirstOrDefaultAsync(item => item.Seriesid == id);
-        if (series == null)
-            return NotFound(new ApiErrorDto("Dòng máy không tồn tại.", null));
-
-        foreach (var product in series.Products)
-            product.Seriesid = null;
-
-        _context.Productseries.Remove(series);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
+    public ActionResult DeleteProductSeries(int id) =>
+        Conflict(new ApiErrorDto("DÃ²ng mÃ¡y Ä‘Æ°á»£c nháº­p trá»±c tiáº¿p khi táº¡o/sá»­a sáº£n pháº©m.", null));
 }

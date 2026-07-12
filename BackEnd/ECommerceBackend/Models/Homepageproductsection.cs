@@ -21,5 +21,9 @@ public partial class Homepageproductsection
 
     public DateTime? Createdat { get; set; }
 
-    public virtual ICollection<Homepageproductsectionitem> Items { get; set; } = new List<Homepageproductsectionitem>();
+    public string? Productids { get; set; }
+
+    public string? Type { get; set; }
+
+    public string? Bannercontent { get; set; }
 }

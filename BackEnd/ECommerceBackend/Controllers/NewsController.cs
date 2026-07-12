@@ -1,162 +1,48 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ECommerceBackend.Models;
-using ECommerceBackend.DTOs.News;
 using ECommerceBackend.DTOs.Common;
+using ECommerceBackend.DTOs.News;
+using ECommerceBackend.Models;
 using ECommerceBackend.Services;
 using Microsoft.AspNetCore.Authorization;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
-namespace ECommerceBackend.Controllers
+namespace ECommerceBackend.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class NewsController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class NewsController : ControllerBase
+    private readonly ECommerceContext _context;
+    private readonly ProductImageStorageService _imageStorage;
+    public NewsController(ECommerceContext context, ProductImageStorageService imageStorage) { _context = context; _imageStorage = imageStorage; }
+
+    private static NewsDto Map(Content item) => new(item.Contentid, item.Title, item.Slug, item.Summary, item.Htmlcontent, item.Thumbnailurl, item.Createdbyuserid, item.Createdat, item.Isactive, item.Createdbyuser?.Fullname);
+    private IQueryable<Content> NewsQuery() => _context.Contents.Include(item => item.Createdbyuser).Where(item => item.Contenttype == "News");
+
+    [HttpGet] public async Task<ActionResult<IEnumerable<NewsDto>>> GetNews() => Ok((await NewsQuery().OrderByDescending(item => item.Createdat).ToListAsync()).Select(Map));
+    [HttpGet("active")] public async Task<ActionResult<IEnumerable<NewsDto>>> GetActiveNews() => Ok((await NewsQuery().Where(item => item.Isactive == true).OrderByDescending(item => item.Createdat).ToListAsync()).Select(Map));
+    [HttpGet("{id:int}")] public async Task<ActionResult<NewsDto>> GetNewsItem(int id) { var item = await NewsQuery().FirstOrDefaultAsync(value => value.Contentid == id); return item == null ? NotFound(new ApiErrorDto("Tin tức không tồn tại.", null)) : Ok(Map(item)); }
+    [HttpGet("by-slug/{slug}")] public async Task<ActionResult<NewsDto>> GetNewsItemBySlug(string slug) { var item = await NewsQuery().FirstOrDefaultAsync(value => value.Slug == slug.Trim().ToLowerInvariant() && value.Isactive == true); return item == null ? NotFound(new ApiErrorDto("Tin tức không tồn tại.", null)) : Ok(Map(item)); }
+
+    [HttpPost, Authorize(Roles = "Admin,Content")]
+    public async Task<ActionResult<NewsDto>> PostNews(CreateNewsRequestDto dto)
     {
-        private readonly ECommerceContext _context;
-        private readonly ProductImageStorageService _imageStorage;
-
-        public NewsController(
-            ECommerceContext context,
-            ProductImageStorageService imageStorage)
-        {
-            _context = context;
-            _imageStorage = imageStorage;
-        }
-
-        private static NewsDto MapToDto(News n) => new NewsDto(
-            n.Postid,
-            n.Title,
-            n.Slug,
-            n.Summary,
-            n.Content,
-            n.Thumbnail,
-            n.Userid,
-            n.Createdat,
-            n.Isactive,
-            n.User?.Fullname
-        );
-
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<NewsDto>>> GetNews()
-        {
-            var newsList = await _context.News.Include(n => n.User).OrderByDescending(n => n.Createdat).ToListAsync();
-            return Ok(newsList.Select(MapToDto));
-        }
-
-        [HttpGet("active")]
-        public async Task<ActionResult<IEnumerable<NewsDto>>> GetActiveNews()
-        {
-            var newsList = await _context.News.Include(n => n.User).Where(n => n.Isactive == true).OrderByDescending(n => n.Createdat).ToListAsync();
-            return Ok(newsList.Select(MapToDto));
-        }
-
-        [HttpGet("{id}")]
-        public async Task<ActionResult<NewsDto>> GetNewsItem(int id)
-        {
-            var news = await _context.News.Include(n => n.User).FirstOrDefaultAsync(n => n.Postid == id);
-            if (news == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
-            return Ok(MapToDto(news));
-        }
-
-        [HttpGet("by-slug/{slug}")]
-        public async Task<ActionResult<NewsDto>> GetNewsItemBySlug(string slug)
-        {
-            if (string.IsNullOrWhiteSpace(slug))
-                return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
-
-            var normalizedSlug = slug.Trim().ToLowerInvariant();
-            var news = await _context.News
-                .Include(n => n.User)
-                .FirstOrDefaultAsync(n => n.Slug == normalizedSlug && n.Isactive == true);
-            if (news == null && int.TryParse(normalizedSlug, out var legacyId))
-            {
-                news = await _context.News
-                    .Include(n => n.User)
-                    .FirstOrDefaultAsync(n => n.Postid == legacyId && n.Isactive == true);
-            }
-            if (news == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
-            return Ok(MapToDto(news));
-        }
-
-        [HttpPost]
-        [Authorize(Roles = "Admin,Content")]
-        public async Task<ActionResult<NewsDto>> PostNews([FromBody] CreateNewsRequestDto dto)
-        {
-            var claimUserId = User.FindFirst("userid")?.Value;
-            if (string.IsNullOrEmpty(claimUserId))
-                return BadRequest(new ApiErrorDto("Không xác định được danh tính người tạo.", null));
-
-            var news = new News
-            {
-                Title = dto.Title,
-                Summary = dto.Summary,
-                Content = dto.Content,
-                Thumbnail = dto.Thumbnail,
-                Slug = await ProductSlugService.GenerateUniqueNewsSlugAsync(_context, dto.Title),
-                Userid = int.Parse(claimUserId),
-                Createdat = DateTime.Now,
-                Isactive = dto.Isactive ?? true
-            };
-
-            _context.News.Add(news);
-            await _context.SaveChangesAsync();
-
-            var createdNews = await _context.News.Include(n => n.User).FirstOrDefaultAsync(n => n.Postid == news.Postid);
-            return CreatedAtAction(nameof(GetNewsItem), new { id = news.Postid }, MapToDto(createdNews!));
-        }
-
-        [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Content")]
-        public async Task<IActionResult> PutNews(int id, [FromBody] UpdateNewsRequestDto dto)
-        {
-            var news = await _context.News.FindAsync(id);
-            if (news == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
-
-            var oldThumbnail = news.Thumbnail;
-            news.Title = dto.Title;
-            news.Summary = dto.Summary;
-            news.Content = dto.Content;
-            news.Thumbnail = dto.Thumbnail;
-            if (string.IsNullOrWhiteSpace(news.Slug))
-            {
-                news.Slug = await ProductSlugService.GenerateUniqueNewsSlugAsync(_context, dto.Title, id);
-            }
-            if (dto.Isactive.HasValue)
-            {
-                news.Isactive = dto.Isactive.Value;
-            }
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                if (!string.Equals(oldThumbnail, news.Thumbnail, StringComparison.OrdinalIgnoreCase))
-                    _imageStorage.DeleteByUrl(oldThumbnail);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.News.Any(e => e.Postid == id)) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
-                throw;
-            }
-
-            var updatedNews = await _context.News.Include(n => n.User).FirstOrDefaultAsync(n => n.Postid == news.Postid);
-            return Ok(MapToDto(updatedNews!));
-        }
-
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin,Content")]
-        public async Task<IActionResult> DeleteNews(int id)
-        {
-            var news = await _context.News.FindAsync(id);
-            if (news == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
-            var thumbnail = news.Thumbnail;
-            _context.News.Remove(news);
-            await _context.SaveChangesAsync();
-            _imageStorage.DeleteByUrl(thumbnail);
-            return NoContent();
-        }
+        if (!int.TryParse(User.FindFirst("userid")?.Value, out var userId)) return BadRequest(new ApiErrorDto("Không xác định được người tạo.", null));
+        var item = new Content { Contenttype = "News", Title = dto.Title.Trim(), Summary = dto.Summary, Htmlcontent = dto.Content, Thumbnailurl = dto.Thumbnail, Slug = await ProductSlugService.GenerateUniqueNewsSlugAsync(_context, dto.Title), Createdbyuserid = userId, Createdat = DateTime.UtcNow, Isactive = dto.Isactive ?? true };
+        _context.Contents.Add(item); await _context.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetNewsItem), new { id = item.Contentid }, Map(item));
     }
+
+    [HttpPut("{id:int}"), Authorize(Roles = "Admin,Content")]
+    public async Task<ActionResult<NewsDto>> PutNews(int id, UpdateNewsRequestDto dto)
+    {
+        var item = await _context.Contents.FirstOrDefaultAsync(value => value.Contentid == id && value.Contenttype == "News");
+        if (item == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null));
+        var oldThumbnail = item.Thumbnailurl; item.Title = dto.Title.Trim(); item.Summary = dto.Summary; item.Htmlcontent = dto.Content; item.Thumbnailurl = dto.Thumbnail; item.Isactive = dto.Isactive ?? item.Isactive;
+        if (string.IsNullOrWhiteSpace(item.Slug)) item.Slug = await ProductSlugService.GenerateUniqueNewsSlugAsync(_context, item.Title, id);
+        await _context.SaveChangesAsync(); if (oldThumbnail != item.Thumbnailurl) _imageStorage.DeleteByUrl(oldThumbnail); return Ok(Map(item));
+    }
+
+    [HttpDelete("{id:int}"), Authorize(Roles = "Admin,Content")]
+    public async Task<IActionResult> DeleteNews(int id) { var item = await _context.Contents.FirstOrDefaultAsync(value => value.Contentid == id && value.Contenttype == "News"); if (item == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null)); _context.Contents.Remove(item); await _context.SaveChangesAsync(); _imageStorage.DeleteByUrl(item.Thumbnailurl); return NoContent(); }
 }

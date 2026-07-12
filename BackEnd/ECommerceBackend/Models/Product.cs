@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace ECommerceBackend.Models;
@@ -11,7 +11,7 @@ public partial class Product
 
     public int? Brandid { get; set; }
 
-    public int? Seriesid { get; set; }
+    public string? Seriesname { get; set; }
 
     public string Productname { get; set; } = null!;
 
@@ -26,10 +26,6 @@ public partial class Product
     public virtual Category? Category { get; set; }
 
     public virtual ICollection<Chatproductrecommendation> Chatproductrecommendations { get; set; } = new List<Chatproductrecommendation>();
-
-    public virtual ICollection<Homepageproductsectionitem> Homepageproductsectionitems { get; set; } = new List<Homepageproductsectionitem>();
-
-    public virtual Productseries? Series { get; set; }
 
     public virtual ICollection<Productvariant> Productvariants { get; set; } = new List<Productvariant>();
 }

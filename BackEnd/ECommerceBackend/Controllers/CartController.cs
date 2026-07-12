@@ -12,6 +12,13 @@ using System.Threading.Tasks;
 
 namespace ECommerceBackend.Controllers
 {
+    public class CartItemJson
+    {
+        public int VariantId { get; set; }
+        public int Quantity { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
@@ -37,12 +44,6 @@ namespace ECommerceBackend.Controllers
         private async Task<Cart> GetOrCreateCartAsync(int userId)
         {
             var cart = await _context.Carts
-                .Include(c => c.Cartitems)
-                    .ThenInclude(ci => ci.Variant)
-                        .ThenInclude(v => v.Product)
-                .Include(c => c.Cartitems)
-                    .ThenInclude(ci => ci.Variant)
-                        .ThenInclude(v => v.Productimages)
                 .FirstOrDefaultAsync(c => c.Userid == userId);
 
             if (cart == null)
@@ -51,13 +52,33 @@ namespace ECommerceBackend.Controllers
                 {
                     Userid = userId,
                     Createdat = DateTime.UtcNow,
-                    Updatedat = DateTime.UtcNow
+                    Updatedat = DateTime.UtcNow,
+                    Cartcontent = "[]"
                 };
                 _context.Carts.Add(cart);
                 await _context.SaveChangesAsync();
             }
 
             return cart;
+        }
+        
+        private List<CartItemJson> GetCartItemsFromJson(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return new List<CartItemJson>();
+            try
+            {
+                return JsonSerializer.Deserialize<List<CartItemJson>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<CartItemJson>();
+            }
+            catch
+            {
+                return new List<CartItemJson>();
+            }
+        }
+        
+        private void SaveCartItemsToJson(Cart cart, List<CartItemJson> items)
+        {
+            cart.Cartcontent = JsonSerializer.Serialize(items);
         }
 
         private string GetVariantName(Productvariant variant)
@@ -94,21 +115,47 @@ namespace ECommerceBackend.Controllers
             return variant.Sku ?? "Mặc định";
         }
 
-        private CartDto MapToCartDto(Cart cart)
+        private async Task<CartDto> MapToCartDtoAsync(Cart cart)
         {
-            var items = cart.Cartitems.Select(ci =>
+            var itemsJson = GetCartItemsFromJson(cart.Cartcontent);
+            if (itemsJson.Count == 0)
             {
-                var variant = ci.Variant;
-                var product = variant.Product;
-                var primaryImg = variant.Productimages.FirstOrDefault(pi => pi.Ismain == true) 
-                                 ?? variant.Productimages.FirstOrDefault();
+                return new CartDto(cart.Userid, new List<CartItemDto>());
+            }
 
-                string imageUrl = primaryImg?.Imageurl ?? "";
+            var variantIds = itemsJson.Select(i => i.VariantId).ToList();
+            var variants = await _context.Productvariants
+                .Include(v => v.Product)
+                .Where(v => variantIds.Contains(v.Variantid))
+                .ToDictionaryAsync(v => v.Variantid);
+
+            var items = new List<CartItemDto>();
+            foreach (var ci in itemsJson)
+            {
+                if (!variants.TryGetValue(ci.VariantId, out var variant)) continue;
+                
+                var product = variant.Product;
+                
+                // Get image url from JSON string
+                string imageUrl = "";
+                if (!string.IsNullOrWhiteSpace(variant.Imageurls))
+                {
+                    try
+                    {
+                        var urls = JsonSerializer.Deserialize<List<string>>(variant.Imageurls);
+                        if (urls != null && urls.Count > 0)
+                        {
+                            imageUrl = urls[0];
+                        }
+                    }
+                    catch { }
+                }
+
                 string productName = product?.Productname ?? "Sản phẩm";
                 string variantName = GetVariantName(variant);
                 decimal price = variant.Saleprice ?? variant.Baseprice;
 
-                return new CartItemDto(
+                items.Add(new CartItemDto(
                     VariantId: variant.Variantid,
                     ProductId: variant.Productid ?? 0,
                     ProductName: productName,
@@ -117,8 +164,8 @@ namespace ECommerceBackend.Controllers
                     ImageUrl: imageUrl,
                     Price: price,
                     Quantity: ci.Quantity
-                );
-            }).ToList();
+                ));
+            }
 
             return new CartDto(cart.Userid, items);
         }
@@ -131,7 +178,7 @@ namespace ECommerceBackend.Controllers
             {
                 int userId = GetUserId();
                 var cart = await GetOrCreateCartAsync(userId);
-                return Ok(MapToCartDto(cart));
+                return Ok(await MapToCartDtoAsync(cart));
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -155,10 +202,13 @@ namespace ECommerceBackend.Controllers
                     return NotFound(new ApiErrorDto("Không tìm thấy phiên bản sản phẩm này."));
 
                 var cart = await GetOrCreateCartAsync(userId);
-                var existingItem = cart.Cartitems.FirstOrDefault(ci => ci.Variantid == dto.VariantId);
+                var items = GetCartItemsFromJson(cart.Cartcontent);
+                var existingItem = items.FirstOrDefault(ci => ci.VariantId == dto.VariantId);
+                
                 var availableStock = await _context.Inventoryitems.CountAsync(item =>
                     item.Variantid == dto.VariantId &&
                     item.Status == "InStock");
+                    
                 var requestedQuantity = (existingItem?.Quantity ?? 0) + dto.Quantity;
                 if (requestedQuantity > availableStock)
                 {
@@ -172,21 +222,19 @@ namespace ECommerceBackend.Controllers
                 }
                 else
                 {
-                    cart.Cartitems.Add(new Cartitem
+                    items.Add(new CartItemJson
                     {
-                        Cartid = cart.Cartid,
-                        Variantid = dto.VariantId,
+                        VariantId = dto.VariantId,
                         Quantity = dto.Quantity,
-                        Createdat = DateTime.UtcNow
+                        CreatedAt = DateTime.UtcNow
                     });
                 }
 
+                SaveCartItemsToJson(cart, items);
                 cart.Updatedat = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
-                // Reload cart to include full navigation objects
-                var updatedCart = await GetOrCreateCartAsync(userId);
-                return Ok(MapToCartDto(updatedCart));
+                return Ok(await MapToCartDtoAsync(cart));
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -202,7 +250,8 @@ namespace ECommerceBackend.Controllers
             {
                 int userId = GetUserId();
                 var cart = await GetOrCreateCartAsync(userId);
-                var existingItem = cart.Cartitems.FirstOrDefault(ci => ci.Variantid == dto.VariantId);
+                var items = GetCartItemsFromJson(cart.Cartcontent);
+                var existingItem = items.FirstOrDefault(ci => ci.VariantId == dto.VariantId);
 
                 if (existingItem == null)
                 {
@@ -211,7 +260,7 @@ namespace ECommerceBackend.Controllers
 
                 if (dto.Quantity <= 0)
                 {
-                    _context.Cartitems.Remove(existingItem);
+                    items.Remove(existingItem);
                 }
                 else
                 {
@@ -226,12 +275,11 @@ namespace ECommerceBackend.Controllers
                     existingItem.Quantity = dto.Quantity;
                 }
 
+                SaveCartItemsToJson(cart, items);
                 cart.Updatedat = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
-                // Reload cart
-                var updatedCart = await GetOrCreateCartAsync(userId);
-                return Ok(MapToCartDto(updatedCart));
+                return Ok(await MapToCartDtoAsync(cart));
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -247,17 +295,18 @@ namespace ECommerceBackend.Controllers
             {
                 int userId = GetUserId();
                 var cart = await GetOrCreateCartAsync(userId);
-                var existingItem = cart.Cartitems.FirstOrDefault(ci => ci.Variantid == variantId);
+                var items = GetCartItemsFromJson(cart.Cartcontent);
+                var existingItem = items.FirstOrDefault(ci => ci.VariantId == variantId);
 
                 if (existingItem != null)
                 {
-                    _context.Cartitems.Remove(existingItem);
+                    items.Remove(existingItem);
+                    SaveCartItemsToJson(cart, items);
                     cart.Updatedat = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                 }
 
-                var updatedCart = await GetOrCreateCartAsync(userId);
-                return Ok(MapToCartDto(updatedCart));
+                return Ok(await MapToCartDtoAsync(cart));
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -273,6 +322,7 @@ namespace ECommerceBackend.Controllers
             {
                 int userId = GetUserId();
                 var cart = await GetOrCreateCartAsync(userId);
+                var items = GetCartItemsFromJson(cart.Cartcontent);
 
                 if (dto.Items != null && dto.Items.Count > 0)
                 {
@@ -283,7 +333,7 @@ namespace ECommerceBackend.Controllers
                         var variant = await _context.Productvariants.FindAsync(item.VariantId);
                         if (variant == null) continue;
 
-                        var existingItem = cart.Cartitems.FirstOrDefault(ci => ci.Variantid == item.VariantId);
+                        var existingItem = items.FirstOrDefault(ci => ci.VariantId == item.VariantId);
                         var availableStock = await _context.Inventoryitems.CountAsync(inventory =>
                             inventory.Variantid == item.VariantId &&
                             inventory.Status == "InStock");
@@ -298,22 +348,21 @@ namespace ECommerceBackend.Controllers
                         }
                         else
                         {
-                            cart.Cartitems.Add(new Cartitem
+                            items.Add(new CartItemJson
                             {
-                                Cartid = cart.Cartid,
-                                Variantid = item.VariantId,
+                                VariantId = item.VariantId,
                                 Quantity = Math.Min(item.Quantity, availableStock),
-                                Createdat = DateTime.UtcNow
+                                CreatedAt = DateTime.UtcNow
                             });
                         }
                     }
 
+                    SaveCartItemsToJson(cart, items);
                     cart.Updatedat = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                 }
 
-                var updatedCart = await GetOrCreateCartAsync(userId);
-                return Ok(MapToCartDto(updatedCart));
+                return Ok(await MapToCartDtoAsync(cart));
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -329,16 +378,17 @@ namespace ECommerceBackend.Controllers
             {
                 int userId = GetUserId();
                 var cart = await GetOrCreateCartAsync(userId);
+                var items = GetCartItemsFromJson(cart.Cartcontent);
 
-                if (cart.Cartitems.Any())
+                if (items.Any())
                 {
-                    _context.Cartitems.RemoveRange(cart.Cartitems);
+                    items.Clear();
+                    SaveCartItemsToJson(cart, items);
                     cart.Updatedat = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                 }
 
-                var updatedCart = await GetOrCreateCartAsync(userId);
-                return Ok(MapToCartDto(updatedCart));
+                return Ok(await MapToCartDtoAsync(cart));
             }
             catch (UnauthorizedAccessException ex)
             {

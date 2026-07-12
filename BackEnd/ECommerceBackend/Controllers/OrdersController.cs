@@ -171,6 +171,17 @@ namespace ECommerceBackend.Controllers
         private static bool IsValidPaymentMethod(string paymentMethod) =>
             paymentMethod is "COD" or "MOMO" or "VNPAY" or "BANK";
 
+        private static bool IsHoChiMinhCityAddress(string address)
+        {
+            var normalized = address
+                .Normalize(System.Text.NormalizationForm.FormD)
+                .Where(character => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(character) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                .Aggregate(string.Empty, (current, character) => current + character)
+                .ToUpperInvariant();
+
+            return normalized.Contains("HO CHI MINH") || normalized.Contains("TP HCM") || normalized.Contains("TP.HCM");
+        }
+
         private static string NormalizePaymentOption(string? option)
         {
             var value = (option ?? string.Empty).Trim().ToUpperInvariant();
@@ -642,7 +653,8 @@ namespace ECommerceBackend.Controllers
             if (!IsValidPaymentMethod(paymentMethod))
                 return BadRequest(new ApiErrorDto("Phương thức thanh toán không hợp lệ.", null));
 
-            if (isGuest && paymentMethod == "COD")
+            // Guest COD is allowed only for the store's internal Ho Chi Minh City delivery.
+            if (isGuest && paymentMethod == "COD" && !IsHoChiMinhCityAddress(dto.Shippingaddress ?? string.Empty))
                 return BadRequest(new ApiErrorDto("Khách vãng lai không thể chọn COD. Vui lòng đặt cọc 30% hoặc thanh toán trước 100%.", null));
 
             User? user = null;
@@ -668,6 +680,13 @@ namespace ECommerceBackend.Controllers
             if (!System.Text.RegularExpressions.Regex.IsMatch(shippingPhone, @"^0\d{9}$"))
             {
                 return BadRequest(new ApiErrorDto("Số điện thoại nhận hàng phải gồm 10 chữ số và bắt đầu bằng 0.", null));
+            }
+
+            if (isGuest && !IsHoChiMinhCityAddress(shippingAddress))
+            {
+                return BadRequest(new ApiErrorDto(
+                    "Khách vãng lai chỉ đặt giao nội thành TP.HCM. Vui lòng đăng ký/đăng nhập để giao qua đơn vị vận chuyển.",
+                    null));
             }
 
             var abuseCheck = await _checkoutAbuseProtection.CheckAsync(
@@ -798,7 +817,7 @@ namespace ECommerceBackend.Controllers
                 order.Finalamount = Math.Max(0, order.Totalamount - (order.Discountamount ?? 0));
 
                 var paymentOption = NormalizePaymentOption(dto.Paymentoption);
-                if (isGuest && string.IsNullOrEmpty(paymentOption))
+                if (isGuest && paymentMethod != "COD" && string.IsNullOrEmpty(paymentOption))
                 {
                     return BadRequest(new ApiErrorDto("Khách vãng lai phải chọn đặt cọc 30% hoặc thanh toán trước 100%.", null));
                 }

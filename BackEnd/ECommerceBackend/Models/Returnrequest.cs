@@ -51,8 +51,4 @@ public partial class Returnrequest
     public virtual User? Assigneduser { get; set; }
 
     public virtual ICollection<Returnitem> Returnitems { get; set; } = new List<Returnitem>();
-
-    public virtual ICollection<Returnrequesthistory> Histories { get; set; } = new List<Returnrequesthistory>();
-
-    public virtual ICollection<Refundtransaction> Refundtransactions { get; set; } = new List<Refundtransaction>();
 }

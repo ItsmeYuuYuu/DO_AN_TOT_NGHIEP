@@ -4,6 +4,7 @@ import type { News } from '@/features/content/api/newsApi';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import { DataTable } from '@/components/DataTable';
 import { productsApi } from '@/features/products/api/productsApi';
 import { LoaderCircle, Upload } from 'lucide-react';
@@ -233,10 +234,10 @@ const AdminNews: React.FC = () => {
           </div>
           <div className="space-y-1">
             <label className="text-sm font-bold text-slate-700">Nội dung</label>
-            <textarea 
-              className="w-full border border-slate-200 rounded-xl p-3 focus:border-[#4f46e5] focus:outline-none text-sm h-40"
+            <RichTextEditor
               value={editing?.content || ''} 
-              onChange={e => setEditing({ ...editing, content: e.target.value })} 
+              onChange={content => setEditing(current => current ? { ...current, content } : current)}
+              placeholder="Soạn nội dung bài viết…"
             />
           </div>
 

@@ -37,6 +37,4 @@ public class Warrantyclaim
     public virtual Customer Customer { get; set; } = null!;
 
     public virtual User? Assigneduser { get; set; }
-
-    public virtual ICollection<Warrantyclaimhistory> Histories { get; set; } = new List<Warrantyclaimhistory>();
 }

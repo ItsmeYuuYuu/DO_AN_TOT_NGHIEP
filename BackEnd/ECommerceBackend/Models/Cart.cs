@@ -15,5 +15,5 @@ public partial class Cart
 
     public virtual User User { get; set; } = null!;
 
-    public virtual ICollection<Cartitem> Cartitems { get; set; } = new List<Cartitem>();
+    public string? Cartcontent { get; set; }
 }

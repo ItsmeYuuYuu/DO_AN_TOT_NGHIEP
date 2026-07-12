@@ -31,17 +31,13 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Homepageproductsection> Homepageproductsections { get; set; }
 
-    public virtual DbSet<Homepageproductsectionitem> Homepageproductsectionitems { get; set; }
-
     public virtual DbSet<Inventoryitem> Inventoryitems { get; set; }
 
     public virtual DbSet<Inventorytransaction> Inventorytransactions { get; set; }
 
-    public virtual DbSet<News> News { get; set; }
+    public virtual DbSet<Content> Contents { get; set; }
 
     public virtual DbSet<Order> Orders { get; set; }
-
-    public virtual DbSet<Orderassignment> Orderassignments { get; set; }
 
     public virtual DbSet<Orderitem> Orderitems { get; set; }
 
@@ -49,13 +45,7 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Product> Products { get; set; }
 
-    public virtual DbSet<Productimage> Productimages { get; set; }
-
-    public virtual DbSet<Productseries> Productseries { get; set; }
-
     public virtual DbSet<Productvariant> Productvariants { get; set; }
-
-    public virtual DbSet<Promotionalcontent> Promotionalcontents { get; set; }
 
     public virtual DbSet<Review> Reviews { get; set; }
 
@@ -63,13 +53,7 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Returnitem> Returnitems { get; set; }
 
-    public virtual DbSet<Returnrequesthistory> Returnrequesthistories { get; set; }
-
-    public virtual DbSet<Refundtransaction> Refundtransactions { get; set; }
-
     public virtual DbSet<Shipment> Shipments { get; set; }
-
-    public virtual DbSet<Shipmenthistory> Shipmenthistories { get; set; }
 
     public virtual DbSet<Role> Roles { get; set; }
 
@@ -81,17 +65,9 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Warrantyclaim> Warrantyclaims { get; set; }
 
-    public virtual DbSet<Warrantyclaimhistory> Warrantyclaimhistories { get; set; }
-
     public virtual DbSet<Cart> Carts { get; set; }
 
-    public virtual DbSet<Cartitem> Cartitems { get; set; }
-
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        // Connection string is configured in Program.cs via Dependency Injection.
-    }
+    public virtual DbSet<Statuslog> Statuslogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -331,40 +307,7 @@ public partial class ECommerceContext : DbContext
                 .HasColumnName("createdat");
         });
 
-        modelBuilder.Entity<Homepageproductsectionitem>(entity =>
-        {
-            entity.HasKey(e => e.Itemid).HasName("homepageproductsectionitems_pkey");
-
-            entity.ToTable("homepageproductsectionitems");
-
-            entity.HasIndex(e => new { e.Sectionid, e.Productid }, "homepageproductsectionitems_sectionid_productid_key").IsUnique();
-            entity.HasIndex(e => e.Productid, "ix_homepageproductsectionitems_productid");
-            entity.HasIndex(e => new { e.Sectionid, e.Isactive, e.Displayorder }, "ix_homepageproductsectionitems_section_active_order");
-
-            entity.Property(e => e.Itemid).HasColumnName("itemid");
-            entity.Property(e => e.Sectionid).HasColumnName("sectionid");
-            entity.Property(e => e.Productid).HasColumnName("productid");
-            entity.Property(e => e.Displayorder)
-                .HasDefaultValue(0)
-                .HasColumnName("displayorder");
-            entity.Property(e => e.Isactive)
-                .HasDefaultValue(true)
-                .HasColumnName("isactive");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
-
-            entity.HasOne(e => e.Section).WithMany(e => e.Items)
-                .HasForeignKey(e => e.Sectionid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_homepageproductsectionitems_sections");
-
-            entity.HasOne(e => e.Product).WithMany(e => e.Homepageproductsectionitems)
-                .HasForeignKey(e => e.Productid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_homepageproductsectionitems_products");
-        });
+        
 
         modelBuilder.Entity<Inventoryitem>(entity =>
         {
@@ -477,7 +420,7 @@ public partial class ECommerceContext : DbContext
                 .HasMaxLength(30)
                 .HasColumnName("coverage");
             entity.Property(e => e.Imageurls)
-                .HasColumnType("text")
+                .HasColumnType("jsonb")
                 .HasColumnName("imageurls");
             entity.Property(e => e.Estimatedcost)
                 .HasPrecision(18, 2)
@@ -519,53 +462,23 @@ public partial class ECommerceContext : DbContext
                 .HasConstraintName("fk_warrantyclaims_users");
         });
 
-        modelBuilder.Entity<Warrantyclaimhistory>(entity =>
+        
+
+        modelBuilder.Entity<Content>(entity =>
         {
-            entity.HasKey(e => e.Historyid).HasName("warrantyclaimhistories_pkey");
-
-            entity.ToTable("warrantyclaimhistories");
-
-            entity.HasIndex(e => e.Claimid, "ix_warrantyclaimhistories_claimid");
-            entity.HasIndex(e => e.Createdat, "ix_warrantyclaimhistories_createdat");
-
-            entity.Property(e => e.Historyid).HasColumnName("historyid");
-            entity.Property(e => e.Claimid).HasColumnName("claimid");
-            entity.Property(e => e.Userid).HasColumnName("userid");
-            entity.Property(e => e.Fromstatus)
-                .HasMaxLength(30)
-                .HasColumnName("fromstatus");
-            entity.Property(e => e.Tostatus)
-                .HasMaxLength(30)
-                .HasColumnName("tostatus");
-            entity.Property(e => e.Note)
-                .HasMaxLength(1000)
-                .HasColumnName("note");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
-
-            entity.HasOne(e => e.Claim).WithMany(e => e.Histories)
-                .HasForeignKey(e => e.Claimid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_warrantyclaimhistories_claims");
-
-            entity.HasOne(e => e.User).WithMany(e => e.Warrantyclaimhistories)
-                .HasForeignKey(e => e.Userid)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("fk_warrantyclaimhistories_users");
-        });
-
-        modelBuilder.Entity<News>(entity =>
-        {
-            entity.HasKey(e => e.Postid).HasName("news_pkey");
-
-            entity.ToTable("news");
-
-            entity.HasIndex(e => e.Slug, "news_slug_key").IsUnique();
-
-            entity.Property(e => e.Postid).HasColumnName("postid");
-            entity.Property(e => e.Content).HasColumnName("content");
+            entity.HasKey(e => e.Contentid).HasName("contents_pkey");
+            entity.ToTable("contents");
+            entity.HasIndex(e => e.Slug, "ux_contents_slug").IsUnique();
+            entity.HasIndex(e => new { e.Contenttype, e.Isactive, e.Displayorder }, "ix_contents_listing");
+            entity.Property(e => e.Contentid).HasColumnName("contentid");
+            entity.Property(e => e.Contenttype).HasMaxLength(30).HasColumnName("contenttype");
+            entity.Property(e => e.Title).HasMaxLength(255).HasColumnName("title");
+            entity.Property(e => e.Slug).HasMaxLength(220).HasColumnName("slug");
+            entity.Property(e => e.Summary).HasMaxLength(500).HasColumnName("summary");
+            entity.Property(e => e.Htmlcontent).HasColumnName("htmlcontent");
+            entity.Property(e => e.Thumbnailurl).HasMaxLength(500).HasColumnName("thumbnailurl");
+            entity.Property(e => e.Linkurl).HasMaxLength(500).HasColumnName("linkurl");
+            entity.Property(e => e.Contentdata).HasColumnType("jsonb").HasColumnName("contentdata");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
@@ -573,22 +486,10 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
-            entity.Property(e => e.Summary)
-                .HasMaxLength(500)
-                .HasColumnName("summary");
-            entity.Property(e => e.Thumbnail)
-                .HasMaxLength(500)
-                .HasColumnName("thumbnail");
-            entity.Property(e => e.Slug)
-                .HasMaxLength(220)
-                .HasColumnName("slug");
-            entity.Property(e => e.Title)
-                .HasMaxLength(255)
-                .HasColumnName("title");
-            entity.Property(e => e.Userid).HasColumnName("userid");
-
-            entity.HasOne(d => d.User).WithMany(p => p.News)
-                .HasForeignKey(d => d.Userid)
+            entity.Property(e => e.Displayorder).HasColumnName("displayorder");
+            entity.Property(e => e.Createdbyuserid).HasColumnName("createdbyuserid");
+            entity.HasOne(d => d.Createdbyuser).WithMany(p => p.Contents)
+                .HasForeignKey(d => d.Createdbyuserid)
                 .HasConstraintName("fk_news_users");
         });
 
@@ -755,30 +656,7 @@ public partial class ECommerceContext : DbContext
                 .HasConstraintName("fk_shipments_users");
         });
 
-        modelBuilder.Entity<Shipmenthistory>(entity =>
-        {
-            entity.HasKey(e => e.Historyid).HasName("shipmenthistories_pkey");
-            entity.ToTable("shipmenthistories");
-
-            entity.HasIndex(e => new { e.Shipmentid, e.Createdat }, "ix_shipmenthistories_shipment_createdat");
-
-            entity.Property(e => e.Historyid).HasColumnName("historyid");
-            entity.Property(e => e.Shipmentid).HasColumnName("shipmentid");
-            entity.Property(e => e.Userid).HasColumnName("userid");
-            entity.Property(e => e.Fromstatus).HasMaxLength(30).HasColumnName("fromstatus");
-            entity.Property(e => e.Tostatus).HasMaxLength(30).HasColumnName("tostatus");
-            entity.Property(e => e.Note).HasMaxLength(1000).HasColumnName("note");
-            entity.Property(e => e.Createdat).HasDefaultValueSql("CURRENT_TIMESTAMP").HasColumnType("timestamp without time zone").HasColumnName("createdat");
-
-            entity.HasOne(e => e.Shipment).WithMany(e => e.Histories)
-                .HasForeignKey(e => e.Shipmentid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_shipmenthistories_shipments");
-            entity.HasOne(e => e.User).WithMany(e => e.Shipmenthistories)
-                .HasForeignKey(e => e.Userid)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("fk_shipmenthistories_users");
-        });
+        
 
         modelBuilder.Entity<Returnrequest>(entity =>
         {
@@ -799,7 +677,7 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Reason).HasMaxLength(200).HasColumnName("reason");
             entity.Property(e => e.Description).HasMaxLength(2000).HasColumnName("description");
             entity.Property(e => e.Status).HasMaxLength(30).HasColumnName("status");
-            entity.Property(e => e.Imageurls).HasColumnType("text").HasColumnName("imageurls");
+            entity.Property(e => e.Imageurls).HasColumnType("jsonb").HasColumnName("imageurls");
             entity.Property(e => e.Reviewnote).HasMaxLength(1000).HasColumnName("reviewnote");
             entity.Property(e => e.Resolution).HasMaxLength(2000).HasColumnName("resolution");
             entity.Property(e => e.Requestedrefundamount).HasPrecision(18, 2).HasColumnName("requestedrefundamount");
@@ -866,124 +744,11 @@ public partial class ECommerceContext : DbContext
                 .HasConstraintName("fk_returnitems_replacement_inventory");
         });
 
-        modelBuilder.Entity<Returnrequesthistory>(entity =>
-        {
-            entity.HasKey(e => e.Historyid).HasName("returnrequesthistories_pkey");
-            entity.ToTable("returnrequesthistories");
+        
 
-            entity.HasIndex(e => e.Returnrequestid, "ix_returnrequesthistories_requestid");
-            entity.HasIndex(e => e.Createdat, "ix_returnrequesthistories_createdat");
+        
 
-            entity.Property(e => e.Historyid).HasColumnName("historyid");
-            entity.Property(e => e.Returnrequestid).HasColumnName("returnrequestid");
-            entity.Property(e => e.Userid).HasColumnName("userid");
-            entity.Property(e => e.Fromstatus).HasMaxLength(30).HasColumnName("fromstatus");
-            entity.Property(e => e.Tostatus).HasMaxLength(30).HasColumnName("tostatus");
-            entity.Property(e => e.Note).HasMaxLength(1000).HasColumnName("note");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
-
-            entity.HasOne(e => e.Returnrequest).WithMany(e => e.Histories)
-                .HasForeignKey(e => e.Returnrequestid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_returnrequesthistories_requests");
-            entity.HasOne(e => e.User).WithMany(e => e.Returnrequesthistories)
-                .HasForeignKey(e => e.Userid)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("fk_returnrequesthistories_users");
-        });
-
-        modelBuilder.Entity<Refundtransaction>(entity =>
-        {
-            entity.HasKey(e => e.Refundtransactionid).HasName("refundtransactions_pkey");
-            entity.ToTable("refundtransactions");
-
-            entity.HasIndex(e => e.Returnrequestid, "ix_refundtransactions_requestid");
-            entity.HasIndex(e => e.Orderid, "ix_refundtransactions_orderid");
-
-            entity.Property(e => e.Refundtransactionid).HasColumnName("refundtransactionid");
-            entity.Property(e => e.Returnrequestid).HasColumnName("returnrequestid");
-            entity.Property(e => e.Orderid).HasColumnName("orderid");
-            entity.Property(e => e.Processedbyuserid).HasColumnName("processedbyuserid");
-            entity.Property(e => e.Amount).HasPrecision(18, 2).HasColumnName("amount");
-            entity.Property(e => e.Provider).HasMaxLength(50).HasColumnName("provider");
-            entity.Property(e => e.Status).HasMaxLength(30).HasColumnName("status");
-            entity.Property(e => e.Transactionref).HasMaxLength(100).HasColumnName("transactionref");
-            entity.Property(e => e.Note).HasMaxLength(1000).HasColumnName("note");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
-            entity.Property(e => e.Processedat)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("processedat");
-
-            entity.HasOne(e => e.Returnrequest).WithMany(e => e.Refundtransactions)
-                .HasForeignKey(e => e.Returnrequestid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_refundtransactions_requests");
-            entity.HasOne(e => e.Order).WithMany(e => e.Refundtransactions)
-                .HasForeignKey(e => e.Orderid)
-                .OnDelete(DeleteBehavior.Restrict)
-                .HasConstraintName("fk_refundtransactions_orders");
-            entity.HasOne(e => e.Processedbyuser).WithMany(e => e.Refundtransactions)
-                .HasForeignKey(e => e.Processedbyuserid)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("fk_refundtransactions_users");
-        });
-
-        modelBuilder.Entity<Orderassignment>(entity =>
-        {
-            entity.HasKey(e => e.Assignmentid).HasName("orderassignments_pkey");
-
-            entity.ToTable("orderassignments");
-
-            entity.HasIndex(
-                    e => new { e.Orderid, e.Department },
-                    "ux_orderassignments_order_department")
-                .IsUnique();
-
-            entity.HasIndex(e => new { e.Department, e.Status }, "ix_orderassignments_department_status");
-            entity.HasIndex(e => e.Assigneduserid, "ix_orderassignments_assigneduserid");
-
-            entity.Property(e => e.Assignmentid).HasColumnName("assignmentid");
-            entity.Property(e => e.Orderid).HasColumnName("orderid");
-            entity.Property(e => e.Department)
-                .HasMaxLength(30)
-                .HasColumnName("department");
-            entity.Property(e => e.Assigneduserid).HasColumnName("assigneduserid");
-            entity.Property(e => e.Assignedbyuserid).HasColumnName("assignedbyuserid");
-            entity.Property(e => e.Status)
-                .HasMaxLength(30)
-                .HasDefaultValue("Pending")
-                .HasColumnName("status");
-            entity.Property(e => e.Assignedat)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("assignedat");
-            entity.Property(e => e.Completedat)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("completedat");
-            entity.Property(e => e.Note)
-                .HasMaxLength(500)
-                .HasColumnName("note");
-
-            entity.HasOne(d => d.Order).WithMany(p => p.Orderassignments)
-                .HasForeignKey(d => d.Orderid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_orderassignments_orders");
-
-            entity.HasOne(d => d.Assigneduser).WithMany(p => p.AssignedOrderassignments)
-                .HasForeignKey(d => d.Assigneduserid)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("fk_orderassignments_assigned_users");
-
-            entity.HasOne(d => d.Assignedbyuser).WithMany(p => p.CreatedOrderassignments)
-                .HasForeignKey(d => d.Assignedbyuserid)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("fk_orderassignments_assignedby_users");
-        });
+        
 
         modelBuilder.Entity<Orderitem>(entity =>
         {
@@ -1029,7 +794,7 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Productid).HasColumnName("productid");
             entity.Property(e => e.Brandid).HasColumnName("brandid");
             entity.Property(e => e.Categoryid).HasColumnName("categoryid");
-            entity.Property(e => e.Seriesid).HasColumnName("seriesid");
+            entity.Property(e => e.Seriesname).HasMaxLength(100).HasColumnName("seriesname");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
@@ -1049,64 +814,13 @@ public partial class ECommerceContext : DbContext
             entity.HasOne(d => d.Category).WithMany(p => p.Products)
                 .HasForeignKey(d => d.Categoryid)
                 .HasConstraintName("fk_products_categories");
-
-            entity.HasOne(d => d.Series).WithMany(p => p.Products)
-                .HasForeignKey(d => d.Seriesid)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("fk_products_productseries");
         });
 
-        modelBuilder.Entity<Productseries>(entity =>
-        {
-            entity.HasKey(e => e.Seriesid).HasName("productseries_pkey");
-
-            entity.ToTable("productseries");
-
-            entity.HasIndex(e => new { e.Brandid, e.Seriesname }, "ix_productseries_brandid_seriesname").IsUnique();
-
-            entity.Property(e => e.Seriesid).HasColumnName("seriesid");
-            entity.Property(e => e.Brandid).HasColumnName("brandid");
-            entity.Property(e => e.Seriesname)
-                .HasMaxLength(100)
-                .HasColumnName("seriesname");
-            entity.Property(e => e.Displayorder)
-                .HasDefaultValue(0)
-                .HasColumnName("displayorder");
-            entity.Property(e => e.Isactive)
-                .HasDefaultValue(true)
-                .HasColumnName("isactive");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
-
-            entity.HasOne(d => d.Brand).WithMany(p => p.Productseries)
-                .HasForeignKey(d => d.Brandid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_productseries_brands");
-        });
+        
 
 
 
-        modelBuilder.Entity<Productimage>(entity =>
-        {
-            entity.HasKey(e => e.Imageid).HasName("productimages_pkey");
-
-            entity.ToTable("productimages");
-
-            entity.Property(e => e.Imageid).HasColumnName("imageid");
-            entity.Property(e => e.Imageurl)
-                .HasMaxLength(500)
-                .HasColumnName("imageurl");
-            entity.Property(e => e.Ismain)
-                .HasDefaultValue(false)
-                .HasColumnName("ismain");
-            entity.Property(e => e.Variantid).HasColumnName("variantid");
-
-            entity.HasOne(d => d.Variant).WithMany(p => p.Productimages)
-                .HasForeignKey(d => d.Variantid)
-                .HasConstraintName("fk_images_variants");
-        });
+        
 
         modelBuilder.Entity<Productvariant>(entity =>
         {
@@ -1133,6 +847,7 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Specifications)
                 .HasColumnType("text")
                 .HasColumnName("specifications");
+            entity.Property(e => e.Imageurls).HasColumnType("jsonb").HasColumnName("Imageurls");
 
             entity.HasOne(d => d.Product).WithMany(p => p.Productvariants)
                 .HasForeignKey(d => d.Productid)
@@ -1242,36 +957,7 @@ public partial class ECommerceContext : DbContext
                 .HasColumnName("validto");
         });
 
-        modelBuilder.Entity<Promotionalcontent>(entity =>
-        {
-            entity.HasKey(e => e.Contentid).HasName("promotionalcontents_pkey");
-
-            entity.ToTable("promotionalcontents");
-
-            entity.Property(e => e.Contentid).HasColumnName("contentid");
-            entity.Property(e => e.Contenttype)
-                .HasMaxLength(50)
-                .HasColumnName("contenttype");
-            entity.Property(e => e.Title)
-                .HasMaxLength(200)
-                .HasColumnName("title");
-            entity.Property(e => e.Imageurl)
-                .HasMaxLength(500)
-                .HasColumnName("imageurl");
-            entity.Property(e => e.Linkurl)
-                .HasMaxLength(500)
-                .HasColumnName("linkurl");
-            entity.Property(e => e.Displayorder)
-                .HasDefaultValue(0)
-                .HasColumnName("displayorder");
-            entity.Property(e => e.Isactive)
-                .HasDefaultValue(true)
-                .HasColumnName("isactive");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
-        });
+        
 
         modelBuilder.Entity<Warrantypackage>(entity =>
         {
@@ -1307,6 +993,7 @@ public partial class ECommerceContext : DbContext
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updatedat");
+            entity.Property(e => e.Cartcontent).HasColumnType("jsonb").HasColumnName("Cartcontent");
 
             entity.HasOne(d => d.User).WithOne(p => p.Cart)
                 .HasForeignKey<Cart>(d => d.Userid)
@@ -1314,34 +1001,39 @@ public partial class ECommerceContext : DbContext
                 .HasConstraintName("fk_carts_users");
         });
 
-        modelBuilder.Entity<Cartitem>(entity =>
+        
+
+                modelBuilder.Entity<Statuslog>(entity =>
         {
-            entity.HasKey(e => e.Cartitemid).HasName("cartitems_pkey");
+            entity.HasKey(e => e.Logid).HasName("statuslogs_pkey");
+            entity.ToTable("statuslogs");
 
-            entity.ToTable("cartitems");
+            entity.HasIndex(e => new { e.Entitytype, e.Entityid }, "ix_statuslogs_entity");
 
-            entity.Property(e => e.Cartitemid).HasColumnName("cartitemid");
-            entity.Property(e => e.Cartid).HasColumnName("cartid");
-            entity.Property(e => e.Variantid).HasColumnName("variantid");
-            entity.Property(e => e.Quantity).HasColumnName("quantity");
+            entity.Property(e => e.Logid).HasColumnName("logid");
+            entity.Property(e => e.Entitytype).HasMaxLength(50).HasColumnName("entitytype");
+            entity.Property(e => e.Entityid).HasColumnName("entityid");
+            entity.Property(e => e.Actiontype).HasMaxLength(50).HasDefaultValue("StatusChanged").HasColumnName("actiontype");
+            entity.Property(e => e.Fromstatus).HasMaxLength(50).HasColumnName("fromstatus");
+            entity.Property(e => e.Tostatus).HasMaxLength(50).HasColumnName("tostatus");
+            entity.Property(e => e.Note).HasMaxLength(1000).HasColumnName("note");
+            entity.Property(e => e.Metadata).HasColumnType("jsonb").HasColumnName("metadata");
+            entity.Property(e => e.Userid).HasColumnName("userid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("createdat");
 
-            entity.HasOne(d => d.Cart).WithMany(p => p.Cartitems)
-                .HasForeignKey(d => d.Cartid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_cartitems_carts");
-
-            entity.HasOne(d => d.Variant).WithMany(p => p.Cartitems)
-                .HasForeignKey(d => d.Variantid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_cartitems_productvariants");
+            entity.HasOne(d => d.User).WithMany(p => p.Statuslogs)
+                .HasForeignKey(d => d.Userid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_statuslogs_users");
         });
 
         OnModelCreatingPartial(modelBuilder);
+
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
+

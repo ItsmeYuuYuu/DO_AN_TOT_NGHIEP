@@ -52,6 +52,7 @@ export interface ReturnRequest {
   requestedrefundamount: number;
   refundamount?: number;
   refundstatus: string;
+  refunddestination?: RefundDestination;
   requestedat?: string;
   reviewedat?: string;
   receivedat?: string;
@@ -60,6 +61,14 @@ export interface ReturnRequest {
   items: ReturnItem[];
   histories: ReturnRequestHistory[];
   refundtransactions: RefundTransaction[];
+}
+
+export interface RefundDestination {
+  method: 'BANK' | 'CASH';
+  bankname?: string;
+  accountnumber?: string;
+  accountholder?: string;
+  confirmed: boolean;
 }
 
 export interface ReturnEmployee {
@@ -94,6 +103,7 @@ export const returnRequestsApi = {
     description?: string;
     orderitemids: number[];
     imageurls: string[];
+    refunddestination?: RefundDestination;
   }) => apiClient.post<ReturnRequest>('/ReturnRequests', payload),
   cancel: (id: number) => apiClient.patch<ReturnRequest>(`/ReturnRequests/${id}/cancel`),
   claim: (id: number) => apiClient.post<ReturnRequest>(`/ReturnRequests/${id}/claim`),
@@ -123,6 +133,15 @@ export const returnRequestsApi = {
     transactionref,
     note,
   }),
+  confirmRefundReceipt: (id: number, note?: string) =>
+    apiClient.post<ReturnRequest>(`/ReturnRequests/${id}/confirm-refund-receipt`, { note }),
+  disputeRefund: (id: number, note: string) =>
+    apiClient.post<ReturnRequest>(`/ReturnRequests/${id}/dispute-refund`, { note }),
+  resolveRefundDispute: (id: number, outcome: 'CONFIRMED' | 'FAILED', note: string) =>
+    apiClient.post<ReturnRequest>(`/ReturnRequests/${id}/resolve-refund-dispute`, {
+      outcome,
+      note,
+    }),
   getEmployees: () => apiClient.get<ReturnEmployee[]>('/ReturnRequests/employees'),
   uploadImages: (files: File[]) => {
     const formData = new FormData();

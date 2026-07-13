@@ -186,10 +186,19 @@ namespace ECommerceBackend.Controllers
             return $"{variant.Condition} - {variant.Sku}".Trim(' ', '-');
         }
 
-        private static ChatRecommendationDto MapRecommendationToDto(
-            Chatproductrecommendation recommendation)
+        private async Task<ChatRecommendationDto?> MapRecommendationToDtoAsync(
+            ChatRecommendationData recommendation)
         {
-            var variant = recommendation.Variant;
+            var variant = await _context.Productvariants
+                .AsNoTracking()
+                .Include(item => item.Product)
+                    .ThenInclude(product => product.Brand)
+                .Include(item => item.Inventoryitems)
+                .FirstOrDefaultAsync(item =>
+                    item.Variantid == recommendation.Variantid &&
+                    item.Productid == recommendation.Productid);
+            if (variant == null || variant.Product == null) return null;
+            var product = variant.Product;
             var imageUrl = "";
             if (!string.IsNullOrWhiteSpace(variant.Imageurls))
             {
@@ -204,9 +213,9 @@ namespace ECommerceBackend.Controllers
             return new ChatRecommendationDto(
                 recommendation.Recommendationid,
                 recommendation.Productid,
-                recommendation.Product.Slug,
+                product.Slug,
                 recommendation.Variantid,
-                recommendation.Product.Productname,
+                product.Productname,
                 GetVariantName(variant),
                 variant.Sku ?? string.Empty,
                 imageUrl,
@@ -218,24 +227,32 @@ namespace ECommerceBackend.Controllers
                 recommendation.Addedtocartat,
                 recommendation.Orderedat,
                 recommendation.Orderid,
-                recommendation.Product.Brand?.Brandname ?? "Chưa xác định",
+                product.Brand?.Brandname ?? "Chưa xác định",
                 variant.Specifications ?? "{}");
         }
 
-        private static ChatMessageDto MapMessageToDto(Chatmessage m) => new(
-            m.Messageid,
-            m.Sessionid,
-            m.Sendertype,
-            m.Messagecontent,
-            m.Sentat,
-            m.Chatproductrecommendations
-                .OrderBy(item => item.Rank)
-                .GroupBy(item => item.Productid)
-                .Select(group => group.First())
-                .Select(MapRecommendationToDto)
-                .ToList(),
-            m.Responsetype,
-            ChatResponseMetadata.DeserializeQuickReplies(m.Quickreplies));
+        private async Task<ChatMessageDto> MapMessageToDtoAsync(Chatmessage message)
+        {
+            var recommendations = new List<ChatRecommendationDto>();
+            foreach (var item in ChatRecommendationDataSerializer.Deserialize(message.Recommendations)
+                         .OrderBy(item => item.Rank)
+                         .GroupBy(item => item.Productid)
+                         .Select(group => group.First()))
+            {
+                var mapped = await MapRecommendationToDtoAsync(item);
+                if (mapped != null) recommendations.Add(mapped);
+            }
+
+            return new ChatMessageDto(
+                message.Messageid,
+                message.Sessionid,
+                message.Sendertype,
+                message.Messagecontent,
+                message.Sentat,
+                recommendations,
+                message.Responsetype,
+                ChatResponseMetadata.DeserializeQuickReplies(message.Quickreplies));
+        }
 
         [HttpGet("my")]
         public async Task<ActionResult<IEnumerable<ChatSessionDto>>> GetMySessions()
@@ -331,10 +348,6 @@ namespace ECommerceBackend.Controllers
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            await _context.Chatproductrecommendations
-                .Where(recommendation => recommendation.Message.Sessionid == id)
-                .ExecuteDeleteAsync();
-
             await _context.Chatmessages
                 .Where(message => message.Sessionid == id)
                 .ExecuteDeleteAsync();
@@ -358,17 +371,14 @@ namespace ECommerceBackend.Controllers
 
             var messages = await _context.Chatmessages
                 .AsNoTracking()
-                .Include(message => message.Chatproductrecommendations)
-                    .ThenInclude(recommendation => recommendation.Product)
-                        .ThenInclude(product => product.Brand)
-                .Include(message => message.Chatproductrecommendations)
-                    .ThenInclude(recommendation => recommendation.Variant)
-                        .ThenInclude(variant => variant.Inventoryitems)
                 .Where(m => m.Sessionid == id)
                 .OrderBy(m => m.Sentat)
                 .ToListAsync();
 
-            return Ok(messages.Select(MapMessageToDto));
+            var result = new List<ChatMessageDto>();
+            foreach (var message in messages)
+                result.Add(await MapMessageToDtoAsync(message));
+            return Ok(result);
         }
 
         [HttpPost("{id}/typing")]
@@ -424,7 +434,7 @@ namespace ECommerceBackend.Controllers
                 session.Endtime = DateTime.Now;
                 _context.Chatmessages.Add(userMessage);
                 await _context.SaveChangesAsync();
-                return Ok(MapMessageToDto(userMessage));
+                return Ok(await MapMessageToDtoAsync(userMessage));
             }
 
             var result = await _chatOrchestrator.ProcessUserMessageAsync(session, dto.Messagecontent);
@@ -443,21 +453,24 @@ namespace ECommerceBackend.Controllers
             if (!await IsOwnerAsync(session))
                 return StatusCode(403, new ApiErrorDto("Bạn không có quyền cập nhật session này.", null));
 
-            var recommendation = await _context.Chatproductrecommendations
-                .Include(item => item.Message)
-                .Include(item => item.Product)
-                    .ThenInclude(product => product.Brand)
-                .Include(item => item.Variant)
-                    .ThenInclude(variant => variant.Inventoryitems)
-                .FirstOrDefaultAsync(item =>
-                    item.Recommendationid == recommendationId &&
-                    item.Message.Sessionid == id);
-            if (recommendation == null)
+            var messages = await _context.Chatmessages
+                .Where(message => message.Sessionid == id && message.Recommendations != null)
+                .ToListAsync();
+            var message = messages.FirstOrDefault(item =>
+                ChatRecommendationDataSerializer.Deserialize(item.Recommendations)
+                    .Any(recommendation => recommendation.Recommendationid == recommendationId));
+            if (message == null)
                 return NotFound(new ApiErrorDto("Sản phẩm đề xuất không tồn tại trong phiên chat.", null));
 
+            var recommendations = ChatRecommendationDataSerializer.Deserialize(message.Recommendations);
+            var recommendation = recommendations.First(item => item.Recommendationid == recommendationId);
             recommendation.Addedtocartat ??= DateTime.Now;
+            message.Recommendations = ChatRecommendationDataSerializer.Serialize(recommendations);
             await _context.SaveChangesAsync();
-            return Ok(MapRecommendationToDto(recommendation));
+            var result = await MapRecommendationToDtoAsync(recommendation);
+            return result == null
+                ? NotFound(new ApiErrorDto("Sản phẩm đề xuất không còn tồn tại.", null))
+                : Ok(result);
         }
 
         [HttpGet("recommendation-metrics")]
@@ -467,20 +480,29 @@ namespace ECommerceBackend.Controllers
         {
             days = Math.Clamp(days, 1, 365);
             var fromDate = DateTime.Now.AddDays(-days);
-            var recommendations = await _context.Chatproductrecommendations
+            var messages = await _context.Chatmessages
                 .AsNoTracking()
-                .Include(item => item.Product)
-                .Where(item => item.Createdat >= fromDate)
+                .Where(item => item.Sentat >= fromDate && item.Recommendations != null)
                 .ToListAsync();
+            var recommendations = messages
+                .SelectMany(item => ChatRecommendationDataSerializer.Deserialize(item.Recommendations))
+                .Where(item => item.Createdat == null || item.Createdat >= fromDate)
+                .ToList();
+
+            var productIds = recommendations.Select(item => item.Productid).Distinct().ToList();
+            var productNames = await _context.Products
+                .AsNoTracking()
+                .Where(item => productIds.Contains(item.Productid))
+                .ToDictionaryAsync(item => item.Productid, item => item.Productname);
 
             var total = recommendations.Count;
             var addedToCart = recommendations.Count(item => item.Addedtocartat.HasValue);
             var ordered = recommendations.Count(item => item.Orderedat.HasValue);
             var topProducts = recommendations
-                .GroupBy(item => new { item.Productid, item.Product.Productname })
+                .GroupBy(item => item.Productid)
                 .Select(group => new ChatRecommendationProductMetricDto(
-                    group.Key.Productid,
-                    group.Key.Productname,
+                    group.Key,
+                    productNames.GetValueOrDefault(group.Key, $"Sản phẩm #{group.Key}"),
                     group.Count(),
                     group.Count(item => item.Addedtocartat.HasValue),
                     group.Count(item => item.Orderedat.HasValue)))
@@ -623,7 +645,7 @@ namespace ECommerceBackend.Controllers
             session.Endtime = DateTime.Now;
             _context.Chatmessages.Add(message);
             await _context.SaveChangesAsync();
-            return Ok(MapMessageToDto(message));
+            return Ok(await MapMessageToDtoAsync(message));
         }
 
         [HttpPost("{id}/close-handoff")]

@@ -425,7 +425,7 @@ const ProfilePage: React.FC = () => {
                 {orders.map(order => (
                   <article key={order.orderid} className="border border-[#e5e7eb] bg-[#ffffff]">
                     <Link
-                      to={`/order-lookup?phone=${order.shippingphone ?? currentProfile.phone ?? ''}&orderId=${order.orderid}&mode=detail`}
+                      to={`/order-lookup?orderId=${order.orderid}&mode=detail`}
                       className="flex w-full flex-col gap-3 p-4 text-left sm:flex-row sm:items-center sm:gap-4 hover:bg-slate-50 transition-colors"
                     >
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-white text-[#1f2937]">

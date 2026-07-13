@@ -46,6 +46,19 @@ public class ReturnRequestsController : ControllerBase
         }
     }
 
+    private static RefundDestinationDto? DeserializeRefundDestination(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<RefundDestinationDto>(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private IQueryable<Returnrequest> RequestQuery() =>
         _context.Returnrequests
             .Include(request => request.Order)
@@ -61,7 +74,10 @@ public class ReturnRequestsController : ControllerBase
                     .ThenInclude(inventory => inventory.Variant)
                         .ThenInclude(variant => variant!.Product);
 
-    private static ReturnRequestDto Map(Returnrequest request) =>
+    private static ReturnRequestDto Map(
+        Returnrequest request,
+        IReadOnlyList<ReturnRequestHistoryDto>? histories = null,
+        IReadOnlyList<RefundTransactionDto>? refundTransactions = null) =>
         new(
             request.Returnrequestid,
             request.Orderid,
@@ -81,6 +97,7 @@ public class ReturnRequestsController : ControllerBase
             request.Requestedrefundamount,
             request.Refundamount,
             request.Refundstatus,
+            DeserializeRefundDestination(request.Refundinfo),
             request.Requestedat,
             request.Reviewedat,
             request.Receivedat,
@@ -100,8 +117,67 @@ public class ReturnRequestsController : ControllerBase
                     item.Replacementimei,
                     item.Refundamount))
                 .ToList(),
-            new List<ReturnRequestHistoryDto>(),
-            new List<RefundTransactionDto>());
+            histories ?? [],
+            refundTransactions ?? []);
+
+    private async Task<IReadOnlyList<ReturnRequestDto>> MapManyAsync(
+        IReadOnlyList<Returnrequest> requests)
+    {
+        if (requests.Count == 0) return [];
+
+        var requestIds = requests.Select(request => request.Returnrequestid).ToList();
+        var histories = await _context.Statuslogs
+            .AsNoTracking()
+            .Include(log => log.User)
+            .Where(log => log.Entitytype == "ReturnRequest" && requestIds.Contains(log.Entityid))
+            .OrderBy(log => log.Createdat)
+            .ThenBy(log => log.Logid)
+            .ToListAsync();
+        var payments = await _context.Orderpayments
+            .AsNoTracking()
+            .Where(payment =>
+                payment.Transactiontype == "Refund" &&
+                payment.Returnrequestid.HasValue &&
+                requestIds.Contains(payment.Returnrequestid.Value))
+            .OrderBy(payment => payment.Createdat)
+            .ThenBy(payment => payment.Paymentid)
+            .ToListAsync();
+
+        var historiesByRequest = histories
+            .GroupBy(log => log.Entityid)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<ReturnRequestHistoryDto>)group.Select(log =>
+                    new ReturnRequestHistoryDto(
+                        log.Logid,
+                        log.Userid,
+                        log.User?.Fullname,
+                        log.Fromstatus,
+                        log.Tostatus,
+                        log.Note,
+                        log.Createdat)).ToList());
+        var paymentsByRequest = payments
+            .GroupBy(payment => payment.Returnrequestid!.Value)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<RefundTransactionDto>)group.Select(payment =>
+                    new RefundTransactionDto(
+                        payment.Paymentid,
+                        payment.Amount,
+                        payment.Provider,
+                        payment.Status,
+                        payment.Transactionref,
+                        null,
+                        payment.Paidat ?? payment.Createdat)).ToList());
+
+        return requests.Select(request => Map(
+            request,
+            historiesByRequest.GetValueOrDefault(request.Returnrequestid, []),
+            paymentsByRequest.GetValueOrDefault(request.Returnrequestid, []))).ToList();
+    }
+
+    private async Task<ReturnRequestDto> MapOneAsync(Returnrequest request) =>
+        (await MapManyAsync([request])).Single();
 
     [HttpGet]
     [Authorize(Roles = "Admin,Manager,Sales,Warehouse")]
@@ -122,7 +198,7 @@ public class ReturnRequestsController : ControllerBase
         var requests = await query
             .OrderByDescending(request => request.Updatedat)
             .ToListAsync();
-        return Ok(requests.Select(Map));
+        return Ok(await MapManyAsync(requests));
     }
 
     [HttpGet("mine")]
@@ -139,7 +215,7 @@ public class ReturnRequestsController : ControllerBase
                 request.Order.Userid == userId)
             .OrderByDescending(request => request.Updatedat)
             .ToListAsync();
-        return Ok(requests.Select(Map));
+        return Ok(await MapManyAsync(requests));
     }
 
     [HttpGet("{id:int}")]
@@ -157,7 +233,7 @@ public class ReturnRequestsController : ControllerBase
             return StatusCode(403, new ApiErrorDto("Bạn không có quyền xem yêu cầu này.", null));
         }
 
-        return Ok(Map(request));
+        return Ok(await MapOneAsync(request));
     }
 
     [HttpGet("employees")]
@@ -224,6 +300,42 @@ public class ReturnRequestsController : ControllerBase
         if (imageUrls.Any(url => !url.Contains("/uploads/returns/", StringComparison.OrdinalIgnoreCase)))
             return BadRequest(new ApiErrorDto("Ảnh đổi trả phải được tải lên từ máy.", null));
 
+        RefundDestinationDto? refundDestination = null;
+        if (requestType.Equals("Return", StringComparison.OrdinalIgnoreCase))
+        {
+            var requiresBankDestination = order.Paymentmethod == "BANK";
+            if (dto.Refunddestination == null)
+                return BadRequest(new ApiErrorDto("Vui lòng chọn phương thức nhận tiền hoàn.", null));
+
+            if (dto.Refunddestination != null)
+            {
+                var method = dto.Refunddestination.Method.Trim().ToUpperInvariant();
+                if (method is not ("BANK" or "CASH"))
+                    return BadRequest(new ApiErrorDto("Phương thức nhận hoàn tiền không hợp lệ.", null));
+                if (requiresBankDestination && method != "BANK")
+                    return BadRequest(new ApiErrorDto("Đơn chuyển khoản phải được hoàn qua tài khoản ngân hàng.", null));
+                if (method == "BANK" &&
+                    (string.IsNullOrWhiteSpace(dto.Refunddestination.Bankname) ||
+                     string.IsNullOrWhiteSpace(dto.Refunddestination.Accountnumber) ||
+                     string.IsNullOrWhiteSpace(dto.Refunddestination.Accountholder)))
+                {
+                    return BadRequest(new ApiErrorDto("Vui lòng nhập đầy đủ ngân hàng, số tài khoản và chủ tài khoản.", null));
+                }
+                if (method == "BANK" &&
+                    !dto.Refunddestination.Accountnumber!.All(char.IsDigit))
+                    return BadRequest(new ApiErrorDto("Số tài khoản chỉ được chứa chữ số.", null));
+                if (!dto.Refunddestination.Confirmed)
+                    return BadRequest(new ApiErrorDto("Khách hàng phải xác nhận thông tin nhận tiền hoàn.", null));
+
+                refundDestination = new RefundDestinationDto(
+                    method,
+                    string.IsNullOrWhiteSpace(dto.Refunddestination.Bankname) ? null : dto.Refunddestination.Bankname.Trim(),
+                    string.IsNullOrWhiteSpace(dto.Refunddestination.Accountnumber) ? null : dto.Refunddestination.Accountnumber.Trim(),
+                    string.IsNullOrWhiteSpace(dto.Refunddestination.Accountholder) ? null : dto.Refunddestination.Accountholder.Trim().ToUpperInvariant(),
+                    true);
+            }
+        }
+
         var now = DateTime.UtcNow;
         var requestedRefund = requestType.Equals("Return", StringComparison.OrdinalIgnoreCase)
             ? selectedItems.Sum(item => item.Sellingprice + (item.Warrantyprice ?? 0))
@@ -240,6 +352,7 @@ public class ReturnRequestsController : ControllerBase
             Imageurls = JsonSerializer.Serialize(imageUrls),
             Requestedrefundamount = requestedRefund,
             Refundstatus = requestedRefund > 0 ? "Pending" : "NotRequired",
+            Refundinfo = refundDestination == null ? null : JsonSerializer.Serialize(refundDestination),
             Requestedat = now,
             Updatedat = now
         };
@@ -271,7 +384,10 @@ public class ReturnRequestsController : ControllerBase
 
         var created = await RequestQuery().AsNoTracking()
             .FirstAsync(item => item.Returnrequestid == request.Returnrequestid);
-        return CreatedAtAction(nameof(GetRequest), new { id = request.Returnrequestid }, Map(created));
+        return CreatedAtAction(
+            nameof(GetRequest),
+            new { id = request.Returnrequestid },
+            await MapOneAsync(created));
     }
 
     [HttpPost("{id:int}/claim")]
@@ -293,7 +409,7 @@ public class ReturnRequestsController : ControllerBase
         request.Updatedat = DateTime.UtcNow;
         AddHistory(request, userId, request.Status, request.Status, "Nhân viên Sales nhận phụ trách.");
         await _context.SaveChangesAsync();
-        return Ok(Map(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
     }
 
     [HttpPatch("{id:int}/assign")]
@@ -320,7 +436,7 @@ public class ReturnRequestsController : ControllerBase
             request.Status,
             string.IsNullOrWhiteSpace(dto.Note) ? $"Phân công cho {employee.Fullname}." : dto.Note.Trim());
         await _context.SaveChangesAsync();
-        return Ok(Map(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
     }
 
     [HttpPatch("{id:int}/review")]
@@ -349,7 +465,7 @@ public class ReturnRequestsController : ControllerBase
         }
         AddHistory(request, CurrentUserId(), previous, request.Status, request.Reviewnote);
         await _context.SaveChangesAsync();
-        return Ok(Map(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
     }
 
     [HttpPatch("{id:int}/receive")]
@@ -479,7 +595,7 @@ public class ReturnRequestsController : ControllerBase
 
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
-        return Ok(Map(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
     }
 
     [HttpPost("{id:int}/refund")]
@@ -504,71 +620,238 @@ public class ReturnRequestsController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Provider))
             return BadRequest(new ApiErrorDto("Vui lòng chọn phương thức hoàn tiền.", null));
 
-        var refundedBefore = request.Order.Orderpayments
-            .Where(p => p.Transactiontype == "Refund" && p.Returnrequestid == request.Returnrequestid)
+        var refundDestination = DeserializeRefundDestination(request.Refundinfo);
+        var provider = dto.Provider.Trim();
+        if (refundDestination == null && provider.Equals("Bank", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new ApiErrorDto(
+                "Yêu cầu cũ chưa có tài khoản nhận tiền. Chỉ được hoàn tiền mặt hoặc bổ sung thông tin tài khoản trước.",
+                null));
+        if (refundDestination?.Method == "BANK")
+        {
+            if (!provider.Equals("Bank", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new ApiErrorDto("Yêu cầu này phải được hoàn bằng chuyển khoản ngân hàng.", null));
+            if (string.IsNullOrWhiteSpace(dto.Transactionref))
+                return BadRequest(new ApiErrorDto("Vui lòng nhập mã giao dịch chuyển khoản hoàn tiền.", null));
+        }
+        if (refundDestination?.Method == "CASH" &&
+            !provider.Equals("Cash", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new ApiErrorDto("Khách hàng đã chọn nhận tiền mặt tại cửa hàng.", null));
+
+        var transactionReference = string.IsNullOrWhiteSpace(dto.Transactionref)
+            ? null
+            : dto.Transactionref.Trim().ToUpperInvariant();
+        if (transactionReference != null && await _context.Orderpayments.AnyAsync(payment =>
+                payment.Transactiontype == "Refund" &&
+                payment.Status != "Failed" &&
+                payment.Transactionref == transactionReference))
+            return Conflict(new ApiErrorDto("Mã giao dịch hoàn tiền đã được sử dụng.", null));
+
+        var reservedBefore = request.Order.Orderpayments
+            .Where(payment =>
+                payment.Transactiontype == "Refund" &&
+                payment.Returnrequestid == request.Returnrequestid &&
+                payment.Status != "Failed")
             .Sum(p => p.Amount);
-        var remaining = request.Requestedrefundamount - refundedBefore;
-        if (dto.Amount > remaining)
-            return BadRequest(new ApiErrorDto("Số tiền hoàn vượt quá số tiền còn lại.", null));
+        var remaining = request.Requestedrefundamount - reservedBefore;
+        if (dto.Amount != remaining)
+            return BadRequest(new ApiErrorDto(
+                $"Phải hoàn toàn bộ số tiền còn lại là {remaining:N0} đồng; hệ thống không hỗ trợ hoàn từng phần.",
+                null));
 
         var now = DateTime.UtcNow;
         request.Order.Orderpayments.Add(new Orderpayment
         {
             Amount = dto.Amount,
-            Provider = dto.Provider.Trim(),
-            Status = "Completed",
+            Provider = provider,
+            Paymenttype = "Refund",
+            Status = "Processing",
             Transactiontype = "Refund",
             Returnrequestid = request.Returnrequestid,
-            Transactionref = string.IsNullOrWhiteSpace(dto.Transactionref)
-                ? $"REF-{request.Returnrequestid}-{now:yyyyMMddHHmmss}"
-                : dto.Transactionref.Trim(),
+            Transactionref = transactionReference ?? $"CASH-RF-{request.Returnrequestid}-{now:yyyyMMddHHmmss}",
             Createdat = now,
-            Paidat = now
+            Paidat = null
         });
 
-        var refundedAfter = refundedBefore + dto.Amount;
-        request.Refundamount = refundedAfter;
-        request.Refundstatus = refundedAfter >= request.Requestedrefundamount
-            ? "Refunded"
-            : "PartiallyRefunded";
+        request.Status = "RefundProcessing";
+        request.Refundstatus = "Processing";
         request.Updatedat = now;
-        if (request.Refundstatus == "Refunded")
-        {
-            request.Status = "Completed";
-            request.Completedat = now;
-        }
-
-        var totalOrderRefunds = request.Order.Orderpayments
-            .Where(p => p.Transactiontype == "Refund")
-            .Sum(p => p.Amount) + dto.Amount;
-        var paidAmount = request.Order.Paidamount ?? request.Order.Finalamount;
-        request.Order.Paymentstatus = totalOrderRefunds >= paidAmount
-            ? "Refunded"
-            : "PartiallyRefunded";
-
-        var completedReturnedItemIds = await _context.Returnitems
-            .Where(item =>
-                item.Returnrequest.Orderid == request.Orderid &&
-                item.Returnrequest.Requesttype == "Return" &&
-                item.Returnrequest.Status == "Completed")
-            .Select(item => item.Orderitemid)
-            .Distinct()
-            .ToListAsync();
-        if (request.Status == "Completed")
-            completedReturnedItemIds.AddRange(request.Returnitems.Select(item => item.Orderitemid));
-        if (completedReturnedItemIds.Distinct().Count() >= request.Order.Orderitems.Count)
-            request.Order.Orderstatus = "Returned";
 
         AddHistory(
             request,
             CurrentUserId(),
             "RefundPending",
-            request.Status,
-            $"Đã hoàn {dto.Amount:N0} qua {dto.Provider}.");
-        await _context.SaveChangesAsync();
+            "RefundProcessing",
+            string.IsNullOrWhiteSpace(dto.Note)
+                ? $"Nhân viên đã thực hiện hoàn {dto.Amount:N0} qua {provider}; chờ khách xác nhận đã nhận tiền."
+                : $"Nhân viên đã thực hiện hoàn {dto.Amount:N0} qua {provider}; chờ khách xác nhận. {dto.Note.Trim()}",
+            new { amount = dto.Amount, provider, transactionReference });
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            await transaction.RollbackAsync();
+            return Conflict(new ApiErrorDto(
+                "Giao dịch hoàn tiền đã được ghi nhận trước đó. Vui lòng tải lại yêu cầu.",
+                null));
+        }
         await transaction.CommitAsync();
 
-        return Ok(Map(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+    }
+
+    [HttpPost("{id:int}/confirm-refund-receipt")]
+    [Authorize(Roles = "Customer")]
+    public async Task<ActionResult<ReturnRequestDto>> ConfirmRefundReceipt(
+        int id,
+        ConfirmRefundReceiptDto dto)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        var request = await RefundRequestQuery().FirstOrDefaultAsync(item => item.Returnrequestid == id);
+        if (request == null)
+            return NotFound(new ApiErrorDto("Yêu cầu đổi trả không tồn tại.", null));
+        if (request.Requestedbyuserid != CurrentUserId() && request.Order.Userid != CurrentUserId())
+            return StatusCode(403, new ApiErrorDto("Bạn không có quyền xác nhận yêu cầu này.", null));
+        if (request.Status is not ("RefundProcessing" or "RefundDisputed"))
+            return Conflict(new ApiErrorDto("Yêu cầu không có giao dịch đang chờ xác nhận.", null));
+
+        var pendingPayments = request.Order.Orderpayments
+            .Where(payment =>
+                payment.Transactiontype == "Refund" &&
+                payment.Returnrequestid == id &&
+                payment.Status is "Processing" or "Disputed")
+            .ToList();
+        if (pendingPayments.Count == 0)
+            return Conflict(new ApiErrorDto("Không tìm thấy giao dịch cần xác nhận.", null));
+
+        var previous = request.Status;
+        var now = DateTime.UtcNow;
+        foreach (var payment in pendingPayments)
+        {
+            payment.Status = "Completed";
+            payment.Paidat = now;
+        }
+        await FinalizeConfirmedRefundAsync(request, now);
+        AddHistory(
+            request,
+            CurrentUserId(),
+            previous,
+            request.Status,
+            string.IsNullOrWhiteSpace(dto.Note)
+                ? "Khách hàng xác nhận đã nhận được tiền hoàn."
+                : $"Khách hàng xác nhận đã nhận được tiền hoàn. {dto.Note.Trim()}");
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+    }
+
+    [HttpPost("{id:int}/dispute-refund")]
+    [Authorize(Roles = "Customer")]
+    public async Task<ActionResult<ReturnRequestDto>> DisputeRefund(int id, DisputeRefundDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Note))
+            return BadRequest(new ApiErrorDto("Vui lòng mô tả việc chưa nhận được tiền.", null));
+
+        var request = await RefundRequestQuery().FirstOrDefaultAsync(item => item.Returnrequestid == id);
+        if (request == null)
+            return NotFound(new ApiErrorDto("Yêu cầu đổi trả không tồn tại.", null));
+        if (request.Requestedbyuserid != CurrentUserId() && request.Order.Userid != CurrentUserId())
+            return StatusCode(403, new ApiErrorDto("Bạn không có quyền khiếu nại yêu cầu này.", null));
+        if (request.Status != "RefundProcessing")
+            return Conflict(new ApiErrorDto("Yêu cầu không ở trạng thái chờ xác nhận tiền hoàn.", null));
+
+        foreach (var payment in request.Order.Orderpayments.Where(payment =>
+                     payment.Transactiontype == "Refund" &&
+                     payment.Returnrequestid == id &&
+                     payment.Status == "Processing"))
+            payment.Status = "Disputed";
+
+        request.Status = "RefundDisputed";
+        request.Refundstatus = "Disputed";
+        request.Updatedat = DateTime.UtcNow;
+        AddHistory(
+            request,
+            CurrentUserId(),
+            "RefundProcessing",
+            "RefundDisputed",
+            $"Khách hàng báo chưa nhận được tiền: {dto.Note.Trim()}");
+        await _context.SaveChangesAsync();
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+    }
+
+    [HttpPost("{id:int}/resolve-refund-dispute")]
+    [Authorize(Roles = "Admin,Manager,Sales")]
+    public async Task<ActionResult<ReturnRequestDto>> ResolveRefundDispute(
+        int id,
+        ResolveRefundDisputeDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Note))
+            return BadRequest(new ApiErrorDto("Bắt buộc nhập kết quả đối soát.", null));
+        var outcome = dto.Outcome.Trim().ToUpperInvariant();
+        if (outcome is not ("CONFIRMED" or "FAILED"))
+            return BadRequest(new ApiErrorDto("Kết quả đối soát chỉ nhận CONFIRMED hoặc FAILED.", null));
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        var request = await RefundRequestQuery().FirstOrDefaultAsync(item => item.Returnrequestid == id);
+        if (request == null)
+            return NotFound(new ApiErrorDto("Yêu cầu đổi trả không tồn tại.", null));
+        if (request.Status != "RefundDisputed")
+            return Conflict(new ApiErrorDto("Yêu cầu không ở trạng thái khiếu nại hoàn tiền.", null));
+        if (User.IsInRole("Sales") && request.Assigneduserid != CurrentUserId())
+            return StatusCode(403, new ApiErrorDto("Bạn không phụ trách yêu cầu này.", null));
+
+        var disputedPayments = request.Order.Orderpayments
+            .Where(payment =>
+                payment.Transactiontype == "Refund" &&
+                payment.Returnrequestid == id &&
+                payment.Status == "Disputed")
+            .ToList();
+        if (disputedPayments.Count == 0)
+            return Conflict(new ApiErrorDto("Không tìm thấy giao dịch đang được khiếu nại.", null));
+
+        var now = DateTime.UtcNow;
+        if (outcome == "CONFIRMED")
+        {
+            foreach (var payment in disputedPayments)
+            {
+                payment.Status = "Completed";
+                payment.Paidat = now;
+            }
+            await FinalizeConfirmedRefundAsync(request, now);
+            AddHistory(
+                request,
+                CurrentUserId(),
+                "RefundDisputed",
+                request.Status,
+                $"Đối soát xác nhận tiền đã được ghi có: {dto.Note.Trim()}");
+        }
+        else
+        {
+            foreach (var payment in disputedPayments)
+                payment.Status = "Failed";
+            var completedAmount = request.Order.Orderpayments
+                .Where(payment =>
+                    payment.Transactiontype == "Refund" &&
+                    payment.Returnrequestid == id &&
+                    payment.Status == "Completed")
+                .Sum(payment => payment.Amount);
+            request.Refundamount = completedAmount;
+            request.Refundstatus = completedAmount > 0 ? "PartiallyRefunded" : "Pending";
+            request.Status = "RefundPending";
+            request.Updatedat = now;
+            AddHistory(
+                request,
+                CurrentUserId(),
+                "RefundDisputed",
+                "RefundPending",
+                $"Đối soát xác nhận giao dịch thất bại; cần hoàn lại: {dto.Note.Trim()}");
+        }
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
     }
 
     [HttpPatch("{id:int}/cancel")]
@@ -592,7 +875,54 @@ public class ReturnRequestsController : ControllerBase
         request.Updatedat = request.Completedat;
         AddHistory(request, CurrentUserId(), previous, request.Status, "Khách hàng hủy yêu cầu.");
         await _context.SaveChangesAsync();
-        return Ok(Map(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+    }
+
+    private IQueryable<Returnrequest> RefundRequestQuery() =>
+        _context.Returnrequests
+            .Include(request => request.Order)
+                .ThenInclude(order => order.Orderitems)
+            .Include(request => request.Order)
+                .ThenInclude(order => order.Orderpayments)
+            .Include(request => request.Returnitems);
+
+    private async Task FinalizeConfirmedRefundAsync(Returnrequest request, DateTime now)
+    {
+        var confirmedAmount = request.Order.Orderpayments
+            .Where(payment =>
+                payment.Transactiontype == "Refund" &&
+                payment.Returnrequestid == request.Returnrequestid &&
+                payment.Status == "Completed")
+            .Sum(payment => payment.Amount);
+        request.Refundamount = confirmedAmount;
+        request.Refundstatus = confirmedAmount >= request.Requestedrefundamount
+            ? "Refunded"
+            : "PartiallyRefunded";
+        request.Status = request.Refundstatus == "Refunded" ? "Completed" : "RefundPending";
+        request.Completedat = request.Status == "Completed" ? now : null;
+        request.Updatedat = now;
+
+        var totalConfirmedOrderRefunds = request.Order.Orderpayments
+            .Where(payment => payment.Transactiontype == "Refund" && payment.Status == "Completed")
+            .Sum(payment => payment.Amount);
+        var paidAmount = request.Order.Paidamount ?? request.Order.Finalamount;
+        request.Order.Paymentstatus = totalConfirmedOrderRefunds >= paidAmount
+            ? "Refunded"
+            : "PartiallyRefunded";
+
+        if (request.Status != "Completed") return;
+        var completedReturnedItemIds = await _context.Returnitems
+            .Where(item =>
+                item.Returnrequest.Orderid == request.Orderid &&
+                item.Returnrequest.Requesttype == "Return" &&
+                item.Returnrequest.Status == "Completed" &&
+                item.Returnrequestid != request.Returnrequestid)
+            .Select(item => item.Orderitemid)
+            .Distinct()
+            .ToListAsync();
+        completedReturnedItemIds.AddRange(request.Returnitems.Select(item => item.Orderitemid));
+        if (completedReturnedItemIds.Distinct().Count() >= request.Order.Orderitems.Count)
+            request.Order.Orderstatus = "Returned";
     }
 
     private static string NormalizeDisposition(string disposition) =>
@@ -603,16 +933,18 @@ public class ReturnRequestsController : ControllerBase
         int? userId,
         string? fromStatus,
         string toStatus,
-        string? note)
+        string? note,
+        object? metadata = null)
     {
         _context.Statuslogs.Add(new Statuslog
         {
             Entitytype = "ReturnRequest",
             Entityid = request.Returnrequestid,
             Userid = userId,
-            Fromstatus = fromStatus,
+            Fromstatus = fromStatus ?? string.Empty,
             Tostatus = toStatus,
             Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+            Metadata = metadata == null ? null : JsonSerializer.Serialize(metadata),
             Createdat = DateTime.UtcNow
         });
     }

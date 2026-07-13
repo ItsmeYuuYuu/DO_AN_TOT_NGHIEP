@@ -6,7 +6,15 @@ public record CreateReturnRequestDto(
     string Reason,
     string? Description,
     IReadOnlyList<int> Orderitemids,
-    IReadOnlyList<string>? Imageurls);
+    IReadOnlyList<string>? Imageurls,
+    RefundDestinationDto? Refunddestination);
+
+public record RefundDestinationDto(
+    string Method,
+    string? Bankname,
+    string? Accountnumber,
+    string? Accountholder,
+    bool Confirmed);
 
 public record ReviewReturnRequestDto(bool Approved, string? Note);
 
@@ -29,6 +37,14 @@ public record ProcessRefundDto(
     string Provider,
     string? Transactionref,
     string? Note);
+
+public record ConfirmRefundReceiptDto(string? Note);
+
+public record DisputeRefundDto(string Note);
+
+public record ResolveRefundDisputeDto(
+    string Outcome,
+    string Note);
 
 public record ReturnRequestHistoryDto(
     int Historyid,
@@ -79,6 +95,7 @@ public record ReturnRequestDto(
     decimal Requestedrefundamount,
     decimal? Refundamount,
     string Refundstatus,
+    RefundDestinationDto? Refunddestination,
     DateTime? Requestedat,
     DateTime? Reviewedat,
     DateTime? Receivedat,

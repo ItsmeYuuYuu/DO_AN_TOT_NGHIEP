@@ -25,7 +25,5 @@ public partial class Product
 
     public virtual Category? Category { get; set; }
 
-    public virtual ICollection<Chatproductrecommendation> Chatproductrecommendations { get; set; } = new List<Chatproductrecommendation>();
-
     public virtual ICollection<Productvariant> Productvariants { get; set; } = new List<Productvariant>();
 }

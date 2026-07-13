@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using ECommerceBackend.Services;
+using ECommerceBackend.DTOs.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -27,20 +28,26 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
         new(StringComparer.OrdinalIgnoreCase)
         {
             ["Products"]            = "products",
-            ["ProductSeries"]       = "productseries",
+            ["ProductSeries"]       = "products",
             ["ProductVariants"]     = "productvariants",
             ["Categories"]          = "categories",
             ["Brands"]              = "brands",
             ["Orders"]              = "orders",
+            ["OrderAssignments"]    = "statuslogs",
+            ["Shipments"]           = "shipments",
+            ["ReturnRequests"]      = "returnrequests",
+            ["WarrantyClaims"]      = "warrantyclaims",
+            ["WarrantyPackages"]    = "warrantypackages",
             ["Users"]               = "users",
             ["Customers"]           = "customers",
             ["Inventory"]           = "inventoryitems",
             ["Warranties"]          = "inventoryitems",
             ["Vouchers"]            = "vouchers",
-            ["PromotionalContents"] = "promotionalcontents",
-            ["HomepageProductSections"] = "homepageproductsections",
-            ["News"]                = "news",
+            ["PromotionalContents"] = "contents",
+            ["HomepageProductSections"] = "contents",
+            ["News"]                = "contents",
             ["Reviews"]             = "reviews",
+            ["ChatSessions"]        = "chatmessages",
             ["Auth"]                = "users",  // Login / change-password
         };
 
@@ -66,19 +73,18 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
         // Thực thi action thực sự
         var executed = await next();
 
-        // Chỉ log khi request THÀNH CÔNG (2xx) — tránh log các lần validation fail
-        var statusCode = context.HttpContext.Response.StatusCode;
-        if (statusCode < 200 || statusCode >= 300)
-        {
-            // Nếu result là ObjectResult thì lấy status code từ đó
-            if (executed.Result is ObjectResult objResult &&
-                (objResult.StatusCode < 200 || objResult.StatusCode >= 300))
-                return;
-        }
-
         // Nếu có exception thì không log thành công
         if (executed.Exception != null && !executed.ExceptionHandled)
             return;
+
+        // Chỉ log khi request thành công (2xx), không ghi validation/authorization failures.
+        var statusCode = executed.Result switch
+        {
+            ObjectResult objectResult => objectResult.StatusCode ?? StatusCodes.Status200OK,
+            StatusCodeResult statusResult => statusResult.StatusCode,
+            _ => context.HttpContext.Response.StatusCode
+        };
+        if (statusCode < 200 || statusCode >= 300) return;
 
         // ── Trích xuất thông tin từ JWT Claims ──────────────────────────────
         int? userId = null;
@@ -86,6 +92,11 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
                        ?? context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var parsedId))
             userId = parsedId;
+        if (!userId.HasValue &&
+            executed.Result is OkObjectResult { Value: LoginResponseDto loginResponse })
+        {
+            userId = loginResponse.Userid;
+        }
 
         // ── Xác định tên action và bảng bị tác động ─────────────────────────
         var controllerName = context.ActionDescriptor.RouteValues.TryGetValue("controller", out var ctrl)
@@ -100,8 +111,16 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
 
         // ── Trích xuất Record ID từ route (nếu có) ───────────────────────────
         string? recordId = null;
-        if (context.RouteData.Values.TryGetValue("id", out var routeId))
+        foreach (var key in new[] { "id", "orderId", "sectionId", "recommendationId" })
+        {
+            if (!context.RouteData.Values.TryGetValue(key, out var routeId)) continue;
             recordId = routeId?.ToString();
+            if (!string.IsNullOrWhiteSpace(recordId)) break;
+        }
+        if (string.IsNullOrWhiteSpace(recordId) && executed.Result is CreatedAtActionResult created)
+        {
+            recordId = created.RouteValues?.Values.FirstOrDefault()?.ToString();
+        }
 
         // ── Enqueue (non-blocking, fire-and-forget) ──────────────────────────
         _auditLogService.Enqueue(new AuditLogEntry

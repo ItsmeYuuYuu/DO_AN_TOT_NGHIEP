@@ -242,27 +242,41 @@ namespace ECommerceBackend.Controllers
             if (variantIds.Count == 0) return;
 
             var since = DateTime.UtcNow.AddDays(-30);
-            var recommendations = await _context.Chatproductrecommendations
-                .Include(item => item.Message)
-                    .ThenInclude(message => message.Session)
+            var messages = await _context.Chatmessages
+                .Include(item => item.Session)
                 .Where(item =>
-                    variantIds.Contains(item.Variantid) &&
-                    item.Addedtocartat != null &&
-                    item.Orderedat == null &&
-                    item.Createdat >= since &&
-                    item.Message.Session != null &&
-                    (item.Message.Session.Customerid == customerId ||
+                    item.Recommendations != null &&
+                    item.Sentat >= since &&
+                    item.Session != null &&
+                    (item.Session.Customerid == customerId ||
                      (!string.IsNullOrWhiteSpace(guestToken) &&
-                      item.Message.Session.Guestsessiontoken == guestToken)))
-                .OrderByDescending(item => item.Addedtocartat)
+                      item.Session.Guestsessiontoken == guestToken)))
                 .ToListAsync();
 
-            foreach (var recommendation in recommendations
-                         .GroupBy(item => item.Variantid)
-                         .Select(group => group.First()))
+            var candidates = messages
+                .SelectMany(message => ChatRecommendationDataSerializer
+                    .Deserialize(message.Recommendations)
+                    .Select(recommendation => new { message, recommendation }))
+                .Where(item =>
+                    variantIds.Contains(item.recommendation.Variantid) &&
+                    item.recommendation.Addedtocartat != null &&
+                    item.recommendation.Orderedat == null &&
+                    (item.recommendation.Createdat == null || item.recommendation.Createdat >= since))
+                .OrderByDescending(item => item.recommendation.Addedtocartat)
+                .GroupBy(item => item.recommendation.Variantid)
+                .Select(group => group.First())
+                .ToList();
+
+            foreach (var group in candidates.GroupBy(item => item.message))
             {
-                recommendation.Orderid = order.Orderid;
-                recommendation.Orderedat = DateTime.UtcNow;
+                var recommendations = ChatRecommendationDataSerializer.Deserialize(group.Key.Recommendations);
+                var selectedIds = group.Select(item => item.recommendation.Recommendationid).ToHashSet();
+                foreach (var recommendation in recommendations.Where(item => selectedIds.Contains(item.Recommendationid)))
+                {
+                    recommendation.Orderid = order.Orderid;
+                    recommendation.Orderedat = DateTime.UtcNow;
+                }
+                group.Key.Recommendations = ChatRecommendationDataSerializer.Serialize(recommendations);
             }
         }
 
@@ -289,7 +303,7 @@ namespace ECommerceBackend.Controllers
             Order order,
             decimal amountDue)
         {
-            var content = $"CDT{order.Orderid}";
+            var content = $"CDT{order.Orderid} THANH TOAN DON HANG";
             var encodedContent = Uri.EscapeDataString(content);
             var encodedAmount = Uri.EscapeDataString(((long)amountDue).ToString());
 
@@ -486,7 +500,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant")]
+        [Authorize]
         public async Task<ActionResult<OrderDetailDto>> GetOrder(int id)
         {
             var order = await _context.Orders
@@ -501,6 +515,15 @@ namespace ECommerceBackend.Controllers
                 .FirstOrDefaultAsync(o => o.Orderid == id);
 
             if (order == null) return NotFound();
+            var canViewAnyOrder =
+                User.IsInRole("Admin") ||
+                User.IsInRole("Manager") ||
+                User.IsInRole("Sales") ||
+                User.IsInRole("Warehouse") ||
+                User.IsInRole("Warranty") ||
+                User.IsInRole("Consultant");
+            if (!canViewAnyOrder && order.Userid != GetClaimUserId())
+                return Forbid();
             return Ok(MapToDetailDto(order));
         }
 
@@ -1249,10 +1272,44 @@ namespace ECommerceBackend.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
-            var order = await _context.Orders.FindAsync(id);
+            var order = await _context.Orders
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Orderid == id);
             if (order == null) return NotFound();
-            _context.Orders.Remove(order);
-            await _context.SaveChangesAsync();
+            if (order.Orderstatus != StatusCancelled)
+                return Conflict(new ApiErrorDto("Chỉ có thể xóa đơn hàng đã hủy.", null));
+            if (await _context.Shipments.AnyAsync(item => item.Orderid == id) ||
+                await _context.Returnrequests.AnyAsync(item => item.Orderid == id))
+            {
+                return Conflict(new ApiErrorDto(
+                    "Không thể xóa đơn đã phát sinh vận chuyển hoặc đổi trả.", null));
+            }
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                await _context.Statuslogs
+                    .Where(log => log.Entitytype == "Order" && log.Entityid == id)
+                    .ExecuteDeleteAsync();
+                await _context.Inventorytransactions
+                    .Where(item => item.Orderid == id)
+                    .ExecuteDeleteAsync();
+                await _context.Orderpayments
+                    .Where(item => item.Orderid == id)
+                    .ExecuteDeleteAsync();
+                await _context.Orderitems
+                    .Where(item => item.Orderid == id)
+                    .ExecuteDeleteAsync();
+                await _context.Orders
+                    .Where(item => item.Orderid == id)
+                    .ExecuteDeleteAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
             return NoContent();
         }
     }

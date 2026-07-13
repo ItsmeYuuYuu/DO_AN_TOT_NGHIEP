@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <Compile Remove="Data\**" />
-    <Compile Remove="Filters\**" />
   </ItemGroup>
 
 	<ItemGroup>

@@ -43,6 +43,8 @@ const statusLabels: Record<string, string> = {
   Approved: 'Chờ kho tiếp nhận',
   Rejected: 'Từ chối',
   RefundPending: 'Chờ hoàn tiền',
+  RefundProcessing: 'Chờ khách xác nhận',
+  RefundDisputed: 'Khách báo chưa nhận tiền',
   Completed: 'Hoàn tất',
   Cancelled: 'Khách đã hủy',
 };
@@ -52,6 +54,8 @@ const statusClasses: Record<string, string> = {
   Approved: 'bg-indigo-50 text-[#4338ca]',
   Rejected: 'bg-red-50 text-red-700',
   RefundPending: 'bg-violet-50 text-violet-700',
+  RefundProcessing: 'bg-blue-50 text-blue-700',
+  RefundDisputed: 'bg-red-50 text-red-700',
   Completed: 'bg-emerald-50 text-emerald-700',
   Cancelled: 'bg-slate-100 text-slate-600',
 };
@@ -74,6 +78,7 @@ const StaffReturns: React.FC = () => {
   const [refundProvider, setRefundProvider] = useState('VNPay');
   const [refundReference, setRefundReference] = useState('');
   const [refundNote, setRefundNote] = useState('');
+  const [reconcileNote, setReconcileNote] = useState('');
 
   const canAssign = user?.rolename === 'Admin' || user?.rolename === 'Manager';
   const canReview = canAssign || user?.rolename === 'Sales';
@@ -126,7 +131,8 @@ const StaffReturns: React.FC = () => {
     total: requests.length,
     waiting: requests.filter(item => item.status === 'PendingReview').length,
     warehouse: requests.filter(item => item.status === 'Approved').length,
-    refund: requests.filter(item => item.status === 'RefundPending').length,
+    refund: requests.filter(item =>
+      ['RefundPending', 'RefundProcessing', 'RefundDisputed'].includes(item.status)).length,
   }), [requests]);
 
   const openDetail = (request: ReturnRequest) => {
@@ -138,9 +144,10 @@ const StaffReturns: React.FC = () => {
       0,
       request.requestedrefundamount - (request.refundamount ?? 0),
     ).toString());
-    setRefundProvider('VNPay');
+    setRefundProvider(request.refunddestination?.method === 'BANK' ? 'Bank' : 'Cash');
     setRefundReference('');
     setRefundNote('');
+    setReconcileNote('');
     setReceiveItems(Object.fromEntries(request.items.map(item => [
       item.returnitemid,
       {
@@ -198,6 +205,15 @@ const StaffReturns: React.FC = () => {
       refundProvider,
       refundReference.trim() || undefined,
       refundNote.trim() || undefined,
+    ));
+  };
+
+  const handleResolveDispute = async (outcome: 'CONFIRMED' | 'FAILED') => {
+    if (!selected || !reconcileNote.trim()) return;
+    await runAction(() => returnRequestsApi.resolveRefundDispute(
+      selected.returnrequestid,
+      outcome,
+      reconcileNote.trim(),
     ));
   };
 
@@ -508,7 +524,14 @@ const StaffReturns: React.FC = () => {
               {selected.status === 'RefundPending' && canReview &&
                (user?.rolename !== 'Sales' || selected.assigneduserid === currentUserId) && (
                 <form onSubmit={handleRefund} className="space-y-3 rounded-xl border border-violet-200 bg-violet-50/40 p-4">
-                  <h3 className="font-black text-violet-900">Ghi nhận hoàn tiền</h3>
+                  <h3 className="font-black text-violet-900">Ghi nhận đã thực hiện hoàn tiền</h3>
+                  {selected.refunddestination?.method === 'BANK' && (
+                    <div className="rounded-2xl border border-blue-100 bg-white p-3 text-sm">
+                      <p className="font-bold text-blue-900">Chuyển khoản hoàn tiền đến</p>
+                      <p className="mt-1">{selected.refunddestination.bankname} · {selected.refunddestination.accountnumber}</p>
+                      <p className="font-semibold uppercase">{selected.refunddestination.accountholder}</p>
+                    </div>
+                  )}
                   <div className="rounded-2xl bg-white p-3 text-sm">
                     Còn phải hoàn: <b>{formatCurrency(
                       selected.requestedrefundamount - (selected.refundamount ?? 0),
@@ -519,23 +542,28 @@ const StaffReturns: React.FC = () => {
                     type="number"
                     min="1"
                     value={refundAmount}
-                    onChange={event => setRefundAmount(event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                    readOnly
+                    aria-label="Số tiền phải hoàn toàn bộ"
+                    className="w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700"
                   />
+                  <p className="text-xs text-violet-700">
+                    Số tiền được lấy tự động từ kết quả kiểm tra; không hỗ trợ hoàn từng phần.
+                  </p>
                   <select
                     value={refundProvider}
-                    onChange={event => setRefundProvider(event.target.value)}
+                    disabled
                     className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   >
-                    <option value="VNPay">VNPay</option>
-                    <option value="Momo">Momo</option>
                     <option value="Bank">Ngân hàng</option>
                     <option value="Cash">Tiền mặt</option>
                   </select>
                   <input
+                    required={selected.refunddestination?.method === 'BANK'}
                     value={refundReference}
                     onChange={event => setRefundReference(event.target.value)}
-                    placeholder="Mã giao dịch (tùy chọn)"
+                    placeholder={selected.refunddestination?.method === 'BANK'
+                      ? 'Mã giao dịch ngân hàng (bắt buộc)'
+                      : 'Mã biên nhận (tùy chọn)'}
                     className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   />
                   <textarea
@@ -546,9 +574,66 @@ const StaffReturns: React.FC = () => {
                     className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                   />
                   <Button type="submit" fullWidth isLoading={working}>
-                    <WalletCards size={16} className="mr-2" /> Xác nhận hoàn tiền
+                    <WalletCards size={16} className="mr-2" /> Xác nhận đã thực hiện chuyển tiền
                   </Button>
+                  <p className="text-xs leading-5 text-violet-700">
+                    Sau bước này yêu cầu sẽ chờ khách xác nhận đã nhận tiền, chưa được tính là hoàn tất.
+                  </p>
                 </form>
+              )}
+
+              {selected.status === 'RefundDisputed' && canReview &&
+               (user?.rolename !== 'Sales' || selected.assigneduserid === currentUserId) && (
+                <div className="space-y-3 rounded-xl border border-red-200 bg-red-50/50 p-4">
+                  <h3 className="font-black text-red-900">Đối soát khiếu nại hoàn tiền</h3>
+                  <p className="text-xs leading-5 text-red-700">
+                    Kiểm tra mã giao dịch trên tài khoản ngân hàng cửa hàng trước khi kết luận.
+                  </p>
+                  <textarea
+                    required
+                    rows={3}
+                    value={reconcileNote}
+                    onChange={event => setReconcileNote(event.target.value)}
+                    placeholder="Kết quả đối soát với ngân hàng (bắt buộc)"
+                    className="w-full rounded-2xl border border-red-200 px-3 py-2 text-sm"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="danger"
+                      disabled={!reconcileNote.trim()}
+                      isLoading={working}
+                      onClick={() => handleResolveDispute('FAILED')}
+                    >
+                      Giao dịch thất bại
+                    </Button>
+                    <Button
+                      disabled={!reconcileNote.trim()}
+                      isLoading={working}
+                      onClick={() => handleResolveDispute('CONFIRMED')}
+                    >
+                      Đã ghi có
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {selected.refundtransactions.length > 0 && (
+                <div className="rounded-xl border border-slate-200 p-4 text-sm">
+                  <h3 className="font-black text-slate-800">Giao dịch hoàn tiền</h3>
+                  <div className="mt-3 space-y-2">
+                    {selected.refundtransactions.map(transaction => (
+                      <div key={transaction.refundtransactionid} className="rounded-xl bg-slate-50 p-3">
+                        <div className="flex justify-between gap-3">
+                          <b>{formatCurrency(transaction.amount)}</b>
+                          <span className="font-semibold text-slate-600">{transaction.status}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {transaction.provider} · {transaction.transactionref ?? 'Không có mã giao dịch'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
               <div className="rounded-xl bg-slate-50 p-4 text-sm">

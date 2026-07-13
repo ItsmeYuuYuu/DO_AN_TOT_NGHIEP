@@ -17,9 +17,9 @@ public partial class Chatmessage
 
     public string? Quickreplies { get; set; }
 
-    public DateTime? Sentat { get; set; }
+    public string? Recommendations { get; set; }
 
-    public virtual ICollection<Chatproductrecommendation> Chatproductrecommendations { get; set; } = new List<Chatproductrecommendation>();
+    public DateTime? Sentat { get; set; }
 
     public virtual Chatsession? Session { get; set; }
 }

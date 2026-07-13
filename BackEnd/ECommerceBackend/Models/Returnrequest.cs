@@ -32,6 +32,8 @@ public partial class Returnrequest
 
     public string Refundstatus { get; set; } = null!;
 
+    public string? Refundinfo { get; set; }
+
     public DateTime? Requestedat { get; set; }
 
     public DateTime? Reviewedat { get; set; }

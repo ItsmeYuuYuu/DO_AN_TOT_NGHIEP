@@ -17,6 +17,8 @@ const statusLabels: Record<string, string> = {
   Approved: 'Đã duyệt, chờ gửi máy',
   Rejected: 'Bị từ chối',
   RefundPending: 'Chờ hoàn tiền',
+  RefundProcessing: 'Chờ bạn xác nhận đã nhận tiền',
+  RefundDisputed: 'Đang đối soát hoàn tiền',
   Completed: 'Hoàn tất',
   Cancelled: 'Đã hủy',
 };
@@ -26,6 +28,8 @@ const statusClasses: Record<string, string> = {
   Approved: 'bg-red-50 text-[#c4000b]',
   Rejected: 'bg-red-50 text-red-700',
   RefundPending: 'bg-violet-50 text-violet-700',
+  RefundProcessing: 'bg-blue-50 text-blue-700',
+  RefundDisputed: 'bg-red-50 text-red-700',
   Completed: 'bg-emerald-50 text-emerald-700',
   Cancelled: 'bg-slate-100 text-slate-600',
 };
@@ -44,6 +48,13 @@ const CustomerReturns: React.FC = () => {
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountNumberConfirm, setAccountNumberConfirm] = useState('');
+  const [accountHolder, setAccountHolder] = useState('');
+  const [refundMethod, setRefundMethod] = useState<'CASH' | 'BANK'>('CASH');
+  const [refundDestinationConfirmed, setRefundDestinationConfirmed] = useState(false);
+  const [disputeNotes, setDisputeNotes] = useState<Record<number, string>>({});
 
   const loadData = useCallback(async () => {
     if (!user?.userid) return;
@@ -81,6 +92,12 @@ const CustomerReturns: React.FC = () => {
     setReason('');
     setDescription('');
     setFiles([]);
+    setBankName('');
+    setAccountNumber('');
+    setAccountNumberConfirm('');
+    setAccountHolder('');
+    setRefundMethod('CASH');
+    setRefundDestinationConfirmed(false);
     setCreateOpen(true);
   };
 
@@ -108,6 +125,17 @@ const CustomerReturns: React.FC = () => {
         description: description.trim() || undefined,
         orderitemids: selectedItems,
         imageurls,
+        refunddestination: requestType === 'Return'
+          ? refundMethod === 'BANK'
+            ? {
+                method: 'BANK',
+                bankname: bankName.trim(),
+                accountnumber: accountNumber.trim(),
+                accountholder: accountHolder.trim(),
+                confirmed: refundDestinationConfirmed,
+              }
+            : { method: 'CASH', confirmed: refundDestinationConfirmed }
+          : undefined,
       });
       setCreateOpen(false);
       await loadData();
@@ -126,6 +154,34 @@ const CustomerReturns: React.FC = () => {
       await loadData();
     } catch (requestError: unknown) {
       setError(getApiErrorMessage(requestError, 'Không thể hủy yêu cầu.'));
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleConfirmRefund = async (id: number) => {
+    setWorking(true);
+    setError('');
+    try {
+      await returnRequestsApi.confirmRefundReceipt(id);
+      await loadData();
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, 'Không thể xác nhận đã nhận tiền.'));
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleDisputeRefund = async (id: number) => {
+    const note = disputeNotes[id]?.trim();
+    if (!note) return;
+    setWorking(true);
+    setError('');
+    try {
+      await returnRequestsApi.disputeRefund(id, note);
+      await loadData();
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, 'Không thể gửi thông báo chưa nhận tiền.'));
     } finally {
       setWorking(false);
     }
@@ -226,6 +282,66 @@ const CustomerReturns: React.FC = () => {
                   Phản hồi: {request.reviewnote}
                 </p>
               )}
+              {request.status === 'RefundProcessing' && (
+                <div className="mt-4 space-y-3 rounded-2xl border border-blue-200 bg-blue-50/50 p-4">
+                  <div>
+                    <p className="font-black text-blue-900">Cửa hàng đã khai báo giao dịch hoàn tiền</p>
+                    <p className="mt-1 text-xs leading-5 text-blue-700">
+                      Chỉ xác nhận khi tiền đã thực sự vào tài khoản hoặc bạn đã nhận đủ tiền mặt.
+                    </p>
+                  </div>
+                  {request.refundtransactions.filter(item => item.status === 'Processing').map(transaction => (
+                    <div key={transaction.refundtransactionid} className="rounded-xl bg-white p-3 text-sm">
+                      <b>{formatCurrency(transaction.amount)}</b>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {transaction.provider} · {transaction.transactionref ?? 'Không có mã giao dịch'}
+                      </p>
+                    </div>
+                  ))}
+                  <textarea
+                    rows={2}
+                    value={disputeNotes[request.returnrequestid] ?? ''}
+                    onChange={event => setDisputeNotes(current => ({
+                      ...current,
+                      [request.returnrequestid]: event.target.value,
+                    }))}
+                    placeholder="Nếu chưa nhận, mô tả thời điểm kiểm tra và thông tin cần đối soát"
+                    className="w-full rounded-2xl border border-blue-200 px-3 py-2 text-sm"
+                  />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button
+                      variant="danger"
+                      disabled={working || !disputeNotes[request.returnrequestid]?.trim()}
+                      onClick={() => handleDisputeRefund(request.returnrequestid)}
+                    >
+                      Tôi chưa nhận được tiền
+                    </Button>
+                    <Button disabled={working} onClick={() => handleConfirmRefund(request.returnrequestid)}>
+                      Tôi đã nhận đủ tiền
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {request.histories.length > 0 && (
+                <details className="mt-4 rounded-2xl border border-slate-200 p-4">
+                  <summary className="cursor-pointer text-sm font-black text-slate-800">
+                    Lịch sử xử lý ({request.histories.length})
+                  </summary>
+                  <div className="mt-3 space-y-3 border-l-2 border-slate-100 pl-4">
+                    {request.histories.map(history => (
+                      <div key={history.historyid}>
+                        <p className="text-sm font-bold text-slate-700">
+                          {statusLabels[history.tostatus] ?? history.tostatus}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {history.createdat ? formatDateTime(history.createdat) : 'Chưa có thời gian'}
+                        </p>
+                        {history.note && <p className="mt-1 text-sm text-slate-500">{history.note}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </article>
           ))}
         </div>
@@ -242,6 +358,9 @@ const CustomerReturns: React.FC = () => {
                 onChange={event => {
                   setOrderId(event.target.value);
                   setSelectedItems([]);
+                  const nextOrder = eligibleOrders.find(order => order.orderid === Number(event.target.value));
+                  setRefundMethod(nextOrder?.paymentmethod === 'BANK' ? 'BANK' : 'CASH');
+                  setRefundDestinationConfirmed(false);
                 }}
                 className="w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm"
               >
@@ -310,6 +429,61 @@ const CustomerReturns: React.FC = () => {
               className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm"
             />
           </div>
+          {requestType === 'Return' && selectedOrder && (
+            <div className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/50 p-4">
+              <div>
+                <p className="text-sm font-black text-blue-900">Phương thức nhận tiền hoàn</p>
+                <p className="mt-1 text-xs text-blue-700">
+                  Tiền sẽ được chuyển lại sau khi kho kiểm tra và chấp nhận sản phẩm.
+                </p>
+              </div>
+              <select
+                value={refundMethod}
+                disabled={selectedOrder.paymentmethod === 'BANK'}
+                onChange={event => {
+                  setRefundMethod(event.target.value as 'CASH' | 'BANK');
+                  setRefundDestinationConfirmed(false);
+                }}
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              >
+                {selectedOrder.paymentmethod !== 'BANK' && <option value="CASH">Nhận tiền mặt tại cửa hàng</option>}
+                <option value="BANK">Nhận qua tài khoản ngân hàng</option>
+              </select>
+              {refundMethod === 'BANK' && (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input required value={bankName} onChange={event => setBankName(event.target.value)} placeholder="Tên ngân hàng" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
+                    <input required inputMode="numeric" value={accountNumber} onChange={event => setAccountNumber(event.target.value.replace(/\D/g, ''))} placeholder="Số tài khoản" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
+                  </div>
+                  <input
+                    required
+                    inputMode="numeric"
+                    value={accountNumberConfirm}
+                    onChange={event => setAccountNumberConfirm(event.target.value.replace(/\D/g, ''))}
+                    placeholder="Nhập lại số tài khoản"
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                  />
+                  {accountNumberConfirm && accountNumberConfirm !== accountNumber && (
+                    <p className="text-xs font-semibold text-red-600">Hai số tài khoản chưa trùng khớp.</p>
+                  )}
+                  <input required value={accountHolder} onChange={event => setAccountHolder(event.target.value)} placeholder="Tên chủ tài khoản" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm uppercase" />
+                  <p className="text-xs leading-5 text-blue-700">
+                    Hãy kiểm tra kỹ. Sau khi yêu cầu được duyệt, thông tin này sẽ được dùng để chuyển tiền và mọi thay đổi đều phải được ghi nhận.
+                  </p>
+                </>
+              )}
+              <label className="flex items-start gap-2 rounded-xl bg-white p-3 text-xs leading-5 text-slate-600">
+                <input
+                  required
+                  type="checkbox"
+                  checked={refundDestinationConfirmed}
+                  onChange={event => setRefundDestinationConfirmed(event.target.checked)}
+                  className="mt-1 h-4 w-4"
+                />
+                Tôi đã kiểm tra và xác nhận thông tin nhận tiền hoàn là chính xác.
+              </label>
+            </div>
+          )}
           <div>
             <label className="mb-1.5 block text-sm font-bold text-slate-700">Ảnh thiết bị (tối đa 6)</label>
             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 p-5 text-sm font-semibold text-slate-500 hover:border-red-300 hover:bg-red-50">
@@ -329,7 +503,15 @@ const CustomerReturns: React.FC = () => {
             <Button
               type="submit"
               isLoading={working}
-              disabled={!orderId || selectedItems.length === 0 || !reason.trim()}
+              disabled={
+                !orderId ||
+                selectedItems.length === 0 ||
+                !reason.trim() ||
+                (requestType === 'Return' && (
+                  !refundDestinationConfirmed ||
+                  (refundMethod === 'BANK' && accountNumber !== accountNumberConfirm)
+                ))
+              }
             >
               Gửi yêu cầu
             </Button>

@@ -23,13 +23,9 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Chatmessage> Chatmessages { get; set; }
 
-    public virtual DbSet<Chatproductrecommendation> Chatproductrecommendations { get; set; }
-
     public virtual DbSet<Chatsession> Chatsessions { get; set; }
 
     public virtual DbSet<Customer> Customers { get; set; }
-
-    public virtual DbSet<Homepageproductsection> Homepageproductsections { get; set; }
 
     public virtual DbSet<Inventoryitem> Inventoryitems { get; set; }
 
@@ -138,6 +134,9 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Quickreplies)
                 .HasColumnType("jsonb")
                 .HasColumnName("quickreplies");
+            entity.Property(e => e.Recommendations)
+                .HasColumnType("jsonb")
+                .HasColumnName("recommendations");
             entity.Property(e => e.Responsetype)
                 .HasMaxLength(30)
                 .HasColumnName("responsetype");
@@ -153,61 +152,6 @@ public partial class ECommerceContext : DbContext
             entity.HasOne(d => d.Session).WithMany(p => p.Chatmessages)
                 .HasForeignKey(d => d.Sessionid)
                 .HasConstraintName("fk_chatmessages_chatsessions");
-        });
-
-        modelBuilder.Entity<Chatproductrecommendation>(entity =>
-        {
-            entity.HasKey(e => e.Recommendationid)
-                .HasName("chatproductrecommendations_pkey");
-
-            entity.ToTable("chatproductrecommendations");
-
-            entity.HasIndex(e => new { e.Messageid, e.Variantid },
-                    "chatproductrecommendations_messageid_variantid_key")
-                .IsUnique();
-            entity.HasIndex(e => e.Productid, "ix_chatproductrecommendations_productid");
-            entity.HasIndex(e => e.Variantid, "ix_chatproductrecommendations_variantid");
-            entity.HasIndex(e => e.Addedtocartat, "ix_chatproductrecommendations_addedtocartat");
-            entity.HasIndex(e => e.Orderedat, "ix_chatproductrecommendations_orderedat");
-            entity.HasIndex(e => e.Orderid, "ix_chatproductrecommendations_orderid");
-
-            entity.Property(e => e.Recommendationid).HasColumnName("recommendationid");
-            entity.Property(e => e.Messageid).HasColumnName("messageid");
-            entity.Property(e => e.Productid).HasColumnName("productid");
-            entity.Property(e => e.Variantid).HasColumnName("variantid");
-            entity.Property(e => e.Rank).HasColumnName("rank");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
-            entity.Property(e => e.Addedtocartat)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("addedtocartat");
-            entity.Property(e => e.Orderedat)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("orderedat");
-            entity.Property(e => e.Orderid).HasColumnName("orderid");
-
-            entity.HasOne(e => e.Message)
-                .WithMany(e => e.Chatproductrecommendations)
-                .HasForeignKey(e => e.Messageid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_chatproductrecommendations_messages");
-            entity.HasOne(e => e.Product)
-                .WithMany(e => e.Chatproductrecommendations)
-                .HasForeignKey(e => e.Productid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_chatproductrecommendations_products");
-            entity.HasOne(e => e.Variant)
-                .WithMany(e => e.Chatproductrecommendations)
-                .HasForeignKey(e => e.Variantid)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_chatproductrecommendations_variants");
-            entity.HasOne(e => e.Order)
-                .WithMany(e => e.Chatproductrecommendations)
-                .HasForeignKey(e => e.Orderid)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("fk_chatproductrecommendations_orders");
         });
 
         modelBuilder.Entity<Chatsession>(entity =>
@@ -270,41 +214,6 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Phone)
                 .HasMaxLength(20)
                 .HasColumnName("phone");
-        });
-
-        modelBuilder.Entity<Homepageproductsection>(entity =>
-        {
-            entity.HasKey(e => e.Sectionid).HasName("homepageproductsections_pkey");
-
-            entity.ToTable("homepageproductsections");
-
-            entity.HasIndex(e => e.Sectionkey, "homepageproductsections_sectionkey_key").IsUnique();
-            entity.HasIndex(e => new { e.Isactive, e.Displayorder }, "ix_homepageproductsections_active_order");
-
-            entity.Property(e => e.Sectionid).HasColumnName("sectionid");
-            entity.Property(e => e.Sectionkey)
-                .HasMaxLength(50)
-                .HasColumnName("sectionkey");
-            entity.Property(e => e.Title)
-                .HasMaxLength(120)
-                .HasColumnName("title");
-            entity.Property(e => e.Subtitle)
-                .HasMaxLength(300)
-                .HasColumnName("subtitle");
-            entity.Property(e => e.Theme)
-                .HasMaxLength(30)
-                .HasDefaultValue("LightBlue")
-                .HasColumnName("theme");
-            entity.Property(e => e.Displayorder)
-                .HasDefaultValue(0)
-                .HasColumnName("displayorder");
-            entity.Property(e => e.Isactive)
-                .HasDefaultValue(true)
-                .HasColumnName("isactive");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
         });
 
         
@@ -615,6 +524,9 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Paidat)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("paidat");
+            entity.HasIndex(e => new { e.Transactiontype, e.Transactionref }, "ux_orderpayments_active_refund_reference")
+                .IsUnique()
+                .HasFilter("\"Transactiontype\" = 'Refund' AND status <> 'Failed' AND transactionref IS NOT NULL");
 
             entity.HasOne(d => d.Order).WithMany(p => p.Orderpayments)
                 .HasForeignKey(d => d.Orderid)
@@ -683,6 +595,7 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Requestedrefundamount).HasPrecision(18, 2).HasColumnName("requestedrefundamount");
             entity.Property(e => e.Refundamount).HasPrecision(18, 2).HasColumnName("refundamount");
             entity.Property(e => e.Refundstatus).HasMaxLength(30).HasColumnName("refundstatus");
+            entity.Property(e => e.Refundinfo).HasColumnType("jsonb").HasColumnName("refundinfo");
             entity.Property(e => e.Requestedat).HasColumnType("timestamp without time zone").HasColumnName("requestedat");
             entity.Property(e => e.Reviewedat).HasColumnType("timestamp without time zone").HasColumnName("reviewedat");
             entity.Property(e => e.Receivedat).HasColumnType("timestamp without time zone").HasColumnName("receivedat");

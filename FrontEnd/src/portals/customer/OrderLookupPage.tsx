@@ -88,6 +88,29 @@ const OrderLookupPage: React.FC = () => {
     const qPhone = searchParams.get('phone');
     const qOrderId = searchParams.get('orderId') || searchParams.get('orderid');
 
+    if (isDetailMode && qOrderId) {
+      setOrderId(qOrderId);
+      setLoading(true);
+      setError(null);
+      setResults(null);
+      apiClient.get<OrderLookup>(`/Orders/${encodeURIComponent(qOrderId)}`)
+        .then(res => {
+          setResults([res.data]);
+          setExpandedId(Number(qOrderId));
+        })
+        .catch(err => {
+          const status = err?.response?.status;
+          const message = status === 403
+            ? 'Bạn không có quyền xem đơn hàng này.'
+            : status === 404
+              ? 'Đơn hàng không tồn tại.'
+              : 'Không thể tải chi tiết đơn hàng.';
+          setError(message);
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
+
     if (qPhone) {
       setPhone(qPhone);
       if (qOrderId) {
@@ -116,7 +139,7 @@ const OrderLookupPage: React.FC = () => {
           setLoading(false);
         });
     }
-  }, [searchParams]);
+  }, [isDetailMode, searchParams]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();

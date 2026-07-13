@@ -1,4 +1,4 @@
-/*
+using System.Text.Json;
 using ECommerceBackend.DTOs.Common;
 using ECommerceBackend.DTOs.Orders;
 using ECommerceBackend.Models;
@@ -13,116 +13,135 @@ namespace ECommerceBackend.Controllers;
 [Authorize]
 public class OrderAssignmentsController : ControllerBase
 {
-    private const string SalesDepartment = "Sales";
-    private const string WarehouseDepartment = "Warehouse";
-    private const string InternalDeliveryCarrier = "STORE_DELIVERY";
-    private static readonly HashSet<string> DemoCarriers =
-        new(["GHN", "GHTK", "VIETTELPOST", "J&T", InternalDeliveryCarrier], StringComparer.OrdinalIgnoreCase);
+    private const string Sales = "Sales";
+    private const string Warehouse = "Warehouse";
+    private const string InternalCarrier = "STORE_DELIVERY";
+    private static readonly HashSet<string> Carriers =
+        new(["GHN", "GHTK", "VIETTELPOST", "J&T", InternalCarrier], StringComparer.OrdinalIgnoreCase);
     private readonly ECommerceContext _context;
 
-    public OrderAssignmentsController(ECommerceContext context)
+    private sealed class AssignmentMetadata
     {
-        _context = context;
+        public string Department { get; set; } = "";
+        public int? Assigneduserid { get; set; }
+        public int? Assignedbyuserid { get; set; }
+        public DateTime? Assignedat { get; set; }
+        public DateTime? Completedat { get; set; }
     }
 
-    private int? GetClaimUserId()
+    public OrderAssignmentsController(ECommerceContext context) => _context = context;
+
+    private int? CurrentUserId() =>
+        int.TryParse(User.FindFirst("userid")?.Value, out var value) ? value : null;
+
+    private static string NormalizeDepartment(string? value) =>
+        value?.Trim().Equals(Sales, StringComparison.OrdinalIgnoreCase) == true ? Sales :
+        value?.Trim().Equals(Warehouse, StringComparison.OrdinalIgnoreCase) == true ? Warehouse : "";
+
+    private bool CanWork(string department) =>
+        User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole(department);
+
+    private static AssignmentMetadata? ReadMetadata(Statuslog log)
     {
-        var value = User.FindFirst("userid")?.Value;
-        return int.TryParse(value, out var userId) ? userId : null;
+        if (string.IsNullOrWhiteSpace(log.Metadata)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<AssignmentMetadata>(log.Metadata,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException) { return null; }
     }
 
-    private static string NormalizeDepartment(string? department)
+    private async Task<OrderAssignmentDto?> GetAssignmentAsync(int orderId, string department)
     {
-        var value = (department ?? string.Empty).Trim();
-        if (value.Equals(SalesDepartment, StringComparison.OrdinalIgnoreCase)) return SalesDepartment;
-        if (value.Equals(WarehouseDepartment, StringComparison.OrdinalIgnoreCase)) return WarehouseDepartment;
-        return string.Empty;
+        var logs = await _context.Statuslogs.AsNoTracking()
+            .Where(log => log.Entitytype == "Order" && log.Entityid == orderId && log.Actiontype == "Assignment")
+            .OrderByDescending(log => log.Createdat)
+            .ThenByDescending(log => log.Logid)
+            .ToListAsync();
+        var match = logs.Select(log => new { log, metadata = ReadMetadata(log) })
+            .FirstOrDefault(item => item.metadata?.Department == department);
+        if (match?.metadata == null) return null;
+
+        var userIds = new[] { match.metadata.Assigneduserid, match.metadata.Assignedbyuserid }
+            .Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+        var names = await _context.Users.AsNoTracking()
+            .Where(user => userIds.Contains(user.Userid))
+            .ToDictionaryAsync(user => user.Userid, user => user.Fullname);
+        return new OrderAssignmentDto(
+            match.log.Logid, orderId, department,
+            match.metadata.Assigneduserid,
+            match.metadata.Assigneduserid.HasValue ? names.GetValueOrDefault(match.metadata.Assigneduserid.Value) : null,
+            match.metadata.Assignedbyuserid,
+            match.metadata.Assignedbyuserid.HasValue ? names.GetValueOrDefault(match.metadata.Assignedbyuserid.Value) : null,
+            match.log.Tostatus,
+            match.metadata.Assignedat,
+            match.metadata.Completedat,
+            match.log.Note);
     }
 
-    private bool CanWorkDepartment(string department) =>
-        User.IsInRole("Admin") ||
-        User.IsInRole("Manager") ||
-        department == SalesDepartment && User.IsInRole("Sales") ||
-        department == WarehouseDepartment && User.IsInRole("Warehouse");
-
-    private static bool IsPaymentReady(Order order) =>
-        order.Paymentmethod == "COD"
-            ? order.Paymentstatus == "CODPending"
-            : order.Paymentstatus is "DepositPaid" or "Paid";
-
-    private static OrderAssignmentDto MapAssignment(Orderassignment assignment) => new(
-        assignment.Assignmentid,
-        assignment.Orderid,
-        assignment.Department,
-        assignment.Assigneduserid,
-        assignment.Assigneduser?.Fullname,
-        assignment.Assignedbyuserid,
-        assignment.Assignedbyuser?.Fullname,
-        assignment.Status,
-        assignment.Assignedat,
-        assignment.Completedat,
-        assignment.Note);
-
-    private static OrderWorkflowItemDto MapWorkflow(Order order, string department)
+    private async Task<OrderWorkflowItemDto> MapAsync(Order order, string department)
     {
-        var assignment = order.Orderassignments
-            .FirstOrDefault(item => item.Department == department);
-        var devices = order.Orderitems
-            .Where(item => !string.IsNullOrWhiteSpace(item.Imei))
+        var devices = order.Orderitems.Where(item => !string.IsNullOrWhiteSpace(item.Imei))
             .Select(item => new OrderWorkflowDeviceDto(
-                item.Orderitemid,
-                item.Imei!,
+                item.Orderitemid, item.Imei!,
                 item.ImeiNavigation?.Variant?.Product?.Productname,
                 item.ImeiNavigation?.Variant?.Sku,
-                item.ImeiNavigation?.Status))
-            .ToList();
+                item.ImeiNavigation?.Status)).ToList();
         return new OrderWorkflowItemDto(
-            order.Orderid,
-            order.Orderdate,
-            order.Orderstatus,
-            order.Paymentmethod,
-            order.Paymentstatus,
-            order.Finalamount,
-            order.Paidamount ?? 0,
-            order.Checkouttype,
-            order.Shippingname,
-            order.Shippingphone,
-            order.Shippingaddress,
-            order.Orderitems.Count,
-            devices,
-            assignment == null ? null : MapAssignment(assignment));
+            order.Orderid, order.Orderdate, order.Orderstatus, order.Paymentmethod,
+            order.Paymentstatus, order.Finalamount, order.Paidamount ?? 0,
+            order.Checkouttype, order.Shippingname, order.Shippingphone,
+            order.Shippingaddress, order.Orderitems.Count, devices,
+            await GetAssignmentAsync(order.Orderid, department));
+    }
+
+    private void AddAssignmentLog(
+        int orderId, string department, string status,
+        int? assignedUserId, int? assignedByUserId,
+        DateTime? assignedAt, DateTime? completedAt, string? note)
+    {
+        _context.Statuslogs.Add(new Statuslog
+        {
+            Entitytype = "Order",
+            Entityid = orderId,
+            Actiontype = "Assignment",
+            Fromstatus = status,
+            Tostatus = status,
+            Userid = assignedByUserId,
+            Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+            Metadata = JsonSerializer.Serialize(new AssignmentMetadata
+            {
+                Department = department,
+                Assigneduserid = assignedUserId,
+                Assignedbyuserid = assignedByUserId,
+                Assignedat = assignedAt,
+                Completedat = completedAt
+            }),
+            Createdat = DateTime.UtcNow
+        });
     }
 
     [HttpGet("queue/{department}")]
     public async Task<ActionResult<IEnumerable<OrderWorkflowItemDto>>> GetQueue(string department)
     {
         department = NormalizeDepartment(department);
-        if (department.Length == 0)
-            return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
-        if (!CanWorkDepartment(department)) return Forbid();
+        if (department.Length == 0) return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
+        if (!CanWork(department)) return Forbid();
 
-        var query = _context.Orders
-            .AsNoTracking()
+        var query = _context.Orders.AsNoTracking()
             .Include(order => order.Orderitems)
                 .ThenInclude(item => item.ImeiNavigation)
                     .ThenInclude(item => item!.Variant)
                         .ThenInclude(item => item!.Product)
-            .Include(order => order.Orderassignments.Where(item => item.Department == department))
-                .ThenInclude(item => item.Assigneduser)
-            .Include(order => order.Orderassignments.Where(item => item.Department == department))
-                .ThenInclude(item => item.Assignedbyuser)
             .AsQueryable();
-
-        query = department == SalesDepartment
+        query = department == Sales
             ? query.Where(order => order.Orderstatus == "Pending")
-            : query.Where(order =>
-                order.Orderstatus == "Processing" &&
-                order.Orderassignments.Any(item => item.Department == WarehouseDepartment));
-
-        var orders = await query
-            .OrderBy(order => order.Orderdate)
-            .ToListAsync();
-        return Ok(orders.Select(order => MapWorkflow(order, department)));
+            : query.Where(order => order.Orderstatus == "Processing");
+        var orders = await query.OrderBy(order => order.Orderdate).ToListAsync();
+        var result = new List<OrderWorkflowItemDto>();
+        foreach (var order in orders) result.Add(await MapAsync(order, department));
+        return Ok(result);
     }
 
     [HttpGet("employees/{department}")]
@@ -130,332 +149,126 @@ public class OrderAssignmentsController : ControllerBase
     public async Task<ActionResult<IEnumerable<AssignmentEmployeeDto>>> GetEmployees(string department)
     {
         department = NormalizeDepartment(department);
-        if (department.Length == 0)
-            return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
-
-        var employees = await _context.Users
-            .AsNoTracking()
-            .Include(user => user.Role)
-            .Where(user =>
-                user.Isactive == true &&
-                user.Role != null &&
-                user.Role.Rolename == department)
+        if (department.Length == 0) return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
+        return Ok(await _context.Users.AsNoTracking().Include(user => user.Role)
+            .Where(user => user.Isactive == true && user.Role != null && user.Role.Rolename == department)
             .OrderBy(user => user.Fullname)
-            .Select(user => new AssignmentEmployeeDto(
-                user.Userid,
-                user.Fullname,
-                user.Role!.Rolename))
-            .ToListAsync();
-        return Ok(employees);
+            .Select(user => new AssignmentEmployeeDto(user.Userid, user.Fullname, user.Role!.Rolename))
+            .ToListAsync());
     }
 
-    [HttpPost("{orderId}/claim")]
-    public async Task<ActionResult<OrderAssignmentDto>> Claim(
-        int orderId,
-        [FromBody] ClaimOrderRequestDto dto)
+    [HttpPost("{orderId:int}/claim")]
+    public async Task<ActionResult<OrderAssignmentDto>> Claim(int orderId, ClaimOrderRequestDto dto)
     {
         var department = NormalizeDepartment(dto.Department);
-        if (department.Length == 0)
-            return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
-        if (!CanWorkDepartment(department)) return Forbid();
-
-        var userId = GetClaimUserId();
-        if (!userId.HasValue)
-            return Unauthorized(new ApiErrorDto("Không xác định được nhân viên.", null));
-
-        await using var transaction = await _context.Database.BeginTransactionAsync();
-        var order = await _context.Orders
-            .Include(order => order.Orderassignments)
-            .FirstOrDefaultAsync(order => order.Orderid == orderId);
+        var userId = CurrentUserId();
+        if (department.Length == 0) return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
+        if (!CanWork(department)) return Forbid();
+        if (!userId.HasValue) return Unauthorized();
+        var order = await _context.Orders.FindAsync(orderId);
         if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
+        if (department == Sales && order.Orderstatus != "Pending" || department == Warehouse && order.Orderstatus != "Processing")
+            return Conflict(new ApiErrorDto("Đơn hàng không còn trong hàng đợi của bộ phận này.", null));
 
-        if (department == SalesDepartment && order.Orderstatus != "Pending")
-            return BadRequest(new ApiErrorDto("Sales chi co the nhan don dang cho xu ly.", null));
-        if (department == WarehouseDepartment &&
-            (order.Orderstatus != "Processing" ||
-             !order.Orderassignments.Any(item => item.Department == WarehouseDepartment)))
-            return BadRequest(new ApiErrorDto("Đơn hàng chưa được bàn giao cho kho.", null));
-
-        var assignment = order.Orderassignments
-            .FirstOrDefault(item => item.Department == department);
-        if (assignment?.Status == "Assigned" && assignment.Assigneduserid != userId)
+        var current = await GetAssignmentAsync(orderId, department);
+        if (current?.Status == "Assigned" && current.Assigneduserid != userId)
             return Conflict(new ApiErrorDto("Đơn hàng đã có nhân viên khác phụ trách.", null));
-        if (assignment?.Status == "Completed")
-            return Conflict(new ApiErrorDto("Công việc của bộ phận này đã hoàn tất.", null));
-
-        if (assignment == null)
-        {
-            assignment = new Orderassignment
-            {
-                Orderid = orderId,
-                Department = department,
-                Status = "Assigned"
-            };
-            _context.Orderassignments.Add(assignment);
-        }
-
-        assignment.Assigneduserid = userId;
-        assignment.Assignedbyuserid = userId;
-        assignment.Assignedat ??= DateTime.UtcNow;
-        assignment.Status = "Assigned";
-        assignment.Note = string.IsNullOrWhiteSpace(dto.Note) ? assignment.Note : dto.Note.Trim();
-
-        try
-        {
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-        }
-        catch (DbUpdateException)
-        {
-            await transaction.RollbackAsync();
-            return Conflict(new ApiErrorDto("Đơn hàng vừa được nhân viên khác tiếp nhận.", null));
-        }
-
-        await _context.Entry(assignment).Reference(item => item.Assigneduser).LoadAsync();
-        await _context.Entry(assignment).Reference(item => item.Assignedbyuser).LoadAsync();
-        return Ok(MapAssignment(assignment));
+        AddAssignmentLog(orderId, department, "Assigned", userId, userId,
+            current?.Assignedat ?? DateTime.UtcNow, null, dto.Note);
+        await _context.SaveChangesAsync();
+        return Ok((await GetAssignmentAsync(orderId, department))!);
     }
 
-    [HttpPost("{orderId}/assign")]
+    [HttpPost("{orderId:int}/assign")]
     [Authorize(Roles = "Admin,Manager")]
-    public async Task<ActionResult<OrderAssignmentDto>> Assign(
-        int orderId,
-        [FromBody] AssignOrderRequestDto dto)
+    public async Task<ActionResult<OrderAssignmentDto>> Assign(int orderId, AssignOrderRequestDto dto)
     {
         var department = NormalizeDepartment(dto.Department);
-        if (department.Length == 0)
-            return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
-
-        var assignedByUserId = GetClaimUserId();
-        var target = await _context.Users
-            .Include(user => user.Role)
-            .FirstOrDefaultAsync(user => user.Userid == dto.Assigneduserid);
-        if (target == null || target.Isactive != true)
-            return BadRequest(new ApiErrorDto("Nhân viên được chọn không hoạt động.", null));
-        if (target.Role?.Rolename != department)
+        if (department.Length == 0) return BadRequest(new ApiErrorDto("Bộ phận không hợp lệ.", null));
+        var target = await _context.Users.Include(user => user.Role)
+            .FirstOrDefaultAsync(user => user.Userid == dto.Assigneduserid && user.Isactive == true);
+        if (target?.Role?.Rolename != department)
             return BadRequest(new ApiErrorDto("Nhân viên không thuộc bộ phận được phân công.", null));
-
-        var order = await _context.Orders
-            .Include(item => item.Orderassignments)
-            .FirstOrDefaultAsync(item => item.Orderid == orderId);
-        if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
-
-        var assignment = order.Orderassignments.FirstOrDefault(item => item.Department == department);
-        if (assignment?.Status == "Completed")
-            return Conflict(new ApiErrorDto("Công việc của bộ phận này đã hoàn tất.", null));
-
-        if (assignment == null)
-        {
-            assignment = new Orderassignment
-            {
-                Orderid = orderId,
-                Department = department
-            };
-            _context.Orderassignments.Add(assignment);
-        }
-
-        assignment.Assigneduserid = target.Userid;
-        assignment.Assignedbyuserid = assignedByUserId;
-        assignment.Assignedat = DateTime.UtcNow;
-        assignment.Status = "Assigned";
-        assignment.Note = string.IsNullOrWhiteSpace(dto.Note) ? assignment.Note : dto.Note.Trim();
+        if (!await _context.Orders.AnyAsync(order => order.Orderid == orderId))
+            return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
+        AddAssignmentLog(orderId, department, "Assigned", target.Userid, CurrentUserId(), DateTime.UtcNow, null, dto.Note);
         await _context.SaveChangesAsync();
-
-        assignment.Assigneduser = target;
-        if (assignedByUserId.HasValue)
-        {
-            assignment.Assignedbyuser = await _context.Users.FindAsync(assignedByUserId.Value);
-        }
-        return Ok(MapAssignment(assignment));
+        return Ok((await GetAssignmentAsync(orderId, department))!);
     }
 
-    [HttpPost("{orderId}/handoff-to-warehouse")]
+    [HttpPost("{orderId:int}/handoff-to-warehouse")]
     [Authorize(Roles = "Admin,Manager,Sales")]
-    public async Task<ActionResult<OrderWorkflowItemDto>> HandoffToWarehouse(
-        int orderId,
-        [FromBody] HandoffOrderRequestDto dto)
+    public async Task<ActionResult<OrderWorkflowItemDto>> HandoffToWarehouse(int orderId, HandoffOrderRequestDto dto)
     {
-        var userId = GetClaimUserId();
-        var order = await _context.Orders
-            .Include(item => item.Orderitems)
-                .ThenInclude(item => item.ImeiNavigation)
-                    .ThenInclude(item => item!.Variant)
-                        .ThenInclude(item => item!.Product)
-            .Include(item => item.Orderassignments)
+        var order = await _context.Orders.Include(item => item.Orderitems)
+            .ThenInclude(item => item.ImeiNavigation)!.ThenInclude(item => item!.Variant)!.ThenInclude(item => item!.Product)
             .FirstOrDefaultAsync(item => item.Orderid == orderId);
         if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
-        if (order.Orderstatus != "Pending")
-            return BadRequest(new ApiErrorDto("Chi don dang cho moi co the ban giao.", null));
-        if (!IsPaymentReady(order))
-            return BadRequest(new ApiErrorDto("Đơn hàng chưa đặt cọc/thanh toán đủ điều kiện.", null));
+        if (order.Orderstatus != "Pending") return Conflict(new ApiErrorDto("Chỉ đơn chờ duyệt mới có thể bàn giao.", null));
+        var paymentReady = order.Paymentmethod == "COD"
+            ? order.Paymentstatus == "CODPending"
+            : order.Paymentstatus is "DepositPaid" or "Paid";
+        if (!paymentReady) return BadRequest(new ApiErrorDto("Đơn hàng chưa đủ điều kiện thanh toán.", null));
 
-        var salesAssignment = order.Orderassignments
-            .FirstOrDefault(item => item.Department == SalesDepartment);
-        if (User.IsInRole("Sales") &&
-            (salesAssignment == null ||
-             salesAssignment.Assigneduserid != userId ||
-             salesAssignment.Status != "Assigned"))
-            return StatusCode(403, new ApiErrorDto("Bạn phải nhận đơn trước khi bàn giao.", null));
-
-        if (salesAssignment != null)
-        {
-            salesAssignment.Status = "Completed";
-            salesAssignment.Completedat = DateTime.UtcNow;
-        }
-
-        var warehouseAssignment = order.Orderassignments
-            .FirstOrDefault(item => item.Department == WarehouseDepartment);
-        if (warehouseAssignment == null)
-        {
-            warehouseAssignment = new Orderassignment
-            {
-                Orderid = orderId,
-                Department = WarehouseDepartment,
-                Status = "Pending",
-                Assignedbyuserid = userId,
-                Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim()
-            };
-            _context.Orderassignments.Add(warehouseAssignment);
-        }
-        else
-        {
-            warehouseAssignment.Status = "Pending";
-            warehouseAssignment.Assigneduserid = null;
-            warehouseAssignment.Assignedat = null;
-            warehouseAssignment.Completedat = null;
-            warehouseAssignment.Assignedbyuserid = userId;
-            warehouseAssignment.Note = string.IsNullOrWhiteSpace(dto.Note)
-                ? warehouseAssignment.Note
-                : dto.Note.Trim();
-        }
-
+        var now = DateTime.UtcNow;
+        AddAssignmentLog(orderId, Sales, "Completed", CurrentUserId(), CurrentUserId(), now, now, dto.Note);
+        AddAssignmentLog(orderId, Warehouse, "Pending", null, CurrentUserId(), null, null, dto.Note);
         order.Orderstatus = "Processing";
         await _context.SaveChangesAsync();
-
-        await _context.Entry(warehouseAssignment).Reference(item => item.Assignedbyuser).LoadAsync();
-        return Ok(MapWorkflow(order, WarehouseDepartment));
+        return Ok(await MapAsync(order, Warehouse));
     }
 
-    [HttpPost("{orderId}/mark-shipped")]
+    [HttpPost("{orderId:int}/mark-shipped")]
     [Authorize(Roles = "Admin,Manager,Warehouse")]
-    public async Task<ActionResult<OrderWorkflowItemDto>> MarkShipped(
-        int orderId,
-        [FromBody] MarkOrderShippedRequestDto dto)
+    public async Task<ActionResult<OrderWorkflowItemDto>> MarkShipped(int orderId, MarkOrderShippedRequestDto dto)
     {
-        var userId = GetClaimUserId();
-        var order = await _context.Orders
-            .Include(item => item.Orderitems)
-                .ThenInclude(item => item.ImeiNavigation)
-                    .ThenInclude(item => item!.Variant)
-                        .ThenInclude(item => item!.Product)
-            .Include(item => item.Orderassignments)
-                .ThenInclude(item => item.Assigneduser)
+        var order = await _context.Orders.Include(item => item.Orderitems)
+            .ThenInclude(item => item.ImeiNavigation)!.ThenInclude(item => item!.Variant)!.ThenInclude(item => item!.Product)
             .FirstOrDefaultAsync(item => item.Orderid == orderId);
         if (order == null) return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
-        if (order.Orderstatus != "Processing")
-            return BadRequest(new ApiErrorDto("Đơn hàng không ở trạng thái đang xử lý.", null));
+        if (order.Orderstatus != "Processing") return Conflict(new ApiErrorDto("Đơn hàng không ở trạng thái đang xử lý.", null));
         if (await _context.Shipments.AnyAsync(item => item.Orderid == orderId))
             return Conflict(new ApiErrorDto("Đơn hàng đã có vận đơn.", null));
-
-        if (string.IsNullOrWhiteSpace(dto.Carrier))
-            return BadRequest(new ApiErrorDto("Vui lòng chọn đơn vị vận chuyển.", null));
         var carrier = dto.Carrier.Trim().ToUpperInvariant();
-        if (order.Checkouttype == "Guest" && carrier != InternalDeliveryCarrier)
-            return BadRequest(new ApiErrorDto(
-                "ÄÆ¡n khÃ¡ch vÃ£ng lai pháº£i do nhÃ¢n viÃªn cá»­a hÃ ng giao ná»™i thÃ nh TP.HCM.", null));
-        if (!DemoCarriers.Contains(carrier))
-            return BadRequest(new ApiErrorDto("Đơn vị vận chuyển không hợp lệ.", null));
-        if (dto.Estimateddeliveryat.HasValue && dto.Estimateddeliveryat.Value.Date < DateTime.UtcNow.Date)
-            return BadRequest(new ApiErrorDto("Ngày giao dự kiến không được ở trong quá khứ.", null));
+        if (!Carriers.Contains(carrier)) return BadRequest(new ApiErrorDto("Đơn vị vận chuyển không hợp lệ.", null));
+        if (order.Checkouttype == "Guest" && carrier != InternalCarrier)
+            return BadRequest(new ApiErrorDto("Đơn khách vãng lai phải do cửa hàng giao nội thành TP.HCM.", null));
 
-        var assignment = order.Orderassignments
-            .FirstOrDefault(item => item.Department == WarehouseDepartment);
-        if (assignment == null)
-            return BadRequest(new ApiErrorDto("Đơn hàng chưa được bàn giao cho kho.", null));
-        if (User.IsInRole("Warehouse") &&
-            (assignment.Assigneduserid != userId || assignment.Status != "Assigned"))
-            return StatusCode(403, new ApiErrorDto("Bạn phải nhận đơn trước khi xác nhận giao.", null));
-
-        var expectedImeis = order.Orderitems
-            .Where(item => !string.IsNullOrWhiteSpace(item.Imei))
-            .Select(item => item.Imei!)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var confirmedImeis = dto.Imeis
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(item => item.Trim())
-            .ToList();
-        var confirmedSet = confirmedImeis.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        if (expectedImeis.Count == 0 ||
-            confirmedImeis.Count != confirmedSet.Count ||
-            !expectedImeis.SetEquals(confirmedSet))
+        var expected = order.Orderitems.Where(item => item.Imei != null).Select(item => item.Imei!).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var confirmed = dto.Imeis.Where(item => !string.IsNullOrWhiteSpace(item)).Select(item => item.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (expected.Count == 0 || !expected.SetEquals(confirmed))
+            return BadRequest(new ApiErrorDto("Danh sách IMEI xác nhận không khớp với đơn hàng.", null));
+        foreach (var inventory in order.Orderitems.Select(item => item.ImeiNavigation).Where(item => item != null).Cast<Inventoryitem>())
         {
-            return BadRequest(new ApiErrorDto(
-                "Danh sách IMEI xác nhận không khớp với thiết bị của đơn hàng.",
-                null));
-        }
-
-        var inventoryItems = order.Orderitems
-            .Select(item => item.ImeiNavigation)
-            .Where(item => item != null)
-            .Cast<Inventoryitem>()
-            .ToList();
-        if (inventoryItems.Count != expectedImeis.Count ||
-            inventoryItems.Any(item => item.Status != "Reserved"))
-        {
-            return Conflict(new ApiErrorDto(
-                "Có thiết bị không còn ở trạng thái Reserved. Vui lòng kiểm tra lại kho.",
-                null));
-        }
-
-        foreach (var inventoryItem in inventoryItems)
-        {
-            var previousStatus = inventoryItem.Status;
-            inventoryItem.Status = "Shipping";
+            var previous = inventory.Status;
+            inventory.Status = "Shipping";
             _context.Inventorytransactions.Add(new Inventorytransaction
             {
-                Imei = inventoryItem.Imei,
-                Orderid = order.Orderid,
-                Userid = userId,
-                Transactiontype = "Ship",
-                Fromstatus = previousStatus,
-                Tostatus = "Shipping",
-                Note = string.IsNullOrWhiteSpace(dto.Note)
-                    ? "Warehouse confirmed device and released order for delivery."
-                    : dto.Note.Trim(),
-                Createdat = DateTime.UtcNow
+                Imei = inventory.Imei, Orderid = orderId, Userid = CurrentUserId(),
+                Transactiontype = "Ship", Fromstatus = previous, Tostatus = "Shipping",
+                Note = dto.Note, Createdat = DateTime.UtcNow
             });
         }
-
-        assignment.Status = "Completed";
-        assignment.Completedat = DateTime.UtcNow;
-        order.Orderstatus = "Shipped";
         var now = DateTime.UtcNow;
+        order.Orderstatus = "Shipped";
         var shipment = new Shipment
         {
-            Orderid = order.Orderid,
-            Carrier = carrier,
-            Trackingcode = $"{carrier.Replace("&", string.Empty)}-DEMO-{now:yyyyMMdd}-{order.Orderid:D6}",
-            Shippingfee = dto.Shippingfee,
-            Status = "AwaitingPickup",
-            Estimateddeliveryat = dto.Estimateddeliveryat,
-            Createdbyuserid = userId,
-            Createdat = now,
-            Updatedat = now
+            Orderid = orderId, Carrier = carrier,
+            Trackingcode = $"{carrier.Replace("&", "")}-DEMO-{now:yyyyMMdd}-{orderId:D6}",
+            Shippingfee = dto.Shippingfee, Status = "AwaitingPickup",
+            Estimateddeliveryat = dto.Estimateddeliveryat, Createdbyuserid = CurrentUserId(),
+            Createdat = now, Updatedat = now
         };
-        shipment.Histories.Add(new Shipmenthistory
-        {
-            Userid = userId,
-            Tostatus = "AwaitingPickup",
-            Note = string.IsNullOrWhiteSpace(dto.Note)
-                ? "Warehouse created the demo shipment."
-                : dto.Note.Trim(),
-            Createdat = now
-        });
         _context.Shipments.Add(shipment);
+        AddAssignmentLog(orderId, Warehouse, "Completed", CurrentUserId(), CurrentUserId(), now, now, dto.Note);
         await _context.SaveChangesAsync();
-        return Ok(MapWorkflow(order, WarehouseDepartment));
+        _context.Statuslogs.Add(new Statuslog
+        {
+            Entitytype = "Shipment", Entityid = shipment.Shipmentid, Actiontype = "StatusChanged",
+            Fromstatus = "Created", Tostatus = "AwaitingPickup", Userid = CurrentUserId(),
+            Note = dto.Note, Createdat = now
+        });
+        await _context.SaveChangesAsync();
+        return Ok(await MapAsync(order, Warehouse));
     }
 }
-
-*/

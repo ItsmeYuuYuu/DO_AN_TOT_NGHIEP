@@ -24,8 +24,6 @@ public partial class Productvariant
 
     public string? Specifications { get; set; }
 
-    public virtual ICollection<Chatproductrecommendation> Chatproductrecommendations { get; set; } = new List<Chatproductrecommendation>();
-
     public virtual ICollection<Inventoryitem> Inventoryitems { get; set; } = new List<Inventoryitem>();
 
     public virtual Product? Product { get; set; }

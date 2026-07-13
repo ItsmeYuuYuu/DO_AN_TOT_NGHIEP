@@ -104,8 +104,11 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-// ── Audit Log (Singleton background service + scoped filter) ─────────────────────
-/*
+// ── Singleton Services ────────────────────────────────────────────────────────
+// ProductImageStorageService: quản lý file ảnh upload trên server (sản phẩm, tin tức, bảo hành, đổi trả)
+builder.Services.AddSingleton<ECommerceBackend.Services.ProductImageStorageService>();
+
+// Runtime services used by authentication, registration and AI consultation.
 builder.Services.Configure<ECommerceBackend.Services.Chat.AiAssistantOptions>(
     builder.Configuration.GetSection(ECommerceBackend.Services.Chat.AiAssistantOptions.SectionName));
 builder.Services.Configure<ECommerceBackend.Services.Email.EmailOptions>(
@@ -117,30 +120,15 @@ builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatOrchestratorServi
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatTypingService, ECommerceBackend.Services.Chat.ChatTypingService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Email.IEmailService, ECommerceBackend.Services.Email.SmtpEmailService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Email.IRegistrationOtpService, ECommerceBackend.Services.Email.RegistrationOtpService>();
-builder.Services.AddSingleton<ProductImageStorageService>();
-var redisConnection = builder.Configuration.GetConnectionString("Redis");
-if (!string.IsNullOrWhiteSpace(redisConnection))
-{
-    builder.Services.AddStackExchangeRedisCache(options =>
-    {
-        options.Configuration = redisConnection;
-        options.InstanceName = "ECommerce:";
-    });
-}
-else
-{
-    builder.Services.AddDistributedMemoryCache();
-}
-builder.Services.AddScoped<ICheckoutAbuseProtectionService, CheckoutAbuseProtectionService>();
-builder.Services.AddHostedService<ExpiredOrderCleanupService>();
-builder.Services.AddSingleton<AuditLogService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<AuditLogService>());
-builder.Services.AddScoped<AuditActionFilter>();
-*/
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddScoped<ECommerceBackend.Services.Checkout.ICheckoutAbuseProtectionService, ECommerceBackend.Services.Checkout.CheckoutAbuseProtectionService>();
+builder.Services.AddHostedService<ECommerceBackend.Services.Checkout.ExpiredOrderCleanupService>();
 
-// ── Singleton Services ────────────────────────────────────────────────────────
-// ProductImageStorageService: quản lý file ảnh upload trên server (sản phẩm, tin tức, bảo hành, đổi trả)
-builder.Services.AddSingleton<ECommerceBackend.Services.ProductImageStorageService>();
+// Audit writes are queued by a global action filter and flushed asynchronously.
+builder.Services.AddSingleton<ECommerceBackend.Services.AuditLogService>();
+builder.Services.AddHostedService(provider =>
+    provider.GetRequiredService<ECommerceBackend.Services.AuditLogService>());
+builder.Services.AddScoped<ECommerceBackend.Filters.AuditActionFilter>();
 
 // ── Health Checks ─────────────────────────────────────────────────────────────
 builder.Services.AddHealthChecks();
@@ -148,8 +136,7 @@ builder.Services.AddHealthChecks();
 // ── Controllers + JSON + Global Audit Filter ─────────────────────────────────
 builder.Services.AddControllers(options =>
     {
-        // Áp dụng AuditActionFilter cho TOÀN BỘ controllers
-        //options.Filters.AddService<AuditActionFilter>();
+        options.Filters.AddService<ECommerceBackend.Filters.AuditActionFilter>();
     })
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.ReferenceHandler =

@@ -106,6 +106,12 @@ public sealed class SmtpEmailService : IEmailService
         CancellationToken cancellationToken,
         string? fallbackLog = null)
     {
+        if (IsReservedTestAddress(to))
+        {
+            _logger.LogInformation("Skipped SMTP delivery to reserved test address {Recipient}. Subject: {Subject}", to, subject);
+            return;
+        }
+
         if (!IsConfigured)
         {
             _logger.LogInformation("Email is not configured. {Fallback}", fallbackLog ?? $"{subject} -> {to}");
@@ -132,6 +138,15 @@ public sealed class SmtpEmailService : IEmailService
         };
 
         await client.SendMailAsync(message, cancellationToken);
+    }
+
+    private static bool IsReservedTestAddress(string email)
+    {
+        var atIndex = email.LastIndexOf('@');
+        if (atIndex < 0 || atIndex == email.Length - 1) return false;
+        var domain = email[(atIndex + 1)..].Trim().ToLowerInvariant();
+        return domain is "example.com" or "example.net" or "example.org" ||
+               domain.EndsWith(".invalid", StringComparison.Ordinal);
     }
 
     private static string BuildEmailLayout(string title, string leadHtml, string bodyHtml)

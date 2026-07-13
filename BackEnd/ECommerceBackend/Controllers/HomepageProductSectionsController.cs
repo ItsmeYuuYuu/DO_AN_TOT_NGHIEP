@@ -13,6 +13,13 @@ namespace ECommerceBackend.Controllers;
 [ApiController]
 public class HomepageProductSectionsController : ControllerBase
 {
+    private const string HomepageSectionType = "HomepageProductSection";
+    private sealed record HomepageSectionData(
+        string Sectionkey,
+        string? Subtitle,
+        string Theme,
+        List<int> Productids);
+
     private readonly ECommerceContext _context;
 
     public HomepageProductSectionsController(ECommerceContext context)
@@ -70,16 +77,29 @@ public class HomepageProductSectionsController : ControllerBase
         );
     }
 
-    private async Task<HomepageProductSectionDto> MapSectionAsync(Homepageproductsection section, bool activeItemsOnly)
+    private static HomepageSectionData ParseSectionData(Content section)
     {
-        var items = new List<HomepageProductSectionItemDto>();
-        if (!string.IsNullOrWhiteSpace(section.Productids))
+        if (!string.IsNullOrWhiteSpace(section.Contentdata))
         {
-            List<int> productIds = new();
-            try { productIds = JsonSerializer.Deserialize<List<int>>(section.Productids) ?? new List<int>(); } catch { }
-
-            if (productIds.Any())
+            try
             {
+                var data = JsonSerializer.Deserialize<HomepageSectionData>(section.Contentdata,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (data != null) return data;
+            }
+            catch (JsonException) { }
+        }
+
+        return new HomepageSectionData($"section-{section.Contentid}", section.Summary, "LightBlue", []);
+    }
+
+    private async Task<HomepageProductSectionDto> MapSectionAsync(Content section, bool activeItemsOnly)
+    {
+        var data = ParseSectionData(section);
+        var items = new List<HomepageProductSectionItemDto>();
+        var productIds = data.Productids;
+        if (productIds.Count > 0)
+        {
                 var products = await _context.Products
                     .Include(product => product.Brand)
                     .Include(product => product.Category)
@@ -95,7 +115,7 @@ public class HomepageProductSectionsController : ControllerBase
                     {
                         items.Add(new HomepageProductSectionItemDto(
                             order + 1,
-                            section.Sectionid,
+                            section.Contentid,
                             pid,
                             order,
                             true,
@@ -106,15 +126,14 @@ public class HomepageProductSectionsController : ControllerBase
                         if (activeItemsOnly && order >= 5) break;
                     }
                 }
-            }
         }
 
         return new HomepageProductSectionDto(
-            section.Sectionid,
-            section.Sectionkey,
+            section.Contentid,
+            data.Sectionkey,
             section.Title,
-            section.Subtitle,
-            section.Theme,
+            data.Subtitle,
+            data.Theme,
             section.Displayorder,
             section.Isactive,
             section.Createdat,
@@ -125,11 +144,11 @@ public class HomepageProductSectionsController : ControllerBase
     [HttpGet("active")]
     public async Task<ActionResult<IEnumerable<HomepageProductSectionDto>>> GetActiveSections()
     {
-        var sections = await _context.Homepageproductsections
+        var sections = await _context.Contents
             .AsNoTracking()
-            .Where(section => section.Isactive == true)
+            .Where(section => section.Contenttype == HomepageSectionType && section.Isactive == true)
             .OrderBy(section => section.Displayorder ?? 0)
-            .ThenBy(section => section.Sectionid)
+            .ThenBy(section => section.Contentid)
             .ToListAsync();
 
         var dtos = new List<HomepageProductSectionDto>();
@@ -145,10 +164,11 @@ public class HomepageProductSectionsController : ControllerBase
     [Authorize(Roles = "Admin,Manager,Content")]
     public async Task<ActionResult<IEnumerable<HomepageProductSectionDto>>> GetSections()
     {
-        var sections = await _context.Homepageproductsections
+        var sections = await _context.Contents
             .AsNoTracking()
+            .Where(section => section.Contenttype == HomepageSectionType)
             .OrderBy(section => section.Displayorder ?? 0)
-            .ThenBy(section => section.Sectionid)
+            .ThenBy(section => section.Contentid)
             .ToListAsync();
 
         var dtos = new List<HomepageProductSectionDto>();
@@ -166,8 +186,9 @@ public class HomepageProductSectionsController : ControllerBase
         int sectionId,
         [FromBody] UpdateHomepageProductSectionRequestDto dto)
     {
-        var section = await _context.Homepageproductsections
-            .FirstOrDefaultAsync(item => item.Sectionid == sectionId);
+        var section = await _context.Contents
+            .FirstOrDefaultAsync(item =>
+                item.Contentid == sectionId && item.Contenttype == HomepageSectionType);
         if (section == null)
         {
             return NotFound(new ApiErrorDto("Không tìm thấy vùng hiển thị trang chủ.", null));
@@ -191,11 +212,16 @@ public class HomepageProductSectionsController : ControllerBase
         }
 
         section.Title = dto.Title.Trim();
-        section.Subtitle = dto.Subtitle?.Trim();
-        section.Theme = string.IsNullOrWhiteSpace(dto.Theme) ? "LightBlue" : dto.Theme.Trim();
+        var currentData = ParseSectionData(section);
+        var theme = string.IsNullOrWhiteSpace(dto.Theme) ? "LightBlue" : dto.Theme.Trim();
         section.Displayorder = dto.Displayorder ?? 0;
         section.Isactive = dto.Isactive ?? true;
-        section.Productids = JsonSerializer.Serialize(requestedProductIds);
+        section.Summary = dto.Subtitle?.Trim();
+        section.Contentdata = JsonSerializer.Serialize(new HomepageSectionData(
+            currentData.Sectionkey,
+            dto.Subtitle?.Trim(),
+            theme,
+            requestedProductIds));
 
         await _context.SaveChangesAsync();
         return NoContent();

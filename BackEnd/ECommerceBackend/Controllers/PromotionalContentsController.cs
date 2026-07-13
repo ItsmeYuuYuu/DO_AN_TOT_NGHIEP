@@ -21,7 +21,7 @@ public class PromotionalContentsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PromotionalContentDto>>> GetAll([FromQuery] string? type)
     {
-        var query = _context.Contents.Where(item => item.Contenttype != "News");
+        var query = _context.Contents.Where(item => item.Contenttype != "News" && item.Contenttype != "HomepageProductSection");
         if (!string.IsNullOrWhiteSpace(type)) query = query.Where(item => item.Contenttype == type);
         return Ok((await query.OrderBy(item => item.Displayorder ?? 999).ThenBy(item => item.Contentid).ToListAsync()).Select(Map));
     }
@@ -29,7 +29,7 @@ public class PromotionalContentsController : ControllerBase
     [HttpGet("active")]
     public async Task<ActionResult<IEnumerable<PromotionalContentDto>>> GetActive([FromQuery] string? type)
     {
-        var query = _context.Contents.Where(item => item.Contenttype != "News" && item.Isactive == true);
+        var query = _context.Contents.Where(item => item.Contenttype != "News" && item.Contenttype != "HomepageProductSection" && item.Isactive == true);
         if (!string.IsNullOrWhiteSpace(type)) query = query.Where(item => item.Contenttype == type);
         return Ok((await query.OrderBy(item => item.Displayorder ?? 999).ThenBy(item => item.Contentid).ToListAsync()).Select(Map));
     }
@@ -37,7 +37,7 @@ public class PromotionalContentsController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PromotionalContentDto>> GetById(int id)
     {
-        var content = await _context.Contents.FirstOrDefaultAsync(item => item.Contentid == id && item.Contenttype != "News");
+        var content = await _context.Contents.FirstOrDefaultAsync(item => item.Contentid == id && item.Contenttype != "News" && item.Contenttype != "HomepageProductSection");
         return content == null ? NotFound(new ApiErrorDto("Nội dung không tồn tại.", null)) : Ok(Map(content));
     }
 
@@ -55,7 +55,7 @@ public class PromotionalContentsController : ControllerBase
     [Authorize(Roles = "Admin,Manager,Content")]
     public async Task<ActionResult<PromotionalContentDto>> Update(int id, [FromBody] UpdatePromotionalContentRequestDto dto)
     {
-        var content = await _context.Contents.FirstOrDefaultAsync(item => item.Contentid == id && item.Contenttype != "News");
+        var content = await _context.Contents.FirstOrDefaultAsync(item => item.Contentid == id && item.Contenttype != "News" && item.Contenttype != "HomepageProductSection");
         if (content == null) return NotFound(new ApiErrorDto("Nội dung không tồn tại.", null));
         content.Contenttype = dto.Contenttype.Trim(); content.Title = dto.Title?.Trim() ?? ""; content.Thumbnailurl = dto.Imageurl.Trim(); content.Linkurl = dto.Linkurl?.Trim(); content.Displayorder = dto.Displayorder ?? content.Displayorder; content.Isactive = dto.Isactive ?? content.Isactive;
         await _context.SaveChangesAsync(); return Ok(Map(content));
@@ -65,7 +65,7 @@ public class PromotionalContentsController : ControllerBase
     [Authorize(Roles = "Admin,Manager,Content")]
     public async Task<IActionResult> Delete(int id)
     {
-        var content = await _context.Contents.FirstOrDefaultAsync(item => item.Contentid == id && item.Contenttype != "News");
+        var content = await _context.Contents.FirstOrDefaultAsync(item => item.Contentid == id && item.Contenttype != "News" && item.Contenttype != "HomepageProductSection");
         if (content == null) return NotFound(new ApiErrorDto("Nội dung không tồn tại.", null));
         _context.Contents.Remove(content); await _context.SaveChangesAsync(); return NoContent();
     }

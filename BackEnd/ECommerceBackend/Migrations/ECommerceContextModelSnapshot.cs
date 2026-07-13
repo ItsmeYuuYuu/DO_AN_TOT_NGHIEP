@@ -176,6 +176,10 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("quickreplies");
 
+                    b.Property<string>("Recommendations")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("recommendations");
+
                     b.Property<string>("Responsetype")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
@@ -203,68 +207,6 @@ namespace ECommerceBackend.Migrations
                     b.HasIndex("Sessionid");
 
                     b.ToTable("chatmessages", (string)null);
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Chatproductrecommendation", b =>
-                {
-                    b.Property<int>("Recommendationid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("recommendationid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Recommendationid"));
-
-                    b.Property<DateTime?>("Addedtocartat")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("addedtocartat");
-
-                    b.Property<DateTime?>("Createdat")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdat")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("Messageid")
-                        .HasColumnType("integer")
-                        .HasColumnName("messageid");
-
-                    b.Property<DateTime?>("Orderedat")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("orderedat");
-
-                    b.Property<int?>("Orderid")
-                        .HasColumnType("integer")
-                        .HasColumnName("orderid");
-
-                    b.Property<int>("Productid")
-                        .HasColumnType("integer")
-                        .HasColumnName("productid");
-
-                    b.Property<int>("Rank")
-                        .HasColumnType("integer")
-                        .HasColumnName("rank");
-
-                    b.Property<int>("Variantid")
-                        .HasColumnType("integer")
-                        .HasColumnName("variantid");
-
-                    b.HasKey("Recommendationid")
-                        .HasName("chatproductrecommendations_pkey");
-
-                    b.HasIndex(new[] { "Messageid", "Variantid" }, "chatproductrecommendations_messageid_variantid_key")
-                        .IsUnique();
-
-                    b.HasIndex(new[] { "Addedtocartat" }, "ix_chatproductrecommendations_addedtocartat");
-
-                    b.HasIndex(new[] { "Orderedat" }, "ix_chatproductrecommendations_orderedat");
-
-                    b.HasIndex(new[] { "Orderid" }, "ix_chatproductrecommendations_orderid");
-
-                    b.HasIndex(new[] { "Productid" }, "ix_chatproductrecommendations_productid");
-
-                    b.HasIndex(new[] { "Variantid" }, "ix_chatproductrecommendations_variantid");
-
-                    b.ToTable("chatproductrecommendations", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Chatsession", b =>
@@ -457,78 +399,6 @@ namespace ECommerceBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("customers", (string)null);
-                });
-
-            modelBuilder.Entity("ECommerceBackend.Models.Homepageproductsection", b =>
-                {
-                    b.Property<int>("Sectionid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("sectionid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Sectionid"));
-
-                    b.Property<string>("Bannercontent")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("Createdat")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdat")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int?>("Displayorder")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("displayorder");
-
-                    b.Property<bool?>("Isactive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("isactive");
-
-                    b.Property<string>("Productids")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Sectionkey")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("sectionkey");
-
-                    b.Property<string>("Subtitle")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("subtitle");
-
-                    b.Property<string>("Theme")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasDefaultValue("LightBlue")
-                        .HasColumnName("theme");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("title");
-
-                    b.Property<string>("Type")
-                        .HasColumnType("text");
-
-                    b.HasKey("Sectionid")
-                        .HasName("homepageproductsections_pkey");
-
-                    b.HasIndex(new[] { "Sectionkey" }, "homepageproductsections_sectionkey_key")
-                        .IsUnique();
-
-                    b.HasIndex(new[] { "Isactive", "Displayorder" }, "ix_homepageproductsections_active_order");
-
-                    b.ToTable("homepageproductsections", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Inventoryitem", b =>
@@ -916,6 +786,10 @@ namespace ECommerceBackend.Migrations
 
                     b.HasIndex("Orderid");
 
+                    b.HasIndex(new[] { "Transactiontype", "Transactionref" }, "ux_orderpayments_active_refund_reference")
+                        .IsUnique()
+                        .HasFilter("\"Transactiontype\" = 'Refund' AND status <> 'Failed' AND transactionref IS NOT NULL");
+
                     b.ToTable("orderpayments", (string)null);
                 });
 
@@ -1154,6 +1028,10 @@ namespace ECommerceBackend.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("refundamount");
+
+                    b.Property<string>("Refundinfo")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("refundinfo");
 
                     b.Property<string>("Refundstatus")
                         .IsRequired()
@@ -1716,44 +1594,6 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Session");
                 });
 
-            modelBuilder.Entity("ECommerceBackend.Models.Chatproductrecommendation", b =>
-                {
-                    b.HasOne("ECommerceBackend.Models.Chatmessage", "Message")
-                        .WithMany("Chatproductrecommendations")
-                        .HasForeignKey("Messageid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_chatproductrecommendations_messages");
-
-                    b.HasOne("ECommerceBackend.Models.Order", "Order")
-                        .WithMany("Chatproductrecommendations")
-                        .HasForeignKey("Orderid")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_chatproductrecommendations_orders");
-
-                    b.HasOne("ECommerceBackend.Models.Product", "Product")
-                        .WithMany("Chatproductrecommendations")
-                        .HasForeignKey("Productid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_chatproductrecommendations_products");
-
-                    b.HasOne("ECommerceBackend.Models.Productvariant", "Variant")
-                        .WithMany("Chatproductrecommendations")
-                        .HasForeignKey("Variantid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_chatproductrecommendations_variants");
-
-                    b.Navigation("Message");
-
-                    b.Navigation("Order");
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Variant");
-                });
-
             modelBuilder.Entity("ECommerceBackend.Models.Chatsession", b =>
                 {
                     b.HasOne("ECommerceBackend.Models.Customer", "Customer")
@@ -2074,11 +1914,6 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Products");
                 });
 
-            modelBuilder.Entity("ECommerceBackend.Models.Chatmessage", b =>
-                {
-                    b.Navigation("Chatproductrecommendations");
-                });
-
             modelBuilder.Entity("ECommerceBackend.Models.Chatsession", b =>
                 {
                     b.Navigation("Chatmessages");
@@ -2112,8 +1947,6 @@ namespace ECommerceBackend.Migrations
 
             modelBuilder.Entity("ECommerceBackend.Models.Order", b =>
                 {
-                    b.Navigation("Chatproductrecommendations");
-
                     b.Navigation("Inventorytransactions");
 
                     b.Navigation("Orderitems");
@@ -2132,15 +1965,11 @@ namespace ECommerceBackend.Migrations
 
             modelBuilder.Entity("ECommerceBackend.Models.Product", b =>
                 {
-                    b.Navigation("Chatproductrecommendations");
-
                     b.Navigation("Productvariants");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Productvariant", b =>
                 {
-                    b.Navigation("Chatproductrecommendations");
-
                     b.Navigation("Inventoryitems");
 
                     b.Navigation("Reviews");

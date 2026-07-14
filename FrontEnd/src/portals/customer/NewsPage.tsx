@@ -6,6 +6,7 @@ import type { News as NewsItem } from '@/features/content/api/newsApi';
 import { Skeleton } from '@/components/Skeleton';
 import { Seo } from '@/components/Seo';
 import { buildSeoDescription } from '@/utils/seoUtils';
+import { RichTextContent } from '@/components/RichTextContent';
 
 const formatDate = (date?: string) =>
   date ? new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
@@ -106,9 +107,10 @@ const NewsPage: React.FC = () => {
                 {detailPost.summary && (
                   <p className="mt-6 text-base font-semibold leading-7 text-slate-600">{detailPost.summary}</p>
                 )}
-                <div className="mt-8 whitespace-pre-wrap text-sm leading-8 text-slate-700">
-                  {detailPost.content || detailPost.summary}
-                </div>
+                <RichTextContent
+                  html={detailPost.content || detailPost.summary || ''}
+                  className="mt-8"
+                />
               </div>
             </article>
           )}

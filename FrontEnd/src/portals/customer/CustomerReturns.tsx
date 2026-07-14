@@ -351,8 +351,9 @@ const CustomerReturns: React.FC = () => {
         <form onSubmit={handleCreate} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-sm font-bold text-slate-700">Đơn hàng</label>
+              <label htmlFor="return-order" className="mb-1.5 block text-sm font-bold text-slate-700">Đơn hàng</label>
               <select
+                id="return-order"
                 required
                 value={orderId}
                 onChange={event => {
@@ -373,8 +374,9 @@ const CustomerReturns: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-bold text-slate-700">Hình thức</label>
+              <label htmlFor="return-type" className="mb-1.5 block text-sm font-bold text-slate-700">Hình thức</label>
               <select
+                id="return-type"
                 value={requestType}
                 onChange={event => setRequestType(event.target.value as 'Return' | 'Exchange')}
                 className="w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm"

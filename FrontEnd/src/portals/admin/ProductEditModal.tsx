@@ -13,6 +13,7 @@ import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { removeImageFromRichText } from '@/utils/richText';
 import { productsApi } from '@/features/products/api/productsApi';
 import type { UpdateFullProduct, UpdateFullProductVariant, UploadedProductImage } from '@/features/products/api/productsApi';
 import { PRODUCT_CONDITION_OPTIONS } from '@/features/products/constants/productOptions';
@@ -189,7 +190,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
     }
   };
 
-  const insertDescriptionImageMarkdown = (images: UploadedProductImage[]) => {
+  const insertDescriptionImages = (images: UploadedProductImage[]) => {
     const insertText = images
       .map(image => `<p><img src="${image.url}" alt="Hình ảnh sản phẩm" /></p>`)
       .join('');
@@ -208,7 +209,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
     try {
       const response = await productsApi.uploadImages(files);
       setDescriptionImages(current => [...current, ...response.data]);
-      insertDescriptionImageMarkdown(response.data);
+      insertDescriptionImages(response.data);
     } catch (error) {
       setError(getApiErrorMessage(error, 'Không thể tải ảnh mô tả lên.'));
     } finally {
@@ -222,11 +223,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
   const removeDescriptionImage = async (image: UploadedProductImage) => {
     await productsApi.deleteUploadedImage(image.fileName).catch(() => undefined);
     setDescriptionImages(current => current.filter(item => item.fileName !== image.fileName));
-    setDescription(current =>
-      current
-        .replace(`\n![Hình ảnh sản phẩm](${image.url})\n`, '\n')
-        .replace(`![Hình ảnh sản phẩm](${image.url})`, '')
-    );
+    setDescription(current => removeImageFromRichText(current, image.url));
   };
 
   const removeImage = async (variant: EditVariant, imageIndex: number) => {

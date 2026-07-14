@@ -179,6 +179,44 @@ public class ReturnRequestsController : ControllerBase
     private async Task<ReturnRequestDto> MapOneAsync(Returnrequest request) =>
         (await MapManyAsync([request])).Single();
 
+    private static IReadOnlyDictionary<int, decimal> CalculateRefundAmounts(
+        Order order,
+        IReadOnlyCollection<Orderitem> selectedItems)
+    {
+        var allItems = order.Orderitems.ToList();
+        var orderGross = allItems.Sum(ItemGrossAmount);
+        if (orderGross <= 0)
+            return selectedItems.ToDictionary(item => item.Orderitemid, _ => 0m);
+
+        // Allocate the amount actually owed after an order-level discount to each
+        // item. This prevents a return from reimbursing more than was paid.
+        var refundableOrderTotal = Math.Clamp(order.Finalamount, 0m, orderGross);
+        var selectedIds = selectedItems.Select(item => item.Orderitemid).ToHashSet();
+        var amounts = new Dictionary<int, decimal>();
+        decimal allocated = 0m;
+
+        for (var index = 0; index < allItems.Count; index++)
+        {
+            var item = allItems[index];
+            var amount = index == allItems.Count - 1
+                ? refundableOrderTotal - allocated
+                : decimal.Round(
+                    refundableOrderTotal * ItemGrossAmount(item) / orderGross,
+                    2,
+                    MidpointRounding.AwayFromZero);
+            amount = Math.Max(0m, amount);
+            allocated += amount;
+
+            if (selectedIds.Contains(item.Orderitemid))
+                amounts[item.Orderitemid] = amount;
+        }
+
+        return amounts;
+    }
+
+    private static decimal ItemGrossAmount(Orderitem item) =>
+        item.Sellingprice + (item.Warrantyprice ?? 0m);
+
     [HttpGet]
     [Authorize(Roles = "Admin,Manager,Sales,Warehouse")]
     public async Task<ActionResult<IEnumerable<ReturnRequestDto>>> GetRequests(
@@ -337,9 +375,10 @@ public class ReturnRequestsController : ControllerBase
         }
 
         var now = DateTime.UtcNow;
-        var requestedRefund = requestType.Equals("Return", StringComparison.OrdinalIgnoreCase)
-            ? selectedItems.Sum(item => item.Sellingprice + (item.Warrantyprice ?? 0))
-            : 0;
+        var refundAmounts = requestType.Equals("Return", StringComparison.OrdinalIgnoreCase)
+            ? CalculateRefundAmounts(order, selectedItems)
+            : new Dictionary<int, decimal>();
+        var requestedRefund = refundAmounts.Values.Sum();
         var request = new Returnrequest
         {
             Orderid = order.Orderid,
@@ -362,25 +401,28 @@ public class ReturnRequestsController : ControllerBase
             {
                 Orderitemid = item.Orderitemid,
                 Imei = item.Imei!,
-                Refundamount = requestType.Equals("Return", StringComparison.OrdinalIgnoreCase)
-                    ? item.Sellingprice + (item.Warrantyprice ?? 0)
-                    : 0
+                Refundamount = refundAmounts.GetValueOrDefault(item.Orderitemid, 0m)
             });
         }
-        _context.Returnrequests.Add(request);
-        await _context.SaveChangesAsync();
-
-        _context.Statuslogs.Add(new Statuslog
+        await using (var transaction = await _context.Database.BeginTransactionAsync())
         {
-            Entitytype = "ReturnRequest",
-            Entityid = request.Returnrequestid,
-            Userid = currentUserId,
-            Tostatus = "PendingReview",
-            Note = "Khách hàng gửi yêu cầu đổi trả.",
-            Createdat = now
-        });
+            _context.Returnrequests.Add(request);
+            await _context.SaveChangesAsync();
 
-        await _context.SaveChangesAsync();
+            _context.Statuslogs.Add(new Statuslog
+            {
+                Entitytype = "ReturnRequest",
+                Entityid = request.Returnrequestid,
+                Userid = currentUserId,
+                Fromstatus = string.Empty,
+                Tostatus = "PendingReview",
+                Note = "Khách hàng gửi yêu cầu đổi trả.",
+                Createdat = now
+            });
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
 
         var created = await RequestQuery().AsNoTracking()
             .FirstAsync(item => item.Returnrequestid == request.Returnrequestid);
@@ -567,11 +609,11 @@ public class ReturnRequestsController : ControllerBase
             }
             else
             {
-                var maximumRefund = item.Orderitem.Sellingprice + (item.Orderitem.Warrantyprice ?? 0);
-                var refund = input.Refundamount ?? maximumRefund;
-                if (refund < 0 || refund > maximumRefund)
-                    return BadRequest(new ApiErrorDto($"Số tiền hoàn cho {item.Imei} không hợp lệ.", null));
-                item.Refundamount = refund;
+                var allocatedRefund = item.Refundamount;
+                if (input.Refundamount.HasValue && input.Refundamount.Value != allocatedRefund)
+                    return BadRequest(new ApiErrorDto(
+                        $"Số tiền hoàn cho {item.Imei} đã được cố định là {allocatedRefund:N0} đồng theo giá trị đơn sau giảm giá.",
+                        null));
             }
         }
 

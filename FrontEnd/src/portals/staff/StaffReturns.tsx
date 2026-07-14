@@ -493,9 +493,9 @@ const StaffReturns: React.FC = () => {
                             type="number"
                             min="0"
                             value={form?.refundamount ?? ''}
-                            onChange={event => updateReceiveItem(item.returnitemid, 'refundamount', event.target.value)}
-                            placeholder="Số tiền hoàn cho IMEI"
-                            className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                            readOnly
+                            title="Số tiền được tính tự động theo giá trị đơn hàng sau giảm giá"
+                            className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-600"
                           />
                         )}
                       </div>

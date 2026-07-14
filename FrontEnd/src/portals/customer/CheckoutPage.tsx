@@ -45,6 +45,12 @@ interface CreatedOrder {
   reservationexpiresat?: string;
 }
 
+interface AppliedVoucher {
+  vouchercode: string;
+  discountpercentage?: number;
+  discountamount?: number;
+}
+
 const phonePattern = /^0\d{9}$/;
 
 const CheckoutPage: React.FC = () => {
@@ -75,7 +81,7 @@ const CheckoutPage: React.FC = () => {
 
   // Voucher state
   const [voucherCodeInput, setVoucherCodeInput] = useState('');
-  const [appliedVoucher, setAppliedVoucher] = useState<any | null>(null);
+  const [appliedVoucher, setAppliedVoucher] = useState<AppliedVoucher | null>(null);
   const [validatingVoucher, setValidatingVoucher] = useState(false);
   const [voucherError, setVoucherError] = useState('');
 
@@ -155,11 +161,11 @@ const CheckoutPage: React.FC = () => {
     setValidatingVoucher(true);
     setVoucherError('');
     try {
-      const res = await apiClient.get(`/Vouchers/validate/${voucherCodeInput.trim().toUpperCase()}`);
+      const res = await apiClient.get<AppliedVoucher>(`/Vouchers/validate/${voucherCodeInput.trim().toUpperCase()}`);
       setAppliedVoucher(res.data);
       setVoucherCodeInput('');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Mã giảm giá không hợp lệ hoặc đã hết hạn.';
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, 'Mã giảm giá không hợp lệ hoặc đã hết hạn.');
       setVoucherError(msg);
       setAppliedVoucher(null);
     } finally {

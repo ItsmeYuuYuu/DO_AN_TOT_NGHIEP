@@ -5,6 +5,10 @@ import {
   ClassicEditor,
   Essentials,
   Heading,
+  Image,
+  ImageCaption,
+  ImageStyle,
+  ImageToolbar,
   Italic,
   Link,
   List,
@@ -43,6 +47,10 @@ export const RichTextEditor = ({
           Essentials,
           Paragraph,
           Heading,
+          Image,
+          ImageCaption,
+          ImageStyle,
+          ImageToolbar,
           Bold,
           Italic,
           Link,
@@ -59,6 +67,12 @@ export const RichTextEditor = ({
           'insertTable', 'blockQuote',
         ],
         table: { contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells'] },
+        image: {
+          toolbar: [
+            'toggleImageCaption', 'imageTextAlternative', '|',
+            'imageStyle:inline', 'imageStyle:block', 'imageStyle:side',
+          ],
+        },
         placeholder,
       }}
       onChange={(_, editor) => onChange(editor.getData())}

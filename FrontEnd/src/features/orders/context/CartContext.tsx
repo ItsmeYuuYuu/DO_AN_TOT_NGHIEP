@@ -58,7 +58,10 @@ const saveToStorage = (items: CartItem[]) => {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isLoggedIn } = useAuth();
-  const [items, setItems] = useState<CartItem[]>([]);
+  // Load guest items during the first render. Initializing with [] lets the
+  // persistence effect overwrite ec_cart before the hydration effect runs in
+  // React StrictMode (used by Vite development and Playwright).
+  const [items, setItems] = useState<CartItem[]>(loadFromStorage);
   const [loading, setLoading] = useState(false);
 
   // Sync cart from server or local storage when login status changes

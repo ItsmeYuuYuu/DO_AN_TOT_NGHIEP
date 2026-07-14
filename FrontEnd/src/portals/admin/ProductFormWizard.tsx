@@ -3,6 +3,7 @@ import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { removeImageFromRichText } from '@/utils/richText';
 import { brandsApi } from '@/features/brands/api/brandsApi';
 import { categoriesApi } from '@/features/categories/api/categoriesApi';
 import { productsApi } from '@/features/products/api/productsApi';
@@ -193,7 +194,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   };
 
   // Step 2 Helpers
-  const insertDescriptionImageMarkdown = (images: UploadedProductImage[]) => {
+  const insertDescriptionImages = (images: UploadedProductImage[]) => {
     const insertText = images
       .map(image => `<p><img src="${image.url}" alt="Hình ảnh sản phẩm" /></p>`)
       .join('');
@@ -212,7 +213,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     try {
       const response = await productsApi.uploadImages(files);
       setDescriptionImages(current => [...current, ...response.data]);
-      insertDescriptionImageMarkdown(response.data);
+      insertDescriptionImages(response.data);
     } catch (error) {
       setError(getApiErrorMessage(error, 'Không thể tải ảnh mô tả lên.'));
     } finally {
@@ -228,11 +229,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     setDescriptionImages(current =>
       current.filter(item => item.fileName !== image.fileName)
     );
-    setDescription(current =>
-      current
-        .replace(`\n![Hình ảnh sản phẩm](${image.url})\n`, '\n')
-        .replace(`![Hình ảnh sản phẩm](${image.url})`, '')
-    );
+    setDescription(current => removeImageFromRichText(current, image.url));
   };
 
   // Step 3 Helpers

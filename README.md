@@ -24,21 +24,27 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 - Chọn đúng biến thể theo màu sắc, RAM, bộ nhớ, tình trạng và xuất xứ.
 - Biến thể hết hàng được làm mờ và không thể thêm vào giỏ.
 - Giỏ hàng hoạt động cho cả người đã đăng nhập và khách vãng lai.
-- Đặt hàng bằng COD, Momo, VNPay hoặc chuyển khoản ngân hàng.
+- Đặt hàng bằng COD, Momo, VNPay hoặc chuyển khoản ngân hàng qua VietQR.
 - Tra cứu đơn hàng, xem lịch sử và trạng thái đơn.
 - Đăng ký có thể gửi mã xác nhận qua Gmail SMTP, đăng nhập, cập nhật hồ sơ và
   đổi mật khẩu.
 
 ### Checkout và thanh toán
 
-- Người đã đăng nhập có thể chọn COD hoặc thanh toán online.
-- Khách vãng lai không được dùng COD.
-- Khách vãng lai phải đặt cọc 30% hoặc thanh toán trước 100%.
+- Người đã đăng nhập có thể chọn COD hoặc thanh toán online và được giao qua
+  đơn vị vận chuyển thứ ba.
+- Khách vãng lai được dùng COD hoặc chuyển khoản khi giao nội thành TP.HCM bởi
+  nhân viên cửa hàng; không được đặt giao ngoại tỉnh.
+- Khách vãng lai thanh toán online phải chọn đặt cọc 30% hoặc thanh toán trước
+  100%.
 - Hàng được giữ trong 15 phút khi chờ thanh toán online.
 - Đơn quá hạn chưa thanh toán tự hủy và hoàn tồn kho.
-- Momo, VNPay và chuyển khoản hiện dùng luồng thanh toán giả lập phục vụ demo.
-- Redis được dùng để hạn chế khách vãng lai spam đặt hàng; nếu chưa cấu hình
-  Redis, hệ thống tự dùng distributed memory cache.
+- Momo và VNPay hiện dùng luồng thanh toán giả lập phục vụ demo.
+- Chuyển khoản sinh VietQR đúng số tiền và nội dung `CDT{mã đơn} THANH TOAN DON
+  HANG`; webhook SePay đối soát giao dịch đến và cập nhật thanh toán theo thời
+  gian thực.
+- Chống lạm dụng checkout hiện dùng distributed memory cache, phù hợp với mô
+  hình chạy một instance local.
 
 ### Sản phẩm và kho
 
@@ -99,18 +105,22 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 - Sales tiếp nhận, duyệt hoặc từ chối; Admin và Manager có thể phân công xử lý.
 - Warehouse kiểm tra máy và phân loại về kho, chuyển bảo hành hoặc đánh dấu hư hỏng.
 - Đổi máy chỉ sử dụng IMEI còn hàng thuộc đúng biến thể.
-- Hoàn tiền hỗ trợ nhiều lần cho tới đủ số tiền, đồng thời cập nhật trạng thái
-  thanh toán và đơn hàng.
-- Lưu toàn bộ lịch sử trạng thái, nhân viên xử lý và giao dịch hoàn tiền.
+- Yêu cầu hoàn qua ngân hàng phải có ngân hàng, số tài khoản, chủ tài khoản và
+  xác nhận của khách; hoàn tiền mặt được thực hiện tại cửa hàng.
+- Hệ thống tự xác định toàn bộ số tiền còn phải hoàn và không cho hoàn từng
+  phần. Hoàn qua ngân hàng bắt buộc có mã giao dịch duy nhất.
+- Sau khi nhân viên khai báo giao dịch, khách xác nhận đã nhận đủ tiền hoặc gửi
+  khiếu nại chưa nhận tiền để Admin/Manager đối soát.
+- Lưu toàn bộ lịch sử trạng thái, người xử lý, tài khoản nhận và giao dịch hoàn
+  tiền.
 - Ảnh đổi trả được lưu tại
   `BackEnd/ECommerceBackend/wwwroot/uploads/returns`.
 
 ### Chatbot và Consultant
 
 - Chatbot truy xuất sản phẩm, giá, cấu hình và tồn kho từ PostgreSQL.
-- Kết quả tư vấn hiển thị sản phẩm có cấu trúc và cho phép thêm biến thể vào
-  giỏ hàng ngay trong cuộc trò chuyện.
-- Lưu lại sản phẩm chatbot đã đề xuất và thời điểm khách thêm vào giỏ.
+- Kết quả tư vấn được trình bày dạng văn bản gọn kèm liên kết đến trang chi tiết
+  sản phẩm; giao diện không hiển thị card sản phẩm để tránh chiếm diện tích.
 - Chatbot hỏi lại theo từng bước khi yêu cầu còn chung chung, kèm lựa chọn nhanh
   về ngân sách và nhu cầu để khách không phải nhập lại dài dòng.
 - Có thể so sánh 2-3 sản phẩm bằng bảng theo giá, cấu hình, camera, pin và tồn
@@ -136,6 +146,8 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 - Tailwind CSS 4
 - Axios
 - Lucide React
+- CKEditor 5 và DOMPurify
+- Playwright
 
 ### Backend
 
@@ -144,10 +156,10 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 - PostgreSQL
 - JWT Bearer Authentication
 - BCrypt
-- Redis hoặc distributed memory cache
+- Distributed memory cache
 - Serilog
 - Swagger/OpenAPI
-- xUnit và SQLite cho integration tests
+- xUnit và PostgreSQL database tạm cho integration tests
 
 ## Phân quyền
 
@@ -174,14 +186,13 @@ ECommerce/
 │   ├── ECommerceBackend/
 │   │   ├── Controllers/       # REST API
 │   │   ├── DTOs/              # Request/response contracts
-│   │   ├── Data/              # Seed dữ liệu và khởi tạo schema hỗ trợ
 │   │   ├── Filters/           # Audit action filter
 │   │   ├── Middlewares/       # Exception handling, correlation ID
 │   │   ├── Migrations/        # EF Core migrations
 │   │   ├── Models/            # Entities và ECommerceContext
 │   │   ├── Services/          # Chatbot, checkout, upload ảnh, audit
 │   │   └── wwwroot/uploads/   # File ảnh upload local
-│   └── ECommerceBackend.Tests/
+│   └── ECommerceBackend.IntegrationTests/
 ├── FrontEnd/
 │   └── src/
 │       ├── api/
@@ -199,7 +210,6 @@ ECommerce/
 - .NET SDK 8
 - Node.js 20 trở lên
 - PostgreSQL
-- Redis, không bắt buộc
 - Ollama, không bắt buộc
 
 ## Cài đặt và chạy local
@@ -231,8 +241,9 @@ dotnet restore
 dotnet ef database update
 ```
 
-Khi backend chạy, `DbInitializer` sẽ bổ sung dữ liệu mẫu còn thiếu. Không cần
-chạy lại file SQL seed thủ công.
+Database local hiện tại được duy trì bằng EF Core migrations và dữ liệu demo đã
+có trong PostgreSQL. `DbInitializer` cũ đang bị loại khỏi compilation và không
+tự chạy khi backend khởi động.
 
 ### 3. Chạy backend
 
@@ -289,20 +300,8 @@ VITE_API_URL=https://localhost:7035/api
 | Customer | `customer01@gmail.com` | `Customer@123456!` |
 | Customer | `customer02@gmail.com` | `Customer@123456!` |
 
-Các tài khoản này được seed tự động và có thể dùng ngay sau khi backend khởi
-động.
-
-## Cấu hình Redis
-
-Redis là tùy chọn khi chạy local. Thiết lập:
-
-```powershell
-dotnet user-secrets set "ConnectionStrings:Redis" "localhost:6379"
-```
-
-Nếu chuỗi kết nối Redis để trống, backend vẫn chạy bằng memory cache. Memory
-cache chỉ phù hợp cho một instance local và mất dữ liệu khi backend khởi động
-lại.
+Các tài khoản trên thuộc database demo local hiện tại. Khi dựng database trắng,
+cần import dữ liệu demo hoặc tạo tài khoản theo quy trình quản trị.
 
 ## Cấu hình Gmail SMTP
 
@@ -398,20 +397,20 @@ npm run lint
 Frontend hiện build production thành công. Tuy nhiên, cấu hình ESLint 10 vẫn
 được chạy trong quy trình kiểm tra và hiện đạt `0 lỗi, 0 cảnh báo`.
 
-Backend hiện có `106/106` integration test chạy qua, bao phủ đăng ký/đăng nhập,
-chatbot, tranh chấp nhận tư vấn, checkout thành viên và khách vãng lai, thanh
-toán/cọc, hoàn kho, Sales/Warehouse, phân quyền API, attribution chatbot và
-nghiệp vụ bảo hành, đổi trả, hoàn tiền, vận chuyển, hỏi lại và so sánh sản phẩm.
+Quy trình regression hiện chạy `5/5` backend integration test và `4/4` frontend
+Playwright E2E, kèm ESLint và production build. Các test tự tạo PostgreSQL và
+thư mục upload tạm rồi dọn sau khi chạy. Xem
+[`docs/testing/automated-regression.md`](docs/testing/automated-regression.md).
 
 ## Trạng thái và giới hạn hiện tại
 
-- Thanh toán Momo, VNPay và ngân hàng đang là mô phỏng có QR demo/VietQR,
-  chưa kết nối sandbox hoặc cổng thanh toán production.
+- Momo và VNPay vẫn là mô phỏng. Chuyển khoản ngân hàng dùng VietQR và webhook
+  SePay trong môi trường local, chưa phải cấu hình production.
 - IMEI được tạo tạm khi Admin tạo sản phẩm để phục vụ demo. Khi vận hành thực
   tế, IMEI phải được nhập hoặc quét từ lô hàng thật.
 - Forgot password chưa có token reset thật; email SMTP/OTP đăng ký có thể bật
   qua cấu hình local.
-- Redis và Ollama đều là thành phần tùy chọn khi chạy local.
+- Ollama là thành phần tùy chọn khi chạy local.
 - Dự án chưa cấu hình quy trình deploy production.
 - Vận chuyển đang dùng mô phỏng nội bộ, chưa kết nối API thật của hãng vận chuyển.
 - KPI chuyên sâu cho từng bộ phận vẫn có thể mở rộng thêm.

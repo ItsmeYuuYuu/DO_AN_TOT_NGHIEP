@@ -52,7 +52,9 @@ public class WarrantyClaimsController : ControllerBase
         }
     }
 
-    private static WarrantyClaimDto MapToDto(Warrantyclaim claim)
+    private static WarrantyClaimDto MapToDto(
+        Warrantyclaim claim,
+        IReadOnlyList<WarrantyClaimHistoryDto>? histories = null)
     {
         var inventory = claim.Inventoryitem;
         return new WarrantyClaimDto(
@@ -76,7 +78,7 @@ public class WarrantyClaimsController : ControllerBase
             claim.Completedat,
             claim.Createdat,
             claim.Updatedat,
-            new List<WarrantyClaimHistoryDto>());
+            histories ?? []);
     }
 
     private IQueryable<Warrantyclaim> ClaimQuery() =>
@@ -86,6 +88,43 @@ public class WarrantyClaimsController : ControllerBase
             .Include(claim => claim.Inventoryitem)
                 .ThenInclude(inventory => inventory.Variant)
                     .ThenInclude(variant => variant!.Product);
+
+    private async Task<IReadOnlyList<WarrantyClaimDto>> MapManyAsync(
+        IReadOnlyList<Warrantyclaim> claims)
+    {
+        if (claims.Count == 0) return [];
+
+        var claimIds = claims.Select(claim => claim.Claimid).ToList();
+        var histories = await _context.Statuslogs
+            .AsNoTracking()
+            .Include(log => log.User)
+            .Where(log => log.Entitytype == "WarrantyClaim" && claimIds.Contains(log.Entityid))
+            .OrderBy(log => log.Createdat)
+            .ThenBy(log => log.Logid)
+            .ToListAsync();
+        var historiesByClaim = histories
+            .GroupBy(log => log.Entityid)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<WarrantyClaimHistoryDto>)group.Select(log =>
+                    new WarrantyClaimHistoryDto(
+                        log.Logid,
+                        log.Userid,
+                        log.User?.Fullname ?? log.User?.Username,
+                        log.Fromstatus,
+                        log.Tostatus,
+                        log.Note,
+                        log.Createdat ?? DateTime.MinValue)).ToList());
+
+        return claims
+            .Select(claim => MapToDto(
+                claim,
+                historiesByClaim.GetValueOrDefault(claim.Claimid, [])))
+            .ToList();
+    }
+
+    private async Task<WarrantyClaimDto> MapOneAsync(Warrantyclaim claim) =>
+        (await MapManyAsync([claim])).Single();
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<WarrantyClaimDto>>> GetClaims(
@@ -108,7 +147,7 @@ public class WarrantyClaimsController : ControllerBase
         var claims = await query
             .OrderByDescending(claim => claim.Updatedat)
             .ToListAsync();
-        return Ok(claims.Select(MapToDto));
+        return Ok(await MapManyAsync(claims));
     }
 
     [HttpGet("{id:int}")]
@@ -119,7 +158,7 @@ public class WarrantyClaimsController : ControllerBase
             .FirstOrDefaultAsync(item => item.Claimid == id);
         if (claim == null)
             return NotFound(new ApiErrorDto("Phiếu bảo hành không tồn tại.", null));
-        return Ok(MapToDto(claim));
+        return Ok(await MapOneAsync(claim));
     }
 
     [HttpGet("employees")]
@@ -201,28 +240,33 @@ public class WarrantyClaimsController : ControllerBase
             Createdat = now,
             Updatedat = now
         };
-        _context.Warrantyclaims.Add(claim);
-        await _context.SaveChangesAsync();
-
-        _context.Statuslogs.Add(new Statuslog
+        await using (var transaction = await _context.Database.BeginTransactionAsync())
         {
-            Entitytype = "WarrantyClaim",
-            Entityid = claim.Claimid,
-            Userid = currentUserId,
-            Tostatus = "Received",
-            Note = isWarrantyEmployee
-                ? "Tiếp nhận thiết bị và tự nhận xử lý."
-                : "Tiếp nhận thiết bị bảo hành.",
-            Createdat = now
-        });
+            _context.Warrantyclaims.Add(claim);
+            await _context.SaveChangesAsync();
 
-        inventory.Warrantystatus = "InService";
-        await _context.SaveChangesAsync();
+            _context.Statuslogs.Add(new Statuslog
+            {
+                Entitytype = "WarrantyClaim",
+                Entityid = claim.Claimid,
+                Userid = currentUserId,
+                Fromstatus = string.Empty,
+                Tostatus = "Received",
+                Note = isWarrantyEmployee
+                    ? "Tiếp nhận thiết bị và tự nhận xử lý."
+                    : "Tiếp nhận thiết bị bảo hành.",
+                Createdat = now
+            });
+
+            inventory.Warrantystatus = "InService";
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
 
         var created = await ClaimQuery()
             .AsNoTracking()
             .FirstAsync(item => item.Claimid == claim.Claimid);
-        return CreatedAtAction(nameof(GetClaim), new { id = claim.Claimid }, MapToDto(created));
+        return CreatedAtAction(nameof(GetClaim), new { id = claim.Claimid }, await MapOneAsync(created));
     }
 
     [HttpPost("{id:int}/claim")]
@@ -257,7 +301,7 @@ public class WarrantyClaimsController : ControllerBase
 
         var updated = await ClaimQuery().AsNoTracking()
             .FirstAsync(item => item.Claimid == id);
-        return Ok(MapToDto(updated));
+        return Ok(await MapOneAsync(updated));
     }
 
     [HttpPatch("{id:int}/assign")]
@@ -297,7 +341,7 @@ public class WarrantyClaimsController : ControllerBase
 
         var updated = await ClaimQuery().AsNoTracking()
             .FirstAsync(item => item.Claimid == id);
-        return Ok(MapToDto(updated));
+        return Ok(await MapOneAsync(updated));
     }
 
     [HttpPatch("{id:int}/status")]
@@ -365,6 +409,6 @@ public class WarrantyClaimsController : ControllerBase
 
         var updated = await ClaimQuery().AsNoTracking()
             .FirstAsync(item => item.Claimid == id);
-        return Ok(MapToDto(updated));
+        return Ok(await MapOneAsync(updated));
     }
 }

@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+/* CKEditor output shown on product and news detail pages. */
+.rich-text-content {
+  color: #334155;
+  font-size: 0.95rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.rich-text-content > * + * { margin-top: 1rem; }
+.rich-text-content h2 { color: #1f2937; font-size: 1.75rem; font-weight: 800; line-height: 1.3; }
+.rich-text-content h3 { color: #1f2937; font-size: 1.4rem; font-weight: 800; line-height: 1.4; }
+.rich-text-content h4 { color: #1f2937; font-size: 1.15rem; font-weight: 800; line-height: 1.5; }
+.rich-text-content strong { color: #1f2937; font-weight: 800; }
+.rich-text-content em { font-style: italic; }
+.rich-text-content a { color: #c4000b; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.rich-text-content ul { list-style: disc; padding-left: 1.5rem; }
+.rich-text-content ol { list-style: decimal; padding-left: 1.5rem; }
+.rich-text-content li + li { margin-top: 0.35rem; }
+.rich-text-content blockquote { border-left: 4px solid #e30613; background: #fff5f5; padding: 1rem 1.25rem; font-style: italic; }
+.rich-text-content figure.image { margin: 1.75rem 0; overflow: hidden; border: 1px solid #e5e7eb; background: #f8fafc; }
+.rich-text-content figure.image img,
+.rich-text-content p > img { display: block; margin: 0 auto; max-height: 680px; max-width: 100%; object-fit: contain; }
+.rich-text-content figcaption { border-top: 1px solid #e5e7eb; padding: 0.6rem 1rem; text-align: center; font-size: 0.8rem; color: #64748b; }
+.rich-text-content figure.table { overflow-x: auto; }
+.rich-text-content table { width: 100%; border-collapse: collapse; white-space: normal; }
+.rich-text-content th,
+.rich-text-content td { border: 1px solid #cbd5e1; padding: 0.65rem 0.8rem; text-align: left; }
+.rich-text-content th { background: #f1f5f9; color: #1f2937; font-weight: 800; }
+
 @layer base {
   :root {
     --color-primary: #e30613;

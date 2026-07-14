@@ -20,49 +20,9 @@ import { RelatedProducts } from '@/features/products/components/RelatedProducts'
 import { formatCurrency } from '@/utils/formatters';
 import { Seo } from '@/components/Seo';
 import { buildSeoDescription } from '@/utils/seoUtils';
+import { RichTextContent } from '@/components/RichTextContent';
 
 type DetailTab = 'description' | 'specs' | 'reviews';
-
-const renderDescription = (description: string) => {
-  const imagePattern = /!\[([^\]]*)\]\(([^)]+)\)/g;
-  const blocks: React.ReactNode[] = [];
-  let cursor = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = imagePattern.exec(description)) !== null) {
-    const text = description.slice(cursor, match.index).trim();
-    if (text) {
-      blocks.push(
-        <p key={`text-${cursor}`} className="whitespace-pre-line text-[15px] leading-8 text-slate-700">
-          {text}
-        </p>,
-      );
-    }
-
-    blocks.push(
-      <figure key={`image-${match.index}`} className="my-7 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#f3f4f6]">
-        <img src={match[2]} alt={match[1] || 'Hình ảnh sản phẩm'} className="mx-auto max-h-[680px] w-full object-contain" />
-        {match[1] && match[1] !== 'Hình ảnh' && (
-          <figcaption className="border-t border-[#e5e7eb] px-4 py-2 text-center text-xs text-slate-500">
-            {match[1]}
-          </figcaption>
-        )}
-      </figure>,
-    );
-    cursor = imagePattern.lastIndex;
-  }
-
-  const remainingText = description.slice(cursor).trim();
-  if (remainingText) {
-    blocks.push(
-      <p key={`text-${cursor}`} className="whitespace-pre-line text-[15px] leading-8 text-slate-700">
-        {remainingText}
-      </p>,
-    );
-  }
-
-  return blocks;
-};
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -299,7 +259,7 @@ const ProductDetailPage: React.FC = () => {
                   {product.productname}
                 </h2>
                 {product.description
-                  ? <div className="space-y-5">{renderDescription(product.description)}</div>
+                  ? <RichTextContent html={product.description} />
                   : <p className="italic text-slate-400">Đang cập nhật mô tả sản phẩm...</p>}
               </div>
             )}

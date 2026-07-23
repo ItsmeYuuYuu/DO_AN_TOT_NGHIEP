@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import apiClient from '@/api/apiClient';
-import { Search, Package, CheckCircle2, Clock, Truck, XCircle, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
+import { Search, Package, CheckCircle2, Clock, Truck, XCircle, ChevronDown, ChevronUp, ArrowLeft, Star, RotateCcw, MessageCircle } from 'lucide-react';
 import { Seo } from '@/components/Seo';
 import { Link, useSearchParams } from 'react-router-dom';
 
@@ -12,6 +12,7 @@ interface OrderLookup {
   discountamount?: number;
   finalamount: number;
   paymentmethod?: string;
+  paymentstatus?: string;
   vouchercode?: string;
   itemCount: number;
   shipment?: {
@@ -29,9 +30,13 @@ interface OrderLookup {
   orderitems?: Array<{
     productname?: string;
     sku?: string;
+    variantsku?: string;
     sellingprice: number;
     packagename?: string;
     warrantyprice?: number;
+    variantid?: number;
+    productid?: number;
+    imageurl?: string;
   }>;
   shippingname?: string;
   shippingphone?: string;
@@ -60,6 +65,30 @@ const formatSkuToAttributes = (productName: string, sku?: string) => {
     return p;
   });
   return `${productName} - ${attrs.join(' / ')}`;
+};
+
+const ProductThumbnail: React.FC<{ imageUrl?: string; productName: string }> = ({ imageUrl, productName }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  if (!imageUrl || imageFailed) {
+    return (
+      <div
+        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-[#f1d7d9] bg-[#fff1f2] text-[#c4000b]"
+        aria-label={`Chưa có ảnh ${productName}`}
+      >
+        <Package size={23} strokeWidth={1.8} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imageUrl}
+      alt={productName}
+      onError={() => setImageFailed(true)}
+      className="h-14 w-14 shrink-0 rounded-xl border border-slate-200 bg-white object-contain p-1"
+    />
+  );
 };
 
 const SHIPMENT_STATUS_LABELS: Record<string, string> = {
@@ -298,6 +327,28 @@ const OrderLookupPage: React.FC = () => {
 
                     {isExpanded && (
                       <div className="border-t border-slate-100 px-5 pb-5 pt-4 animate-in fade-in duration-200">
+                        {isDetailMode && (
+                          <div className="mb-6 rounded-2xl border border-slate-100 bg-white p-4">
+                            <div className="grid grid-cols-5 gap-2">
+                              {[
+                                { label: 'Đã đặt', active: true, icon: Package },
+                                { label: 'Đã thanh toán', active: ['paid', 'depositpaid'].includes((order.paymentstatus ?? '').toLowerCase()), icon: CheckCircle2 },
+                                { label: 'Đã giao vận', active: ['shipped', 'completed'].includes((order.orderstatus ?? '').toLowerCase()), icon: Truck },
+                                { label: 'Đã nhận hàng', active: (order.orderstatus ?? '').toLowerCase() === 'completed', icon: CheckCircle2 },
+                                { label: 'Đánh giá', active: false, icon: Star },
+                              ].map((step, index) => {
+                                const Icon = step.icon;
+                                return (
+                                  <div key={step.label} className="relative text-center">
+                                    {index > 0 && <span className={`absolute right-1/2 top-4 h-0.5 w-full ${step.active ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
+                                    <span className={`relative mx-auto flex h-8 w-8 items-center justify-center rounded-full ${step.active ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}><Icon size={15} /></span>
+                                    <p className="mt-2 text-[10px] font-bold text-slate-600 sm:text-xs">{step.label}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                         {/* 1. Grid Info: Shipping & Payment */}
                         <div className="grid gap-4 md:grid-cols-2 text-xs mb-4">
                           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 shadow-sm">
@@ -348,16 +399,22 @@ const OrderLookupPage: React.FC = () => {
                             <p className="text-[10px] font-bold text-slate-400 uppercase">Danh sách sản phẩm</p>
                             <div className="divide-y divide-slate-200">
                               {order.orderitems.map((item, idx) => (
-                                <div key={idx} className="flex justify-between items-center py-2.5 first:pt-0 last:pb-0 text-xs">
-                                  <div>
+                                <div key={idx} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0 text-xs">
+                                  <div className="flex min-w-0 items-center gap-3">
+                                    <ProductThumbnail
+                                      imageUrl={item.imageurl}
+                                      productName={item.productname ?? 'sản phẩm'}
+                                    />
+                                    <div className="min-w-0">
                                     <p className="font-bold text-slate-800">
-                                      {formatSkuToAttributes(item.productname ?? 'Sản phẩm', item.sku)}
+                                      {formatSkuToAttributes(item.productname ?? 'Sản phẩm', item.sku ?? item.variantsku)}
                                     </p>
                                     {item.packagename && (
                                       <p className="text-[10px] font-semibold text-[#c4000b] mt-0.5">
                                         🛡️ Gói bảo hành: {item.packagename} (+{fmtMoney(item.warrantyprice ?? 0)})
                                       </p>
                                     )}
+                                    </div>
                                   </div>
                                   <span className="font-black text-slate-700">{fmtMoney(item.sellingprice)}</span>
                                 </div>
@@ -393,6 +450,21 @@ const OrderLookupPage: React.FC = () => {
                                 </div>
                               ))}
                             </div>
+                          </div>
+                        )}
+                        {isDetailMode && (
+                          <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
+                            <Link to="/chat" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600"><MessageCircle size={14} /> Liên hệ tư vấn</Link>
+                            {(order.orderstatus ?? '').toLowerCase() === 'completed' && (
+                              <>
+                                <Link to="/returns" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600"><RotateCcw size={14} /> Yêu cầu trả hàng/hoàn tiền</Link>
+                                {order.orderitems?.find(item => item.productid && item.variantid) && (() => {
+                                  const item = order.orderitems!.find(candidate => candidate.productid && candidate.variantid)!;
+                                  return <Link to={`/products/${item.productid}?variantId=${item.variantid}&review=1`} className="inline-flex items-center gap-2 rounded-xl bg-[#e30613] px-4 py-2 text-xs font-black text-white"><Star size={14} /> Đánh giá</Link>;
+                                })()}
+                              </>
+                            )}
+                            <Link to="/products" className="inline-flex items-center gap-2 rounded-xl border border-[#e30613] px-4 py-2 text-xs font-black text-[#e30613]">Mua lại</Link>
                           </div>
                         )}
                       </div>

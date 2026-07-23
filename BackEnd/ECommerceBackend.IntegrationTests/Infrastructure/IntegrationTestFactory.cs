@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using ECommerceBackend.DTOs.Auth;
 using ECommerceBackend.Models;
+using ECommerceBackend.Services.Email;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +44,9 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
             services.RemoveAll<DbContextOptions<ECommerceContext>>();
             services.RemoveAll<ECommerceContext>();
             services.AddDbContext<ECommerceContext>(options => options.UseNpgsql(_testConnectionString));
+            services.RemoveAll<IEmailService>();
+            services.AddSingleton<TestEmailService>();
+            services.AddSingleton<IEmailService>(provider => provider.GetRequiredService<TestEmailService>());
         });
     }
 
@@ -161,7 +165,9 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
         var admin = NewUser("it_admin", "Integration Admin", "it.admin@example.test", adminRole);
         var customerAUser = NewUser("it_customer_a", "Integration Customer A", "it.a@example.test", customerRole);
         var customerBUser = NewUser("it_customer_b", "Integration Customer B", "it.b@example.test", customerRole);
-        db.Users.AddRange(admin, customerAUser, customerBUser);
+        var passwordResetUser = NewUser("it_reset", "Integration Reset User", "it.reset@example.test", customerRole);
+        passwordResetUser.Phone = "0900000003";
+        db.Users.AddRange(admin, customerAUser, customerBUser, passwordResetUser);
 
         var customerA = new Customer
         {

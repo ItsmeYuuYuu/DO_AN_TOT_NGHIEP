@@ -24,36 +24,36 @@ export interface UpdateReviewRequest {
 
 export const reviewsApi = {
   getAll: async (): Promise<Review[]> => {
-    const { data } = await apiClient.get('/api/reviews');
+    const { data } = await apiClient.get('/reviews');
     return data;
   },
 
   getByVariant: async (variantId: number): Promise<Review[]> => {
-    const { data } = await apiClient.get(`/api/reviews/variant/${variantId}`);
+    const { data } = await apiClient.get(`/reviews/variant/${variantId}`);
     return data;
   },
 
   getByProduct: async (productId: number): Promise<Review[]> => {
-    const { data } = await apiClient.get(`/api/reviews/product/${productId}`);
+    const { data } = await apiClient.get(`/reviews/product/${productId}`);
     return data;
   },
 
   getMyReviews: async (): Promise<Review[]> => {
-    const { data } = await apiClient.get('/api/reviews/me');
+    const { data } = await apiClient.get('/reviews/me');
     return data;
   },
 
   create: async (payload: CreateReviewRequest): Promise<Review> => {
-    const { data } = await apiClient.post('/api/reviews', payload);
+    const { data } = await apiClient.post('/reviews', payload);
     return data;
   },
 
   update: async (id: number, payload: UpdateReviewRequest): Promise<Review> => {
-    const { data } = await apiClient.put(`/api/reviews/${id}`, payload);
+    const { data } = await apiClient.put(`/reviews/${id}`, payload);
     return data;
   },
 
   delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/api/reviews/${id}`);
+    await apiClient.delete(`/reviews/${id}`);
   },
 };

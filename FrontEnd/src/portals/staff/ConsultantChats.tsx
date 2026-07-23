@@ -140,7 +140,7 @@ const ConsultantChats = () => {
             <p className="text-xs font-bold text-slate-400">Lượt AI đề xuất sản phẩm</p>
           </div>
           <div className="ops-card p-4">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center bg-indigo-50 text-[#4338ca]">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center bg-red-50 text-[#c4000b]">
               <ShoppingCart size={19} />
             </div>
             <p className="text-2xl font-black text-[#172033]">{metrics.addtocartrate}%</p>
@@ -257,7 +257,7 @@ const ConsultantChats = () => {
                   return (
                     <div key={message.messageid} className={`flex gap-3 ${fromCustomer ? '' : 'flex-row-reverse'}`}>
                       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white ${
-                        fromCustomer ? 'bg-[#4f46e5]' : fromAssistant ? 'bg-violet-500' : 'bg-teal-600'
+                        fromCustomer ? 'bg-[#e30613]' : fromAssistant ? 'bg-violet-500' : 'bg-teal-600'
                       }`}>
                         {fromCustomer ? <User size={16} /> : fromAssistant ? <Bot size={16} /> : <Headphones size={16} />}
                       </div>
@@ -284,7 +284,7 @@ const ConsultantChats = () => {
                 })}
                 {customerTyping && activeSession.handoffstatus === 'InProgress' && (
                   <div className="flex gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#4f46e5] text-white">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e30613] text-white">
                       <User size={16} />
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-500 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">

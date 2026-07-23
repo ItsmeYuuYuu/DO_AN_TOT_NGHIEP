@@ -936,10 +936,20 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("condition");
 
+                    b.Property<decimal>("Deductionamount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("deductionamount");
+
                     b.Property<string>("Disposition")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
                         .HasColumnName("disposition");
+
+                    b.Property<string>("Faultresponsibility")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("faultresponsibility");
 
                     b.Property<string>("Imei")
                         .IsRequired()
@@ -947,9 +957,19 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("imei");
 
+                    b.Property<string>("Inspectiongrade")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("inspectiongrade");
+
                     b.Property<int>("Orderitemid")
                         .HasColumnType("integer")
                         .HasColumnName("orderitemid");
+
+                    b.Property<decimal>("Originalpaidamount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("originalpaidamount");
 
                     b.Property<decimal>("Refundamount")
                         .HasPrecision(18, 2)
@@ -960,6 +980,10 @@ namespace ECommerceBackend.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("replacementimei");
+
+                    b.Property<int?>("Resalevariantid")
+                        .HasColumnType("integer")
+                        .HasColumnName("resalevariantid");
 
                     b.Property<int>("Returnrequestid")
                         .HasColumnType("integer")
@@ -973,6 +997,8 @@ namespace ECommerceBackend.Migrations
                     b.HasIndex(new[] { "Imei" }, "ix_returnitems_imei");
 
                     b.HasIndex(new[] { "Replacementimei" }, "ix_returnitems_replacementimei");
+
+                    b.HasIndex(new[] { "Resalevariantid" }, "ix_returnitems_resalevariantid");
 
                     b.HasIndex(new[] { "Returnrequestid", "Orderitemid" }, "ux_returnitems_request_orderitem")
                         .IsUnique();
@@ -988,6 +1014,11 @@ namespace ECommerceBackend.Migrations
                         .HasColumnName("returnrequestid");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Returnrequestid"));
+
+                    b.Property<decimal?>("Approvedrefundamount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("approvedrefundamount");
 
                     b.Property<int?>("Assigneduserid")
                         .HasColumnType("integer")
@@ -1014,11 +1045,23 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("orderid");
 
+                    b.Property<string>("Policyversion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("policyversion");
+
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("reason");
+
+                    b.Property<string>("Reasoncategory")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("reasoncategory");
 
                     b.Property<DateTime?>("Receivedat")
                         .HasColumnType("timestamp without time zone")
@@ -1028,6 +1071,10 @@ namespace ECommerceBackend.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("refundamount");
+
+                    b.Property<string>("Refundcalculation")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("refundcalculation");
 
                     b.Property<string>("Refundinfo")
                         .HasColumnType("jsonb")
@@ -1761,6 +1808,12 @@ namespace ECommerceBackend.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_returnitems_replacement_inventory");
 
+                    b.HasOne("ECommerceBackend.Models.Productvariant", "Resalevariant")
+                        .WithMany()
+                        .HasForeignKey("Resalevariantid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_returnitems_resale_variants");
+
                     b.HasOne("ECommerceBackend.Models.Returnrequest", "Returnrequest")
                         .WithMany("Returnitems")
                         .HasForeignKey("Returnrequestid")
@@ -1773,6 +1826,8 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Orderitem");
 
                     b.Navigation("Replacementinventoryitem");
+
+                    b.Navigation("Resalevariant");
 
                     b.Navigation("Returnrequest");
                 });

@@ -2,8 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using ECommerceBackend.DTOs.Orders;
 using ECommerceBackend.DTOs.Returns;
+using ECommerceBackend.DTOs.ProductSeries;
 using ECommerceBackend.IntegrationTests.Infrastructure;
 using ECommerceBackend.Controllers;
+using ECommerceBackend.DTOs.Reviews;
 
 namespace ECommerceBackend.IntegrationTests;
 
@@ -99,5 +101,34 @@ public sealed class OrderReturnSecurityTests : IClassFixture<IntegrationTestFact
         Assert.Equal(1, result.DeletedFiles);
         Assert.Contains(unusedFile, result.DeletedFileNames);
         Assert.DoesNotContain(referencedFile, result.DeletedFileNames);
+    }
+
+    [Fact]
+    public async Task Product_Series_Api_Groups_Products_By_Series_Label()
+    {
+        var response = await _factory.Client.GetAsync("/api/ProductSeries?activeOnly=true");
+        var series = await response.Content.ReadFromJsonAsync<List<ProductSeriesDto>>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(series);
+        var integrationSeries = Assert.Single(series, item => item.Seriesname == "Integration Series");
+        Assert.Equal("Integration Brand", integrationSeries.Brandname);
+        Assert.Equal(1, integrationSeries.Productcount);
+    }
+
+    [Fact]
+    public async Task Review_Requires_Completed_Purchase_And_Duplicate_Is_Rejected()
+    {
+        using var owner = await _factory.CreateAuthenticatedClientAsync("it_customer_a");
+        using var otherCustomer = await _factory.CreateAuthenticatedClientAsync("it_customer_b");
+        var payload = new CreateReviewRequestDto(_factory.Seed.CheckoutVariantId, 5, "Máy hoạt động tốt.");
+
+        var created = await owner.PostAsJsonAsync("/api/Reviews", payload);
+        var duplicate = await owner.PostAsJsonAsync("/api/Reviews", payload);
+        var notPurchased = await otherCustomer.PostAsJsonAsync("/api/Reviews", payload);
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, notPurchased.StatusCode);
     }
 }

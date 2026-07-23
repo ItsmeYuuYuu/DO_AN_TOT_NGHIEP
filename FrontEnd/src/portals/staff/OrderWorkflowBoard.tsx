@@ -27,6 +27,8 @@ interface OrderWorkflowBoardProps {
   department: WorkflowDepartment;
 }
 
+const INTERNAL_CARRIER = 'STORE_DELIVERY';
+
 const paymentLabels: Record<string, string> = {
   CODPending: 'COD khi nhận hàng',
   AwaitingDeposit: 'Chờ đặt cọc',
@@ -41,7 +43,7 @@ const departmentCopy = {
     label: 'Bộ phận bán hàng',
     title: 'Xác nhận đơn & thanh toán',
     description: 'Nhận đơn, kiểm tra thanh toán và bàn giao các đơn hợp lệ sang bộ phận kho.',
-    accent: 'from-[#4338ca] to-[#172033]',
+    accent: 'from-[#c4000b] to-[#172033]',
   },
   Warehouse: {
     label: 'Bộ phận kho',
@@ -50,6 +52,11 @@ const departmentCopy = {
     accent: 'from-emerald-700 to-[#172033]',
   },
 } satisfies Record<WorkflowDepartment, { label: string; title: string; description: string; accent: string }>;
+
+const isPaymentReady = (item: OrderWorkflowItem) =>
+  item.paymentmethod === 'COD'
+    ? item.paymentstatus === 'CODPending'
+    : item.paymentstatus === 'DepositPaid' || item.paymentstatus === 'Paid';
 
 const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) => {
   const { user } = useAuth();
@@ -96,7 +103,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
     total: items.length,
     unassigned: items.filter(item => !item.assignment?.assigneduserid).length,
     mine: items.filter(item => item.assignment?.assigneduserid === currentUserId).length,
-    ready: items.filter(item => item.paymentstatus === 'Paid' || item.paymentstatus === 'DepositPaid' || item.paymentstatus === 'CODPending').length,
+    ready: items.filter(isPaymentReady).length,
   }), [currentUserId, items]);
 
   const runAction = async (orderId: number, action: () => Promise<unknown>) => {
@@ -112,16 +119,11 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
     }
   };
 
-  const isPaymentReady = (item: OrderWorkflowItem) =>
-    item.paymentmethod === 'COD'
-      ? item.checkouttype === 'Registered' && item.paymentstatus === 'CODPending'
-      : item.paymentstatus === 'DepositPaid' || item.paymentstatus === 'Paid';
-
   const openImeiVerification = (item: OrderWorkflowItem) => {
     setVerificationOrder(item);
     setConfirmedImeis(new Set());
     setShippingNote('');
-    setCarrier('GHN');
+    setCarrier(item.checkouttype === 'Guest' ? INTERNAL_CARRIER : 'GHN');
     setShippingFee(30000);
     setEstimatedDeliveryDate('');
   };
@@ -162,6 +164,8 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
     setShippingNote('');
   };
 
+  const isGuestShipment = verificationOrder?.checkouttype === 'Guest';
+
   return (
     <div className="space-y-5">
       <section className="ops-hero">
@@ -181,10 +185,10 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
 
       <div className="grid gap-4 sm:grid-cols-4">
         {[
-          { label: 'Tổng việc', value: stats.total, icon: <ClipboardCheck size={20} />, tone: 'bg-indigo-50 text-[#4338ca]' },
-          { label: 'Chưa nhận', value: stats.unassigned, icon: <Clock3 size={20} />, tone: 'bg-amber-50 text-amber-700' },
-          { label: 'Tôi phụ trách', value: stats.mine, icon: <UserCheck size={20} />, tone: 'bg-emerald-50 text-emerald-700' },
-          { label: 'Sẵn sàng xử lý', value: stats.ready, icon: <PackageCheck size={20} />, tone: 'bg-violet-50 text-violet-700' },
+          { label: 'Tổng việc', value: stats.total, icon: <ClipboardCheck size={20} />, tone: 'bg-red-50 text-[#c4000b]' },
+          { label: 'Chưa nhận', value: stats.unassigned, icon: <Clock3 size={20} />, tone: 'bg-red-50 text-[#c4000b]' },
+          { label: 'Tôi phụ trách', value: stats.mine, icon: <UserCheck size={20} />, tone: 'bg-red-50 text-[#c4000b]' },
+          { label: 'Sẵn sàng xử lý', value: stats.ready, icon: <PackageCheck size={20} />, tone: 'bg-red-50 text-[#c4000b]' },
         ].map(stat => (
           <div key={stat.label} className="ops-card p-4">
             <div className={`mb-3 flex h-10 w-10 items-center justify-center ${stat.tone}`}>{stat.icon}</div>
@@ -220,9 +224,9 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                 const ready = isPaymentReady(item);
 
                 return (
-                  <tr key={item.orderid} className="align-top transition hover:bg-indigo-50/40">
+                  <tr key={item.orderid} className="align-top transition hover:bg-red-50/40">
                     <td className="px-5 py-4">
-                      <p className="font-mono text-sm font-black text-[#4338ca]">#{String(item.orderid).padStart(5, '0')}</p>
+                      <p className="font-mono text-sm font-black text-[#c4000b]">#{String(item.orderid).padStart(5, '0')}</p>
                       <p className="mt-1 text-xs font-semibold text-slate-400">
                         {item.orderdate ? formatDateTime(item.orderdate) : '—'} · {item.itemcount} sản phẩm
                       </p>
@@ -272,7 +276,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                             disabled={!selectedEmployees[item.orderid] || workingId === item.orderid}
                             onClick={() => runAction(item.orderid, () =>
                               orderAssignmentsApi.assign(item.orderid, department, selectedEmployees[item.orderid]))}
-                            className="rounded-xl bg-[#172033] px-3 py-1.5 text-xs font-black text-white disabled:opacity-40"
+                            className="rounded-xl bg-[#e30613] px-3 py-1.5 text-xs font-black text-white hover:bg-[#c4000b] disabled:opacity-40"
                           >
                             Giao việc
                           </button>
@@ -299,7 +303,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                             type="button"
                             disabled={workingId === item.orderid}
                             onClick={() => runAction(item.orderid, () => ordersApi.confirmPayment(item.orderid))}
-                            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-[#4338ca] hover:bg-indigo-100"
+                            className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-[#c4000b] hover:bg-red-100"
                           >
                             <CircleDollarSign size={14} /> Xác nhận thanh toán
                           </button>
@@ -310,7 +314,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                             type="button"
                             disabled={workingId === item.orderid}
                             onClick={() => runAction(item.orderid, () => orderAssignmentsApi.handoffToWarehouse(item.orderid))}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#4f46e5] px-3 py-2 text-xs font-black text-white hover:bg-[#4338ca] disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#e30613] px-3 py-2 text-xs font-black text-white hover:bg-[#c4000b] disabled:opacity-50"
                           >
                             <Truck size={14} /> Bàn giao sang kho
                           </button>
@@ -321,7 +325,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                             type="button"
                             disabled={workingId === item.orderid}
                             onClick={() => openImeiVerification(item)}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#4f46e5] px-3 py-2 text-xs font-black text-white hover:bg-[#4338ca] disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#e30613] px-3 py-2 text-xs font-black text-white hover:bg-[#c4000b] disabled:opacity-50"
                           >
                             <ScanLine size={14} /> Kiểm tra IMEI
                           </button>
@@ -361,7 +365,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
           <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-[#4f46e5]">Đối chiếu thiết bị</p>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-[#e30613]">Đối chiếu thiết bị</p>
                 <h2 className="text-xl font-black text-[#172033]">
                   Đơn #{String(verificationOrder.orderid).padStart(5, '0')}
                 </h2>
@@ -387,7 +391,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                     <label
                       key={device.imei}
                       className={`flex cursor-pointer items-center gap-4 border-2 p-4 transition-colors ${
-                        checked ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-indigo-300'
+                        checked ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-red-300'
                       }`}
                     >
                       <input
@@ -396,14 +400,14 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                         onChange={() => toggleImei(device.imei)}
                         className="h-5 w-5 accent-emerald-600"
                       />
-                      <div className="flex h-11 w-11 items-center justify-center bg-white text-[#4f46e5] shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+                      <div className="flex h-11 w-11 items-center justify-center bg-white text-[#e30613] shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
                         <Smartphone size={22} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-black text-[#172033]">
                           {device.productname ?? device.variantsku ?? 'Thiết bị'}
                         </p>
-                        <p className="font-mono text-sm font-black text-[#4338ca]">{device.imei}</p>
+                        <p className="font-mono text-sm font-black text-[#c4000b]">{device.imei}</p>
                         <p className="text-xs font-semibold text-slate-400">
                           {device.variantsku ?? 'Không có SKU'} · Kho: {device.inventorystatus ?? '—'}
                         </p>
@@ -420,18 +424,24 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                   value={shippingNote}
                   onChange={event => setShippingNote(event.target.value)}
                   placeholder="Ví dụ: Đã kiểm tra ngoại hình, niêm phong và phụ kiện..."
-                  className="min-h-24 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#4f46e5]"
+                  className="min-h-24 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#e30613]"
                 />
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <label className="text-xs font-black uppercase text-slate-500">
                   Đơn vị vận chuyển
-                  <select value={carrier} onChange={event => setCarrier(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case text-[#172033]">
-                    <option value="GHN">GHN</option>
-                    <option value="GHTK">GHTK</option>
-                    <option value="VIETTELPOST">Viettel Post</option>
-                    <option value="J&T">J&T</option>
+                  <select
+                    value={carrier}
+                    onChange={event => setCarrier(event.target.value)}
+                    disabled={isGuestShipment}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case text-[#172033] disabled:cursor-not-allowed disabled:bg-slate-100"
+                  >
+                    <option value={INTERNAL_CARRIER}>Cửa hàng giao nội thành TP.HCM</option>
+                    {!isGuestShipment && <option value="GHN">GHN</option>}
+                    {!isGuestShipment && <option value="GHTK">GHTK</option>}
+                    {!isGuestShipment && <option value="VIETTELPOST">Viettel Post</option>}
+                    {!isGuestShipment && <option value="J&T">J&T</option>}
                   </select>
                 </label>
                 <label className="text-xs font-black uppercase text-slate-500">
@@ -467,7 +477,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                     shippingFee < 0
                   }
                   onClick={confirmShipment}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#4f46e5] px-5 py-2.5 text-sm font-black text-white hover:bg-[#4338ca] disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#e30613] px-5 py-2.5 text-sm font-black text-white hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   <PackageCheck size={17} />
                   {workingId === verificationOrder.orderid ? 'Đang xuất kho...' : 'Xác nhận xuất giao'}

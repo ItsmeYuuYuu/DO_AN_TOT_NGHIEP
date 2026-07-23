@@ -15,6 +15,8 @@ import { Seo } from '@/components/Seo';
 const statusLabels: Record<string, string> = {
   PendingReview: 'Chờ duyệt',
   Approved: 'Đã duyệt, chờ gửi máy',
+  AwaitingCustomerConfirmation: 'Chờ bạn xác nhận mức hoàn',
+  AssessmentDisputed: 'Đang kiểm tra lại kết quả',
   Rejected: 'Bị từ chối',
   RefundPending: 'Chờ hoàn tiền',
   RefundProcessing: 'Chờ bạn xác nhận đã nhận tiền',
@@ -26,6 +28,8 @@ const statusLabels: Record<string, string> = {
 const statusClasses: Record<string, string> = {
   PendingReview: 'bg-amber-50 text-amber-700',
   Approved: 'bg-red-50 text-[#c4000b]',
+  AwaitingCustomerConfirmation: 'bg-blue-50 text-blue-700',
+  AssessmentDisputed: 'bg-orange-50 text-orange-700',
   Rejected: 'bg-red-50 text-red-700',
   RefundPending: 'bg-violet-50 text-violet-700',
   RefundProcessing: 'bg-blue-50 text-blue-700',
@@ -45,6 +49,7 @@ const CustomerReturns: React.FC = () => {
   const [orderId, setOrderId] = useState('');
   const [requestType, setRequestType] = useState<'Return' | 'Exchange'>('Return');
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [reasonCategory, setReasonCategory] = useState('ChangeOfMind');
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -79,8 +84,9 @@ const CustomerReturns: React.FC = () => {
   }, [loadData]);
 
   const eligibleOrders = useMemo(() => orders.filter(order => {
-    if (order.orderstatus !== 'Completed' || !order.orderdate) return false;
-    return new Date(order.orderdate).getTime() >= Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const deliveredAt = order.shipment?.deliveredat ?? order.orderdate;
+    if (order.orderstatus !== 'Completed' || !deliveredAt) return false;
+    return new Date(deliveredAt).getTime() >= Date.now() - 30 * 24 * 60 * 60 * 1000;
   }), [orders]);
 
   const selectedOrder = eligibleOrders.find(order => order.orderid === Number(orderId));
@@ -89,6 +95,7 @@ const CustomerReturns: React.FC = () => {
     setOrderId('');
     setRequestType('Return');
     setSelectedItems([]);
+    setReasonCategory('ChangeOfMind');
     setReason('');
     setDescription('');
     setFiles([]);
@@ -121,6 +128,7 @@ const CustomerReturns: React.FC = () => {
       await returnRequestsApi.create({
         orderid: Number(orderId),
         requesttype: requestType,
+        reasoncategory: reasonCategory,
         reason: reason.trim(),
         description: description.trim() || undefined,
         orderitemids: selectedItems,
@@ -141,6 +149,21 @@ const CustomerReturns: React.FC = () => {
       await loadData();
     } catch (requestError: unknown) {
       setError(getApiErrorMessage(requestError, 'Không thể tạo yêu cầu đổi trả.'));
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleAssessment = async (id: number, accepted: boolean) => {
+    const note = disputeNotes[id]?.trim();
+    if (!accepted && !note) return;
+    setWorking(true);
+    setError('');
+    try {
+      await returnRequestsApi.confirmAssessment(id, accepted, note || undefined);
+      await loadData();
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, 'Không thể xác nhận kết quả kiểm định.'));
     } finally {
       setWorking(false);
     }
@@ -262,6 +285,11 @@ const CustomerReturns: React.FC = () => {
                   {request.requesttype === 'Return' && (
                     <>Hoàn dự kiến: <b className="text-slate-800">{formatCurrency(request.requestedrefundamount)}</b></>
                   )}
+                  {request.approvedrefundamount != null && (
+                    <span className="ml-3 text-blue-700">
+                      Sau kiểm định: {formatCurrency(request.approvedrefundamount)}
+                    </span>
+                  )}
                   {request.refundamount != null && (
                     <span className="ml-3 text-emerald-600">Đã hoàn: {formatCurrency(request.refundamount)}</span>
                   )}
@@ -281,6 +309,61 @@ const CustomerReturns: React.FC = () => {
                 <p className="mt-3 rounded-full bg-amber-50 px-3 py-2 text-sm text-amber-800">
                   Phản hồi: {request.reviewnote}
                 </p>
+              )}
+              {request.status === 'AwaitingCustomerConfirmation' && (
+                <div className="mt-4 space-y-3 rounded-2xl border border-blue-200 bg-blue-50/50 p-4">
+                  <div>
+                    <p className="font-black text-blue-900">Xác nhận kết quả kiểm định</p>
+                    <p className="mt-1 text-xs leading-5 text-blue-700">
+                      Kho đã kiểm tra thiết bị. Tiền hoàn chỉ được xử lý sau khi bạn đồng ý mức dưới đây.
+                    </p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="rounded-xl bg-white p-3 text-sm">
+                      <span className="block text-xs text-slate-400">Đã thanh toán</span>
+                      <b>{formatCurrency(request.items.reduce((sum, item) => sum + item.originalpaidamount, 0))}</b>
+                    </div>
+                    <div className="rounded-xl bg-white p-3 text-sm">
+                      <span className="block text-xs text-slate-400">Khấu hao</span>
+                      <b className="text-red-600">-{formatCurrency(request.refundcalculation?.totaldeductionamount ?? 0)}</b>
+                    </div>
+                    <div className="rounded-xl bg-white p-3 text-sm">
+                      <span className="block text-xs text-slate-400">Sẽ hoàn</span>
+                      <b className="text-emerald-600">{formatCurrency(request.approvedrefundamount ?? 0)}</b>
+                    </div>
+                  </div>
+                  {request.refundcalculation?.items.map(item => (
+                    <div key={item.orderitemid} className="rounded-xl bg-white p-3 text-xs leading-5 text-slate-600">
+                      <b className="text-slate-800">IMEI {item.imei}</b>
+                      <p>
+                        Phân loại {item.inspectiongrade} · khấu hao {item.totaldeductionrate}%
+                        {' '}({formatCurrency(item.deductionamount)})
+                      </p>
+                    </div>
+                  ))}
+                  <textarea
+                    rows={2}
+                    value={disputeNotes[request.returnrequestid] ?? ''}
+                    onChange={event => setDisputeNotes(current => ({
+                      ...current,
+                      [request.returnrequestid]: event.target.value,
+                    }))}
+                    placeholder="Nếu không đồng ý, nhập lý do để Manager yêu cầu kiểm định lại"
+                    className="w-full rounded-2xl border border-blue-200 px-3 py-2 text-sm"
+                  />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button
+                      variant="danger"
+                      disabled={working || !disputeNotes[request.returnrequestid]?.trim()}
+                      onClick={() => handleAssessment(request.returnrequestid, false)}
+                    >
+                      Không đồng ý
+                    </Button>
+                    <Button disabled={working} onClick={() => handleAssessment(request.returnrequestid, true)}>
+                      Đồng ý mức hoàn
+                    </Button>
+                  </div>
+                </div>
               )}
               {request.status === 'RefundProcessing' && (
                 <div className="mt-4 space-y-3 rounded-2xl border border-blue-200 bg-blue-50/50 p-4">
@@ -412,7 +495,30 @@ const CustomerReturns: React.FC = () => {
           )}
 
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-slate-700">Lý do</label>
+            <label htmlFor="return-reason-category" className="mb-1.5 block text-sm font-bold text-slate-700">
+              Nhóm lý do
+            </label>
+            <select
+              id="return-reason-category"
+              required
+              value={reasonCategory}
+              onChange={event => setReasonCategory(event.target.value)}
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+            >
+              <option value="ChangeOfMind">Thay đổi nhu cầu / không còn muốn sử dụng</option>
+              <option value="ManufacturerDefect">Nghi ngờ lỗi nhà sản xuất</option>
+              <option value="StoreFault">Sản phẩm không đúng cam kết của cửa hàng</option>
+              <option value="CarrierDamage">Hư hỏng trong quá trình vận chuyển</option>
+              <option value="CustomerDamage">Sự cố do quá trình sử dụng</option>
+              <option value="Other">Lý do khác</option>
+            </select>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Đổi ý: khấu hao 10% trong 7 ngày, 15% từ ngày 8–15 và 20% từ ngày 16–30.
+              Lỗi thuộc nhà sản xuất, cửa hàng hoặc vận chuyển được xác nhận sẽ không khấu hao.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-bold text-slate-700">Mô tả lý do</label>
             <input
               required
               value={reason}

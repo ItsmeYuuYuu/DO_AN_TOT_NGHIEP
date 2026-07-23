@@ -41,6 +41,27 @@ public sealed class ProductConsultationService : IProductConsultationService
         "giup", "khoang", "tam", "duoi", "tren", "gia", "trieu", "nghin", "vnd"
     };
 
+    private static readonly HashSet<string> GenericPhoneConsultationWords = new(StringComparer.Ordinal)
+    {
+        "toi", "minh", "em", "anh", "chi", "ban", "cho", "can", "muon", "mua", "tim", "tu", "van", "giup",
+        "goi", "y", "vui", "long", "hay", "nen", "chon", "lay", "xem", "co", "khong", "la", "cua", "voi", "va",
+        "mot", "vai", "cai", "chiec", "loai", "mau", "dong", "may", "san", "pham", "dien", "thoai", "smartphone", "phone",
+        "nao", "gi", "phu", "hop", "tot", "dep", "muot", "manh", "ben", "on", "dinh", "ngon", "re", "xin", "nhat",
+        "gia", "ngan", "sach", "tam", "khoang", "duoi", "tren", "tu", "den", "trieu", "nghin", "k", "vnd", "dong",
+        "camera", "chup", "anh", "quay", "phim", "video", "tele", "zoom", "dem", "selfie", "chan", "dung", "ois",
+        "choi", "game", "gaming", "genshin", "pubg", "lien", "quan", "free", "fire", "toc", "chien", "fps",
+        "pin", "lau", "trau", "sac", "nhanh", "hieu", "nang", "cau", "hinh", "chip", "cpu", "gpu",
+        "ram", "rom", "bo", "nho", "dung", "luong", "gb", "tb", "man", "hinh", "oled", "amoled", "hz",
+        "hoc", "tap", "sinh", "vien", "van", "phong", "lam", "viec", "mang", "xa", "hoi", "livestream",
+        "moi", "new", "seal", "likenew", "cu", "con", "hang", "ton", "kho", "chinh", "hang",
+        "so", "sanh", "khac", "nhau", "hon", "doi", "chieu", "uu", "tien", "theo", "thuong", "hieu"
+    };
+
+    private static readonly HashSet<string> GenericCatalogTermWords = new(StringComparer.Ordinal)
+    {
+        "dien", "thoai", "smartphone", "phone", "mobile", "may", "san", "pham", "dong", "series", "model"
+    };
+
     private readonly ECommerceContext _context;
     private readonly AiAssistantOptions _options;
 
@@ -259,46 +280,52 @@ public sealed class ProductConsultationService : IProductConsultationService
 
     private static bool IsCatalogIntent(string query, IReadOnlyCollection<string> catalogTerms)
     {
-        if (ContainsAny(
-                query,
-                "san pham",
-                "dien thoai",
-                "laptop",
-                "tablet",
-                "tai nghe",
-                "dong ho",
-                "phu kien",
-                "gia",
-                "ram",
-                "bo nho",
-                "dung luong",
-                "con hang",
-                "ton kho",
-                "so sanh",
-                "khac nhau",
-                "nen chon",
-                "may nao hon",
-                "may nao tot hon",
-                "doi chieu",
-                "mua",
-                "camera",
-                "pin",
-                "chup anh",
-                "quay phim",
-                "quay video",
-                "choi game",
-                "gaming",
-                "hieu nang",
-                "cau hinh",
-                "pin lau",
-                "pin trau",
-                "hoc tap",
-                "lam viec"))
-        {
-            return true;
-        }
+        if (CatalogScopeGuard.Check(query).IsOutOfScope)
+            return false;
 
-        return catalogTerms.Any(term => term.Length >= 3 && query.Contains(term));
+        if (catalogTerms.Any(term => MatchesCatalogTerm(query, term)))
+            return true;
+
+        if (ContainsAny(query, "dien thoai", "smartphone", "smart phone", "mobile phone", "iphone"))
+            return true;
+
+        var hasConsultationSignal = ContainsAny(
+            query, "san pham", "may nao", "tim may", "chon may", "goi y", "tu van", "mua",
+            "gia", "ram", "bo nho", "so sanh", "camera", "pin", "chup anh", "quay video",
+            "choi game", "gaming", "hieu nang", "cau hinh", "hoc tap", "lam viec");
+        if (!hasConsultationSignal)
+            return false;
+
+        // Generic phone requests are accepted only when every meaningful word belongs to the
+        // consultation vocabulary. An unknown target noun therefore cannot borrow “camera/pin/game”
+        // to receive unrelated phone results. Real brand/product/series names were accepted above.
+        return Regex.Matches(query, @"[\p{L}\p{N}]+")
+            .Select(match => match.Value)
+            .All(token =>
+                token.All(char.IsDigit) ||
+                token.Length == 1 ||
+                GenericPhoneConsultationWords.Contains(token));
+    }
+
+    private static bool MatchesCatalogTerm(string query, string catalogTerm)
+    {
+        if (catalogTerm.Length >= 3 && query.Contains(catalogTerm, StringComparison.Ordinal))
+            return true;
+
+        var queryTokens = Regex.Matches(query, @"[\p{L}\p{N}]+")
+            .Select(match => match.Value)
+            .ToHashSet(StringComparer.Ordinal);
+        var distinctiveTokens = Regex.Matches(catalogTerm, @"[\p{L}\p{N}]+")
+            .Select(match => match.Value)
+            .Where(token => token.Length >= 2 && !GenericCatalogTermWords.Contains(token))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var matches = distinctiveTokens.Count(queryTokens.Contains);
+
+        if (distinctiveTokens.Count >= 2)
+            return matches >= 2;
+        return distinctiveTokens.Count == 1 && matches == 1 &&
+            (distinctiveTokens[0].Length >= 5 || distinctiveTokens[0].Any(char.IsDigit));
     }
 
     private static (decimal? Min, decimal? Max) ExtractPriceRange(string query)

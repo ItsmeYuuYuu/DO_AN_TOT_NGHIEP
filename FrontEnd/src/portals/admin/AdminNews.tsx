@@ -178,7 +178,7 @@ const AdminNews: React.FC = () => {
             header: 'Thao tác',
             render: (n: News) => (
               <div className="flex gap-2">
-                <button onClick={() => openEdit(n)} className="px-3 py-1 bg-indigo-50 text-[#4f46e5] rounded hover:bg-indigo-100 text-xs font-bold">Sửa</button>
+                <button onClick={() => openEdit(n)} className="px-3 py-1 bg-red-50 text-[#e30613] rounded hover:bg-red-100 text-xs font-bold">Sửa</button>
                 <button onClick={() => handleDelete(n.postid)} className="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 text-xs font-bold">Xóa</button>
               </div>
             )
@@ -198,7 +198,7 @@ const AdminNews: React.FC = () => {
           />
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700">Ảnh thumbnail</label>
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-bold text-[#4338ca] hover:bg-indigo-100">
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-[#c4000b] hover:bg-red-100">
               {uploadingThumbnail
                 ? <LoaderCircle size={17} className="animate-spin" />
                 : <Upload size={17} />}
@@ -227,7 +227,7 @@ const AdminNews: React.FC = () => {
           <div className="space-y-1">
             <label className="text-sm font-bold text-slate-700">Tóm tắt</label>
             <textarea 
-              className="w-full border border-slate-200 rounded-xl p-3 focus:border-[#4f46e5] focus:outline-none text-sm h-20"
+              className="w-full border border-slate-200 rounded-xl p-3 focus:border-[#e30613] focus:outline-none text-sm h-20"
               value={editing?.summary || ''} 
               onChange={e => setEditing({ ...editing, summary: e.target.value })} 
             />
@@ -247,7 +247,7 @@ const AdminNews: React.FC = () => {
               id="isactive" 
               checked={editing?.isactive ?? true} 
               onChange={e => setEditing({ ...editing, isactive: e.target.checked })} 
-              className="w-4 h-4 text-[#4f46e5] rounded border-slate-300 focus:ring-[#4f46e5]"
+              className="w-4 h-4 text-[#e30613] rounded border-slate-300 focus:ring-[#e30613]"
             />
             <label htmlFor="isactive" className="text-sm font-bold text-slate-700">
               Hiển thị bài viết này

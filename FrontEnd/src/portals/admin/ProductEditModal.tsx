@@ -11,12 +11,14 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { Modal } from '@/components/Modal';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { removeImageFromRichText } from '@/utils/richText';
 import { productsApi } from '@/features/products/api/productsApi';
 import type { UpdateFullProduct, UpdateFullProductVariant, UploadedProductImage } from '@/features/products/api/productsApi';
 import { PRODUCT_CONDITION_OPTIONS } from '@/features/products/constants/productOptions';
+import { ProductSeriesInput } from '@/features/productSeries/components/ProductSeriesInput';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { getApiErrorMessage } from '@/utils/apiError';
 
@@ -49,7 +51,7 @@ interface EditVariant {
 }
 
 const inputClass =
-  'w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#4f46e5] disabled:bg-slate-100 disabled:text-slate-500';
+  'w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#e30613] disabled:bg-slate-100 disabled:text-slate-500';
 
 const newClientId = () => crypto.randomUUID();
 
@@ -264,6 +266,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
     if (!productname.trim()) return 'Vui lòng nhập tên sản phẩm.';
     if (!categoryid) return 'Vui lòng chọn danh mục.';
     if (!brandid) return 'Vui lòng chọn thương hiệu.';
+    if (!seriesname.trim()) return 'Vui lòng chọn hoặc nhập dòng máy (series).';
     if (variants.length === 0) return 'Sản phẩm phải có ít nhất một biến thể.';
 
     const seenSkus = new Set<string>();
@@ -311,7 +314,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
       description: description.trim(),
       categoryid: Number(categoryid),
       brandid: Number(brandid),
-      seriesname: seriesname.trim() || undefined,
+      seriesname: seriesname.trim(),
       variants: variants.map<UpdateFullProductVariant>(variant => ({
         variantid: variant.variantid,
         sku: variant.sku.trim(),
@@ -400,12 +403,13 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-600">Dòng máy</label>
-                <input
+                <label className="mb-1 block text-xs font-bold text-slate-600">Dòng máy (series) *</label>
+                <ProductSeriesInput
+                  brandId={brandid}
                   className={inputClass}
                   value={seriesname}
                   disabled={contentOnly}
-                  onChange={event => setSeriesname(event.target.value)}
+                  onChange={setSeriesname}
                   placeholder="VD: Galaxy S, iPhone Pro"
                 />
               </div>
@@ -413,7 +417,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
             <div>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <label className="block text-xs font-bold text-slate-600">Mô tả</label>
-                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-2xl bg-indigo-50 px-3 py-2 text-xs font-bold text-[#4338ca] hover:bg-indigo-100">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-2xl bg-red-50 px-3 py-2 text-xs font-bold text-[#c4000b] hover:bg-red-100">
                   {uploadingDescriptionImages
                     ? <LoaderCircle size={15} className="animate-spin" />
                     : <Upload size={15} />}
@@ -544,21 +548,15 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-bold text-slate-600">Giá gốc *</label>
-                        <input disabled={contentOnly} type="number" className={inputClass} value={variant.baseprice} onChange={event =>
-                          updateVariant(variant.clientId, current => ({
-                            ...current,
-                            baseprice: event.target.value ? Number(event.target.value) : '',
-                          }))
-                        } />
+                        <CurrencyInput disabled={contentOnly} value={variant.baseprice} onChange={value =>
+                          updateVariant(variant.clientId, current => ({ ...current, baseprice: value }))
+                        } className={inputClass} />
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-bold text-slate-600">Giá giảm</label>
-                        <input disabled={contentOnly} type="number" className={inputClass} value={variant.saleprice} onChange={event =>
-                          updateVariant(variant.clientId, current => ({
-                            ...current,
-                            saleprice: event.target.value ? Number(event.target.value) : '',
-                          }))
-                        } />
+                        <CurrencyInput disabled={contentOnly} value={variant.saleprice} onChange={value =>
+                          updateVariant(variant.clientId, current => ({ ...current, saleprice: value }))
+                        } className={inputClass} />
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-bold text-slate-600">Tồn kho *</label>
@@ -577,7 +575,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                           <h4 className="text-xs font-bold uppercase text-slate-600">Hình ảnh ({variant.images.length}/8)</h4>
                           <p className="text-[11px] text-slate-500">Chọn một ảnh làm đại diện cho danh sách sản phẩm.</p>
                         </div>
-                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-2xl bg-indigo-50 px-3 py-2 text-xs font-bold text-[#4338ca] hover:bg-indigo-100">
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-2xl bg-red-50 px-3 py-2 text-xs font-bold text-[#c4000b] hover:bg-red-100">
                           {uploadingVariant === variant.clientId
                             ? <LoaderCircle size={15} className="animate-spin" />
                             : <Upload size={15} />}
@@ -607,7 +605,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                             <div
                               key={`${image.imageurl}-${imageIndex}`}
                               className={`relative rounded-xl border-2 bg-white p-2 ${
-                                image.ismain ? 'border-[#4f46e5] ring-2 ring-indigo-100' : 'border-slate-200'
+                                image.ismain ? 'border-[#e30613] ring-2 ring-red-100' : 'border-slate-200'
                               }`}
                             >
                               <img src={image.imageurl} alt="" className="aspect-square w-full rounded-2xl bg-slate-50 object-contain" />
@@ -652,16 +650,17 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                       ) : (
                         <div className="space-y-2">
                           {variant.specs.map((spec, specIndex) => (
-                            <div key={specIndex} className="flex gap-2">
+                            <div key={specIndex} className="flex items-start gap-2">
                               <input
                                 className={inputClass}
                                 placeholder="Tên thông số"
                                 value={spec.key}
                                 onChange={event => updateSpec(variant, specIndex, 'key', event.target.value)}
                               />
-                              <input
-                                className={inputClass}
-                                placeholder="Giá trị"
+                              <textarea
+                                rows={3}
+                                className={`${inputClass} resize-y`}
+                                placeholder="Giá trị (Enter để xuống dòng)"
                                 value={spec.value}
                                 onChange={event => updateSpec(variant, specIndex, 'value', event.target.value)}
                               />

@@ -21,6 +21,36 @@ export interface ReturnItem {
   disposition?: string;
   replacementimei?: string;
   refundamount: number;
+  originalpaidamount: number;
+  inspectiongrade?: 'NewSeal' | 'Grade99' | 'Grade98' | 'Damaged';
+  faultresponsibility?: 'Manufacturer' | 'Store' | 'Carrier' | 'Customer' | 'NoFault';
+  deductionamount: number;
+  resalevariantid?: number;
+}
+
+export interface RefundCalculationItem {
+  orderitemid: number;
+  imei: string;
+  originalpaidamount: number;
+  inspectiongrade: string;
+  faultresponsibility: string;
+  timedeductionrate: number;
+  conditiondeductionrate: number;
+  missingboxrate: number;
+  missingaccessoryrate: number;
+  totaldeductionrate: number;
+  deductionamount: number;
+  refundamount: number;
+}
+
+export interface RefundCalculation {
+  policyversion: string;
+  deliverydate: string;
+  dayssincedelivery: number;
+  totaldeductionamount: number;
+  items: RefundCalculationItem[];
+  manageroverride?: boolean;
+  overridenote?: string;
 }
 
 export interface RefundTransaction {
@@ -43,6 +73,7 @@ export interface ReturnRequest {
   assigneduserid?: number;
   assigneduser?: string;
   requesttype: 'Return' | 'Exchange';
+  reasoncategory: string;
   reason: string;
   description?: string;
   status: string;
@@ -50,9 +81,12 @@ export interface ReturnRequest {
   reviewnote?: string;
   resolution?: string;
   requestedrefundamount: number;
+  approvedrefundamount?: number;
   refundamount?: number;
   refundstatus: string;
   refunddestination?: RefundDestination;
+  policyversion: string;
+  refundcalculation?: RefundCalculation;
   requestedat?: string;
   reviewedat?: string;
   receivedat?: string;
@@ -86,6 +120,10 @@ export interface ReceiveReturnItemPayload {
   returnitemid: number;
   condition: string;
   disposition: 'Restock' | 'Warranty' | 'Damaged';
+  inspectiongrade: 'NewSeal' | 'Grade99' | 'Grade98' | 'Damaged';
+  faultresponsibility: 'Manufacturer' | 'Store' | 'Carrier' | 'Customer' | 'NoFault';
+  missingbox: boolean;
+  missingaccessorycount: number;
   replacementimei?: string;
   refundamount?: number;
 }
@@ -99,6 +137,7 @@ export const returnRequestsApi = {
   create: (payload: {
     orderid: number;
     requesttype: 'Return' | 'Exchange';
+    reasoncategory: string;
     reason: string;
     description?: string;
     orderitemids: number[];
@@ -121,6 +160,15 @@ export const returnRequestsApi = {
     resolution,
     note,
   }),
+  confirmAssessment: (id: number, accepted: boolean, note?: string) =>
+    apiClient.post<ReturnRequest>(`/ReturnRequests/${id}/confirm-assessment`, { accepted, note }),
+  reinspect: (id: number, note: string) =>
+    apiClient.post<ReturnRequest>(`/ReturnRequests/${id}/reinspect`, { note }),
+  overrideAssessment: (id: number, approvedrefundamount: number, note: string) =>
+    apiClient.post<ReturnRequest>(`/ReturnRequests/${id}/override-assessment`, {
+      approvedrefundamount,
+      note,
+    }),
   refund: (
     id: number,
     amount: number,

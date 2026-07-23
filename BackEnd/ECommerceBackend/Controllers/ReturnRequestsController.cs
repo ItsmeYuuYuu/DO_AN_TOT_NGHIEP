@@ -2,6 +2,7 @@ using System.Text.Json;
 using ECommerceBackend.DTOs.Common;
 using ECommerceBackend.DTOs.Returns;
 using ECommerceBackend.Models;
+using ECommerceBackend.Services.Returns;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,10 +22,12 @@ public class ReturnRequestsController : ControllerBase
         new(StringComparer.OrdinalIgnoreCase) { "Rejected", "Cancelled", "Completed" };
 
     private readonly ECommerceContext _context;
+    private readonly IReturnRefundPolicyService _refundPolicy;
 
-    public ReturnRequestsController(ECommerceContext context)
+    public ReturnRequestsController(ECommerceContext context, IReturnRefundPolicyService refundPolicy)
     {
         _context = context;
+        _refundPolicy = refundPolicy;
     }
 
     private int? CurrentUserId()
@@ -59,9 +62,23 @@ public class ReturnRequestsController : ControllerBase
         }
     }
 
+    private static RefundCalculationDto? DeserializeRefundCalculation(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<RefundCalculationDto>(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private IQueryable<Returnrequest> RequestQuery() =>
         _context.Returnrequests
             .Include(request => request.Order)
+                .ThenInclude(order => order.Shipment)
             .Include(request => request.Customer)
             .Include(request => request.Assigneduser)
             .Include(request => request.Returnitems)
@@ -88,6 +105,7 @@ public class ReturnRequestsController : ControllerBase
             request.Assigneduserid,
             request.Assigneduser?.Fullname,
             request.Requesttype,
+            request.Reasoncategory,
             request.Reason,
             request.Description,
             request.Status,
@@ -95,9 +113,12 @@ public class ReturnRequestsController : ControllerBase
             request.Reviewnote,
             request.Resolution,
             request.Requestedrefundamount,
+            request.Approvedrefundamount,
             request.Refundamount,
             request.Refundstatus,
             DeserializeRefundDestination(request.Refundinfo),
+            request.Policyversion,
+            DeserializeRefundCalculation(request.Refundcalculation),
             request.Requestedat,
             request.Reviewedat,
             request.Receivedat,
@@ -115,7 +136,12 @@ public class ReturnRequestsController : ControllerBase
                     item.Condition,
                     item.Disposition,
                     item.Replacementimei,
-                    item.Refundamount))
+                    item.Refundamount,
+                    item.Originalpaidamount,
+                    item.Inspectiongrade,
+                    item.Faultresponsibility,
+                    item.Deductionamount,
+                    item.Resalevariantid))
                 .ToList(),
             histories ?? [],
             refundTransactions ?? []);
@@ -298,9 +324,14 @@ public class ReturnRequestsController : ControllerBase
             return BadRequest(new ApiErrorDto("Vui lòng chọn ít nhất một sản phẩm.", null));
         if (string.IsNullOrWhiteSpace(dto.Reason))
             return BadRequest(new ApiErrorDto("Vui lòng nhập lý do đổi trả.", null));
+        var reasonCategory = _refundPolicy.ReasonCategories.FirstOrDefault(item =>
+            item.Equals(dto.Reasoncategory?.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (reasonCategory == null)
+            return BadRequest(new ApiErrorDto("Nhóm lý do đổi trả không hợp lệ.", null));
 
         var order = await _context.Orders
             .Include(item => item.Customer)
+            .Include(item => item.Shipment)
             .Include(item => item.Orderitems)
                 .ThenInclude(item => item.ImeiNavigation)
             .FirstOrDefaultAsync(item => item.Orderid == dto.Orderid);
@@ -308,7 +339,21 @@ public class ReturnRequestsController : ControllerBase
             return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
         if (order.Orderstatus != "Completed")
             return BadRequest(new ApiErrorDto("Chỉ đơn hàng đã hoàn thành mới được yêu cầu đổi trả.", null));
-        if (order.Orderdate.HasValue && order.Orderdate.Value < DateTime.UtcNow.AddDays(-30))
+        DateTime deliveryDate;
+        try
+        {
+            deliveryDate = _refundPolicy.ResolveDeliveryDate(
+                order.Shipment?.Deliveredat,
+                order.Warehousecompletedat,
+                order.Orderdate);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ApiErrorDto(exception.Message, null));
+        }
+        var now = DateTime.UtcNow;
+        var daysSinceDelivery = _refundPolicy.DaysSinceDelivery(deliveryDate, now);
+        if (daysSinceDelivery > 30)
             return BadRequest(new ApiErrorDto("Đơn hàng đã quá thời hạn đổi trả 30 ngày.", null));
 
         var currentUserId = CurrentUserId();
@@ -374,34 +419,56 @@ public class ReturnRequestsController : ControllerBase
             }
         }
 
-        var now = DateTime.UtcNow;
-        var refundAmounts = requestType.Equals("Return", StringComparison.OrdinalIgnoreCase)
+        var originalPaidAmounts = requestType.Equals("Return", StringComparison.OrdinalIgnoreCase)
             ? CalculateRefundAmounts(order, selectedItems)
             : new Dictionary<int, decimal>();
-        var requestedRefund = refundAmounts.Values.Sum();
+        var estimates = requestType.Equals("Return", StringComparison.OrdinalIgnoreCase)
+            ? selectedItems.Select(item => _refundPolicy.Estimate(
+                    item.Orderitemid,
+                    item.Imei!,
+                    originalPaidAmounts.GetValueOrDefault(item.Orderitemid, 0m),
+                    daysSinceDelivery,
+                    reasonCategory))
+                .ToList()
+            : [];
+        var requestedRefund = estimates.Sum(item => item.Refundamount);
         var request = new Returnrequest
         {
             Orderid = order.Orderid,
             Customerid = order.Customerid,
             Requestedbyuserid = currentUserId,
             Requesttype = requestType,
+            Reasoncategory = reasonCategory,
             Reason = dto.Reason.Trim(),
             Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim(),
             Status = "PendingReview",
             Imageurls = JsonSerializer.Serialize(imageUrls),
             Requestedrefundamount = requestedRefund,
+            Approvedrefundamount = null,
             Refundstatus = requestedRefund > 0 ? "Pending" : "NotRequired",
             Refundinfo = refundDestination == null ? null : JsonSerializer.Serialize(refundDestination),
+            Policyversion = _refundPolicy.PolicyVersion,
+            Refundcalculation = requestType.Equals("Return", StringComparison.OrdinalIgnoreCase)
+                ? JsonSerializer.Serialize(new RefundCalculationDto(
+                    _refundPolicy.PolicyVersion,
+                    deliveryDate,
+                    daysSinceDelivery,
+                    estimates.Sum(item => item.Deductionamount),
+                    estimates))
+                : null,
             Requestedat = now,
             Updatedat = now
         };
         foreach (var item in selectedItems)
         {
+            var estimate = estimates.FirstOrDefault(value => value.Orderitemid == item.Orderitemid);
             request.Returnitems.Add(new Returnitem
             {
                 Orderitemid = item.Orderitemid,
                 Imei = item.Imei!,
-                Refundamount = refundAmounts.GetValueOrDefault(item.Orderitemid, 0m)
+                Originalpaidamount = originalPaidAmounts.GetValueOrDefault(item.Orderitemid, 0m),
+                Refundamount = estimate?.Refundamount ?? 0m,
+                Deductionamount = estimate?.Deductionamount ?? 0m
             });
         }
         await using (var transaction = await _context.Database.BeginTransactionAsync())
@@ -517,11 +584,14 @@ public class ReturnRequestsController : ControllerBase
         await using var transaction = await _context.Database.BeginTransactionAsync();
         var request = await _context.Returnrequests
             .Include(item => item.Order)
+                .ThenInclude(order => order.Shipment)
+            .Include(item => item.Order)
                 .ThenInclude(order => order.Orderitems)
             .Include(item => item.Returnitems)
                 .ThenInclude(item => item.Orderitem)
             .Include(item => item.Returnitems)
                 .ThenInclude(item => item.Inventoryitem)
+                    .ThenInclude(inventory => inventory.Variant)
             .FirstOrDefaultAsync(item => item.Returnrequestid == id);
         if (request == null)
             return NotFound(new ApiErrorDto("Yêu cầu đổi trả không tồn tại.", null));
@@ -530,12 +600,29 @@ public class ReturnRequestsController : ControllerBase
         if (dto.Items.Count != request.Returnitems.Count)
             return BadRequest(new ApiErrorDto("Cần kiểm tra đầy đủ tất cả IMEI trong phiếu.", null));
 
+        if (dto.Items.Select(item => item.Returnitemid).Distinct().Count() != dto.Items.Count)
+            return BadRequest(new ApiErrorDto("Danh sách kiểm định có IMEI bị lặp.", null));
         var payload = dto.Items.ToDictionary(item => item.Returnitemid);
         if (request.Returnitems.Any(item => !payload.ContainsKey(item.Returnitemid)))
             return BadRequest(new ApiErrorDto("Danh sách IMEI tiếp nhận không khớp với phiếu.", null));
 
         var actorId = CurrentUserId();
         var now = DateTime.UtcNow;
+        DateTime deliveryDate;
+        try
+        {
+            deliveryDate = _refundPolicy.ResolveDeliveryDate(
+                request.Order.Shipment?.Deliveredat,
+                request.Order.Warehousecompletedat,
+                request.Order.Orderdate);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ApiErrorDto(exception.Message, null));
+        }
+        var daysSinceDelivery = _refundPolicy.DaysSinceDelivery(deliveryDate, now);
+        var calculations = new List<RefundCalculationItemDto>();
+
         foreach (var item in request.Returnitems)
         {
             var input = payload[item.Returnitemid];
@@ -544,33 +631,35 @@ public class ReturnRequestsController : ControllerBase
             if (string.IsNullOrWhiteSpace(input.Condition))
                 return BadRequest(new ApiErrorDto($"Cần nhập tình trạng cho IMEI {item.Imei}.", null));
 
+            var inspectionGrade = _refundPolicy.InspectionGrades.FirstOrDefault(value =>
+                value.Equals(input.Inspectiongrade?.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (inspectionGrade == null)
+                return BadRequest(new ApiErrorDto($"Mức phân loại của IMEI {item.Imei} không hợp lệ.", null));
+            var faultResponsibility = _refundPolicy.FaultResponsibilities.FirstOrDefault(value =>
+                value.Equals(input.Faultresponsibility?.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (faultResponsibility == null)
+                return BadRequest(new ApiErrorDto($"Trách nhiệm lỗi của IMEI {item.Imei} không hợp lệ.", null));
+            if (input.Missingaccessorycount is < 0 or > 10)
+                return BadRequest(new ApiErrorDto("Số phụ kiện thiếu phải từ 0 đến 10.", null));
+
             var original = item.Inventoryitem;
-            var previousStatus = original.Status;
+            if (original.Variant == null)
+                return Conflict(new ApiErrorDto($"IMEI {item.Imei} không còn liên kết biến thể sản phẩm.", null));
             var disposition = NormalizeDisposition(input.Disposition);
-            original.Status = disposition switch
-            {
-                "Restock" => "InStock",
-                "Warranty" => "Warranty",
-                _ => "Damaged"
-            };
-            original.Warrantystatus = disposition == "Restock" ? "Returned" : original.Warrantystatus;
+            if (disposition == "Restock" && inspectionGrade == "Damaged")
+                return BadRequest(new ApiErrorDto("Máy hư hỏng không thể nhập lại kho bán hàng.", null));
+            if (disposition == "Restock" && faultResponsibility == "Customer")
+                return BadRequest(new ApiErrorDto("Máy lỗi do khách sử dụng phải chuyển bảo hành hoặc hư hỏng.", null));
+
             item.Condition = input.Condition.Trim();
             item.Disposition = disposition;
-
-            _context.Inventorytransactions.Add(new Inventorytransaction
-            {
-                Imei = original.Imei,
-                Orderid = request.Orderid,
-                Userid = actorId,
-                Transactiontype = "CustomerReturn",
-                Fromstatus = previousStatus,
-                Tostatus = original.Status,
-                Note = $"Return request #{request.Returnrequestid}: {disposition}.",
-                Createdat = now
-            });
+            item.Inspectiongrade = inspectionGrade;
+            item.Faultresponsibility = faultResponsibility;
+            item.Resalevariantid = null;
 
             if (request.Requesttype.Equals("Exchange", StringComparison.OrdinalIgnoreCase))
             {
+                var originalVariantId = original.Variantid;
                 if (string.IsNullOrWhiteSpace(input.Replacementimei))
                     return BadRequest(new ApiErrorDto($"Cần chọn IMEI thay thế cho {item.Imei}.", null));
 
@@ -578,12 +667,14 @@ public class ReturnRequestsController : ControllerBase
                     .FirstOrDefaultAsync(inventory => inventory.Imei == input.Replacementimei.Trim());
                 if (replacement == null ||
                     replacement.Status != "InStock" ||
-                    replacement.Variantid != original.Variantid)
+                    replacement.Variantid != originalVariantId)
                 {
                     return BadRequest(new ApiErrorDto(
                         $"IMEI thay thế cho {item.Imei} phải cùng biến thể và đang còn trong kho.",
                         null));
                 }
+
+                await ApplyReturnedInventoryAsync(request, item, actorId, now);
 
                 replacement.Status = "Sold";
                 replacement.Warrantystartdate = now;
@@ -609,11 +700,22 @@ public class ReturnRequestsController : ControllerBase
             }
             else
             {
-                var allocatedRefund = item.Refundamount;
-                if (input.Refundamount.HasValue && input.Refundamount.Value != allocatedRefund)
+                var calculation = _refundPolicy.Calculate(
+                    item.Orderitemid,
+                    item.Imei,
+                    item.Originalpaidamount,
+                    daysSinceDelivery,
+                    inspectionGrade,
+                    faultResponsibility,
+                    input.Missingbox,
+                    input.Missingaccessorycount);
+                if (input.Refundamount.HasValue && input.Refundamount.Value != calculation.Refundamount)
                     return BadRequest(new ApiErrorDto(
-                        $"Số tiền hoàn cho {item.Imei} đã được cố định là {allocatedRefund:N0} đồng theo giá trị đơn sau giảm giá.",
+                        $"Số tiền hoàn cho {item.Imei} phải do hệ thống tính là {calculation.Refundamount:N0} đồng.",
                         null));
+                item.Deductionamount = calculation.Deductionamount;
+                item.Refundamount = calculation.Refundamount;
+                calculations.Add(calculation);
             }
         }
 
@@ -623,9 +725,15 @@ public class ReturnRequestsController : ControllerBase
         request.Updatedat = now;
         if (request.Requesttype.Equals("Return", StringComparison.OrdinalIgnoreCase))
         {
-            request.Requestedrefundamount = request.Returnitems.Sum(item => item.Refundamount);
-            request.Status = request.Requestedrefundamount > 0 ? "RefundPending" : "Completed";
-            request.Refundstatus = request.Requestedrefundamount > 0 ? "Pending" : "NotRequired";
+            request.Approvedrefundamount = calculations.Sum(item => item.Refundamount);
+            request.Refundcalculation = JsonSerializer.Serialize(new RefundCalculationDto(
+                request.Policyversion,
+                deliveryDate,
+                daysSinceDelivery,
+                calculations.Sum(item => item.Deductionamount),
+                calculations));
+            request.Status = "AwaitingCustomerConfirmation";
+            request.Refundstatus = "AwaitingConfirmation";
         }
         else
         {
@@ -637,6 +745,193 @@ public class ReturnRequestsController : ControllerBase
 
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+    }
+
+    [HttpPost("{id:int}/confirm-assessment")]
+    [Authorize(Roles = "Customer")]
+    public async Task<ActionResult<ReturnRequestDto>> ConfirmAssessment(
+        int id,
+        ConfirmRefundAssessmentDto dto)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        var request = await _context.Returnrequests
+            .Include(item => item.Order)
+            .Include(item => item.Returnitems)
+                .ThenInclude(item => item.Inventoryitem)
+                    .ThenInclude(inventory => inventory.Variant)
+            .FirstOrDefaultAsync(item => item.Returnrequestid == id);
+        if (request == null)
+            return NotFound(new ApiErrorDto("Yêu cầu đổi trả không tồn tại.", null));
+        if (request.Requestedbyuserid != CurrentUserId() && request.Order.Userid != CurrentUserId())
+            return StatusCode(403, new ApiErrorDto("Bạn không có quyền xác nhận yêu cầu này.", null));
+        if (request.Status != "AwaitingCustomerConfirmation")
+            return Conflict(new ApiErrorDto("Yêu cầu không chờ xác nhận kết quả kiểm định.", null));
+        if (!dto.Accepted && string.IsNullOrWhiteSpace(dto.Note))
+            return BadRequest(new ApiErrorDto("Vui lòng nhập lý do không đồng ý kết quả kiểm định.", null));
+
+        var previous = request.Status;
+        var now = DateTime.UtcNow;
+        if (!dto.Accepted)
+        {
+            request.Status = "AssessmentDisputed";
+            request.Refundstatus = "AssessmentDisputed";
+            request.Updatedat = now;
+            AddHistory(
+                request,
+                CurrentUserId(),
+                previous,
+                request.Status,
+                $"Khách hàng không đồng ý kết quả kiểm định: {dto.Note!.Trim()}");
+        }
+        else
+        {
+            foreach (var item in request.Returnitems)
+                await ApplyReturnedInventoryAsync(request, item, CurrentUserId(), now);
+
+            request.Status = request.Approvedrefundamount > 0 ? "RefundPending" : "Completed";
+            request.Refundstatus = request.Approvedrefundamount > 0 ? "Pending" : "NotRequired";
+            request.Completedat = request.Status == "Completed" ? now : null;
+            request.Updatedat = now;
+            AddHistory(
+                request,
+                CurrentUserId(),
+                previous,
+                request.Status,
+                string.IsNullOrWhiteSpace(dto.Note)
+                    ? "Khách hàng đồng ý kết quả kiểm định và số tiền hoàn."
+                    : $"Khách hàng đồng ý kết quả kiểm định. {dto.Note.Trim()}");
+        }
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+    }
+
+    [HttpPost("{id:int}/reinspect")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<ActionResult<ReturnRequestDto>> Reinspect(
+        int id,
+        ReinspectRefundAssessmentDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Note))
+            return BadRequest(new ApiErrorDto("Bắt buộc nhập lý do yêu cầu kiểm định lại.", null));
+
+        var request = await _context.Returnrequests
+            .Include(item => item.Returnitems)
+            .FirstOrDefaultAsync(item => item.Returnrequestid == id);
+        if (request == null)
+            return NotFound(new ApiErrorDto("Yêu cầu đổi trả không tồn tại.", null));
+        if (request.Status != "AssessmentDisputed")
+            return Conflict(new ApiErrorDto("Yêu cầu không có khiếu nại kết quả kiểm định.", null));
+
+        foreach (var item in request.Returnitems)
+        {
+            item.Condition = null;
+            item.Disposition = null;
+            item.Inspectiongrade = null;
+            item.Faultresponsibility = null;
+            item.Deductionamount = 0m;
+            item.Refundamount = item.Originalpaidamount;
+            item.Resalevariantid = null;
+        }
+        var previous = request.Status;
+        request.Status = "Approved";
+        request.Refundstatus = "Pending";
+        request.Approvedrefundamount = null;
+        request.Refundcalculation = null;
+        request.Receivedat = null;
+        request.Updatedat = DateTime.UtcNow;
+        AddHistory(request, CurrentUserId(), previous, request.Status, dto.Note.Trim());
+
+        await _context.SaveChangesAsync();
+        return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
+    }
+
+    [HttpPost("{id:int}/override-assessment")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<ActionResult<ReturnRequestDto>> OverrideAssessment(
+        int id,
+        OverrideRefundAssessmentDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Note))
+            return BadRequest(new ApiErrorDto("Bắt buộc nhập lý do điều chỉnh ngoại lệ.", null));
+
+        var request = await _context.Returnrequests
+            .Include(item => item.Returnitems)
+            .FirstOrDefaultAsync(item => item.Returnrequestid == id);
+        if (request == null)
+            return NotFound(new ApiErrorDto("Yêu cầu đổi trả không tồn tại.", null));
+        if (request.Status is not ("AwaitingCustomerConfirmation" or "AssessmentDisputed"))
+            return Conflict(new ApiErrorDto("Chỉ được điều chỉnh kết quả đang chờ xác nhận hoặc đang khiếu nại.", null));
+
+        var maximumRefund = request.Returnitems.Sum(item => item.Originalpaidamount);
+        if (dto.Approvedrefundamount < 0 || dto.Approvedrefundamount > maximumRefund)
+            return BadRequest(new ApiErrorDto(
+                $"Số tiền điều chỉnh phải từ 0 đến {maximumRefund:N0} đồng.",
+                null));
+
+        var oldAmount = request.Approvedrefundamount ?? request.Returnitems.Sum(item => item.Refundamount);
+        var allocationBase = maximumRefund;
+        decimal allocated = 0m;
+        var calculation = DeserializeRefundCalculation(request.Refundcalculation);
+        var calculationItems = new List<RefundCalculationItemDto>();
+
+        for (var index = 0; index < request.Returnitems.Count; index++)
+        {
+            var item = request.Returnitems.OrderBy(value => value.Returnitemid).ElementAt(index);
+            var weight = allocationBase <= 0
+                ? 0m
+                : item.Originalpaidamount / allocationBase;
+            var refund = index == request.Returnitems.Count - 1
+                ? dto.Approvedrefundamount - allocated
+                : decimal.Round(dto.Approvedrefundamount * weight, 0, MidpointRounding.AwayFromZero);
+            refund = Math.Clamp(refund, 0m, item.Originalpaidamount);
+            allocated += refund;
+            item.Refundamount = refund;
+            item.Deductionamount = item.Originalpaidamount - refund;
+
+            var previous = calculation?.Items.FirstOrDefault(value => value.Orderitemid == item.Orderitemid);
+            var totalRate = item.Originalpaidamount <= 0
+                ? 0m
+                : decimal.Round(item.Deductionamount * 100m / item.Originalpaidamount, 2);
+            calculationItems.Add(new RefundCalculationItemDto(
+                item.Orderitemid,
+                item.Imei,
+                item.Originalpaidamount,
+                item.Inspectiongrade ?? "Grade98",
+                item.Faultresponsibility ?? "NoFault",
+                previous?.Timedeductionrate ?? 0m,
+                previous?.Conditiondeductionrate ?? 0m,
+                previous?.Missingboxrate ?? 0m,
+                previous?.Missingaccessoryrate ?? 0m,
+                totalRate,
+                item.Deductionamount,
+                refund));
+        }
+
+        request.Approvedrefundamount = request.Returnitems.Sum(item => item.Refundamount);
+        request.Refundcalculation = JsonSerializer.Serialize(new RefundCalculationDto(
+            request.Policyversion,
+            calculation?.Deliverydate ?? request.Receivedat ?? DateTime.UtcNow,
+            calculation?.Dayssincedelivery ?? 0,
+            request.Returnitems.Sum(item => item.Deductionamount),
+            calculationItems,
+            Manageroverride: true,
+            Overridenote: dto.Note.Trim()));
+        var previousStatus = request.Status;
+        request.Status = "AwaitingCustomerConfirmation";
+        request.Refundstatus = "AwaitingConfirmation";
+        request.Updatedat = DateTime.UtcNow;
+        AddHistory(
+            request,
+            CurrentUserId(),
+            previousStatus,
+            request.Status,
+            $"Manager điều chỉnh mức hoàn từ {oldAmount:N0} thành {request.Approvedrefundamount:N0} đồng. {dto.Note.Trim()}",
+            new { oldAmount, request.Approvedrefundamount, reason = dto.Note.Trim() });
+
+        await _context.SaveChangesAsync();
         return Ok(await MapOneAsync(await RequestQuery().AsNoTracking().FirstAsync(item => item.Returnrequestid == id)));
     }
 
@@ -694,7 +989,8 @@ public class ReturnRequestsController : ControllerBase
                 payment.Returnrequestid == request.Returnrequestid &&
                 payment.Status != "Failed")
             .Sum(p => p.Amount);
-        var remaining = request.Requestedrefundamount - reservedBefore;
+        var approvedRefund = request.Approvedrefundamount ?? request.Requestedrefundamount;
+        var remaining = approvedRefund - reservedBefore;
         if (dto.Amount != remaining)
             return BadRequest(new ApiErrorDto(
                 $"Phải hoàn toàn bộ số tiền còn lại là {remaining:N0} đồng; hệ thống không hỗ trợ hoàn từng phần.",
@@ -937,7 +1233,8 @@ public class ReturnRequestsController : ControllerBase
                 payment.Status == "Completed")
             .Sum(payment => payment.Amount);
         request.Refundamount = confirmedAmount;
-        request.Refundstatus = confirmedAmount >= request.Requestedrefundamount
+        var approvedRefund = request.Approvedrefundamount ?? request.Requestedrefundamount;
+        request.Refundstatus = confirmedAmount >= approvedRefund
             ? "Refunded"
             : "PartiallyRefunded";
         request.Status = request.Refundstatus == "Refunded" ? "Completed" : "RefundPending";
@@ -965,6 +1262,89 @@ public class ReturnRequestsController : ControllerBase
         completedReturnedItemIds.AddRange(request.Returnitems.Select(item => item.Orderitemid));
         if (completedReturnedItemIds.Distinct().Count() >= request.Order.Orderitems.Count)
             request.Order.Orderstatus = "Returned";
+    }
+
+    private async Task ApplyReturnedInventoryAsync(
+        Returnrequest request,
+        Returnitem item,
+        int? actorId,
+        DateTime now)
+    {
+        var inventory = item.Inventoryitem;
+        var previousStatus = inventory.Status;
+        var disposition = NormalizeDisposition(item.Disposition ?? "Damaged");
+
+        if (disposition == "Restock")
+        {
+            if (inventory.Variant == null)
+                throw new InvalidOperationException($"IMEI {inventory.Imei} không có biến thể để nhập lại kho.");
+            var resaleVariant = await ResolveResaleVariantAsync(
+                inventory.Variant,
+                item.Inspectiongrade ?? "Grade98");
+            inventory.Variant = resaleVariant;
+            item.Resalevariant = resaleVariant;
+            inventory.Status = "InStock";
+            inventory.Warrantystatus = "Returned";
+        }
+        else
+        {
+            inventory.Status = disposition == "Warranty" ? "Warranty" : "Damaged";
+        }
+
+        _context.Inventorytransactions.Add(new Inventorytransaction
+        {
+            Imei = inventory.Imei,
+            Orderid = request.Orderid,
+            Userid = actorId,
+            Transactiontype = "CustomerReturn",
+            Fromstatus = previousStatus,
+            Tostatus = inventory.Status,
+            Note = $"Return request #{request.Returnrequestid}: {disposition}; grade {item.Inspectiongrade}.",
+            Createdat = now
+        });
+    }
+
+    private async Task<Productvariant> ResolveResaleVariantAsync(
+        Productvariant original,
+        string inspectionGrade)
+    {
+        if (inspectionGrade.Equals("NewSeal", StringComparison.OrdinalIgnoreCase))
+            return original;
+
+        var condition = inspectionGrade.Equals("Grade99", StringComparison.OrdinalIgnoreCase)
+            ? "Like New (99%)"
+            : "Like New (98%)";
+        var existing = await _context.Productvariants.FirstOrDefaultAsync(variant =>
+            variant.Productid == original.Productid &&
+            variant.Condition == condition &&
+            variant.Specifications == original.Specifications);
+        if (existing != null) return existing;
+
+        var suffix = inspectionGrade.Equals("Grade99", StringComparison.OrdinalIgnoreCase) ? "99" : "98";
+        var skuBase = $"RET-{original.Variantid}-{suffix}";
+        var sku = skuBase;
+        var sequence = 1;
+        while (await _context.Productvariants.AnyAsync(variant => variant.Sku == sku))
+            sku = $"{skuBase}-{sequence++}";
+
+        var currentPrice = original.Saleprice ?? original.Baseprice;
+        var resaleRate = suffix == "99" ? 0.90m : 0.85m;
+        var resalePrice = decimal.Round(
+            currentPrice * resaleRate / 1_000m,
+            0,
+            MidpointRounding.AwayFromZero) * 1_000m;
+        var created = new Productvariant
+        {
+            Productid = original.Productid,
+            Sku = sku,
+            Imageurls = original.Imageurls,
+            Baseprice = resalePrice,
+            Saleprice = null,
+            Condition = condition,
+            Specifications = original.Specifications
+        };
+        _context.Productvariants.Add(created);
+        return created;
     }
 
     private static string NormalizeDisposition(string disposition) =>

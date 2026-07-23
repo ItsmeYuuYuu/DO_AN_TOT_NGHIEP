@@ -9,7 +9,7 @@ const modules = [
     to: '/staff/products',
     action: 'Mở danh sách sản phẩm',
     Icon: PackageSearch,
-    color: 'bg-indigo-50 text-[#4338ca]',
+    color: 'bg-red-50 text-[#c4000b]',
   },
   {
     title: 'Tin tức',
@@ -17,7 +17,7 @@ const modules = [
     to: '/staff/news',
     action: 'Quản lý tin tức',
     Icon: Newspaper,
-    color: 'bg-violet-50 text-violet-700',
+    color: 'bg-red-50 text-[#c4000b]',
   },
   {
     title: 'Banner & slider',
@@ -47,12 +47,12 @@ const ContentWorkspace: React.FC = () => (
           </span>
           <h2 className="mt-5 text-lg font-black text-slate-800">{title}</h2>
           <p className="mt-2 flex-1 text-sm leading-6 text-slate-500">{description}</p>
-          <span className="mt-5 text-sm font-bold text-[#4f46e5] group-hover:underline">{action} →</span>
+          <span className="mt-5 text-sm font-bold text-[#e30613] group-hover:underline">{action} →</span>
         </Link>
       ))}
     </div>
 
-    <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 text-sm text-[#4338ca]">
+    <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-[#c4000b]">
       Tài khoản Content chỉ chỉnh phần nội dung. Tạo sản phẩm mới, giá bán, tồn kho và xóa dữ liệu vẫn thuộc Admin, Manager hoặc Warehouse.
     </div>
   </div>

@@ -277,22 +277,21 @@ export default function CustomerChat() {
     <div className="customer-shell px-0 py-0 md:px-4 md:py-6">
       <Seo title="Trợ lý mua sắm AI - Cuồng Điện Thoại" description="Trợ lý tư vấn AI của Cuồng Điện Thoại." noIndex />
       <div className="customer-container grid h-[calc(100dvh-8.75rem)] min-h-[460px] overflow-hidden border border-[#dde3ea] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.12)] md:h-[calc(100vh-12rem)] md:min-h-[560px] md:max-h-[calc(100vh-8rem)] md:rounded-[24px] lg:grid-cols-[310px_1fr]">
-        <aside className="hidden min-h-0 bg-[#1f2937] text-white lg:flex lg:flex-col">
-          <div className="border-b border-white/10 p-5">
+        <aside className="hidden min-h-0 border-r border-[#f3c7cb] bg-[linear-gradient(180deg,#fff8f8_0%,#fff1f2_100%)] text-[#1f2937] lg:flex lg:flex-col">
+          <div className="border-b border-[#f3c7cb] p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#ffd166]">AI history</p>
-                <h2 className="mt-2 flex items-center gap-2 text-xl font-black text-white">
+                <h2 className="flex items-center gap-2 text-xl font-bold text-[#1f2937]">
                   <MessageSquare size={19} /> Lịch sử chat
                 </h2>
-                <p className="mt-1 text-xs font-semibold text-white/50">
+                <p className="mt-1 text-xs font-medium text-[#7d5560]">
                   Lưu lại các nhu cầu bạn đã hỏi.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={createSession}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#1f2937] shadow-[0_12px_28px_rgba(0,0,0,0.22)] transition hover:bg-[#e30613] hover:text-white"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#e30613] text-white shadow-[0_10px_24px_rgba(227,6,19,0.22)] transition hover:bg-[#c4000b]"
                 title="Tạo hội thoại mới"
               >
                 <Plus size={19} />
@@ -302,7 +301,7 @@ export default function CustomerChat() {
 
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
             {sessions.length === 0 ? (
-              <div className="rounded-[20px] border border-dashed border-white/15 bg-white/5 px-4 py-10 text-center text-sm font-semibold text-white/45">
+              <div className="rounded-[20px] border border-dashed border-[#efb2b8] bg-white/75 px-4 py-10 text-center text-sm font-medium text-[#8f626b]">
                 Chưa có cuộc hội thoại nào.
               </div>
             ) : (
@@ -321,13 +320,13 @@ export default function CustomerChat() {
                   className={`group flex w-full items-start justify-between gap-3 rounded-[18px] border p-3 text-left transition ${
                     activeSession?.sessionid === session.sessionid
                       ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_14px_34px_rgba(227,6,19,0.28)]'
-                      : 'border-white/10 bg-white/5 text-white hover:border-white/25 hover:bg-white/10'
+                      : 'border-[#f3c7cb] bg-white text-[#1f2937] hover:border-[#e30613] hover:bg-[#fffafa]'
                   }`}
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-black">{session.title}</span>
                     <span className={`mt-1 block text-xs ${
-                      activeSession?.sessionid === session.sessionid ? 'text-white/65' : 'text-white/40'
+                      activeSession?.sessionid === session.sessionid ? 'text-white/70' : 'text-[#9b6a73]'
                     }`}>
                       {formatDateTime(session.starttime)}
                     </span>
@@ -341,7 +340,7 @@ export default function CustomerChat() {
                       }
                     }}
                     className={`flex h-8 w-8 shrink-0 items-center justify-center opacity-0 transition group-hover:opacity-100 focus:opacity-100 ${
-                      activeSession?.sessionid === session.sessionid ? 'text-white/60 hover:text-white' : 'text-white/35 hover:text-white'
+                      activeSession?.sessionid === session.sessionid ? 'text-white/65 hover:text-white' : 'text-[#b17882] hover:text-[#c4000b]'
                     }`}
                     title="Xóa cuộc hội thoại"
                     aria-label="Xóa cuộc hội thoại"
@@ -362,7 +361,7 @@ export default function CustomerChat() {
                 <button
                   type="button"
                   onClick={createSession}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#1f2937] px-3 py-2 text-xs font-black text-white"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#e30613] px-3 py-2 text-xs font-bold text-white"
                 >
                   <Plus size={14} /> Mới
                 </button>
@@ -393,14 +392,11 @@ export default function CustomerChat() {
 
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
               <div className="flex min-w-0 gap-3">
-                <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-[#1f2937] text-[#ffd166] shadow-[0_14px_34px_rgba(15,23,42,0.18)] sm:flex">
+                <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-[#fff1f2] text-[#c4000b] shadow-[0_12px_28px_rgba(227,6,19,0.12)] sm:flex">
                   <Bot size={24} />
                 </div>
                 <div className="min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#ffe0a3] bg-[#fff7df] px-3 py-1 text-[11px] font-black text-[#8a5a00]">
-                  <Sparkles size={13} /> AI tư vấn theo dữ liệu cửa hàng
-                </div>
-                <h1 className="customer-display mt-2 line-clamp-2 text-2xl font-bold text-[#1f2937] sm:text-3xl">
+                <h1 className="customer-display line-clamp-2 text-2xl font-bold text-[#1f2937] sm:text-3xl">
                   {activeSession ? activeSession.title : 'Tư vấn chọn điện thoại'}
                 </h1>
                 {activeSession && (
@@ -439,10 +435,10 @@ export default function CustomerChat() {
             </div>
           </header>
 
-          <div ref={messagesPaneRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] p-3 md:space-y-6 md:p-6">
+          <div ref={messagesPaneRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(180deg,#fffafa_0%,#fff4f5_100%)] p-3 md:space-y-6 md:p-6">
             {!activeSession && sessions.length === 0 && (
               <div className="flex h-full flex-col items-center justify-center text-center">
-                <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-[24px] bg-[#1f2937] text-[#ffd166] shadow-[0_16px_38px_rgba(15,23,42,0.18)]">
+                <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-[24px] bg-[#e30613] text-white shadow-[0_16px_38px_rgba(227,6,19,0.2)]">
                   <Bot size={42} />
                 </div>
                 <h2 className="customer-display text-3xl font-bold text-[#1f2937]">

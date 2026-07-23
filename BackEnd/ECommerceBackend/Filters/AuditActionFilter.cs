@@ -144,6 +144,7 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
                 "register" => "Đăng ký tài khoản",
                 "changepassword" => "Đổi mật khẩu",
                 "forgotpassword" => "Yêu cầu khôi phục mật khẩu",
+                "resetpassword" => "Đặt lại mật khẩu",
                 _ => $"Xác thực [Auth] - {action}",
             };
         }

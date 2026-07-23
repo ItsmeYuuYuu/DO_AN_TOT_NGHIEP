@@ -26,8 +26,8 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 - Giỏ hàng hoạt động cho cả người đã đăng nhập và khách vãng lai.
 - Đặt hàng bằng COD, Momo, VNPay hoặc chuyển khoản ngân hàng qua VietQR.
 - Tra cứu đơn hàng, xem lịch sử và trạng thái đơn.
-- Đăng ký có thể gửi mã xác nhận qua Gmail SMTP, đăng nhập, cập nhật hồ sơ và
-  đổi mật khẩu.
+- Đăng ký có thể gửi mã xác nhận qua Gmail SMTP, đăng nhập, cập nhật hồ sơ, đổi
+  mật khẩu và khôi phục mật khẩu bằng mã dùng một lần có hiệu lực 10 phút.
 
 ### Checkout và thanh toán
 
@@ -99,11 +99,22 @@ Dự án hiện được thiết kế để chạy và trình diễn trên môi 
 
 ### Đổi trả và hoàn tiền
 
-- Khách hàng tạo yêu cầu đổi hoặc trả từ đơn đã hoàn tất trong vòng 30 ngày.
+- Khách hàng tạo yêu cầu đổi hoặc trả trong vòng 30 ngày tính từ thời điểm giao
+  hàng thành công, không tính từ ngày đặt đơn.
 - Mỗi yêu cầu gắn với đúng sản phẩm, biến thể và IMEI đã bán.
 - Upload tối đa 6 ảnh tình trạng thiết bị từ máy.
 - Sales tiếp nhận, duyệt hoặc từ chối; Admin và Manager có thể phân công xử lý.
-- Warehouse kiểm tra máy và phân loại về kho, chuyển bảo hành hoặc đánh dấu hư hỏng.
+- Warehouse kiểm tra máy, xác định bên chịu trách nhiệm, cấp tình trạng
+  `NewSeal`/`Grade99`/`Grade98`/`Damaged`, tình trạng hộp và phụ kiện.
+- Lỗi nhà sản xuất, cửa hàng hoặc vận chuyển không bị khấu hao. Trả theo nhu cầu
+  bị khấu hao 10% trong 7 ngày, 15% từ ngày 8–15 và 20% từ ngày 16–30; phụ phí
+  tình trạng được giới hạn để tổng khấu hao không vượt 30%.
+- Tiền hoàn lúc tạo yêu cầu chỉ là ước tính. Sau kiểm định, hệ thống tự chốt số
+  tiền chính thức và yêu cầu khách đồng ý trước khi hoàn tiền hoặc nhập lại IMEI.
+- Nếu khách không đồng ý, Manager yêu cầu kho kiểm định lại; toàn bộ thay đổi
+  đều được ghi vào lịch sử trạng thái và Audit Log.
+- Máy đã mở hộp không quay lại biến thể New. IMEI đủ điều kiện bán lại được
+  chuyển sang biến thể `Like New (99%)` hoặc `Like New (98%)` với SKU riêng.
 - Đổi máy chỉ sử dụng IMEI còn hàng thuộc đúng biến thể.
 - Yêu cầu hoàn qua ngân hàng phải có ngân hàng, số tài khoản, chủ tài khoản và
   xác nhận của khách; hoàn tiền mặt được thực hiện tại cửa hàng.
@@ -397,7 +408,7 @@ npm run lint
 Frontend hiện build production thành công. Tuy nhiên, cấu hình ESLint 10 vẫn
 được chạy trong quy trình kiểm tra và hiện đạt `0 lỗi, 0 cảnh báo`.
 
-Quy trình regression hiện chạy `5/5` backend integration test và `4/4` frontend
+Quy trình regression hiện chạy `7/7` backend integration test và `5/5` frontend
 Playwright E2E, kèm ESLint và production build. Các test tự tạo PostgreSQL và
 thư mục upload tạm rồi dọn sau khi chạy. Xem
 [`docs/testing/automated-regression.md`](docs/testing/automated-regression.md).
@@ -408,8 +419,8 @@ thư mục upload tạm rồi dọn sau khi chạy. Xem
   SePay trong môi trường local, chưa phải cấu hình production.
 - IMEI được tạo tạm khi Admin tạo sản phẩm để phục vụ demo. Khi vận hành thực
   tế, IMEI phải được nhập hoặc quét từ lô hàng thật.
-- Forgot password chưa có token reset thật; email SMTP/OTP đăng ký có thể bật
-  qua cấu hình local.
+- Email SMTP có thể bật qua cấu hình local. Khi SMTP chưa được cấu hình, mã OTP
+  đăng ký và mã khôi phục mật khẩu được ghi ra console backend để phục vụ demo.
 - Ollama là thành phần tùy chọn khi chạy local.
 - Dự án chưa cấu hình quy trình deploy production.
 - Vận chuyển đang dùng mô phỏng nội bộ, chưa kết nối API thật của hãng vận chuyển.

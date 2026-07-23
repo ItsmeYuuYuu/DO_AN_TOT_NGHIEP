@@ -45,7 +45,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page === 1}
-          className="px-3 py-1.5 text-xs border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs transition-colors hover:bg-red-50 hover:text-[#c4000b] disabled:cursor-not-allowed disabled:opacity-40"
         >
           ← Trước
         </button>
@@ -57,10 +57,10 @@ export const Pagination: React.FC<PaginationProps> = ({
             <button
               key={p}
               onClick={() => onPageChange(p)}
-              className={`px-3 py-1.5 text-xs border rounded transition-colors ${
+              className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
                 p === page
-                  ? 'bg-[#4f46e5] border-[#4f46e5] text-white font-semibold'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'border-[#e30613] bg-[#e30613] font-semibold text-white'
+                  : 'border-slate-200 text-slate-600 hover:bg-red-50 hover:text-[#c4000b]'
               }`}
             >
               {p}
@@ -71,7 +71,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page === totalPages}
-          className="px-3 py-1.5 text-xs border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs transition-colors hover:bg-red-50 hover:text-[#c4000b] disabled:cursor-not-allowed disabled:opacity-40"
         >
           Sau →
         </button>

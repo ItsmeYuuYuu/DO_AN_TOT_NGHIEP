@@ -36,6 +36,11 @@ export interface UpdateHomepageProductSection {
   }>;
 }
 
+export interface HomepageProductMetric {
+  productid: number;
+  soldquantity: number;
+}
+
 export const homepageSectionsApi = {
   getActive: async (): Promise<HomepageProductSection[]> => {
     const { data } = await apiClient.get<HomepageProductSection[]>('/HomepageProductSections/active');
@@ -43,6 +48,10 @@ export const homepageSectionsApi = {
   },
   getAll: async (): Promise<HomepageProductSection[]> => {
     const { data } = await apiClient.get<HomepageProductSection[]>('/HomepageProductSections');
+    return data;
+  },
+  getProductMetrics: async (): Promise<HomepageProductMetric[]> => {
+    const { data } = await apiClient.get<HomepageProductMetric[]>('/HomepageProductSections/product-metrics');
     return data;
   },
   update: async (sectionId: number, payload: UpdateHomepageProductSection): Promise<void> => {

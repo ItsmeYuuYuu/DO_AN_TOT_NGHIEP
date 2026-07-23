@@ -93,7 +93,7 @@ export interface CreateFullProduct {
   description?: string;
   categoryid?: number;
   brandid?: number;
-  seriesname?: string;
+  seriesname: string;
   totalquantity: number;
   variants?: CreateFullProductVariant[];
 }
@@ -108,7 +108,7 @@ export interface UpdateFullProduct {
   description?: string;
   categoryid?: number;
   brandid?: number;
-  seriesname?: string;
+  seriesname: string;
   variants: UpdateFullProductVariant[];
 }
 

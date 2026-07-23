@@ -33,8 +33,8 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusClasses: Record<string, string> = {
-  Received: 'bg-indigo-50 text-[#4338ca]',
-  Inspecting: 'bg-violet-50 text-violet-700',
+  Received: 'bg-blue-50 text-blue-700',
+  Inspecting: 'bg-amber-50 text-amber-700',
   WaitingParts: 'bg-amber-50 text-amber-700',
   Repairing: 'bg-orange-50 text-orange-700',
   Completed: 'bg-emerald-50 text-emerald-700',
@@ -110,10 +110,10 @@ const StaffWarranties: React.FC = () => {
     completed: claims.filter(item => ['Completed', 'Returned'].includes(item.status)).length,
   }), [claims]);
   const statCards = [
-    { label: 'Tổng phiếu', value: stats.total, Icon: FileText, color: 'text-slate-700' },
-    { label: 'Chờ tiếp nhận', value: stats.waiting, Icon: Clock3, color: 'text-[#4f46e5]' },
-    { label: 'Đang xử lý', value: stats.processing, Icon: Wrench, color: 'text-orange-600' },
-    { label: 'Đã hoàn tất', value: stats.completed, Icon: CheckCircle2, color: 'text-emerald-600' },
+    { label: 'Tổng phiếu', value: stats.total, Icon: FileText, color: 'text-[#c4000b]' },
+    { label: 'Chờ tiếp nhận', value: stats.waiting, Icon: Clock3, color: 'text-[#c4000b]' },
+    { label: 'Đang xử lý', value: stats.processing, Icon: Wrench, color: 'text-[#c4000b]' },
+    { label: 'Đã hoàn tất', value: stats.completed, Icon: CheckCircle2, color: 'text-[#c4000b]' },
   ];
 
   const resetWorkflowForm = (claim?: WarrantyClaim) => {
@@ -210,7 +210,7 @@ const StaffWarranties: React.FC = () => {
           <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p>
+                <p className="text-xs font-bold text-slate-400">{label}</p>
                 <p className="mt-1 text-2xl font-black text-slate-900">{value}</p>
               </div>
               <Icon size={24} className={color} />
@@ -256,7 +256,7 @@ const StaffWarranties: React.FC = () => {
                   </td>
                 </tr>
               ) : claims.map(claim => (
-                <tr key={claim.claimid} className="hover:bg-indigo-50/40/70">
+                <tr key={claim.claimid} className="transition-colors hover:bg-red-50/40">
                   <td className="px-4 py-3">
                     <p className="font-black text-slate-800">#{claim.claimid}</p>
                     <p className="text-xs font-medium text-slate-500">{claim.imei}</p>
@@ -298,7 +298,7 @@ const StaffWarranties: React.FC = () => {
               value={imei}
               onChange={event => setImei(event.target.value)}
               placeholder="Quét hoặc nhập IMEI của máy đã bán"
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4f46e5]"
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#e30613]"
             />
             <p className="mt-1 text-xs text-slate-400">Khách hàng và thời hạn bảo hành được tra tự động từ đơn đã hoàn tất.</p>
           </div>
@@ -310,12 +310,12 @@ const StaffWarranties: React.FC = () => {
               value={faultDescription}
               onChange={event => setFaultDescription(event.target.value)}
               placeholder="Tình trạng máy, lỗi khách phản ánh, phụ kiện bàn giao..."
-              className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4f46e5]"
+              className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#e30613]"
             />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-bold text-slate-700">Ảnh thiết bị (tối đa 6 ảnh)</label>
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-5 text-sm font-semibold text-slate-500 hover:border-indigo-300 hover:bg-indigo-50">
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-5 text-sm font-semibold text-slate-500 hover:border-red-300 hover:bg-red-50">
               <Camera size={20} />
               Chọn ảnh từ máy
               <input
@@ -398,7 +398,7 @@ const StaffWarranties: React.FC = () => {
                 <div className="space-y-3 border-l-2 border-slate-100 pl-4">
                   {selected.histories.map(history => (
                     <div key={history.historyid} className="relative">
-                      <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-indigo-500 ring-4 ring-white" />
+                      <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-4 ring-white" />
                       <p className="text-sm font-bold text-slate-700">
                         {statusLabels[history.tostatus] ?? history.tostatus}
                       </p>

@@ -70,6 +70,18 @@ public sealed class GroundedAiProvider : IAiProvider
         AiConversationRequest request,
         CancellationToken cancellationToken = default)
     {
+        var scopeDecision = CatalogScopeGuard.Check(request.UserMessage);
+        if (scopeDecision.IsOutOfScope)
+        {
+            return new AiAssistantResponse(
+                "Cuồng Điện Thoại hiện chỉ tư vấn các mẫu điện thoại đang kinh doanh. " +
+                "Sản phẩm anh/chị vừa hỏi không thuộc danh mục của cửa hàng nên em sẽ không gợi ý điện thoại thay thế một cách tùy tiện. " +
+                "Anh/chị có thể hỏi em về điện thoại theo ngân sách, camera, chơi game, pin hoặc thương hiệu.",
+                Array.Empty<ProductConsultationResult>(),
+                ChatResponseTypes.Text,
+                new[] { "Điện thoại chụp ảnh đẹp", "Điện thoại chơi game", "Điện thoại pin lâu" });
+        }
+
         var clarification = GetClarification(request);
         if (clarification != null)
         {

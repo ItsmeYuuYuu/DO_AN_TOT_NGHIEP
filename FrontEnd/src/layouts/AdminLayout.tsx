@@ -183,10 +183,10 @@ export const AdminLayout: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setOpenGroup(openGroup === item.label ? null : item.label)}
-                    className={`flex h-full items-center gap-1.5 border-b-2 px-3 text-sm font-black transition-colors ${
+                    className={`my-1 flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-colors ${
                       active
-                        ? 'border-[#4f46e5] text-[#172033]'
-                        : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-[#172033]'
+                        ? 'bg-slate-100 text-[#172033]'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
                     }`}
                   >
                     {item.label}
@@ -203,7 +203,7 @@ export const AdminLayout: React.FC = () => {
                             className={({ isActive }) =>
                               `flex items-center gap-3 px-3 py-2.5 text-sm font-bold transition-colors ${
                                 isActive
-                                  ? 'rounded-2xl bg-[#4f46e5] text-white'
+                                  ? 'rounded-xl bg-[#e30613] text-white'
                                   : 'rounded-2xl text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
                               }`
                             }
@@ -225,10 +225,10 @@ export const AdminLayout: React.FC = () => {
                 to={item.to!}
                 end={item.end}
                 className={() =>
-                  `flex h-full items-center gap-1.5 border-b-2 px-3 text-sm font-black transition-colors ${
+                  `my-1 flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-colors ${
                     active
-                      ? 'border-[#4f46e5] text-[#172033]'
-                      : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-[#172033]'
+                      ? 'bg-slate-100 text-[#172033]'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-[#172033]'
                   }`
                 }
               >
@@ -252,7 +252,7 @@ export const AdminLayout: React.FC = () => {
                         type="button"
                         onClick={() => setOpenGroup(expanded ? null : item.label)}
                         className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-sm font-black ${
-                          active ? 'rounded-2xl bg-[#4f46e5] text-white' : 'rounded-2xl text-slate-700 hover:bg-slate-50'
+                          active ? 'rounded-xl bg-[#e30613] text-white' : 'rounded-xl text-slate-700 hover:bg-slate-50'
                         }`}
                       >
                         <span className="flex items-center gap-3">{item.icon}{item.label}</span>
@@ -267,7 +267,7 @@ export const AdminLayout: React.FC = () => {
                               to={child.to}
                               className={({ isActive }) =>
                                 `flex items-center gap-3 px-3 py-2 text-sm font-medium ${
-                                  isActive ? 'rounded-2xl bg-[#4f46e5] text-white' : 'rounded-2xl text-slate-600 hover:bg-slate-50'
+                                  isActive ? 'rounded-xl bg-[#e30613] text-white' : 'rounded-xl text-slate-600 hover:bg-slate-50'
                                 }`
                               }
                             >
@@ -288,7 +288,7 @@ export const AdminLayout: React.FC = () => {
                     end={item.end}
                     className={() =>
                       `flex items-center gap-3 px-3 py-2.5 text-sm font-black ${
-                        active ? 'rounded-2xl bg-[#4f46e5] text-white' : 'rounded-2xl text-slate-700 hover:bg-slate-50'
+                        active ? 'rounded-xl bg-[#e30613] text-white' : 'rounded-xl text-slate-700 hover:bg-slate-50'
                       }`
                     }
                   >

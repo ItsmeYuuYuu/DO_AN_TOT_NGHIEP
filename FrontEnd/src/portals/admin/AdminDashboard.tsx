@@ -94,7 +94,7 @@ const DonutChart = ({
     <div className="ops-card flex h-[460px] flex-col p-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <p className="ops-label">Order mix</p>
+          <p className="ops-label">Cơ cấu đơn hàng</p>
           <h2 className="mt-1 text-xl font-black text-[#172033]">Cơ cấu đơn hàng</h2>
         </div>
         <div className="flex items-center gap-2">
@@ -401,7 +401,7 @@ const AdminDashboard: React.FC = () => {
         <section className="ops-card flex h-[460px] flex-col p-6 lg:col-span-2">
           <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-start">
             <div>
-              <p className="ops-label">Revenue analytics</p>
+              <p className="ops-label">Phân tích doanh thu</p>
               <h2 className="mt-1 text-xl font-black text-[#172033]">Biểu đồ doanh thu</h2>
               <p className="mt-1 text-xs text-slate-400">Tổng trong biểu đồ: {formatCurrency(totalRevenueInChart)}</p>
             </div>
@@ -526,7 +526,7 @@ const AdminDashboard: React.FC = () => {
 
         <section className="ops-card flex h-[460px] flex-col p-5">
           <div className="border-b border-slate-100 pb-3">
-            <p className="ops-label">Live feed</p>
+            <p className="ops-label">Hoạt động gần đây</p>
             <h2 className="mt-1 text-xl font-black text-[#172033]">Nhật ký hoạt động</h2>
           </div>
           <div className="relative mt-3">
@@ -607,7 +607,7 @@ const AdminDashboard: React.FC = () => {
         <section className="ops-card p-6">
           <div className="mb-4 flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
-              <p className="ops-label">Top products</p>
+              <p className="ops-label">Sản phẩm nổi bật</p>
               <h2 className="mt-1 text-xl font-black text-[#172033]">Sản phẩm bán chạy</h2>
             </div>
             <select
@@ -651,7 +651,7 @@ const AdminDashboard: React.FC = () => {
         <section className="ops-card p-6">
           <div className="mb-4 flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
-              <p className="ops-label">Top customers</p>
+              <p className="ops-label">Khách hàng nổi bật</p>
               <h2 className="mt-1 text-xl font-black text-[#172033]">Khách hàng thân thiết</h2>
             </div>
             <select

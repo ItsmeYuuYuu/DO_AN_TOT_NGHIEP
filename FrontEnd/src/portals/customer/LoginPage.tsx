@@ -82,18 +82,16 @@ const LoginPage: React.FC = () => {
       />
       <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="grid w-full max-w-6xl overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)] lg:grid-cols-[0.95fr_1.05fr]">
-          <section className="relative hidden min-h-[560px] overflow-hidden bg-[#1f2937] p-10 text-white lg:flex lg:flex-col">
-            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/10 bg-white/5" />
-            <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full border border-white/10 bg-[#e30613]/20" />
-            <div className="relative z-10">
-              <Link to="/" className="inline-flex rounded-2xl bg-white px-5 py-3 shadow-[0_14px_30px_rgba(227,6,19,0.18)]">
+          <section className="hidden min-h-[560px] bg-[#fff1f2] p-10 text-[#1f2937] lg:flex lg:flex-col">
+            <div>
+              <Link to="/" className="inline-flex rounded-xl bg-white px-5 py-3 shadow-[0_12px_28px_rgba(92,0,7,0.18)]">
                 <img src={Logo} alt="Cuồng Điện Thoại" className="h-16 w-auto object-contain" />
               </Link>
-              <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#ffd166]">Cuồng Điện Thoại</p>
-              <h1 className="customer-display mt-3 max-w-md text-5xl font-black leading-[0.95]">
+              <p className="mt-16 text-sm font-semibold uppercase tracking-[0.12em] text-[#c4000b]">Cuồng Điện Thoại</p>
+              <h1 className="mt-3 max-w-md font-sans text-4xl font-bold leading-tight tracking-[-0.02em] text-[#b0000a]">
                 Đăng nhập tài khoản.
               </h1>
-              <p className="mt-6 max-w-sm text-sm font-medium leading-7 text-white/70">
+              <p className="mt-6 max-w-sm font-sans text-base font-normal leading-7 text-[#4b5563]">
                 Theo dõi đơn hàng, bảo hành và lưu lại các sản phẩm bạn đang quan tâm.
               </p>
             </div>

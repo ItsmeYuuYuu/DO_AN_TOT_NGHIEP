@@ -17,8 +17,8 @@ const digitsOnly = (value: string, maxLength = 10) =>
   value.replace(/\D/g, '').slice(0, maxLength);
 
 const roleColors: Record<string, string> = {
-  Admin:    'bg-purple-50 text-purple-700 border border-purple-200',
-  Manager:  'bg-indigo-50 text-indigo-700 border border-indigo-200',
+  Admin:    'bg-red-50 text-[#c4000b] border border-red-200',
+  Manager:  'bg-red-50 text-[#c4000b] border border-red-200',
   Sales:    'bg-cyan-50 text-cyan-700 border border-cyan-200',
   Warehouse:'bg-amber-50 text-amber-700 border border-amber-200',
   Warranty: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
@@ -128,7 +128,7 @@ const AdminUsers: React.FC = () => {
       header: 'Họ tên',
       render: (u: UserItem) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[#4338ca] font-bold text-xs shrink-0">
+          <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-[#c4000b] font-bold text-xs shrink-0">
             {u.fullname.charAt(0).toUpperCase()}
           </div>
           <div>
@@ -191,7 +191,7 @@ const AdminUsers: React.FC = () => {
       className: 'w-28',
       render: (u: UserItem) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(u)} className="px-2.5 py-1.5 text-xs text-[#4f46e5] bg-indigo-50 hover:bg-indigo-100 rounded-xl font-semibold">Sửa</button>
+          <button onClick={() => openEdit(u)} className="px-2.5 py-1.5 text-xs text-[#e30613] bg-red-50 hover:bg-red-100 rounded-xl font-semibold">Sửa</button>
           {u.roleid !== 1 && u.roleid !== 3 && (
             <button onClick={() => handleDelete(u.userid)} className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-xl font-semibold">Xóa</button>
           )}
@@ -229,13 +229,13 @@ const AdminUsers: React.FC = () => {
           onClick={() => handleTabChange('staff')}
           className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold transition-all ${
             tab === 'staff'
-              ? 'bg-white text-[#4338ca] shadow-[0_10px_28px_rgba(15,23,42,0.06)]'
+              ? 'bg-white text-[#c4000b] shadow-[0_10px_28px_rgba(15,23,42,0.06)]'
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
           <UserCheck size={16} />
           Nhân Viên
-          <span className={`text-xs px-1.5 py-0.5 rounded-full font-black ${tab === 'staff' ? 'bg-indigo-100 text-[#4338ca]' : 'bg-slate-200 text-slate-500'}`}>
+          <span className={`text-xs px-1.5 py-0.5 rounded-full font-black ${tab === 'staff' ? 'bg-red-100 text-[#c4000b]' : 'bg-slate-200 text-slate-500'}`}>
             {staffUsers.length}
           </span>
         </button>
@@ -294,7 +294,7 @@ const AdminUsers: React.FC = () => {
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1.5">Vai trò</label>
             <select
-              className="w-full bg-white border border-slate-300 rounded-2xl px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#4f46e5]"
+              className="w-full bg-white border border-slate-300 rounded-2xl px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#e30613]"
               value={editing?.roleid ?? (tab === 'staff' ? 5 : 3)}
               onChange={e => setEditing(p => ({ ...p, roleid: parseInt(e.target.value) }))}
             >

@@ -10,6 +10,8 @@ public interface IEmailService
 
     Task SendRegistrationOtpAsync(string email, string code, CancellationToken cancellationToken = default);
 
+    Task SendPasswordResetOtpAsync(string email, string code, CancellationToken cancellationToken = default);
+
     Task SendTestEmailAsync(string email, CancellationToken cancellationToken = default);
 
     Task SendOrderCreatedAsync(Order order, CancellationToken cancellationToken = default);

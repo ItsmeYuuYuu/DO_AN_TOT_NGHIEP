@@ -34,13 +34,18 @@ interface InventoryItem {
 interface ReceiveFormItem {
   condition: string;
   disposition: 'Restock' | 'Warranty' | 'Damaged';
+  inspectiongrade: 'NewSeal' | 'Grade99' | 'Grade98' | 'Damaged';
+  faultresponsibility: 'Manufacturer' | 'Store' | 'Carrier' | 'Customer' | 'NoFault';
+  missingbox: 'true' | 'false';
+  missingaccessorycount: string;
   replacementimei: string;
-  refundamount: string;
 }
 
 const statusLabels: Record<string, string> = {
   PendingReview: 'Chờ Sales duyệt',
   Approved: 'Chờ kho tiếp nhận',
+  AwaitingCustomerConfirmation: 'Chờ khách xác nhận mức hoàn',
+  AssessmentDisputed: 'Khách yêu cầu kiểm định lại',
   Rejected: 'Từ chối',
   RefundPending: 'Chờ hoàn tiền',
   RefundProcessing: 'Chờ khách xác nhận',
@@ -51,9 +56,11 @@ const statusLabels: Record<string, string> = {
 
 const statusClasses: Record<string, string> = {
   PendingReview: 'bg-amber-50 text-amber-700',
-  Approved: 'bg-indigo-50 text-[#4338ca]',
+  Approved: 'bg-emerald-50 text-emerald-700',
+  AwaitingCustomerConfirmation: 'bg-blue-50 text-blue-700',
+  AssessmentDisputed: 'bg-orange-50 text-orange-700',
   Rejected: 'bg-red-50 text-red-700',
-  RefundPending: 'bg-violet-50 text-violet-700',
+  RefundPending: 'bg-amber-50 text-amber-700',
   RefundProcessing: 'bg-blue-50 text-blue-700',
   RefundDisputed: 'bg-red-50 text-red-700',
   Completed: 'bg-emerald-50 text-emerald-700',
@@ -79,6 +86,7 @@ const StaffReturns: React.FC = () => {
   const [refundReference, setRefundReference] = useState('');
   const [refundNote, setRefundNote] = useState('');
   const [reconcileNote, setReconcileNote] = useState('');
+  const [overrideAmount, setOverrideAmount] = useState('');
 
   const canAssign = user?.rolename === 'Admin' || user?.rolename === 'Manager';
   const canReview = canAssign || user?.rolename === 'Sales';
@@ -132,7 +140,7 @@ const StaffReturns: React.FC = () => {
     waiting: requests.filter(item => item.status === 'PendingReview').length,
     warehouse: requests.filter(item => item.status === 'Approved').length,
     refund: requests.filter(item =>
-      ['RefundPending', 'RefundProcessing', 'RefundDisputed'].includes(item.status)).length,
+      ['AwaitingCustomerConfirmation', 'AssessmentDisputed', 'RefundPending', 'RefundProcessing', 'RefundDisputed'].includes(item.status)).length,
   }), [requests]);
 
   const openDetail = (request: ReturnRequest) => {
@@ -142,19 +150,23 @@ const StaffReturns: React.FC = () => {
     setReceiveNote('');
     setRefundAmount(Math.max(
       0,
-      request.requestedrefundamount - (request.refundamount ?? 0),
+      (request.approvedrefundamount ?? request.requestedrefundamount) - (request.refundamount ?? 0),
     ).toString());
     setRefundProvider(request.refunddestination?.method === 'BANK' ? 'Bank' : 'Cash');
     setRefundReference('');
     setRefundNote('');
     setReconcileNote('');
+    setOverrideAmount((request.approvedrefundamount ?? request.requestedrefundamount).toString());
     setReceiveItems(Object.fromEntries(request.items.map(item => [
       item.returnitemid,
       {
         condition: item.condition ?? '',
         disposition: (item.disposition as ReceiveFormItem['disposition']) ?? 'Restock',
+        inspectiongrade: item.inspectiongrade ?? 'Grade99',
+        faultresponsibility: item.faultresponsibility ?? 'NoFault',
+        missingbox: 'false',
+        missingaccessorycount: '0',
         replacementimei: item.replacementimei ?? '',
-        refundamount: item.refundamount.toString(),
       },
     ])));
   };
@@ -182,10 +194,11 @@ const StaffReturns: React.FC = () => {
         returnitemid: item.returnitemid,
         condition: form.condition.trim(),
         disposition: form.disposition,
+        inspectiongrade: form.inspectiongrade,
+        faultresponsibility: form.faultresponsibility,
+        missingbox: form.missingbox === 'true',
+        missingaccessorycount: Number(form.missingaccessorycount),
         replacementimei: form.replacementimei.trim() || undefined,
-        refundamount: selected.requesttype === 'Return'
-          ? Number(form.refundamount)
-          : undefined,
       };
     });
     await runAction(() => returnRequestsApi.receive(
@@ -247,17 +260,17 @@ const StaffReturns: React.FC = () => {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ['Tổng yêu cầu', stats.total, RotateCcw, 'text-slate-700'],
-          ['Chờ duyệt', stats.waiting, UserCheck, 'text-amber-600'],
-          ['Chờ kho', stats.warehouse, PackageCheck, 'text-[#4f46e5]'],
-          ['Chờ hoàn tiền', stats.refund, WalletCards, 'text-violet-600'],
+          ['Tổng yêu cầu', stats.total, RotateCcw, 'text-[#c4000b]'],
+          ['Chờ duyệt', stats.waiting, UserCheck, 'text-[#c4000b]'],
+          ['Chờ kho', stats.warehouse, PackageCheck, 'text-[#c4000b]'],
+          ['Chờ hoàn tiền', stats.refund, WalletCards, 'text-[#c4000b]'],
         ].map(([label, value, Icon, color]) => {
           const CardIcon = Icon as typeof RotateCcw;
           return (
             <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label as string}</p>
+                  <p className="text-xs font-bold text-slate-400">{label as string}</p>
                   <p className="mt-1 text-2xl font-black text-slate-900">{value as number}</p>
                 </div>
                 <CardIcon size={24} className={color as string} />
@@ -300,7 +313,7 @@ const StaffReturns: React.FC = () => {
               ) : requests.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">Không có yêu cầu phù hợp.</td></tr>
               ) : requests.map(request => (
-                <tr key={request.returnrequestid} className="hover:bg-indigo-50/40">
+                <tr key={request.returnrequestid} className="hover:bg-red-50/40">
                   <td className="px-4 py-3">
                     <p className="font-black text-slate-800">#{request.returnrequestid}</p>
                     <p className="text-xs text-slate-400">Đơn #{request.orderid}</p>
@@ -383,7 +396,7 @@ const StaffReturns: React.FC = () => {
                 <div className="space-y-3 border-l-2 border-slate-100 pl-4">
                   {selected.histories.map(history => (
                     <div key={history.historyid} className="relative">
-                      <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-indigo-500 ring-4 ring-white" />
+                      <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-4 ring-white" />
                       <p className="text-sm font-bold text-slate-700">{statusLabels[history.tostatus] ?? history.tostatus}</p>
                       <p className="text-xs text-slate-400">
                         {history.userfullname ?? 'Hệ thống'} · {history.createdat ? formatDateTime(history.createdat) : 'Chưa có thời gian'}
@@ -465,6 +478,50 @@ const StaffReturns: React.FC = () => {
                           placeholder="Tình trạng thực tế khi nhận máy"
                           className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                         />
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <select
+                            required
+                            value={form?.inspectiongrade ?? 'Grade99'}
+                            onChange={event => updateReceiveItem(item.returnitemid, 'inspectiongrade', event.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                          >
+                            <option value="NewSeal">Còn nguyên seal</option>
+                            <option value="Grade99">Máy 99%</option>
+                            <option value="Grade98">Máy 98%</option>
+                            <option value="Damaged">Hư hỏng</option>
+                          </select>
+                          <select
+                            required
+                            value={form?.faultresponsibility ?? 'NoFault'}
+                            onChange={event => updateReceiveItem(item.returnitemid, 'faultresponsibility', event.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                          >
+                            <option value="NoFault">Không lỗi / khách đổi ý</option>
+                            <option value="Manufacturer">Lỗi nhà sản xuất</option>
+                            <option value="Store">Lỗi cửa hàng</option>
+                            <option value="Carrier">Lỗi vận chuyển</option>
+                            <option value="Customer">Lỗi do khách sử dụng</option>
+                          </select>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <select
+                            value={form?.missingbox ?? 'false'}
+                            onChange={event => updateReceiveItem(item.returnitemid, 'missingbox', event.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                          >
+                            <option value="false">Đủ vỏ hộp</option>
+                            <option value="true">Thiếu vỏ hộp</option>
+                          </select>
+                          <input
+                            type="number"
+                            min="0"
+                            max="10"
+                            value={form?.missingaccessorycount ?? '0'}
+                            onChange={event => updateReceiveItem(item.returnitemid, 'missingaccessorycount', event.target.value)}
+                            placeholder="Số phụ kiện bị thiếu"
+                            className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                          />
+                        </div>
                         <select
                           value={form?.disposition ?? 'Restock'}
                           onChange={event => updateReceiveItem(item.returnitemid, 'disposition', event.target.value)}
@@ -489,14 +546,10 @@ const StaffReturns: React.FC = () => {
                             ))}
                           </select>
                         ) : (
-                          <input
-                            type="number"
-                            min="0"
-                            value={form?.refundamount ?? ''}
-                            readOnly
-                            title="Số tiền được tính tự động theo giá trị đơn hàng sau giảm giá"
-                            className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-600"
-                          />
+                          <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs leading-5 text-blue-800">
+                            Giá trị thực trả: <b>{formatCurrency(item.originalpaidamount || item.refundamount)}</b>.
+                            Hệ thống sẽ tự tính khấu hao sau khi xác nhận kiểm định; nhân viên không được nhập tiền thủ công.
+                          </div>
                         )}
                       </div>
                     );
@@ -521,10 +574,67 @@ const StaffReturns: React.FC = () => {
                 </form>
               )}
 
+              {selected.status === 'AwaitingCustomerConfirmation' && (
+                <div className="space-y-2 rounded-xl border border-blue-200 bg-blue-50/50 p-4 text-sm">
+                  <h3 className="font-black text-blue-900">Đang chờ khách xác nhận kết quả kiểm định</h3>
+                  <p className="text-blue-700">
+                    Mức hoàn chính thức: <b>{formatCurrency(selected.approvedrefundamount ?? 0)}</b>
+                    {' '}· Khấu hao: <b>{formatCurrency(selected.refundcalculation?.totaldeductionamount ?? 0)}</b>
+                  </p>
+                  <p className="text-xs text-blue-600">IMEI chưa được nhập lại kho bán hàng cho đến khi khách đồng ý.</p>
+                </div>
+              )}
+
+              {selected.status === 'AssessmentDisputed' && canAssign && (
+                <div className="space-y-3 rounded-xl border border-orange-200 bg-orange-50/50 p-4">
+                  <h3 className="font-black text-orange-900">Khách yêu cầu kiểm định lại</h3>
+                  <textarea
+                    required
+                    rows={3}
+                    value={reconcileNote}
+                    onChange={event => setReconcileNote(event.target.value)}
+                    placeholder="Kết luận của Manager và nội dung yêu cầu kho kiểm định lại"
+                    className="w-full rounded-2xl border border-orange-200 px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max={selected.items.reduce((sum, item) => sum + item.originalpaidamount, 0)}
+                    value={overrideAmount}
+                    onChange={event => setOverrideAmount(event.target.value)}
+                    placeholder="Mức hoàn ngoại lệ"
+                    className="w-full rounded-2xl border border-orange-200 px-3 py-2 text-sm font-bold"
+                  />
+                  <p className="text-xs text-orange-700">
+                    Điều chỉnh ngoại lệ bắt buộc có lý do và sẽ được ghi vào lịch sử/Audit Log.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button
+                      disabled={!reconcileNote.trim()}
+                      isLoading={working}
+                      onClick={() => runAction(() => returnRequestsApi.reinspect(selected.returnrequestid, reconcileNote.trim()))}
+                    >
+                      Kiểm định lại
+                    </Button>
+                    <Button
+                      disabled={!reconcileNote.trim() || overrideAmount === ''}
+                      isLoading={working}
+                      onClick={() => runAction(() => returnRequestsApi.overrideAssessment(
+                        selected.returnrequestid,
+                        Number(overrideAmount),
+                        reconcileNote.trim(),
+                      ))}
+                    >
+                      Duyệt mức ngoại lệ
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {selected.status === 'RefundPending' && canReview &&
                (user?.rolename !== 'Sales' || selected.assigneduserid === currentUserId) && (
-                <form onSubmit={handleRefund} className="space-y-3 rounded-xl border border-violet-200 bg-violet-50/40 p-4">
-                  <h3 className="font-black text-violet-900">Ghi nhận đã thực hiện hoàn tiền</h3>
+                <form onSubmit={handleRefund} className="space-y-3 rounded-xl border border-red-100 bg-red-50/40 p-4">
+                  <h3 className="font-black text-[#7f1d1d]">Ghi nhận đã thực hiện hoàn tiền</h3>
                   {selected.refunddestination?.method === 'BANK' && (
                     <div className="rounded-2xl border border-blue-100 bg-white p-3 text-sm">
                       <p className="font-bold text-blue-900">Chuyển khoản hoàn tiền đến</p>
@@ -534,7 +644,7 @@ const StaffReturns: React.FC = () => {
                   )}
                   <div className="rounded-2xl bg-white p-3 text-sm">
                     Còn phải hoàn: <b>{formatCurrency(
-                      selected.requestedrefundamount - (selected.refundamount ?? 0),
+                      (selected.approvedrefundamount ?? selected.requestedrefundamount) - (selected.refundamount ?? 0),
                     )}</b>
                   </div>
                   <input
@@ -546,7 +656,7 @@ const StaffReturns: React.FC = () => {
                     aria-label="Số tiền phải hoàn toàn bộ"
                     className="w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700"
                   />
-                  <p className="text-xs text-violet-700">
+                  <p className="text-xs text-[#9f1239]">
                     Số tiền được lấy tự động từ kết quả kiểm tra; không hỗ trợ hoàn từng phần.
                   </p>
                   <select
@@ -576,7 +686,7 @@ const StaffReturns: React.FC = () => {
                   <Button type="submit" fullWidth isLoading={working}>
                     <WalletCards size={16} className="mr-2" /> Xác nhận đã thực hiện chuyển tiền
                   </Button>
-                  <p className="text-xs leading-5 text-violet-700">
+                  <p className="text-xs leading-5 text-[#9f1239]">
                     Sau bước này yêu cầu sẽ chờ khách xác nhận đã nhận tiền, chưa được tính là hoàn tất.
                   </p>
                 </form>
@@ -640,6 +750,14 @@ const StaffReturns: React.FC = () => {
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Yêu cầu hoàn</span>
                   <b>{formatCurrency(selected.requestedrefundamount)}</b>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">Khấu hao sau kiểm định</span>
+                  <b className="text-red-600">-{formatCurrency(selected.refundcalculation?.totaldeductionamount ?? 0)}</b>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">Được duyệt hoàn</span>
+                  <b className="text-blue-700">{formatCurrency(selected.approvedrefundamount ?? selected.requestedrefundamount)}</b>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Đã hoàn</span>

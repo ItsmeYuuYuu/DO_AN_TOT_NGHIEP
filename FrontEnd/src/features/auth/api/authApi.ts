@@ -15,6 +15,8 @@ export const authApi = {
   requestRegistrationCode: (email: string) => apiClient.post('/auth/registration-code', { email }),
   register: (data: RegisterRequest) => apiClient.post('/auth/register', data),
   forgotPassword: (email: string) => apiClient.post('/auth/forgot-password', { email }),
+  resetPassword: (data: { email: string; verificationCode: string; newPassword: string; confirmPassword: string }) =>
+    apiClient.post('/auth/reset-password', data),
   logout: () => apiClient.post('/auth/logout'),
   me: () => apiClient.get('/auth/me'),
 };

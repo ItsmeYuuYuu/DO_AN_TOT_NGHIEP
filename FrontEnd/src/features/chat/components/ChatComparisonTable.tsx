@@ -172,7 +172,7 @@ export const ChatComparisonTable = ({
                       isBest ? 'bg-emerald-50/70 font-bold text-emerald-800' : ''
                     }`}
                   >
-                    <span>{row.value(product)}</span>
+                    <span className="whitespace-pre-line">{row.value(product)}</span>
                     {isBest && row.bestLabel && (
                       <span className="mt-1 block w-fit bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
                         {row.bestLabel}

@@ -163,7 +163,7 @@ const StaffInventory: React.FC = () => {
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="border border-slate-200 rounded-2xl text-sm px-3 py-1.5 bg-slate-50 focus:outline-none focus:border-[#4f46e5] font-medium"
+          className="border border-slate-200 rounded-2xl text-sm px-3 py-1.5 bg-slate-50 focus:outline-none focus:border-[#e30613] font-medium"
         >
           <option value="">Tất cả</option>
           <option value="InStock">InStock (Trong kho)</option>
@@ -223,9 +223,9 @@ const StaffInventory: React.FC = () => {
             ) : items.length === 0 ? (
               <tr><td colSpan={6} className="p-8 text-center text-slate-400">Không có dữ liệu</td></tr>
             ) : items.map(item => (
-              <tr key={item.imei} className="hover:bg-indigo-50/40 transition-colors">
+              <tr key={item.imei} className="hover:bg-red-50/40 transition-colors">
                 <td className="p-4 font-bold text-slate-800 flex items-center gap-2">
-                  <Package size={16} className="text-[#4f46e5]" /> {item.imei}
+                  <Package size={16} className="text-[#e30613]" /> {item.imei}
                 </td>
                 <td className="p-4 text-sm font-bold text-slate-700">{item.productName || `Variant #${item.variantid}`}</td>
                 <td className="p-4 text-sm text-slate-500">{item.variantSku}</td>
@@ -234,7 +234,7 @@ const StaffInventory: React.FC = () => {
                   <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider
                     ${item.status === 'InStock' ? 'bg-green-100 text-green-700' :
                       item.status === 'Sold' ? 'bg-slate-100 text-slate-500' :
-                      item.status === 'Shipping' ? 'bg-indigo-100 text-[#4338ca]' :
+                      item.status === 'Shipping' ? 'bg-blue-50 text-blue-700' :
                       item.status === 'Defective' ? 'bg-red-100 text-red-700' :
                       'bg-orange-100 text-orange-700'}`}>
                     {item.status}
@@ -245,7 +245,7 @@ const StaffInventory: React.FC = () => {
                     <History size={16} />
                   </button>
                   {canManageInventory && (
-                    <button onClick={() => openEditModal(item)} className="p-2 text-[#4f46e5] hover:bg-indigo-50 rounded-2xl transition-colors">
+                    <button onClick={() => openEditModal(item)} className="p-2 text-[#e30613] hover:bg-red-50 rounded-2xl transition-colors">
                       <Edit2 size={16} />
                     </button>
                   )}
@@ -295,7 +295,7 @@ const StaffInventory: React.FC = () => {
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={closeModal} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Hủy</button>
                 <button type="submit" disabled={saving || !formData.imei || formData.variantid === ''} 
-                  className="flex-1 py-2 bg-[#4f46e5] text-white font-bold rounded-xl hover:bg-[#4338ca] disabled:opacity-60 transition-colors">
+                  className="flex-1 py-2 bg-[#e30613] text-white font-bold rounded-xl hover:bg-[#c4000b] disabled:opacity-60 transition-colors">
                   {saving ? 'Đang lưu...' : 'Lưu lại'}
                 </button>
               </div>
@@ -310,7 +310,7 @@ const StaffInventory: React.FC = () => {
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div>
                 <h2 className="text-lg font-black text-slate-800">Lịch sử giao dịch kho</h2>
-                <p className="text-xs font-mono font-bold text-[#4f46e5]">{historyItem.imei}</p>
+                <p className="text-xs font-mono font-bold text-[#e30613]">{historyItem.imei}</p>
               </div>
               <button onClick={() => setHistoryItem(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
             </div>
@@ -327,7 +327,7 @@ const StaffInventory: React.FC = () => {
                         <div>
                           <p className="text-sm font-black text-slate-800">{transaction.transactiontype}</p>
                           <p className="mt-1 text-xs text-slate-500">
-                            {transaction.fromstatus ?? 'Khởi tạo'} → <span className="font-bold text-[#4338ca]">{transaction.tostatus}</span>
+                            {transaction.fromstatus ?? 'Khởi tạo'} → <span className="font-bold text-[#c4000b]">{transaction.tostatus}</span>
                           </p>
                         </div>
                         <p className="text-xs text-slate-400">

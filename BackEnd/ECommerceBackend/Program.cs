@@ -102,6 +102,19 @@ builder.Services.AddRateLimiter(options =>
                 AutoReplenishment = true
             });
     });
+    options.AddPolicy("PasswordResetRequests", httpContext =>
+    {
+        var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            $"password-reset:{remoteIp}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
 });
 
 // ── Singleton Services ────────────────────────────────────────────────────────
@@ -120,8 +133,10 @@ builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatOrchestratorServi
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatTypingService, ECommerceBackend.Services.Chat.ChatTypingService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Email.IEmailService, ECommerceBackend.Services.Email.SmtpEmailService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Email.IRegistrationOtpService, ECommerceBackend.Services.Email.RegistrationOtpService>();
+builder.Services.AddScoped<ECommerceBackend.Services.Email.IPasswordResetService, ECommerceBackend.Services.Email.PasswordResetService>();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddScoped<ECommerceBackend.Services.Checkout.ICheckoutAbuseProtectionService, ECommerceBackend.Services.Checkout.CheckoutAbuseProtectionService>();
+builder.Services.AddScoped<ECommerceBackend.Services.Returns.IReturnRefundPolicyService, ECommerceBackend.Services.Returns.ReturnRefundPolicyService>();
 builder.Services.AddHostedService<ECommerceBackend.Services.Checkout.ExpiredOrderCleanupService>();
 
 // Audit writes are queued by a global action filter and flushed asynchronously.

@@ -21,7 +21,7 @@ const PaymentSimulationPage: React.FC = () => {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<'success' | 'failed' | null>(null);
+  const [result, setResult] = useState<'success' | 'failed' | 'cancelled' | null>(null);
   const [message, setMessage] = useState('');
 
   const loadPayment = useCallback(async () => {
@@ -136,6 +136,23 @@ const PaymentSimulationPage: React.FC = () => {
     }
   };
 
+  const cancelPayment = async () => {
+    if (!numericOrderId || !token || submitting) return;
+    if (!window.confirm('Ngừng giao dịch sẽ hủy đơn và trả máy đang giữ về kho. Bạn có chắc chắn?')) return;
+
+    setSubmitting(true);
+    setMessage('');
+    try {
+      await ordersApi.cancelPendingPayment(numericOrderId, token);
+      setResult('cancelled');
+      setMessage('Giao dịch đã được ngừng. Thiết bị giữ chỗ đã được trả về kho ngay.');
+    } catch (error: unknown) {
+      setMessage(getApiErrorMessage(error, 'Không thể ngừng giao dịch. Vui lòng tải lại để kiểm tra trạng thái thanh toán.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -169,7 +186,17 @@ const PaymentSimulationPage: React.FC = () => {
     <div className="customer-shell min-h-screen px-4 py-12">
       <Seo title="Thanh toán đơn hàng - Cuồng Điện Thoại" description="Trang thanh toán đơn hàng Cuồng Điện Thoại." noIndex />
       <div className="customer-panel mx-auto max-w-xl overflow-hidden shadow-md">
-        {showSuccess ? (
+        {result === 'cancelled' ? (
+          <div className="bg-white p-8 text-center">
+            <XCircle size={56} className="mx-auto mb-4 text-slate-500" />
+            <h2 className="text-2xl font-black text-slate-900">Đã ngừng giao dịch</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-500">{message}</p>
+            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link to="/cart" className="rounded-2xl bg-[#e30613] px-6 py-3 font-black text-white">Quay lại giỏ hàng</Link>
+              <Link to="/products" className="rounded-2xl border border-slate-200 px-6 py-3 font-bold text-slate-600">Tiếp tục mua sắm</Link>
+            </div>
+          </div>
+        ) : showSuccess ? (
           // GIAO DIỆN THANH TOÁN THÀNH CÔNG CHUYÊN NGHIỆP
           <>
             <div className="bg-emerald-600 p-8 text-center text-white">
@@ -305,11 +332,11 @@ const PaymentSimulationPage: React.FC = () => {
                   )
                 )}
                 <button
-                  onClick={() => submitPayment(false)}
+                  onClick={cancelPayment}
                   disabled={submitting || expired}
-                  className="w-full rounded-2xl border border-slate-200 py-3 font-bold text-slate-600 hover:bg-slate-50"
+                  className="w-full rounded-2xl border border-red-200 py-3 font-black text-red-600 hover:bg-red-50 disabled:text-slate-400"
                 >
-                  Báo giao dịch không thành công
+                  {submitting ? 'Đang ngừng giao dịch...' : 'Ngừng giao dịch'}
                 </button>
                 {result === 'failed' && !expired && (
                   <button onClick={loadPayment} className="mx-auto flex items-center gap-2 text-sm font-bold text-[#e30613]">

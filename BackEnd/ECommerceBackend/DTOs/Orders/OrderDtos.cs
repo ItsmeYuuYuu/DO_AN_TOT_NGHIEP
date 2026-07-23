@@ -15,7 +15,10 @@ namespace ECommerceBackend.DTOs.Orders
         int? Packageid,
         string? Packagename,
         string? Productname,
-        string? Variantsku
+        string? Variantsku,
+        int? Variantid,
+        int? Productid,
+        string? Imageurl
     );
 
     public record OrderPaymentDto(
@@ -152,6 +155,10 @@ namespace ECommerceBackend.DTOs.Orders
         bool Success
     );
 
+    public record CancelPaymentRequestDto(
+        [Required] string Paymenttoken
+    );
+
     public record PaymentCheckoutDto(
         int Orderid,
         string? Paymentmethod,
@@ -188,6 +195,7 @@ namespace ECommerceBackend.DTOs.Orders
         string Status,
         DateTime? Estimateddeliveryat,
         int Deliveryattempts,
+        DateTime? Deliveredat,
         List<ShipmentLookupHistoryDto> Histories
     );
 
@@ -196,7 +204,10 @@ namespace ECommerceBackend.DTOs.Orders
         string? Sku,
         decimal Sellingprice,
         string? Packagename,
-        decimal? Warrantyprice
+        decimal? Warrantyprice,
+        int? Variantid,
+        int? Productid,
+        string? Imageurl
     );
 
     public record OrderLookupDto(
@@ -207,6 +218,7 @@ namespace ECommerceBackend.DTOs.Orders
         decimal? Discountamount,
         decimal Finalamount,
         string? Paymentmethod,
+        string? Paymentstatus,
         string? Vouchercode,
         int ItemCount,
         ShipmentLookupDto? Shipment,

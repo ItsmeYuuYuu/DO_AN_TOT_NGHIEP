@@ -142,7 +142,7 @@ const AdminProducts: React.FC = () => {
       header: 'Hãng / dòng',
       render: (product: Product) => (
         <div className="space-y-1">
-          <span className="inline-flex bg-indigo-50 px-2.5 py-1 text-xs font-black text-[#4338ca]">
+          <span className="inline-flex bg-red-50 px-2.5 py-1 text-xs font-black text-[#c4000b]">
             {product.brand?.name ?? '—'}
           </span>
           {product.series?.name && <p className="text-[11px] font-bold text-slate-400">{product.series.name}</p>}
@@ -157,7 +157,7 @@ const AdminProducts: React.FC = () => {
         if (!variant) return <span className="text-xs font-semibold text-slate-400">Chưa có biến thể</span>;
         return (
           <div>
-            <p className="text-sm font-black text-[#4338ca]">{formatCurrency(variant.saleprice ?? variant.baseprice)}</p>
+            <p className="text-sm font-black text-[#c4000b]">{formatCurrency(variant.saleprice ?? variant.baseprice)}</p>
             {variant.saleprice && variant.saleprice < variant.baseprice && (
               <p className="text-xs text-slate-400 line-through">{formatCurrency(variant.baseprice)}</p>
             )}
@@ -193,7 +193,7 @@ const AdminProducts: React.FC = () => {
           <button
             type="button"
             onClick={() => setEditingProductId(product.productid)}
-            className="inline-flex items-center gap-1 rounded-xl bg-indigo-50 px-2.5 py-1.5 text-xs font-black text-[#4338ca] hover:bg-indigo-100"
+            className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1.5 text-xs font-black text-[#c4000b] hover:bg-red-100"
           >
             <Wrench size={12} /> Sửa
           </button>
@@ -239,10 +239,10 @@ const AdminProducts: React.FC = () => {
 
       <div className="grid gap-4 md:grid-cols-4">
         {[
-          { label: 'Tổng sản phẩm', value: products.length, icon: <Package size={19} />, tone: 'bg-indigo-50 text-[#4338ca]' },
-          { label: 'Biến thể', value: totalVariants, icon: <Tags size={19} />, tone: 'bg-violet-50 text-violet-700' },
-          { label: 'Tổng tồn kho', value: totalStock, icon: <Boxes size={19} />, tone: 'bg-emerald-50 text-emerald-700' },
-          { label: 'Đang giảm giá', value: discountedProducts, icon: <Search size={19} />, tone: 'bg-orange-50 text-orange-700' },
+          { label: 'Tổng sản phẩm', value: products.length, icon: <Package size={19} />, tone: 'bg-red-50 text-[#c4000b]' },
+          { label: 'Biến thể', value: totalVariants, icon: <Tags size={19} />, tone: 'bg-red-50 text-[#c4000b]' },
+          { label: 'Tổng tồn kho', value: totalStock, icon: <Boxes size={19} />, tone: 'bg-red-50 text-[#c4000b]' },
+          { label: 'Đang giảm giá', value: discountedProducts, icon: <Search size={19} />, tone: 'bg-red-50 text-[#c4000b]' },
         ].map(item => (
           <div key={item.label} className="ops-card p-4">
             <div className={`mb-3 flex h-10 w-10 items-center justify-center ${item.tone}`}>{item.icon}</div>
@@ -278,7 +278,7 @@ const AdminProducts: React.FC = () => {
             {categories.map(category => <option key={category.categoryid} value={category.categoryid}>{category.categoryname}</option>)}
           </select>
           <label className="flex cursor-pointer items-center gap-2 text-sm font-black text-[#172033]">
-            <input type="checkbox" checked={filterDiscount} onChange={event => { setFilterDiscount(event.target.checked); setPage(1); }} className="accent-[#4f46e5]" />
+            <input type="checkbox" checked={filterDiscount} onChange={event => { setFilterDiscount(event.target.checked); setPage(1); }} className="accent-[#e30613]" />
             Đang giảm giá
           </label>
           {(search || filterBrand || filterCategory || filterDiscount) && (

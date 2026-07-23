@@ -91,7 +91,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               toast.type === 'success' ? 'border-emerald-200 text-emerald-700' :
               toast.type === 'error' ? 'border-red-200 text-red-700' :
               toast.type === 'warning' ? 'border-amber-200 text-amber-700' :
-              'border-indigo-200 text-[#4338ca]'
+              'border-blue-200 text-blue-700'
             }`}
           >
             {toast.message}

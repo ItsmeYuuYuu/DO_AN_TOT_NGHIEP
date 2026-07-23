@@ -180,6 +180,27 @@ public class HomepageProductSectionsController : ControllerBase
         return Ok(dtos);
     }
 
+    [HttpGet("product-metrics")]
+    [Authorize(Roles = "Admin,Manager,Content")]
+    public async Task<ActionResult<IEnumerable<HomepageProductMetricDto>>> GetProductMetrics()
+    {
+        var soldQuantities = await _context.Orderitems
+            .AsNoTracking()
+            .Where(item =>
+                item.Order != null &&
+                item.Order.Orderstatus == "Completed" &&
+                item.ImeiNavigation != null &&
+                item.ImeiNavigation.Variant != null &&
+                item.ImeiNavigation.Variant.Productid != null)
+            .GroupBy(item => item.ImeiNavigation!.Variant!.Productid!.Value)
+            .Select(group => new HomepageProductMetricDto(
+                group.Key,
+                group.Count()))
+            .ToListAsync();
+
+        return Ok(soldQuantities);
+    }
+
     [HttpPut("{sectionId:int}")]
     [Authorize(Roles = "Admin,Manager,Content")]
     public async Task<IActionResult> UpdateSection(

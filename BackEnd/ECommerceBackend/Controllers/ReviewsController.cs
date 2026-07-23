@@ -145,6 +145,20 @@ namespace ECommerceBackend.Controllers
             if (!variantExists) 
                 return BadRequest(new ApiErrorDto($"Biến thể sản phẩm (VariantId: {dto.Variantid}) không tồn tại.", null));
 
+            var hasCompletedPurchase = await _context.Orderitems
+                .AnyAsync(item => item.Order != null &&
+                    item.Order.Customerid == cust.Customerid &&
+                    item.Order.Orderstatus == "Completed" &&
+                    item.ImeiNavigation != null &&
+                    item.ImeiNavigation.Variantid == dto.Variantid);
+            if (!hasCompletedPurchase)
+                return BadRequest(new ApiErrorDto("Chỉ khách hàng đã nhận sản phẩm mới có thể đánh giá biến thể này.", null));
+
+            var existingReview = await _context.Reviews
+                .FirstOrDefaultAsync(review => review.Customerid == cust.Customerid && review.Variantid == dto.Variantid);
+            if (existingReview != null)
+                return Conflict(new ApiErrorDto("Bạn đã đánh giá sản phẩm này. Vui lòng sửa đánh giá hiện có thay vì tạo mới.", null));
+
             var review = new Review
             {
                 Variantid = dto.Variantid,

@@ -78,7 +78,7 @@ export function DataTable<T>({
             </tr>
           ) : (
             data.map(row => (
-              <tr key={String(row[keyField])} className="transition-colors hover:bg-indigo-50/40">
+              <tr key={String(row[keyField])} className="transition-colors hover:bg-red-50/40">
                 {columns.map(col => (
                   <td key={col.key} className={`px-4 py-3 text-slate-700 ${col.className ?? ''}`}>
                     {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '—')}

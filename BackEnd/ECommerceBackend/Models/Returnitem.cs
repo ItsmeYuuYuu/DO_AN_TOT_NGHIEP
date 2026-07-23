@@ -18,6 +18,16 @@ public partial class Returnitem
 
     public decimal Refundamount { get; set; }
 
+    public decimal Originalpaidamount { get; set; }
+
+    public string? Inspectiongrade { get; set; }
+
+    public string? Faultresponsibility { get; set; }
+
+    public decimal Deductionamount { get; set; }
+
+    public int? Resalevariantid { get; set; }
+
     public virtual Returnrequest Returnrequest { get; set; } = null!;
 
     public virtual Orderitem Orderitem { get; set; } = null!;
@@ -25,4 +35,6 @@ public partial class Returnitem
     public virtual Inventoryitem Inventoryitem { get; set; } = null!;
 
     public virtual Inventoryitem? Replacementinventoryitem { get; set; }
+
+    public virtual Productvariant? Resalevariant { get; set; }
 }

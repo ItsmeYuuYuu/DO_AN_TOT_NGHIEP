@@ -587,15 +587,19 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Assigneduserid).HasColumnName("assigneduserid");
             entity.Property(e => e.Requesttype).HasMaxLength(20).HasColumnName("requesttype");
             entity.Property(e => e.Reason).HasMaxLength(200).HasColumnName("reason");
+            entity.Property(e => e.Reasoncategory).HasMaxLength(30).HasColumnName("reasoncategory");
             entity.Property(e => e.Description).HasMaxLength(2000).HasColumnName("description");
             entity.Property(e => e.Status).HasMaxLength(30).HasColumnName("status");
             entity.Property(e => e.Imageurls).HasColumnType("jsonb").HasColumnName("imageurls");
             entity.Property(e => e.Reviewnote).HasMaxLength(1000).HasColumnName("reviewnote");
             entity.Property(e => e.Resolution).HasMaxLength(2000).HasColumnName("resolution");
             entity.Property(e => e.Requestedrefundamount).HasPrecision(18, 2).HasColumnName("requestedrefundamount");
+            entity.Property(e => e.Approvedrefundamount).HasPrecision(18, 2).HasColumnName("approvedrefundamount");
             entity.Property(e => e.Refundamount).HasPrecision(18, 2).HasColumnName("refundamount");
             entity.Property(e => e.Refundstatus).HasMaxLength(30).HasColumnName("refundstatus");
             entity.Property(e => e.Refundinfo).HasColumnType("jsonb").HasColumnName("refundinfo");
+            entity.Property(e => e.Policyversion).HasMaxLength(20).HasColumnName("policyversion");
+            entity.Property(e => e.Refundcalculation).HasColumnType("jsonb").HasColumnName("refundcalculation");
             entity.Property(e => e.Requestedat).HasColumnType("timestamp without time zone").HasColumnName("requestedat");
             entity.Property(e => e.Reviewedat).HasColumnType("timestamp without time zone").HasColumnName("reviewedat");
             entity.Property(e => e.Receivedat).HasColumnType("timestamp without time zone").HasColumnName("receivedat");
@@ -629,6 +633,7 @@ public partial class ECommerceContext : DbContext
                 .IsUnique();
             entity.HasIndex(e => e.Imei, "ix_returnitems_imei");
             entity.HasIndex(e => e.Replacementimei, "ix_returnitems_replacementimei");
+            entity.HasIndex(e => e.Resalevariantid, "ix_returnitems_resalevariantid");
 
             entity.Property(e => e.Returnitemid).HasColumnName("returnitemid");
             entity.Property(e => e.Returnrequestid).HasColumnName("returnrequestid");
@@ -638,6 +643,11 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Disposition).HasMaxLength(30).HasColumnName("disposition");
             entity.Property(e => e.Replacementimei).HasMaxLength(50).HasColumnName("replacementimei");
             entity.Property(e => e.Refundamount).HasPrecision(18, 2).HasColumnName("refundamount");
+            entity.Property(e => e.Originalpaidamount).HasPrecision(18, 2).HasColumnName("originalpaidamount");
+            entity.Property(e => e.Inspectiongrade).HasMaxLength(20).HasColumnName("inspectiongrade");
+            entity.Property(e => e.Faultresponsibility).HasMaxLength(20).HasColumnName("faultresponsibility");
+            entity.Property(e => e.Deductionamount).HasPrecision(18, 2).HasColumnName("deductionamount");
+            entity.Property(e => e.Resalevariantid).HasColumnName("resalevariantid");
 
             entity.HasOne(e => e.Returnrequest).WithMany(e => e.Returnitems)
                 .HasForeignKey(e => e.Returnrequestid)
@@ -655,6 +665,10 @@ public partial class ECommerceContext : DbContext
                 .HasForeignKey(e => e.Replacementimei)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("fk_returnitems_replacement_inventory");
+            entity.HasOne(e => e.Resalevariant).WithMany()
+                .HasForeignKey(e => e.Resalevariantid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_returnitems_resale_variants");
         });
 
         

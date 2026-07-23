@@ -38,8 +38,8 @@ interface Customer {
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   Pending: { label: 'Chờ xác nhận', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  Processing: { label: 'Đang xử lý', className: 'bg-indigo-50 text-[#4338ca] border-indigo-200' },
-  Shipped: { label: 'Đang giao', className: 'bg-violet-50 text-violet-700 border-violet-200' },
+  Processing: { label: 'Đang xử lý', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  Shipped: { label: 'Đang giao', className: 'bg-blue-50 text-blue-700 border-blue-200' },
   Completed: { label: 'Hoàn thành', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   Cancelled: { label: 'Đã hủy', className: 'bg-red-50 text-red-700 border-red-200' },
 };
@@ -236,7 +236,7 @@ const AdminCustomers: React.FC = () => {
         <button
           type="button"
           onClick={() => openCustomerDetail(c)}
-          className="inline-flex items-center gap-1.5 rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-[#4338ca] transition-colors hover:bg-indigo-100"
+          className="inline-flex items-center gap-1.5 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-[#c4000b] transition-colors hover:bg-red-100"
         >
           <Eye size={15} />
           Chi tiết
@@ -260,7 +260,7 @@ const AdminCustomers: React.FC = () => {
       <div className="bg-white rounded-xl border border-slate-200 p-4">
         <div className="max-w-sm">
           <input
-            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 text-sm text-slate-700 outline-none focus:border-[#4f46e5] placeholder:text-slate-400"
+            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 text-sm text-slate-700 outline-none focus:border-[#e30613] placeholder:text-slate-400"
             placeholder="Tìm tên, số điện thoại, email..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
@@ -313,9 +313,9 @@ const AdminCustomers: React.FC = () => {
             ) : (
               <>
                 <section className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
-                    <ShoppingBag size={20} className="mb-2 text-[#4f46e5]" />
-                    <p className="text-xs font-semibold uppercase text-[#4f46e5]">Tổng đơn hàng</p>
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                    <ShoppingBag size={20} className="mb-2 text-[#e30613]" />
+                    <p className="text-xs font-semibold uppercase text-[#e30613]">Tổng đơn hàng</p>
                     <p className="mt-1 text-xl font-black text-slate-800">{orderSummary.total}</p>
                   </div>
                   <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
@@ -323,9 +323,9 @@ const AdminCustomers: React.FC = () => {
                     <p className="text-xs font-semibold uppercase text-emerald-600">Đã hoàn thành</p>
                     <p className="mt-1 text-xl font-black text-slate-800">{orderSummary.completed}</p>
                   </div>
-                  <div className="rounded-xl border border-violet-100 bg-violet-50 p-4">
-                    <Wallet size={20} className="mb-2 text-violet-600" />
-                    <p className="text-xs font-semibold uppercase text-violet-600">Tổng chi tiêu</p>
+                  <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+                    <Wallet size={20} className="mb-2 text-[#c4000b]" />
+                    <p className="text-xs font-semibold text-[#c4000b]">Tổng chi tiêu</p>
                     <p className="mt-1 text-lg font-black text-slate-800">{formatCurrency(orderSummary.spent)}</p>
                   </div>
                 </section>

@@ -267,17 +267,17 @@ export const CustomerLayout: React.FC = () => {
 
   return (
     <div className="customer-shell flex min-h-screen flex-col">
-      <div className="hidden border-b border-white/10 bg-[#1f2937] px-4 py-2 text-white/70 md:block">
-        <div className="mx-auto flex max-w-7xl items-center justify-between text-[10px] font-bold uppercase tracking-[0.14em]">
+      <div className="hidden border-b border-[#fecdd3] bg-[#fff1f2] px-4 py-2 text-[#7f1d1d] md:block">
+        <div className="mx-auto flex max-w-7xl items-center justify-between text-xs font-semibold [font-family:'Segoe_UI',Tahoma,Arial,sans-serif]">
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-2"><Phone size={12} /> Hotline 1800 0000</span>
             <span className="flex items-center gap-2"><MapPin size={12} /> Hệ thống cửa hàng</span>
           </div>
           <div className="flex items-center gap-6">
-            <Link to="/order-lookup" className="flex items-center gap-2 hover:text-[#ffd166]">
+            <Link to="/order-lookup" className="flex items-center gap-2 hover:text-[#c4000b]">
               <ClipboardList size={12} /> Tra cứu đơn
             </Link>
-            <Link to="/news" className="flex items-center gap-2 hover:text-[#ffd166]">
+            <Link to="/news" className="flex items-center gap-2 hover:text-[#c4000b]">
               <Newspaper size={12} /> Tin công nghệ
             </Link>
           </div>
@@ -316,17 +316,6 @@ export const CustomerLayout: React.FC = () => {
             </form>
 
             <div className="ml-auto flex items-center">
-              <Link
-                to="/chat"
-                className="hidden items-center gap-3 border-r customer-rule px-4 py-2 text-[#1f2937] transition hover:bg-[#ffd166]/30 lg:flex"
-              >
-                <Headphones size={20} />
-                <span>
-                  <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-[#c4000b]">Trợ lý mua sắm</span>
-                  <span className="block text-xs font-black">Hỏi AI</span>
-                </span>
-              </Link>
-
               {isLoggedIn ? (
                 <Link
                   to="/profile"
@@ -388,24 +377,24 @@ export const CustomerLayout: React.FC = () => {
             </div>
           </form>
 
-          <nav className="relative hidden h-12 items-stretch border-t customer-rule md:flex">
+          <nav className="relative hidden h-12 items-stretch border-t customer-rule [font-family:'Segoe_UI',Tahoma,Arial,sans-serif] md:flex">
             <NavLink
               to="/products?sort=newest"
-              className="flex items-center rounded-t-2xl border-r customer-rule px-5 text-[11px] font-black uppercase tracking-[0.16em] text-[#1f2937] hover:bg-[#1f2937] hover:text-white"
+              className="flex items-center rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#fff1f2] hover:text-[#c4000b]"
             >
               Máy mới
               <span className="ml-2 rounded-full bg-[#e30613] px-1.5 py-0.5 text-[8px] text-white">NEW</span>
             </NavLink>
 
             <div className="group/phone relative flex">
-              <button className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[11px] font-black uppercase tracking-[0.16em] text-[#1f2937] group-hover/phone:bg-[#1f2937] group-hover/phone:text-white">
+              <button className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] group-hover/phone:bg-[#fff1f2] group-hover/phone:text-[#c4000b]">
                 Điện thoại <ChevronDown size={14} />
               </button>
 
               <div className="pointer-events-none absolute left-0 top-full z-[999] w-[900px] max-w-[calc(100vw-2rem)] translate-y-2 pt-2 opacity-0 transition duration-200 group-hover/phone:pointer-events-auto group-hover/phone:translate-y-0 group-hover/phone:opacity-100">
                 <div className="grid min-h-80 grid-cols-[250px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
-                  <div className="bg-[#1f2937] p-4 text-white">
-                    <p className="mb-3 text-[9px] font-black uppercase tracking-[0.2em] text-[#ffd166]">Hãng sản xuất</p>
+                  <div className="bg-[#fff1f2] p-4 text-[#1f2937]">
+                    <p className="mb-3 text-[9px] font-black uppercase tracking-[0.2em] text-[#c4000b]">Hãng sản xuất</p>
                     <div className="space-y-1">
                       {phoneMenuBrands.map(brand => (
                         <NavLink
@@ -416,7 +405,7 @@ export const CustomerLayout: React.FC = () => {
                           className={`flex items-center justify-between px-3 py-2.5 text-sm font-bold ${
                             activePhoneBrand?.brandid === brand.brandid
                               ? 'rounded-2xl bg-[#e30613] text-white'
-                              : 'rounded-2xl text-white/70 hover:bg-white/10 hover:text-white'
+                              : 'rounded-2xl text-[#4b5563] hover:bg-[#fee2e2] hover:text-[#c4000b]'
                           }`}
                         >
                           <span>{brand.brandname}</span>
@@ -469,13 +458,13 @@ export const CustomerLayout: React.FC = () => {
 
             <NavLink
               to="/promotions"
-              className="flex items-center rounded-t-2xl border-r customer-rule px-5 text-[11px] font-black uppercase tracking-[0.16em] text-[#c4000b] hover:bg-[#e30613] hover:text-white"
+              className="flex items-center rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#c4000b] hover:bg-[#e30613] hover:text-white"
             >
               Ưu đãi
             </NavLink>
             <NavLink
               to="/chat"
-              className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[11px] font-black uppercase tracking-[0.16em] text-[#1f2937] hover:bg-[#ffd166]"
+              className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#ffd166]"
             >
               So sánh bằng AI
             </NavLink>
@@ -560,10 +549,7 @@ export const CustomerLayout: React.FC = () => {
                       <Bot size={22} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-black">AI tư vấn chọn máy</p>
-                      <p className="truncate text-[11px] font-medium text-white/80">
-                        {aiWidgetHandoffActive ? 'Đã chuyển cho tư vấn viên' : 'Chat nhanh ngay tại trang này'}
-                      </p>
+                      <p className="text-sm font-bold">Tư vấn chọn máy</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
@@ -778,45 +764,45 @@ export const CustomerLayout: React.FC = () => {
         )}
       </main>
 
-      <footer className="border-t-4 border-[#e30613] bg-[#1f2937] text-white">
+      <footer className="border-t-4 border-[#e30613] bg-[linear-gradient(135deg,#fff8f8_0%,#fff1f2_55%,#ffffff_100%)] text-[#1f2937]">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-[1.3fr_1fr_1fr_1.2fr]">
           <div>
             <img src={Logo} alt="Cường Điện Thoại" className="h-16 w-auto object-contain" />
-            <p className="mt-5 max-w-sm text-sm leading-6 text-white/55">
+            <p className="mt-5 max-w-sm text-sm leading-6 text-[#596273]">
               Cửa hàng thiết bị công nghệ tập trung vào dữ liệu sản phẩm rõ ràng, tư vấn đúng nhu cầu và quy trình hậu mãi có thể theo dõi.
             </p>
           </div>
 
           <div>
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ffd166]">Hỗ trợ</h4>
-            <ul className="mt-5 space-y-3 text-sm text-white/60">
-              <li><Link to="/order-lookup" className="hover:text-white">Tra cứu đơn hàng</Link></li>
-              <li><Link to="/policy" className="hover:text-white">Chính sách bảo hành</Link></li>
-              <li><Link to="/shipping" className="hover:text-white">Chính sách vận chuyển</Link></li>
-              <li><Link to="/return" className="hover:text-white">Đổi trả và hoàn tiền</Link></li>
+            <h4 className="text-sm font-bold text-[#b4232d]">Hỗ trợ khách hàng</h4>
+            <ul className="mt-5 space-y-3 text-sm text-[#596273]">
+              <li><Link to="/order-lookup" className="transition hover:text-[#c4000b]">Tra cứu đơn hàng</Link></li>
+              <li><Link to="/policy" className="transition hover:text-[#c4000b]">Chính sách bảo hành</Link></li>
+              <li><Link to="/shipping" className="transition hover:text-[#c4000b]">Chính sách vận chuyển</Link></li>
+              <li><Link to="/return" className="transition hover:text-[#c4000b]">Đổi trả và hoàn tiền</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ffd166]">Khám phá</h4>
-            <ul className="mt-5 space-y-3 text-sm text-white/60">
-              <li><Link to="/products" className="hover:text-white">Toàn bộ sản phẩm</Link></li>
-              <li><Link to="/products?sort=newest" className="hover:text-white">Máy mới lên kệ</Link></li>
-              <li><Link to="/promotions" className="hover:text-white">Ưu đãi hiện tại</Link></li>
-              <li><Link to="/chat" className="hover:text-white">Trợ lý mua sắm AI</Link></li>
+            <h4 className="text-sm font-bold text-[#b4232d]">Khám phá</h4>
+            <ul className="mt-5 space-y-3 text-sm text-[#596273]">
+              <li><Link to="/products" className="transition hover:text-[#c4000b]">Toàn bộ sản phẩm</Link></li>
+              <li><Link to="/products?sort=newest" className="transition hover:text-[#c4000b]">Máy mới lên kệ</Link></li>
+              <li><Link to="/promotions" className="transition hover:text-[#c4000b]">Ưu đãi hiện tại</Link></li>
+              <li><Link to="/chat" className="transition hover:text-[#c4000b]">Tư vấn chọn máy</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ffd166]">Nhận tin mới</h4>
-            <p className="mt-5 text-sm leading-6 text-white/55">
+            <h4 className="text-sm font-bold text-[#b4232d]">Nhận tin mới</h4>
+            <p className="mt-5 text-sm leading-6 text-[#596273]">
               Sản phẩm mới, cập nhật giá và nội dung công nghệ đáng chú ý.
             </p>
-            <div className="mt-5 flex overflow-hidden rounded-full border border-white/25 bg-white/10">
+            <div className="mt-5 flex overflow-hidden rounded-full border border-[#f3b8bd] bg-white shadow-sm">
               <input
                 type="email"
                 placeholder="Email của bạn"
-                className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-white outline-none placeholder:text-white/35"
+                className="min-w-0 flex-1 bg-transparent px-4 py-3 text-sm text-[#1f2937] outline-none placeholder:text-[#8a94a3]"
               />
               <button
                 type="button"
@@ -828,8 +814,8 @@ export const CustomerLayout: React.FC = () => {
           </div>
         </div>
 
-        <div className="border-t border-white/10 px-4 py-5">
-          <div className="mx-auto flex max-w-7xl justify-center text-[10px] font-bold uppercase tracking-[0.12em] text-white/35">
+        <div className="border-t border-[#f3c7cb] px-4 py-5">
+          <div className="mx-auto flex max-w-7xl justify-center text-xs font-medium text-[#7d5560]">
             <span>© 2026 Cuồng Điện Thoại</span>
           </div>
         </div>

@@ -223,6 +223,7 @@ namespace ECommerceBackend.Controllers
             if (normalized.Contains("[auth]") && normalized.Contains("register")) return "Đăng ký tài khoản";
             if (normalized.Contains("[auth]") && normalized.Contains("changepassword")) return "Đổi mật khẩu";
             if (normalized.Contains("[auth]") && normalized.Contains("forgotpassword")) return "Yêu cầu khôi phục mật khẩu";
+            if (normalized.Contains("[auth]") && normalized.Contains("resetpassword")) return "Đặt lại mật khẩu";
             return action;
         }
 

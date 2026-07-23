@@ -6,6 +6,7 @@ using ECommerceBackend.Services.Email;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace ECommerceBackend.Controllers
 {
@@ -50,7 +51,10 @@ namespace ECommerceBackend.Controllers
                 i.Packageid,
                 i.Package?.Packagename,
                 i.ImeiNavigation?.Variant?.Product?.Productname,
-                i.ImeiNavigation?.Variant?.Sku
+                i.ImeiNavigation?.Variant?.Sku,
+                i.ImeiNavigation?.Variantid,
+                i.ImeiNavigation?.Variant?.Productid,
+                FirstImageUrl(i.ImeiNavigation?.Variant?.Imageurls)
             )).ToList();
             var payments = o.Orderpayments
                 .OrderByDescending(payment => payment.Createdat)
@@ -73,6 +77,7 @@ namespace ECommerceBackend.Controllers
                     o.Shipment.Status,
                     o.Shipment.Estimateddeliveryat,
                     o.Shipment.Deliveryattempts,
+                    o.Shipment.Deliveredat,
                     o.Shipment.Histories
                         .OrderBy(history => history.Createdat)
                         .Select(history => new ShipmentLookupHistoryDto(
@@ -137,8 +142,16 @@ namespace ECommerceBackend.Controllers
                 mapped.Cancellationreason,
                 mapped.Customer,
                 mapped.Orderitems,
-                mapped.Orderpayments
+                mapped.Orderpayments,
+                mapped.Shipment
             );
+        }
+
+        private static string? FirstImageUrl(string? imageUrls)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrls)) return null;
+            try { return JsonSerializer.Deserialize<List<string>>(imageUrls)?.FirstOrDefault(); }
+            catch (JsonException) { return null; }
         }
 
         private int? GetClaimUserId()
@@ -616,6 +629,7 @@ namespace ECommerceBackend.Controllers
                 o.Discountamount,
                 o.Finalamount,
                 o.Paymentmethod,
+                o.Paymentstatus,
                 o.Vouchercode,
                 o.Orderitems.Count,
                 o.Shipment == null
@@ -626,6 +640,7 @@ namespace ECommerceBackend.Controllers
                         o.Shipment.Status,
                         o.Shipment.Estimateddeliveryat,
                         o.Shipment.Deliveryattempts,
+                        o.Shipment.Deliveredat,
                         o.Shipment.Histories
                             .OrderBy(history => history.Createdat)
                             .Select(history => new ShipmentLookupHistoryDto(
@@ -638,7 +653,10 @@ namespace ECommerceBackend.Controllers
                     oi.ImeiNavigation?.Variant?.Sku,
                     oi.Sellingprice,
                     oi.Package?.Packagename,
-                    oi.Warrantyprice
+                    oi.Warrantyprice,
+                    oi.ImeiNavigation?.Variantid,
+                    oi.ImeiNavigation?.Variant?.Productid,
+                    FirstImageUrl(oi.ImeiNavigation?.Variant?.Imageurls)
                 )).ToList(),
                 o.Shippingname,
                 o.Shippingphone,
@@ -1027,6 +1045,52 @@ namespace ECommerceBackend.Controllers
             await transaction.CommitAsync();
             await _emailService.SendPaymentUpdatedAsync(order, HttpContext.RequestAborted);
             return Ok(result);
+        }
+
+        [HttpPost("{id}/cancel-payment")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CancelPendingPayment(
+            int id,
+            [FromBody] CancelPaymentRequestDto dto)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            var order = await _context.Orders
+                .Include(item => item.Orderitems)
+                .Include(item => item.Orderpayments)
+                .FirstOrDefaultAsync(item => item.Orderid == id);
+
+            if (order == null)
+                return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
+            if (string.IsNullOrWhiteSpace(dto.Paymenttoken) || dto.Paymenttoken != order.Paymenttoken)
+                return StatusCode(403, new ApiErrorDto("Mã thanh toán không hợp lệ.", null));
+            if (order.Paymentmethod == "COD")
+                return BadRequest(new ApiErrorDto("Đơn COD không có giao dịch ngân hàng để ngừng.", null));
+            if (order.Paymentstatus is "Paid" or "DepositPaid" || (order.Paidamount ?? 0) > 0)
+                return Conflict(new ApiErrorDto("Giao dịch đã được ghi nhận thanh toán nên không thể ngừng.", null));
+            if (order.Orderstatus == StatusCancelled)
+                return Ok(new { orderid = order.Orderid, orderstatus = order.Orderstatus, paymentstatus = order.Paymentstatus });
+
+            await ApplyInventoryForStatusAsync(order, StatusCancelled);
+            foreach (var payment in order.Orderpayments.Where(item => item.Status == "Pending"))
+            {
+                payment.Status = "Cancelled";
+            }
+
+            order.Orderstatus = StatusCancelled;
+            order.Paymentstatus = "Cancelled";
+            order.Cancellationreason = "Khách hàng chủ động ngừng giao dịch thanh toán.";
+            order.Reservationexpiresat = null;
+            order.Paymenttoken = null;
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            if (!string.IsNullOrWhiteSpace(order.Shippingphone))
+            {
+                await _checkoutAbuseProtection.ReleaseGuestPendingAsync(order.Guesttoken, order.Shippingphone);
+            }
+
+            return Ok(new { orderid = order.Orderid, orderstatus = order.Orderstatus, paymentstatus = order.Paymentstatus });
         }
 
         [HttpPost("{id}/confirm-payment")]

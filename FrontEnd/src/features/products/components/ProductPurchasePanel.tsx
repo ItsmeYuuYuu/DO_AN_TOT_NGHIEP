@@ -177,7 +177,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
 
   return (
     <div className="flex h-full flex-col gap-6">
-      <div className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+      <div className="rounded-2xl border border-[#f3c7cb] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <p className="customer-label">Giá bán</p>
         <div className="mt-2 flex flex-wrap items-end gap-3">
           <span className="text-4xl font-black tracking-tight text-[#c4000b]">
@@ -185,7 +185,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
           </span>
           {discount && discount > 0 ? (
             <>
-              <span className="mb-1 text-sm text-slate-400 line-through">
+              <span className="mb-1 text-sm text-[#9f6670] line-through">
                 {formatCurrency(selectedVariant?.baseprice ?? 0)}
               </span>
               <span className="mb-1 rounded-full bg-[#e30613] px-2.5 py-1 text-xs font-black text-white">

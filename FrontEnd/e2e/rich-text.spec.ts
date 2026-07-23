@@ -80,6 +80,17 @@ test('product form loads CKEditor and applies formatting', async ({ page }) => {
       await route.fulfill({ json: [{ categoryid: 1, categoryname: 'Điện thoại' }] });
       return;
     }
+    if (path.endsWith('/ProductSeries')) {
+      const requestUrl = new URL(route.request().url());
+      expect(requestUrl.searchParams.get('brandId')).toBe('1');
+      await route.fulfill({
+        json: [
+          { seriesid: 1, brandid: 1, brandname: 'E2E Brand', seriesname: 'E2E Pro', displayorder: 0, isactive: true, productcount: 2 },
+          { seriesid: 2, brandid: 1, brandname: 'E2E Brand', seriesname: 'E2E Fold', displayorder: 0, isactive: true, productcount: 1 },
+        ],
+      });
+      return;
+    }
     if (path.endsWith('/ProductImages/upload') && route.request().method() === 'POST') {
       await route.fulfill({
         json: [{
@@ -99,6 +110,10 @@ test('product form loads CKEditor and applies formatting', async ({ page }) => {
   await dialog.getByPlaceholder('VD: Google Pixel 8 Pro').fill('CKEditor runtime test');
   await dialog.getByRole('combobox').nth(0).selectOption('1');
   await dialog.getByRole('combobox').nth(1).selectOption('1');
+  const seriesInput = dialog.getByPlaceholder('VD: Galaxy S, iPhone Pro');
+  await expect(seriesInput).toBeEnabled();
+  await expect(dialog.locator('datalist option')).toHaveCount(2);
+  await seriesInput.fill('E2E Pro');
   await dialog.getByPlaceholder('0').nth(0).fill('10000000');
   await dialog.getByPlaceholder('0').nth(2).fill('1');
   await dialog.getByRole('button', { name: 'Tiếp theo' }).click();

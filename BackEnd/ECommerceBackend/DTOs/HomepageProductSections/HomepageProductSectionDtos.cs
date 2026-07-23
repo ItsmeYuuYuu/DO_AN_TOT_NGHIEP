@@ -41,3 +41,8 @@ public record UpdateHomepageProductSectionItemDto(
     int? Displayorder,
     bool? Isactive
 );
+
+public record HomepageProductMetricDto(
+    int Productid,
+    int Soldquantity
+);

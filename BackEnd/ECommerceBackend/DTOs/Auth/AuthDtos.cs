@@ -77,6 +77,25 @@ namespace ECommerceBackend.DTOs.Auth
         string Email
     );
 
+    public record ResetPasswordRequestDto(
+        [Required(ErrorMessage = "Email không được để trống")]
+        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        string Email,
+
+        [Required(ErrorMessage = "Mã xác nhận không được để trống")]
+        [RegularExpression(@"^\d{6}$", ErrorMessage = "Mã xác nhận phải gồm 6 chữ số")]
+        string VerificationCode,
+
+        [Required(ErrorMessage = "Mật khẩu mới không được để trống")]
+        [RegularExpression(
+            @"^(?=.{8,}$)(?!.*\s)(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).*$",
+            ErrorMessage = "Mật khẩu mới phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt")]
+        string NewPassword,
+
+        [Required(ErrorMessage = "Vui lòng xác nhận mật khẩu mới")]
+        string ConfirmPassword
+    );
+
     public record TestEmailRequestDto(
         [Required(ErrorMessage = "Email không được để trống")]
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]

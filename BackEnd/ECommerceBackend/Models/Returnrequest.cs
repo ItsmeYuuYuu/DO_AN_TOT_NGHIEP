@@ -16,6 +16,8 @@ public partial class Returnrequest
 
     public string Reason { get; set; } = null!;
 
+    public string Reasoncategory { get; set; } = "Other";
+
     public string? Description { get; set; }
 
     public string Status { get; set; } = null!;
@@ -28,11 +30,17 @@ public partial class Returnrequest
 
     public decimal Requestedrefundamount { get; set; }
 
+    public decimal? Approvedrefundamount { get; set; }
+
     public decimal? Refundamount { get; set; }
 
     public string Refundstatus { get; set; } = null!;
 
     public string? Refundinfo { get; set; }
+
+    public string Policyversion { get; set; } = "Legacy";
+
+    public string? Refundcalculation { get; set; }
 
     public DateTime? Requestedat { get; set; }
 

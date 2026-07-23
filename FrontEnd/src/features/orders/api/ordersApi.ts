@@ -27,6 +27,14 @@ export interface Order {
   customer?: { customerid: number; fullname: string; phone: string; email?: string };
   orderitems?: OrderItem[];
   orderpayments?: OrderPayment[];
+  shipment?: {
+    carrier: string;
+    trackingcode: string;
+    status: string;
+    estimateddeliveryat?: string;
+    deliveryattempts: number;
+    deliveredat?: string;
+  };
 }
 
 export interface OrderPayment {
@@ -50,6 +58,9 @@ export interface OrderItem {
   packagename?: string;
   productname?: string;
   variantsku?: string;
+  variantid?: number;
+  productid?: number;
+  imageurl?: string;
 }
 
 export interface BulkUpdateFailedItem {
@@ -99,6 +110,8 @@ export const ordersApi = {
     apiClient.get<PaymentCheckout>(`/Orders/${id}/payment`, { params: { token } }),
   simulatePayment: (id: number, paymenttoken: string, success: boolean) =>
     apiClient.post<PaymentActionResult>(`/Orders/${id}/simulate-payment`, { paymenttoken, success }),
+  cancelPendingPayment: (id: number, paymenttoken: string) =>
+    apiClient.post<{ orderid: number; orderstatus: string; paymentstatus: string }>(`/Orders/${id}/cancel-payment`, { paymenttoken }),
   confirmPayment: (id: number, amount?: number, transactionref?: string, note?: string) =>
     apiClient.post<PaymentActionResult>(`/Orders/${id}/confirm-payment`, { amount, transactionref, note }),
   delete: (id: number) => apiClient.delete(`/Orders/${id}`),

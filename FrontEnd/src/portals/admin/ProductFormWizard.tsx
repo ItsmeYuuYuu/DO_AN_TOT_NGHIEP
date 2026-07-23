@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { Modal } from '@/components/Modal';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { removeImageFromRichText } from '@/utils/richText';
@@ -13,6 +14,7 @@ import type {
   UploadedProductImage,
 } from '@/features/products/api/productsApi';
 import { PRODUCT_CONDITION_OPTIONS } from '@/features/products/constants/productOptions';
+import { ProductSeriesInput } from '@/features/productSeries/components/ProductSeriesInput';
 import { 
   AlertCircle, 
   CheckCircle, 
@@ -421,6 +423,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
       if (!productname.trim()) return setError('Vui lòng nhập tên sản phẩm.');
       if (!categoryid) return setError('Vui lòng chọn danh mục.');
       if (!brandid) return setError('Vui lòng chọn thương hiệu.');
+      if (!seriesname.trim()) return setError('Vui lòng chọn hoặc nhập dòng máy (series).');
       if (baseprice === '' || Number(baseprice) <= 0) return setError('Giá gốc sản phẩm phải lớn hơn 0.');
       if (hasDiscount && (saleprice === '' || Number(saleprice) < 0)) return setError('Giá giảm không hợp lệ.');
       if (hasDiscount && Number(saleprice) > Number(baseprice)) return setError('Giá giảm không được lớn hơn giá gốc.');
@@ -487,7 +490,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
         description: description.trim(),
         categoryid: Number(categoryid),
         brandid: Number(brandid),
-        seriesname: seriesname.trim() || undefined,
+        seriesname: seriesname.trim(),
         totalquantity: totalBatchStock,
         variants: parsedVariants
       };
@@ -517,9 +520,9 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
             { s: 5, label: 'Hoàn tất' }
           ].map((item, idx) => (
             <React.Fragment key={item.s}>
-              <div className={`flex items-center gap-2 shrink-0 ${step === item.s ? 'text-[#4f46e5] font-bold' : step > item.s ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
+              <div className={`flex items-center gap-2 shrink-0 ${step === item.s ? 'text-[#e30613] font-bold' : step > item.s ? 'text-emerald-600 font-medium' : 'text-slate-400'}`}>
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs border-2 ${
-                  step === item.s ? 'border-[#4f46e5] bg-indigo-50 text-[#4f46e5]' :
+                  step === item.s ? 'border-[#e30613] bg-red-50 text-[#e30613]' :
                   step > item.s ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-slate-200 text-slate-400'
                 }`}>
                   {step > item.s ? '✓' : item.s}
@@ -546,14 +549,14 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Danh mục *</label>
-                <select className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-[#4f46e5] bg-white" value={categoryid} onChange={e => setCategoryid(e.target.value ? Number(e.target.value) : '')}>
+                <select className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-[#e30613] bg-white" value={categoryid} onChange={e => setCategoryid(e.target.value ? Number(e.target.value) : '')}>
                   <option value="">-- Chọn danh mục --</option>
                   {categories.map(c => <option key={c.categoryid} value={c.categoryid}>{c.categoryname}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Thương hiệu *</label>
-                <select className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-[#4f46e5] bg-white" value={brandid} onChange={e => {
+                <select className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-[#e30613] bg-white" value={brandid} onChange={e => {
                   setBrandid(e.target.value ? Number(e.target.value) : '');
                   setSeriesname('');
                 }}>
@@ -562,17 +565,19 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 </select>
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Dòng máy</label>
-                <Input
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Dòng máy (series) *</label>
+                <ProductSeriesInput
+                  brandId={brandid}
                   value={seriesname}
-                  onChange={event => setSeriesname(event.target.value)}
+                  onChange={setSeriesname}
                   placeholder="VD: Galaxy S, iPhone Pro"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-[#e30613] focus:ring-4 focus:ring-red-50/50 disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4 items-end">
-              <Input type="number" label="Giá gốc (đ) *" value={baseprice} onChange={e => setBaseprice(e.target.value ? Number(e.target.value) : '')} placeholder="0" />
+              <CurrencyInput label="Giá gốc *" value={baseprice} onChange={setBaseprice} />
               
               <div className="space-y-1">
                 <label className="block text-xs font-bold text-slate-600 uppercase">Giá giảm</label>
@@ -580,13 +585,13 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                   <input type="checkbox" id="hasDiscount" checked={hasDiscount} onChange={e => {
                     setHasDiscount(e.target.checked);
                     if (!e.target.checked) setSaleprice('');
-                  }} className="rounded text-[#4f46e5] cursor-pointer" />
+                  }} className="rounded text-[#e30613] cursor-pointer" />
                   <label htmlFor="hasDiscount" className="text-xs font-bold text-slate-700 cursor-pointer select-none">Áp dụng giá giảm</label>
                 </div>
               </div>
 
               <div>
-                <Input type="number" value={saleprice} onChange={e => setSaleprice(e.target.value ? Number(e.target.value) : '')} disabled={!hasDiscount} placeholder="0" className="disabled:bg-slate-100" />
+                <CurrencyInput value={saleprice} onChange={setSaleprice} disabled={!hasDiscount} />
               </div>
             </div>
 
@@ -615,7 +620,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 type="button"
                 onClick={() => descriptionImageInputRef.current?.click()}
                 disabled={uploadingDescriptionImages}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-[#4f46e5] font-bold text-xs rounded-xl transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-[#e30613] font-bold text-xs rounded-xl transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {uploadingDescriptionImages
                   ? <LoaderCircle size={14} className="animate-spin" />
@@ -665,7 +670,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 ? 'border-emerald-200 bg-emerald-50'
                 : remainingStock < 0
                   ? 'border-red-200 bg-red-50'
-                  : 'border-indigo-200 bg-indigo-50'
+                  : 'border-red-200 bg-red-50'
             }`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -679,7 +684,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                     ? 'bg-emerald-200 text-emerald-800'
                     : remainingStock < 0
                       ? 'bg-red-200 text-red-800'
-                      : 'bg-indigo-100 text-[#4338ca]'
+                      : 'bg-red-100 text-[#c4000b]'
                 }`}>
                   {remainingStock >= 0 ? `Còn ${remainingStock} máy` : `Vượt ${Math.abs(remainingStock)} máy`}
                 </span>
@@ -692,12 +697,12 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 {/* Màu sắc */}
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Màu sắc</label>
-                  <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#4f46e5] bg-white font-medium" value={activeColor} onChange={e => setActiveColor(e.target.value)}>
+                  <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#e30613] bg-white font-medium" value={activeColor} onChange={e => setActiveColor(e.target.value)}>
                     {allColors.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <div className="flex items-center gap-1.5 mt-2">
                     <input type="text" placeholder="Thêm màu..." value={customColor} onChange={e => setCustomColor(e.target.value)}
-                      className="border border-slate-300 rounded-2xl px-2 py-1 text-xs w-full outline-none focus:border-[#4f46e5]" />
+                      className="border border-slate-300 rounded-2xl px-2 py-1 text-xs w-full outline-none focus:border-[#e30613]" />
                     <button type="button" onClick={handleAddCustomColor} className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[10px] rounded-2xl transition-colors shrink-0">Thêm</button>
                   </div>
                 </div>
@@ -705,7 +710,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 {/* RAM */}
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">RAM</label>
-                  <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#4f46e5] bg-white font-medium" value={activeRam} onChange={e => setActiveRam(e.target.value)}>
+                  <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#e30613] bg-white font-medium" value={activeRam} onChange={e => setActiveRam(e.target.value)}>
                     {allRams.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
@@ -713,7 +718,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 {/* Bộ nhớ trong */}
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Bộ nhớ trong</label>
-                  <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#4f46e5] bg-white font-medium" value={activeRom} onChange={e => setActiveRom(e.target.value)}>
+                  <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#e30613] bg-white font-medium" value={activeRom} onChange={e => setActiveRom(e.target.value)}>
                     {allRoms.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
@@ -721,7 +726,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 {/* Tình trạng */}
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tình trạng máy</label>
-                  <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#4f46e5] bg-white font-medium" value={activeCondition} onChange={e => setActiveCondition(e.target.value)}>
+                  <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#e30613] bg-white font-medium" value={activeCondition} onChange={e => setActiveCondition(e.target.value)}>
                     {PRODUCT_CONDITION_OPTIONS.map(cond => <option key={cond} value={cond}>{cond}</option>)}
                   </select>
                 </div>
@@ -729,7 +734,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 {/* Xuất xứ */}
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Xuất xứ</label>
-                  <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#4f46e5] bg-white font-medium" value={activeOrigin} onChange={e => setActiveOrigin(e.target.value)}>
+                  <select className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-[#e30613] bg-white font-medium" value={activeOrigin} onChange={e => setActiveOrigin(e.target.value)}>
                     {allOrigins.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
@@ -741,10 +746,10 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                   <Input label="Mã SKU Biến thể" value={variantSku} onChange={e => setVariantSku(e.target.value)} />
                 </div>
                 <div>
-                  <Input type="number" label="Giá gốc (đ) *" value={variantBasePrice} onChange={e => setVariantBasePrice(e.target.value ? Number(e.target.value) : '')} />
+                  <CurrencyInput label="Giá gốc *" value={variantBasePrice} onChange={setVariantBasePrice} />
                 </div>
                 <div>
-                  <Input type="number" label="Giá giảm (đ)" value={variantSalePrice} onChange={e => setVariantSalePrice(e.target.value ? Number(e.target.value) : '')} />
+                  <CurrencyInput label="Giá giảm" value={variantSalePrice} onChange={setVariantSalePrice} />
                 </div>
                 <div>
                   <Input
@@ -773,7 +778,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                   className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-4 text-sm font-bold transition-colors ${
                     uploadingImages || activeImages.length >= 8
                       ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
-                      : 'border-indigo-200 bg-indigo-50 text-[#4338ca] hover:border-indigo-300 hover:bg-indigo-100'
+                      : 'border-red-200 bg-red-50 text-[#c4000b] hover:border-red-300 hover:bg-red-100'
                   }`}
                 >
                   {uploadingImages ? <LoaderCircle size={18} className="animate-spin" /> : <Upload size={18} />}
@@ -803,7 +808,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                       <div
                         key={image.imageurl}
                         className={`relative overflow-hidden rounded-xl border-2 bg-white p-2 ${
-                          image.ismain ? 'border-[#4f46e5] ring-2 ring-indigo-100' : 'border-slate-200'
+                          image.ismain ? 'border-[#e30613] ring-2 ring-red-100' : 'border-slate-200'
                         }`}
                       >
                         <div className="aspect-square overflow-hidden rounded-2xl bg-slate-50">
@@ -857,7 +862,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                   {variants.map((v, idx) => (
                     <div key={idx} className="p-3.5 border border-slate-200 rounded-2xl bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] flex items-center justify-between hover:border-slate-300 transition-colors">
                       <div className="min-w-0">
-                        <p className="text-xs font-extrabold text-[#4f46e5]">{v.sku}</p>
+                        <p className="text-xs font-extrabold text-[#e30613]">{v.sku}</p>
                         <p className="text-xs font-bold text-slate-700 mt-0.5">{v.optionKeys.join(' • ')}</p>
                         <p className="text-[10px] text-slate-500 mt-0.5">
                           Giá gốc: {v.baseprice.toLocaleString('vi-VN')}đ 
@@ -888,7 +893,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 return (
                   <button key={spec} type="button" onClick={() => toggleSpec(spec)}
                     className={`px-3 py-2 text-left text-xs font-bold rounded-xl border-2 transition-colors flex items-center justify-between ${
-                      isActive ? 'bg-[#4f46e5] border-[#4f46e5] text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                      isActive ? 'bg-[#e30613] border-[#e30613] text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}>
                     <span className="truncate">{spec}</span>
                     <span className="text-[10px] opacity-75">{isActive ? 'ON' : 'OFF'}</span>
@@ -906,7 +911,14 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {activeSpecs.map(spec => (
                     <div key={spec}>
-                      <Input label={`${spec} *`} value={specsData[spec] ?? ''} onChange={e => handleSpecValChange(spec, e.target.value)} placeholder={`Nhập ${spec.toLowerCase()}...`} />
+                      <label className="mb-1.5 block text-sm font-medium text-slate-700">{spec} *</label>
+                      <textarea
+                        rows={3}
+                        value={specsData[spec] ?? ''}
+                        onChange={event => handleSpecValChange(spec, event.target.value)}
+                        placeholder={`Nhập ${spec.toLowerCase()}... (Enter để xuống dòng)`}
+                        className="w-full resize-y rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-[#e30613] focus:ring-4 focus:ring-red-50/50"
+                      />
                     </div>
                   ))}
                 </div>
@@ -978,7 +990,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                   {activeSpecs.map(spec => (
                     <div key={spec} className="flex justify-between border-b border-slate-50 pb-1">
                       <span className="text-slate-500 font-semibold">{spec}</span>
-                      <span className="text-slate-800 font-black text-right">{specsData[spec]}</span>
+                      <span className="whitespace-pre-line text-right font-black text-slate-800">{specsData[spec]}</span>
                     </div>
                   ))}
                 </div>

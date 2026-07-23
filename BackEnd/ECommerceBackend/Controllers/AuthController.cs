@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.RateLimiting;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Auth;
 using ECommerceBackend.DTOs.Common;
@@ -20,18 +21,24 @@ namespace ECommerceBackend.Controllers
         private readonly ECommerceContext _context;
         private readonly IConfiguration _config;
         private readonly IRegistrationOtpService _registrationOtpService;
+        private readonly IPasswordResetService _passwordResetService;
         private readonly IEmailService _emailService;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             ECommerceContext context,
             IConfiguration config,
             IRegistrationOtpService registrationOtpService,
-            IEmailService emailService)
+            IPasswordResetService passwordResetService,
+            IEmailService emailService,
+            ILogger<AuthController> logger)
         {
             _context = context;
             _config  = config;
             _registrationOtpService = registrationOtpService;
+            _passwordResetService = passwordResetService;
             _emailService = emailService;
+            _logger = logger;
         }
 
         // ── POST /api/auth/login ──────────────────────────────────────────────
@@ -304,20 +311,59 @@ namespace ECommerceBackend.Controllers
         }
 
         // ── POST /api/auth/forgot-password ────────────────────────────────────
-        // Stub: không gửi email thật ở P4. Luôn trả 200 để không lộ thông tin user.
         [HttpPost("forgot-password")]
+        [EnableRateLimiting("PasswordResetRequests")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto req)
         {
-            // Intentional: do not reveal whether the email exists (security)
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
+            var email = req.Email.Trim().ToLowerInvariant();
+            var user = await _context.Users.FirstOrDefaultAsync(user =>
+                user.Email != null && user.Email.ToLower() == email && user.Isactive == true);
             if (user != null)
             {
-                await _emailService.SendRegistrationOtpAsync(
-                    user.Email!,
-                    "RESET-DEMO",
-                    HttpContext.RequestAborted);
+                try
+                {
+                    await _passwordResetService.SendCodeAsync(email, HttpContext.RequestAborted);
+                }
+                catch (Exception exception) when (exception is SmtpException or InvalidOperationException)
+                {
+                    _logger.LogError(exception, "Could not send password reset OTP to {Email}", email);
+                }
             }
-            return Ok(new ApiMessageDto("Nếu email này tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu."));
+
+            var message = _emailService.IsConfigured
+                ? "Nếu email tồn tại trong hệ thống, mã khôi phục sẽ được gửi đến hộp thư của bạn."
+                : "Nếu email tồn tại trong hệ thống, mã khôi phục đã được tạo. Do SMTP chưa cấu hình, vui lòng xem console backend để lấy mã demo.";
+            return Ok(new ApiMessageDto(message));
+        }
+
+        // ── POST /api/auth/reset-password ─────────────────────────────────────
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDto req)
+        {
+            if (!string.Equals(req.NewPassword, req.ConfirmPassword, StringComparison.Ordinal))
+                return BadRequest(new ApiErrorDto("Mật khẩu xác nhận không khớp.", null));
+
+            var email = req.Email.Trim().ToLowerInvariant();
+            var user = await _context.Users.FirstOrDefaultAsync(user =>
+                user.Email != null && user.Email.ToLower() == email && user.Isactive == true);
+
+            if (user == null)
+                return BadRequest(new ApiErrorDto("Mã khôi phục không đúng hoặc đã hết hạn.", null));
+
+            if (BCrypt.Net.BCrypt.Verify(req.NewPassword, user.Passwordhash))
+                return BadRequest(new ApiErrorDto("Mật khẩu mới phải khác mật khẩu hiện tại.", null));
+
+            var isValid = await _passwordResetService.ValidateAndConsumeAsync(
+                email,
+                req.VerificationCode,
+                HttpContext.RequestAborted);
+            if (!isValid)
+                return BadRequest(new ApiErrorDto("Mã khôi phục không đúng, đã hết hạn hoặc đã vượt quá số lần thử.", null));
+
+            user.Passwordhash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+            await _context.SaveChangesAsync(HttpContext.RequestAborted);
+
+            return Ok(new ApiMessageDto("Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới."));
         }
     }
 }

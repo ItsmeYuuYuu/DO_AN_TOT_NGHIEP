@@ -23,6 +23,11 @@ const completedOrder = {
   finalamount: 9_000_000,
   paymentmethod: 'COD',
   paymentstatus: 'Paid',
+  shipment: {
+    shipmentid: 1,
+    status: 'Delivered',
+    deliveredat: new Date().toISOString(),
+  },
   orderitems: [
     {
       orderitemid: 7101,
@@ -35,8 +40,8 @@ const completedOrder = {
   ],
 };
 
-async function mockReturnsApi(page: Page) {
-  let requests: unknown[] = [];
+async function mockReturnsApi(page: Page, initialRequests: unknown[] = []) {
+  let requests: unknown[] = initialRequests;
   await page.route('https://localhost:7035/api/**', async (route: Route) => {
     const url = new URL(route.request().url());
     const method = route.request().method();
@@ -57,6 +62,7 @@ async function mockReturnsApi(page: Page) {
       expect(payload).toMatchObject({
         orderid: 7001,
         requesttype: 'Return',
+        reasoncategory: 'ChangeOfMind',
         reason: 'Không còn nhu cầu sử dụng',
         orderitemids: [7101],
         refunddestination: { method: 'CASH', confirmed: true },
@@ -66,12 +72,14 @@ async function mockReturnsApi(page: Page) {
         orderid: 7001,
         requestedbyuserid: 101,
         requesttype: 'Return',
+        reasoncategory: payload.reasoncategory,
         reason: payload.reason,
         description: payload.description,
         status: 'PendingReview',
         imageurls: [],
-        requestedrefundamount: 9_000_000,
+        requestedrefundamount: 8_100_000,
         refundstatus: 'Pending',
+        policyversion: '2026.07',
         requestedat: new Date().toISOString(),
         items: [{
           returnitemid: 8101,
@@ -79,7 +87,9 @@ async function mockReturnsApi(page: Page) {
           imei: 'E2E-IMEI-7001',
           productname: 'Điện thoại E2E',
           sku: 'E2E-128-BLACK',
-          refundamount: 9_000_000,
+          refundamount: 8_100_000,
+          originalpaidamount: 9_000_000,
+          deductionamount: 900_000,
         }],
         histories: [{
           historyid: 1,
@@ -92,6 +102,14 @@ async function mockReturnsApi(page: Page) {
       };
       requests = [created];
       await route.fulfill({ status: 201, json: created });
+      return;
+    }
+    if (url.pathname.endsWith('/ReturnRequests/8002/confirm-assessment') && method === 'POST') {
+      const payload = route.request().postDataJSON();
+      expect(payload).toMatchObject({ accepted: true });
+      const updated = { ...(requests[0] as Record<string, unknown>), status: 'RefundPending', refundstatus: 'Pending' };
+      requests = [updated];
+      await route.fulfill({ json: updated });
       return;
     }
     await route.fulfill({ json: [] });
@@ -114,6 +132,66 @@ test('customer creates a cash return request from a completed order', async ({ p
   await page.getByRole('button', { name: 'Gửi yêu cầu' }).click();
 
   await expect(page.getByRole('heading', { name: 'Trả hàng: Không còn nhu cầu sử dụng' })).toBeVisible();
-  await expect(page.getByText('Hoàn dự kiến:')).toContainText('9.000.000');
+  await expect(page.getByText('Hoàn dự kiến:')).toContainText('8.100.000');
   await expect(page.getByText('Lịch sử xử lý (1)')).toBeVisible();
+});
+
+test('customer accepts the final refund assessment before payment', async ({ page }) => {
+  await page.addInitScript(storedSession => {
+    window.localStorage.setItem('ec_session', JSON.stringify(storedSession));
+  }, session);
+  await mockReturnsApi(page, [{
+    returnrequestid: 8002,
+    orderid: 7001,
+    requestedbyuserid: 101,
+    requesttype: 'Return',
+    reasoncategory: 'ChangeOfMind',
+    reason: 'Không còn nhu cầu sử dụng',
+    status: 'AwaitingCustomerConfirmation',
+    imageurls: [],
+    requestedrefundamount: 8_100_000,
+    approvedrefundamount: 7_020_000,
+    refundstatus: 'AwaitingConfirmation',
+    policyversion: '2026.07',
+    refundcalculation: {
+      policyversion: '2026.07',
+      deliverydate: new Date().toISOString(),
+      dayssincedelivery: 5,
+      totaldeductionamount: 1_980_000,
+      items: [{
+        orderitemid: 7101,
+        imei: 'E2E-IMEI-7001',
+        originalpaidamount: 9_000_000,
+        inspectiongrade: 'Grade98',
+        faultresponsibility: 'NoFault',
+        timedeductionrate: 10,
+        conditiondeductionrate: 5,
+        missingboxrate: 2,
+        missingaccessoryrate: 5,
+        totaldeductionrate: 22,
+        deductionamount: 1_980_000,
+        refundamount: 7_020_000,
+      }],
+    },
+    requestedat: new Date().toISOString(),
+    items: [{
+      returnitemid: 8102,
+      orderitemid: 7101,
+      imei: 'E2E-IMEI-7001',
+      productname: 'Điện thoại E2E',
+      refundamount: 7_020_000,
+      originalpaidamount: 9_000_000,
+      deductionamount: 1_980_000,
+      inspectiongrade: 'Grade98',
+      faultresponsibility: 'NoFault',
+    }],
+    histories: [],
+    refundtransactions: [],
+  }]);
+
+  await page.goto('/returns');
+  await expect(page.getByText('Xác nhận kết quả kiểm định')).toBeVisible();
+  await expect(page.getByText('7.020.000 ₫', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Đồng ý mức hoàn' }).click();
+  await expect(page.getByText('Chờ hoàn tiền')).toBeVisible();
 });

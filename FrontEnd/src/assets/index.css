@@ -100,8 +100,21 @@
   }
 
   .customer-label {
-    @apply text-[10px] font-black uppercase tracking-[0.22em];
-    color: var(--customer-orange-dark);
+    @apply inline-flex items-center text-xs font-semibold;
+    color: #b4232d;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    letter-spacing: 0.025em;
+    text-transform: none;
+  }
+
+  .customer-label::before {
+    width: 0.45rem;
+    height: 0.45rem;
+    margin-right: 0.5rem;
+    border-radius: 999px;
+    background: #e30613;
+    box-shadow: 0 0 0 4px rgb(227 6 19 / 10%);
+    content: '';
   }
 
   .customer-rule {
@@ -173,11 +186,9 @@
   }
 
   .ops-shell {
-    background:
-      radial-gradient(circle at top left, rgb(79 70 229 / 10%), transparent 26rem),
-      radial-gradient(circle at bottom right, rgb(15 118 110 / 9%), transparent 24rem),
-      var(--ops-bg);
+    background: var(--ops-bg);
     color: var(--ops-ink);
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
   }
 
   .ops-card {
@@ -190,7 +201,7 @@
   .ops-hero {
     position: relative;
     overflow: hidden;
-    border: 1px solid rgb(227 6 19 / 14%);
+    border: 1px solid var(--ops-line);
     border-radius: 22px;
     background:
       radial-gradient(circle at 100% 0%, rgb(227 6 19 / 11%), transparent 18rem),
@@ -198,18 +209,10 @@
     box-shadow: 0 20px 48px rgb(15 23 42 / 8%);
   }
 
-  .ops-hero::before {
-    content: '';
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 6px;
-    background: linear-gradient(180deg, var(--ops-primary), var(--ops-accent));
-  }
-
   .ops-hero-title {
-    @apply text-3xl font-black tracking-tight md:text-4xl;
+    @apply text-3xl font-bold md:text-4xl;
     color: var(--ops-ink);
-    letter-spacing: -0.04em;
+    letter-spacing: -0.025em;
   }
 
   .ops-hero-action {
@@ -227,7 +230,7 @@
   }
 
   .ops-label {
-    @apply text-[10px] font-black uppercase tracking-[0.18em];
+    @apply text-xs font-semibold;
     color: var(--ops-muted);
   }
 

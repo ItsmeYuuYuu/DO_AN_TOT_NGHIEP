@@ -117,7 +117,7 @@ const AdminWarrantyPackages: React.FC = () => {
       className: 'w-28 text-right',
       render: (p: WarrantyPackage) => (
         <div className="flex justify-end gap-2">
-          <button onClick={() => openEdit(p)} className="px-3 py-1.5 bg-indigo-50 text-[#4f46e5] rounded hover:bg-indigo-100 font-semibold text-xs transition-colors">
+          <button onClick={() => openEdit(p)} className="px-3 py-1.5 bg-red-50 text-[#e30613] rounded hover:bg-red-100 font-semibold text-xs transition-colors">
             Sửa
           </button>
           <button onClick={() => handleDelete(p.packageid)} className="px-3 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 font-semibold text-xs transition-colors">
@@ -130,9 +130,9 @@ const AdminWarrantyPackages: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="ops-hero flex items-center justify-between p-6">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">Quản lý Gói Bảo Hành</h1>
+          <h1 className="ops-hero-title">Quản lý gói bảo hành</h1>
           <p className="text-sm text-slate-500 mt-1">Cấu hình các gói bảo hành mở rộng cho sản phẩm</p>
         </div>
         <Button onClick={openCreate} size="sm">+ Thêm Gói Bảo Hành</Button>
@@ -158,7 +158,7 @@ const AdminWarrantyPackages: React.FC = () => {
               <label className="block text-sm font-bold text-slate-700 mb-1.5">Thời hạn (Tháng) *</label>
               <input 
                 type="number" 
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#4f46e5] transition-colors"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#e30613] transition-colors"
                 value={editing?.durationmonths ?? ''} 
                 onChange={e => setEditing(p => ({ ...p!, durationmonths: parseInt(e.target.value) || 0 }))}
                 min="1"
@@ -168,7 +168,7 @@ const AdminWarrantyPackages: React.FC = () => {
               <label className="block text-sm font-bold text-slate-700 mb-1.5">Giá gói (VNĐ) *</label>
               <input 
                 type="number" 
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#4f46e5] transition-colors"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-[#e30613] transition-colors"
                 value={editing?.price ?? ''} 
                 onChange={e => setEditing(p => ({ ...p!, price: parseInt(e.target.value) || 0 }))}
                 min="0"

@@ -134,7 +134,7 @@ namespace ECommerceBackend.DTOs.Products
         string? Description,
         int? Categoryid,
         int? Brandid,
-        string? Seriesname,
+        [Required(ErrorMessage = "Dòng máy (series) là bắt buộc"), StringLength(100)] string Seriesname,
         [Range(0, 10000, ErrorMessage = "Tổng số lượng lô hàng phải từ 0 đến 10000")] int Totalquantity,
         List<CreateFullProductVariantDto>? Variants
     );
@@ -155,7 +155,7 @@ namespace ECommerceBackend.DTOs.Products
         string? Description,
         int? Categoryid,
         int? Brandid,
-        string? Seriesname,
+        [Required(ErrorMessage = "Dòng máy (series) là bắt buộc"), StringLength(100)] string Seriesname,
         [Required, MinLength(1)] List<UpdateFullProductVariantDto> Variants
     );
 }

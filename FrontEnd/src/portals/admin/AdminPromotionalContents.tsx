@@ -167,23 +167,23 @@ export const AdminPromotionalContents: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200">
+      <div className="flex gap-2">
         <button
           onClick={() => { setActiveTab('Slider'); resetForm(); }}
-          className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all border-b-2 ${
+          className={`flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all ${
             activeTab === 'Slider'
-              ? 'border-[#4f46e5] text-[#4f46e5]'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              ? 'bg-slate-100 text-[#172033]'
+              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
           }`}
         >
           <Sliders size={16} /> Sliders Quảng Cáo
         </button>
         <button
           onClick={() => { setActiveTab('Banner'); resetForm(); }}
-          className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all border-b-2 ${
+          className={`flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all ${
             activeTab === 'Banner'
-              ? 'border-[#4f46e5] text-[#4f46e5]'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              ? 'bg-slate-100 text-[#172033]'
+              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
           }`}
         >
           <Image size={16} /> Banner phụ trang chủ
@@ -204,13 +204,13 @@ export const AdminPromotionalContents: React.FC = () => {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Nhập tiêu đề hoặc mô tả ngắn..."
-                className="w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#4f46e5] text-slate-800"
+                className="w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#e30613] text-slate-800"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Hình ảnh</label>
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-bold text-[#4338ca] hover:bg-indigo-100">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-[#c4000b] hover:bg-red-100">
                 {uploadingImage ? <LoaderCircle size={17} className="animate-spin" /> : <Upload size={17} />}
                 {uploadingImage ? 'Đang tải ảnh...' : imageurl ? 'Chọn ảnh khác' : 'Chọn ảnh từ máy'}
                 <input
@@ -242,7 +242,7 @@ export const AdminPromotionalContents: React.FC = () => {
                     product.productid === Number(e.target.value));
                   setLinkurl(selectedProduct ? getProductPath(selectedProduct) : '');
                 }}
-                className="mb-2 w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#4f46e5] text-slate-800"
+                className="mb-2 w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#e30613] text-slate-800"
               >
                 <option value="">Không gắn sản phẩm cụ thể</option>
                 {products.map(product => (
@@ -257,7 +257,7 @@ export const AdminPromotionalContents: React.FC = () => {
                 value={linkurl}
                 onChange={(e) => setLinkurl(e.target.value)}
                 placeholder="/products/google-pixel-10-pro"
-                className="w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#4f46e5] text-slate-800"
+                className="w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#e30613] text-slate-800"
               />
             </div>
 
@@ -267,7 +267,7 @@ export const AdminPromotionalContents: React.FC = () => {
                 type="number"
                 value={displayorder}
                 onChange={(e) => setDisplayorder(parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#4f46e5] text-slate-800"
+                className="w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#e30613] text-slate-800"
               />
               {activeTab === 'Banner' && (
                 <p className="mt-1 text-[11px] font-medium text-slate-400">Trang chủ lấy 2 banner phụ đầu tiên theo thứ tự này.</p>
@@ -280,7 +280,7 @@ export const AdminPromotionalContents: React.FC = () => {
                 id="isactive-checkbox"
                 checked={isactive}
                 onChange={(e) => setIsactive(e.target.checked)}
-                className="w-4 h-4 text-[#4f46e5] border-slate-300 rounded focus:ring-[#4f46e5]"
+                className="w-4 h-4 text-[#e30613] border-slate-300 rounded focus:ring-[#e30613]"
               />
               <label htmlFor="isactive-checkbox" className="text-sm font-medium text-slate-700 select-none">Hiển thị nội dung này</label>
             </div>
@@ -318,7 +318,7 @@ export const AdminPromotionalContents: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredContents.map(c => (
-                    <tr key={c.contentid} className="hover:bg-indigo-50/40 transition-colors">
+                    <tr key={c.contentid} className="hover:bg-red-50/40 transition-colors">
                       <td className="px-5 py-4">
                         <img
                           src={c.imageurl}
@@ -350,7 +350,7 @@ export const AdminPromotionalContents: React.FC = () => {
                         <div className="flex justify-end gap-1.5">
                           <button
                             onClick={() => handleEdit(c)}
-                            className="p-1.5 text-slate-400 hover:text-[#4f46e5] rounded-2xl hover:bg-slate-100 transition-all"
+                            className="p-1.5 text-slate-400 hover:text-[#e30613] rounded-2xl hover:bg-slate-100 transition-all"
                             title="Chỉnh sửa"
                           >
                             <Edit2 size={15} />

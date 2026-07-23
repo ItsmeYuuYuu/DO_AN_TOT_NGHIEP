@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Check, Eye, EyeOff, LayoutGrid, Save, Search, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Eye, EyeOff, LayoutGrid, Save, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { homepageSectionsApi, type HomepageProductSection } from '@/features/homepage/api/homepageSectionsApi';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
@@ -13,9 +13,49 @@ const getProductImage = (product: Product) => {
     ?? firstVariant?.productimages?.[0]?.imageurl;
 };
 
-const getProductPrice = (product: Product) => {
-  const firstVariant = product.productvariants?.[0];
-  return firstVariant ? firstVariant.saleprice ?? firstVariant.baseprice : undefined;
+interface ProductPricing {
+  basePrice: number;
+  salePrice: number;
+  discountAmount: number;
+  discountPercent: number;
+}
+
+type ProductSortMode =
+  | 'default'
+  | 'discount-percent'
+  | 'discount-amount'
+  | 'sold'
+  | 'price-asc'
+  | 'price-desc';
+
+const getProductPricing = (product: Product): ProductPricing | undefined => {
+  const prices = (product.productvariants ?? [])
+    .filter(variant => variant.baseprice > 0)
+    .map(variant => {
+      const salePrice = variant.saleprice != null && variant.saleprice > 0
+        ? variant.saleprice
+        : variant.baseprice;
+      const discountAmount = Math.max(0, variant.baseprice - salePrice);
+      return {
+        basePrice: variant.baseprice,
+        salePrice,
+        discountAmount,
+        discountPercent: variant.baseprice > 0
+          ? Math.round((discountAmount / variant.baseprice) * 100)
+          : 0,
+      };
+    });
+
+  if (prices.length === 0) return undefined;
+  const discounted = prices.filter(price => price.discountAmount > 0);
+  if (discounted.length > 0) {
+    return [...discounted].sort((a, b) =>
+      b.discountPercent - a.discountPercent ||
+      b.discountAmount - a.discountAmount ||
+      a.salePrice - b.salePrice,
+    )[0];
+  }
+  return [...prices].sort((a, b) => a.salePrice - b.salePrice)[0];
 };
 
 export const AdminHomepageSections: React.FC = () => {
@@ -28,6 +68,9 @@ export const AdminHomepageSections: React.FC = () => {
   const [isactive, setIsactive] = useState(true);
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [productSort, setProductSort] = useState<ProductSortMode>('default');
+  const [onlyRelevantProducts, setOnlyRelevantProducts] = useState(true);
+  const [soldQuantityByProduct, setSoldQuantityByProduct] = useState<Map<number, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -36,12 +79,14 @@ export const AdminHomepageSections: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [sectionData, productResponse] = await Promise.all([
+      const [sectionData, productResponse, productMetrics] = await Promise.all([
         homepageSectionsApi.getAll(),
         productsApi.getAll(),
+        homepageSectionsApi.getProductMetrics().catch(() => []),
       ]);
       setSections(sectionData);
       setProducts(productResponse.data);
+      setSoldQuantityByProduct(new Map(productMetrics.map(metric => [metric.productid, metric.soldquantity])));
       setActiveSectionId(current => current ?? sectionData[0]?.sectionid ?? null);
     } catch (error) {
       notifyError(getApiErrorMessage(error, 'Không thể tải cấu hình sản phẩm trang chủ.'));
@@ -67,6 +112,17 @@ export const AdminHomepageSections: React.FC = () => {
         .slice(0, 5)
         .map(item => item.productid),
     );
+    const titleText = `${activeSection.sectionkey} ${activeSection.title}`.toLowerCase();
+    if (titleText.includes('khuyến mãi') || titleText.includes('promotion') || titleText.includes('sale')) {
+      setProductSort('discount-percent');
+      setOnlyRelevantProducts(true);
+    } else if (titleText.includes('bán chạy') || titleText.includes('best')) {
+      setProductSort('sold');
+      setOnlyRelevantProducts(true);
+    } else {
+      setProductSort('default');
+      setOnlyRelevantProducts(false);
+    }
   }, [activeSection]);
 
   const productsById = useMemo(
@@ -78,16 +134,62 @@ export const AdminHomepageSections: React.FC = () => {
     .map(productId => productsById.get(productId))
     .filter((product): product is Product => Boolean(product));
 
-  const filteredProducts = products.filter(product => {
+  const activeSectionText = `${activeSection?.sectionkey ?? ''} ${activeSection?.title ?? ''}`.toLowerCase();
+  const isPromotionSection = activeSectionText.includes('khuyến mãi')
+    || activeSectionText.includes('promotion')
+    || activeSectionText.includes('sale');
+  const isBestSellerSection = activeSectionText.includes('bán chạy')
+    || activeSectionText.includes('best');
+
+  const filteredProducts = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
-    if (!keyword) return true;
-    return [
-      product.productname,
-      product.brand?.name,
-      product.series?.name,
-      product.category?.name,
-    ].some(value => value?.toLowerCase().includes(keyword));
-  });
+    const result = products.filter(product => {
+      const matchesKeyword = !keyword || [
+        product.productname,
+        product.brand?.name,
+        product.series?.name,
+        product.category?.name,
+      ].some(value => value?.toLowerCase().includes(keyword));
+      if (!matchesKeyword) return false;
+
+      if (onlyRelevantProducts && isPromotionSection) {
+        return (getProductPricing(product)?.discountAmount ?? 0) > 0;
+      }
+      if (onlyRelevantProducts && isBestSellerSection) {
+        return (soldQuantityByProduct.get(product.productid) ?? 0) > 0;
+      }
+      return true;
+    });
+
+    return [...result].sort((a, b) => {
+      const aPricing = getProductPricing(a);
+      const bPricing = getProductPricing(b);
+      if (productSort === 'discount-percent') {
+        return (bPricing?.discountPercent ?? 0) - (aPricing?.discountPercent ?? 0);
+      }
+      if (productSort === 'discount-amount') {
+        return (bPricing?.discountAmount ?? 0) - (aPricing?.discountAmount ?? 0);
+      }
+      if (productSort === 'sold') {
+        return (soldQuantityByProduct.get(b.productid) ?? 0) - (soldQuantityByProduct.get(a.productid) ?? 0);
+      }
+      if (productSort === 'price-asc') {
+        return (aPricing?.salePrice ?? Number.MAX_SAFE_INTEGER) - (bPricing?.salePrice ?? Number.MAX_SAFE_INTEGER);
+      }
+      if (productSort === 'price-desc') {
+        return (bPricing?.salePrice ?? 0) - (aPricing?.salePrice ?? 0);
+      }
+      return a.productid - b.productid;
+    });
+  }, [
+    products,
+    searchTerm,
+    onlyRelevantProducts,
+    isPromotionSection,
+    isBestSellerSection,
+    productSort,
+    soldQuantityByProduct,
+  ]);
 
   const toggleProduct = (productId: number) => {
     setSelectedProductIds(current => {
@@ -111,6 +213,16 @@ export const AdminHomepageSections: React.FC = () => {
       [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
       return next;
     });
+  };
+
+  const selectTopProducts = () => {
+    const productIds = filteredProducts.slice(0, 5).map(product => product.productid);
+    if (productIds.length === 0) {
+      notifyError('Không có sản phẩm phù hợp với bộ lọc hiện tại.');
+      return;
+    }
+    setSelectedProductIds(productIds);
+    notifySuccess(`Đã chọn ${productIds.length} sản phẩm đầu danh sách.`);
   };
 
   const handleSave = async () => {
@@ -170,8 +282,8 @@ export const AdminHomepageSections: React.FC = () => {
                   onClick={() => setActiveSectionId(section.sectionid)}
                   className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
                     activeSectionId === section.sectionid
-                      ? 'border-[#4f46e5] bg-indigo-50 text-[#172033]'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50/50'
+                      ? 'border-[#e30613] bg-red-50 text-[#172033]'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-red-200 hover:bg-red-50/50'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -193,7 +305,7 @@ export const AdminHomepageSections: React.FC = () => {
                     <input
                       value={title}
                       onChange={event => setTitle(event.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-[#4f46e5] focus:ring-2 focus:ring-indigo-100"
+                      className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-[#e30613] focus:ring-2 focus:ring-red-100"
                     />
                   </label>
                   <label className="block">
@@ -201,7 +313,7 @@ export const AdminHomepageSections: React.FC = () => {
                     <input
                       value={subtitle}
                       onChange={event => setSubtitle(event.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#4f46e5] focus:ring-2 focus:ring-indigo-100"
+                      className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#e30613] focus:ring-2 focus:ring-red-100"
                     />
                   </label>
                   <label className="block">
@@ -209,7 +321,7 @@ export const AdminHomepageSections: React.FC = () => {
                     <select
                       value={theme}
                       onChange={event => setTheme(event.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-[#4f46e5] focus:ring-2 focus:ring-indigo-100"
+                      className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-[#e30613] focus:ring-2 focus:ring-red-100"
                     >
                       <option value="Red">Đỏ khuyến mãi</option>
                       <option value="LightBlue">Xanh nhạt</option>
@@ -220,7 +332,7 @@ export const AdminHomepageSections: React.FC = () => {
                       type="checkbox"
                       checked={isactive}
                       onChange={event => setIsactive(event.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-[#4f46e5] focus:ring-[#4f46e5]"
+                      className="h-4 w-4 rounded border-slate-300 text-[#e30613] focus:ring-[#e30613]"
                     />
                     Hiển thị
                   </label>
@@ -253,6 +365,25 @@ export const AdminHomepageSections: React.FC = () => {
                         <div className="min-w-0 flex-1">
                           <p className="line-clamp-2 text-sm font-black text-slate-800">{product.productname}</p>
                           <p className="mt-1 text-xs text-slate-400">{product.brand?.name ?? 'Chưa có hãng'}</p>
+                          {(() => {
+                            const pricing = getProductPricing(product);
+                            const soldQuantity = soldQuantityByProduct.get(product.productid) ?? 0;
+                            return (
+                              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                                {pricing && (
+                                  <>
+                                    <span className="font-bold text-[#dc2626]">{formatCurrency(pricing.salePrice)}</span>
+                                    {pricing.discountPercent > 0 && (
+                                      <span className="rounded-md bg-red-50 px-1.5 py-0.5 font-bold text-[#c4000b]">
+                                        -{pricing.discountPercent}%
+                                      </span>
+                                    )}
+                                  </>
+                                )}
+                                <span className="font-semibold text-emerald-700">Đã bán {soldQuantity}</span>
+                              </div>
+                            );
+                          })()}
                           <div className="mt-2 flex items-center gap-1.5">
                             <button type="button" onClick={() => moveProduct(product.productid, -1)} disabled={index === 0} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 disabled:opacity-30">
                               <ArrowUp size={14} />
@@ -272,26 +403,68 @@ export const AdminHomepageSections: React.FC = () => {
               </section>
 
               <section className="ops-card p-5">
-                <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-center">
+                <div className="mb-4 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
                   <div>
                     <h2 className="text-lg font-black text-slate-900">Danh sách sản phẩm</h2>
-                    <p className="text-xs text-slate-400">Bấm vào sản phẩm để thêm hoặc bỏ khỏi vùng đang chọn.</p>
+                    <p className="text-xs text-slate-400">
+                      {isPromotionSection
+                        ? 'So sánh giá gốc, giá giảm và mức giảm trước khi chọn.'
+                        : isBestSellerSection
+                          ? 'Số lượng bán được tính từ các đơn đã giao hoàn tất.'
+                          : 'Bấm vào sản phẩm để thêm hoặc bỏ khỏi vùng đang chọn.'}
+                    </p>
                   </div>
-                  <label className="relative w-full md:w-80">
-                    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      value={searchTerm}
-                      onChange={event => setSearchTerm(event.target.value)}
-                      placeholder="Tìm sản phẩm, hãng, dòng máy..."
-                      className="w-full rounded-2xl border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-[#4f46e5] focus:ring-2 focus:ring-indigo-100"
-                    />
-                  </label>
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                    <label className="relative w-full md:w-72">
+                      <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        value={searchTerm}
+                        onChange={event => setSearchTerm(event.target.value)}
+                        placeholder="Tìm sản phẩm, hãng, dòng máy..."
+                        className="w-full rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-[#e30613] focus:ring-2 focus:ring-red-100"
+                      />
+                    </label>
+                    <label className="relative">
+                      <SlidersHorizontal size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <select
+                        value={productSort}
+                        onChange={event => setProductSort(event.target.value as ProductSortMode)}
+                        className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-8 text-sm font-semibold text-slate-700 outline-none focus:border-[#e30613] md:w-52"
+                      >
+                        <option value="default">Mặc định</option>
+                        {isPromotionSection && <option value="discount-percent">Giảm % cao nhất</option>}
+                        {isPromotionSection && <option value="discount-amount">Số tiền giảm nhiều nhất</option>}
+                        {isBestSellerSection && <option value="sold">Bán nhiều nhất</option>}
+                        <option value="price-asc">Giá thấp đến cao</option>
+                        <option value="price-desc">Giá cao đến thấp</option>
+                      </select>
+                    </label>
+                    {(isPromotionSection || isBestSellerSection) && (
+                      <label className="flex min-h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={onlyRelevantProducts}
+                          onChange={event => setOnlyRelevantProducts(event.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-[#e30613] focus:ring-[#e30613]"
+                        />
+                        {isPromotionSection ? 'Chỉ đang giảm giá' : 'Chỉ sản phẩm đã bán'}
+                      </label>
+                    )}
+                    <button
+                      type="button"
+                      onClick={selectTopProducts}
+                      className="min-h-10 whitespace-nowrap rounded-xl bg-[#e30613] px-4 text-xs font-bold text-white transition hover:bg-[#c4000b]"
+                    >
+                      Chọn 5 sản phẩm đầu
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {filteredProducts.map(product => {
                     const selected = selectedProductIds.includes(product.productid);
-                    const price = getProductPrice(product);
+                    const pricing = getProductPricing(product);
+                    const soldQuantity = soldQuantityByProduct.get(product.productid) ?? 0;
                     return (
                       <button
                         key={product.productid}
@@ -299,8 +472,8 @@ export const AdminHomepageSections: React.FC = () => {
                         onClick={() => toggleProduct(product.productid)}
                         className={`flex gap-3 rounded-2xl border p-3 text-left transition ${
                           selected
-                            ? 'border-[#4f46e5] bg-indigo-50'
-                            : 'border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/40'
+                            ? 'border-[#e30613] bg-red-50'
+                            : 'border-slate-200 bg-white hover:border-red-200 hover:bg-red-50/40'
                         }`}
                       >
                         <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
@@ -313,17 +486,44 @@ export const AdminHomepageSections: React.FC = () => {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <p className="line-clamp-2 text-sm font-black text-slate-800">{product.productname}</p>
-                            {selected && <Check size={16} className="shrink-0 text-[#4f46e5]" />}
+                            {selected && <Check size={16} className="shrink-0 text-[#e30613]" />}
                           </div>
                           <p className="mt-1 text-xs text-slate-400">{product.brand?.name ?? 'Chưa có hãng'}</p>
-                          <p className="mt-2 text-sm font-black text-[#dc2626]">
-                            {price != null ? formatCurrency(price) : 'Liên hệ'}
+                          {pricing ? (
+                            <div className="mt-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-black text-[#dc2626]">{formatCurrency(pricing.salePrice)}</span>
+                                {pricing.discountPercent > 0 && (
+                                  <>
+                                    <span className="text-xs text-slate-400 line-through">{formatCurrency(pricing.basePrice)}</span>
+                                    <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-black text-[#c4000b]">
+                                      -{pricing.discountPercent}%
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                              {pricing.discountAmount > 0 && (
+                                <p className="mt-1 text-[11px] font-semibold text-[#c4000b]">
+                                  Tiết kiệm {formatCurrency(pricing.discountAmount)}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-sm font-bold text-slate-500">Liên hệ</p>
+                          )}
+                          <p className="mt-1.5 text-xs font-bold text-emerald-700">
+                            Đã bán: {soldQuantity} máy
                           </p>
                         </div>
                       </button>
                     );
                   })}
                 </div>
+                {filteredProducts.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center text-sm font-semibold text-slate-400">
+                    Không có sản phẩm phù hợp với bộ lọc hiện tại.
+                  </div>
+                )}
               </section>
             </div>
           )}

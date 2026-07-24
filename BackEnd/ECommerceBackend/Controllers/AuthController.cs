@@ -271,7 +271,7 @@ namespace ECommerceBackend.Controllers
                 Phone        = phone,
                 Roleid       = customerRole.Roleid,
                 Isactive     = true,
-                Createdat    = DateTime.Now
+                Createdat    = DateTime.UtcNow
             };
 
             try
@@ -287,7 +287,7 @@ namespace ECommerceBackend.Controllers
                         Fullname = fullname,
                         Email = email,
                         Phone = phone,
-                        Createdat = DateTime.Now
+                        Createdat = DateTime.UtcNow
                     });
                 }
                 else

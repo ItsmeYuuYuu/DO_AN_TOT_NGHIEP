@@ -2,6 +2,7 @@ using System.Text.Json;
 using ECommerceBackend.DTOs.Common;
 using ECommerceBackend.DTOs.Orders;
 using ECommerceBackend.Models;
+using ECommerceBackend.Services.Email;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,7 @@ public class OrderAssignmentsController : ControllerBase
     private static readonly HashSet<string> Carriers =
         new(["GHN", "GHTK", "VIETTELPOST", "J&T", InternalCarrier], StringComparer.OrdinalIgnoreCase);
     private readonly ECommerceContext _context;
+    private readonly IEmailService _emailService;
 
     private sealed class AssignmentMetadata
     {
@@ -29,7 +31,11 @@ public class OrderAssignmentsController : ControllerBase
         public DateTime? Completedat { get; set; }
     }
 
-    public OrderAssignmentsController(ECommerceContext context) => _context = context;
+    public OrderAssignmentsController(ECommerceContext context, IEmailService emailService)
+    {
+        _context = context;
+        _emailService = emailService;
+    }
 
     private int? CurrentUserId() =>
         int.TryParse(User.FindFirst("userid")?.Value, out var value) ? value : null;
@@ -215,6 +221,7 @@ public class OrderAssignmentsController : ControllerBase
         AddAssignmentLog(orderId, Warehouse, "Pending", null, CurrentUserId(), null, null, dto.Note);
         order.Orderstatus = "Processing";
         await _context.SaveChangesAsync();
+        await _emailService.SendOrderStatusUpdatedAsync(order, HttpContext.RequestAborted);
         return Ok(await MapAsync(order, Warehouse));
     }
 
@@ -269,6 +276,7 @@ public class OrderAssignmentsController : ControllerBase
             Note = dto.Note, Createdat = now
         });
         await _context.SaveChangesAsync();
+        await _emailService.SendOrderStatusUpdatedAsync(order, HttpContext.RequestAborted);
         return Ok(await MapAsync(order, Warehouse));
     }
 }

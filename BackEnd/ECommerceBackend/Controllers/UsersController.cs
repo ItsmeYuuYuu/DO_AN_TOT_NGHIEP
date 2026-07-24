@@ -82,7 +82,7 @@ namespace ECommerceBackend.Controllers
                 Phone = dto.Phone,
                 Roleid = dto.Roleid,
                 Isactive = dto.Isactive ?? true,
-                Createdat = DateTime.Now
+                Createdat = DateTime.UtcNow
             };
 
             _context.Users.Add(user);

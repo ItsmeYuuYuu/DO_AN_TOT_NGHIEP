@@ -6,7 +6,7 @@ import { Pagination } from '@/components/Pagination';
 import { useOrders } from '@/features/orders/hooks/useOrders';
 import type { Order } from '@/features/orders/api/ordersApi';
 import { ordersApi } from '@/features/orders/api/ordersApi';
-import { formatCurrency, formatDateTime } from '@/utils/formatters';
+import { formatCurrency, formatDateInput, formatDateTime } from '@/utils/formatters';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
 import { getApiErrorMessage } from '@/utils/apiError';
@@ -61,9 +61,9 @@ const AdminOrders: React.FC = () => {
 
     let matchDate = true;
     if (order.orderdate) {
-      const orderDate = new Date(order.orderdate);
-      if (dateFrom && orderDate < new Date(dateFrom)) matchDate = false;
-      if (dateTo && orderDate > new Date(`${dateTo}T23:59:59`)) matchDate = false;
+      const orderDate = formatDateInput(order.orderdate);
+      if (dateFrom && orderDate < dateFrom) matchDate = false;
+      if (dateTo && orderDate > dateTo) matchDate = false;
     }
 
     return matchStatus && matchSearch && matchDate;

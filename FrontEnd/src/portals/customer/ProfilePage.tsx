@@ -17,7 +17,7 @@ import {
 import apiClient from '@/api/apiClient';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { updateStoredUser } from '@/features/auth/utils/authUtils';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatDate } from '@/utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { notifyError, notifySuccess } from '@/utils/notifications';
 import { MyReviews } from './MyReviews';
@@ -485,7 +485,7 @@ const ProfilePage: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-[#241516]">Đơn #{order.orderid}</p>
                         <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-[#9b7d80]">
-                          <Clock size={11} /> {new Date(order.orderdate).toLocaleDateString('vi-VN')}
+                          <Clock size={11} /> {formatDate(order.orderdate)}
                           {order.shippingaddress && ` · ${order.shippingaddress}`}
                         </p>
                       </div>

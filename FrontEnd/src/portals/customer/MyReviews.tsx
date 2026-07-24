@@ -4,6 +4,7 @@ import { reviewsApi } from '@/features/products/api/reviewsApi';
 import type { Review } from '@/features/products/api/reviewsApi';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
+import { formatDate } from '@/utils/formatters';
 
 const formatSkuToAttributes = (sku?: string) => {
   if (!sku) return 'Sản phẩm';
@@ -126,7 +127,7 @@ export const MyReviews: React.FC = () => {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <p className="text-sm font-bold text-slate-800">{formatSkuToAttributes(rev.variantSku)}</p>
-                      <p className="text-xs text-slate-400">{rev.createdat ? new Date(rev.createdat).toLocaleDateString('vi-VN') : ''}</p>
+                      <p className="text-xs text-slate-400">{rev.createdat ? formatDate(rev.createdat) : ''}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex">

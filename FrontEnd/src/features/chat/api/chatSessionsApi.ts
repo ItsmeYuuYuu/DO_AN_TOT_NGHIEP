@@ -135,6 +135,13 @@ export const chatSessionsApi = {
     return response.data;
   },
 
+  getConsultationHistory: async (limit = 100): Promise<ChatSession[]> => {
+    const response = await apiClient.get('/chatsessions/consultation-history', {
+      params: { limit },
+    });
+    return response.data;
+  },
+
   acceptHandoff: async (id: number): Promise<ChatSession> => {
     const response = await apiClient.post(`/chatsessions/${id}/accept`);
     return response.data;

@@ -1,6 +1,7 @@
 using ECommerceBackend.DTOs.Common;
 using ECommerceBackend.DTOs.Shipping;
 using ECommerceBackend.Models;
+using ECommerceBackend.Services.Email;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,10 +27,12 @@ public class ShipmentsController : ControllerBase
     };
 
     private readonly ECommerceContext _context;
+    private readonly IEmailService _emailService;
 
-    public ShipmentsController(ECommerceContext context)
+    public ShipmentsController(ECommerceContext context, IEmailService emailService)
     {
         _context = context;
+        _emailService = emailService;
     }
 
     private int? CurrentUserId()
@@ -175,6 +178,14 @@ public class ShipmentsController : ControllerBase
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
 
+        if (ShouldNotifyCustomer(nextStatus))
+        {
+            await _emailService.SendShipmentStatusUpdatedAsync(
+                shipment.Order,
+                shipment,
+                HttpContext.RequestAborted);
+        }
+
         var updated = await ShipmentQuery().AsNoTracking()
             .FirstAsync(item => item.Shipmentid == id);
         return Ok(Map(updated));
@@ -290,4 +301,12 @@ public class ShipmentsController : ControllerBase
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault(item => item.Equals(value, StringComparison.OrdinalIgnoreCase));
     }
+
+    private static bool ShouldNotifyCustomer(string status) => status is
+        "OutForDelivery" or
+        "DeliveryFailed" or
+        "Delivered" or
+        "DamageClaim" or
+        "LostClaim" or
+        "ReturnedToWarehouse";
 }

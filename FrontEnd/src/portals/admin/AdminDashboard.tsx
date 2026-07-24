@@ -11,7 +11,7 @@ import {
   TrendingUp,
   XOctagon,
 } from 'lucide-react';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatDateTime } from '@/utils/formatters';
 import { dashboardApi } from '@/features/dashboard/api/dashboardApi';
 import type {
   RecentActivity,
@@ -40,14 +40,7 @@ const formatYAxisValue = (value: number) => {
 };
 
 const formatActivityTime = (timestamp: string) => {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-  });
+  return formatDateTime(timestamp);
 };
 
 const activityStatusLabel: Record<string, string> = {

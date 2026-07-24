@@ -7,6 +7,9 @@ namespace ECommerceBackend.IntegrationTests.Infrastructure;
 public sealed class TestEmailService : IEmailService
 {
     private readonly ConcurrentDictionary<string, string> _passwordResetCodes = new();
+    private readonly ConcurrentQueue<EmailEvent> _events = new();
+
+    public IReadOnlyCollection<EmailEvent> Events => _events.ToArray();
 
     public bool IsConfigured => true;
 
@@ -28,9 +31,32 @@ public sealed class TestEmailService : IEmailService
 
     public Task SendTestEmailAsync(string email, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-    public Task SendOrderCreatedAsync(Order order, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task SendOrderCreatedAsync(Order order, CancellationToken cancellationToken = default)
+    {
+        _events.Enqueue(new EmailEvent("OrderCreated", order.Orderid, null));
+        return Task.CompletedTask;
+    }
 
-    public Task SendPaymentUpdatedAsync(Order order, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task SendPaymentUpdatedAsync(Order order, CancellationToken cancellationToken = default)
+    {
+        _events.Enqueue(new EmailEvent("PaymentUpdated", order.Orderid, order.Paymentstatus));
+        return Task.CompletedTask;
+    }
 
-    public Task SendOrderStatusUpdatedAsync(Order order, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task SendOrderStatusUpdatedAsync(Order order, CancellationToken cancellationToken = default)
+    {
+        _events.Enqueue(new EmailEvent("OrderStatusUpdated", order.Orderid, order.Orderstatus));
+        return Task.CompletedTask;
+    }
+
+    public Task SendShipmentStatusUpdatedAsync(
+        Order order,
+        Shipment shipment,
+        CancellationToken cancellationToken = default)
+    {
+        _events.Enqueue(new EmailEvent("ShipmentStatusUpdated", order.Orderid, shipment.Status));
+        return Task.CompletedTask;
+    }
 }
+
+public sealed record EmailEvent(string Type, int OrderId, string? Status);

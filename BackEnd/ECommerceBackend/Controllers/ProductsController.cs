@@ -316,7 +316,7 @@ namespace ECommerceBackend.Controllers
                 Categoryid = dto.Categoryid,
                 Brandid = dto.Brandid,
                 Seriesname = dto.Seriesname,
-                Createdat = DateTime.Now
+                Createdat = DateTime.UtcNow
             };
 
             _context.Products.Add(product);
@@ -402,7 +402,7 @@ namespace ECommerceBackend.Controllers
                     Categoryid = dto.Categoryid,
                     Brandid = dto.Brandid,
                     Seriesname = dto.Seriesname,
-                    Createdat = DateTime.Now
+                    Createdat = DateTime.UtcNow
                 };
 
                 _context.Products.Add(product);
@@ -450,7 +450,7 @@ namespace ECommerceBackend.Controllers
                                     Imei = GenerateTemporaryInventoryCode(variant.Variantid),
                                     Variantid = variant.Variantid,
                                     Status = "InStock",
-                                    Importedat = DateTime.Now
+                                    Importedat = DateTime.UtcNow
                                 };
                                 _context.Inventoryitems.Add(item);
                             }
@@ -706,7 +706,7 @@ namespace ECommerceBackend.Controllers
                                 Imei = GenerateTemporaryInventoryCode(variant.Variantid),
                                 Variantid = variant.Variantid,
                                 Status = "InStock",
-                                Importedat = DateTime.Now
+                                Importedat = DateTime.UtcNow
                             });
                         }
                     }

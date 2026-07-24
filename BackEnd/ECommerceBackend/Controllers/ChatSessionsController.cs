@@ -61,7 +61,7 @@ namespace ECommerceBackend.Controllers
                 Fullname = dbUser.Fullname,
                 Email = dbUser.Email,
                 Phone = dbUser.Phone ?? string.Empty,
-                Createdat = DateTime.Now
+                Createdat = DateTime.UtcNow
             };
             _context.Customers.Add(newCustomer);
             await _context.SaveChangesAsync();
@@ -299,7 +299,7 @@ namespace ECommerceBackend.Controllers
             {
                 Customerid = customerId,
                 Guestsessiontoken = guestToken,
-                Starttime = DateTime.Now,
+                Starttime = DateTime.UtcNow,
                 Status = string.IsNullOrEmpty(dto.Title) ? "Cuộc hội thoại mới" : dto.Title
             };
 
@@ -345,6 +345,13 @@ namespace ECommerceBackend.Controllers
             var session = await _context.Chatsessions.FindAsync(id);
             if (session == null) return NotFound(new ApiErrorDto("Session không tồn tại.", null));
             if (!await IsOwnerAsync(session)) return StatusCode(403, new ApiErrorDto("Bạn không có quyền xóa session này.", null));
+
+            if (!string.IsNullOrWhiteSpace(session.Handoffstatus))
+            {
+                return Conflict(new ApiErrorDto(
+                    "Phiên đã chuyển cho nhân viên tư vấn được lưu lại để phục vụ giám sát và không thể xóa.",
+                    null));
+            }
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -429,9 +436,9 @@ namespace ECommerceBackend.Controllers
                     Sessionid = session.Sessionid,
                     Sendertype = "user",
                     Messagecontent = dto.Messagecontent.Trim(),
-                    Sentat = DateTime.Now
+                    Sentat = DateTime.UtcNow
                 };
-                session.Endtime = DateTime.Now;
+                session.Endtime = DateTime.UtcNow;
                 _context.Chatmessages.Add(userMessage);
                 await _context.SaveChangesAsync();
                 return Ok(await MapMessageToDtoAsync(userMessage));
@@ -464,7 +471,7 @@ namespace ECommerceBackend.Controllers
 
             var recommendations = ChatRecommendationDataSerializer.Deserialize(message.Recommendations);
             var recommendation = recommendations.First(item => item.Recommendationid == recommendationId);
-            recommendation.Addedtocartat ??= DateTime.Now;
+            recommendation.Addedtocartat ??= DateTime.UtcNow;
             message.Recommendations = ChatRecommendationDataSerializer.Serialize(recommendations);
             await _context.SaveChangesAsync();
             var result = await MapRecommendationToDtoAsync(recommendation);
@@ -479,7 +486,7 @@ namespace ECommerceBackend.Controllers
             [FromQuery] int days = 30)
         {
             days = Math.Clamp(days, 1, 365);
-            var fromDate = DateTime.Now.AddDays(-days);
+            var fromDate = DateTime.UtcNow.AddDays(-days);
             var messages = await _context.Chatmessages
                 .AsNoTracking()
                 .Where(item => item.Sentat >= fromDate && item.Recommendations != null)
@@ -533,18 +540,47 @@ namespace ECommerceBackend.Controllers
                 return Conflict(new ApiErrorDto("Cuộc trò chuyện đã có nhân viên tư vấn tiếp nhận.", null));
 
             session.Handoffstatus = "Waiting";
-            session.Handoffrequestedat = DateTime.Now;
+            session.Handoffrequestedat = DateTime.UtcNow;
             session.Assigneduserid = null;
             _context.Chatmessages.Add(new Chatmessage
             {
                 Sessionid = session.Sessionid,
                 Sendertype = "system",
                 Messagecontent = "Khách hàng đã yêu cầu kết nối với nhân viên tư vấn.",
-                Sentat = DateTime.Now
+                Sentat = DateTime.UtcNow
             });
             await _context.SaveChangesAsync();
 
             return Ok(await MapToDetailedDtoAsync(session));
+        }
+
+        [HttpGet("consultation-history")]
+        [Authorize(Roles = "Admin,Manager,Consultant")]
+        public async Task<ActionResult<IEnumerable<ChatSessionDto>>> GetConsultationHistory(
+            [FromQuery] int limit = 100)
+        {
+            limit = Math.Clamp(limit, 1, 300);
+            var currentUserId = GetCurrentUserId();
+            var query = _context.Chatsessions
+                .AsNoTracking()
+                .Where(session => session.Handoffstatus != null);
+
+            if (User.IsInRole("Consultant"))
+            {
+                query = query.Where(session => session.Assigneduserid == currentUserId);
+            }
+
+            var sessions = await query
+                .OrderByDescending(session => session.Endtime ?? session.Handoffrequestedat ?? session.Starttime)
+                .Take(limit)
+                .ToListAsync();
+            var result = new List<ChatSessionDto>();
+            foreach (var session in sessions)
+            {
+                result.Add(await MapToDetailedDtoAsync(session));
+            }
+
+            return Ok(result);
         }
 
         [HttpGet("handoffs")]
@@ -608,7 +644,7 @@ namespace ECommerceBackend.Controllers
                     Sessionid = id,
                     Sendertype = "system",
                     Messagecontent = "Nhân viên tư vấn đã tiếp nhận cuộc trò chuyện.",
-                    Sentat = DateTime.Now
+                    Sentat = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
 
@@ -640,9 +676,9 @@ namespace ECommerceBackend.Controllers
                 Sessionid = session.Sessionid,
                 Sendertype = "consultant",
                 Messagecontent = dto.Messagecontent.Trim(),
-                Sentat = DateTime.Now
+                Sentat = DateTime.UtcNow
             };
-            session.Endtime = DateTime.Now;
+            session.Endtime = DateTime.UtcNow;
             _context.Chatmessages.Add(message);
             await _context.SaveChangesAsync();
             return Ok(await MapMessageToDtoAsync(message));
@@ -659,13 +695,13 @@ namespace ECommerceBackend.Controllers
                 return StatusCode(403, new ApiErrorDto("Bạn không phụ trách cuộc trò chuyện này.", null));
 
             session.Handoffstatus = "Closed";
-            session.Endtime = DateTime.Now;
+            session.Endtime = DateTime.UtcNow;
             _context.Chatmessages.Add(new Chatmessage
             {
                 Sessionid = session.Sessionid,
                 Sendertype = "system",
                 Messagecontent = "Phiên tư vấn trực tiếp đã kết thúc.",
-                Sentat = DateTime.Now
+                Sentat = DateTime.UtcNow
             });
             await _context.SaveChangesAsync();
             return Ok(await MapToDetailedDtoAsync(session));

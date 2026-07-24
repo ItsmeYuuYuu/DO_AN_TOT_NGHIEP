@@ -23,6 +23,9 @@ public sealed class ChatCatalogScopeTests
     [InlineData("xe máy nào quay video 4K")]
     [InlineData("nước hoa nào cấu hình mạnh")]
     [InlineData("mua loa kết nối điện thoại")]
+    [InlineData("toi muon mua dien thoai chip intel")]
+    [InlineData("dien thoai Intel Core i7 nao chup anh dep")]
+    [InlineData("goi y smartphone dung chip AMD Ryzen")]
     public void Clearly_Unsupported_Products_Are_Blocked(string message)
     {
         Assert.True(CatalogScopeGuard.Check(message).IsOutOfScope);
@@ -46,6 +49,7 @@ public sealed class ChatCatalogScopeTests
     [InlineData("tôi muốn mua đồng hồ chụp ảnh đẹp")]
     [InlineData("tôi muốn mua cái loa chơi game mượt")]
     [InlineData("gợi ý cho tôi vài cái tủ lạnh pin trâu")]
+    [InlineData("toi muon mua dien thoai chip intel")]
     public async Task Provider_Returns_No_Recommendations_For_Out_Of_Scope_Message(string message)
     {
         var retrieval = new FailingProductConsultationService();

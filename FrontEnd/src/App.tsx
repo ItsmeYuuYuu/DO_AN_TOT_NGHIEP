@@ -24,7 +24,7 @@ const PageLoader = () => (
 
 // ── Customer pages ───────────────────────────────────────────────────
 const CustomerHome      = lazy(() => import('@/portals/customer/CustomerHome'));
-const LoginPage         = lazy(() => import('@/portals/customer/LoginPage'));
+const AuthPage          = lazy(() => import('@/portals/customer/AuthPage'));
 const ProductDetailPage = lazy(() => import('@/portals/customer/ProductDetailPage'));
 const ProductsListPage  = lazy(() => import('@/portals/customer/ProductsListPage'));
 const SearchPage        = lazy(() => import('@/portals/customer/SearchPage'));
@@ -38,8 +38,6 @@ const PaymentSimulationPage = lazy(() => import('@/portals/customer/PaymentSimul
 const ProfilePage       = lazy(() => import('@/portals/customer/ProfilePage'));
 const CustomerChat      = lazy(() => import('@/portals/customer/CustomerChat'));
 const CustomerReturns   = lazy(() => import('@/portals/customer/CustomerReturns'));
-// Batch 2 — Auth (wired after Batch 2 is done)
-const RegisterPage      = lazy(() => import('@/portals/customer/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/portals/customer/ForgotPasswordPage'));
 
 // ── Admin pages ───────────────────────────────────────────────────
@@ -106,8 +104,7 @@ const App: React.FC = () => {
         {/* ═══ PUBLIC — Customer Portal ════════════════════════════════════ */}
         <Route path="/" element={<CustomerLayout />}>
           <Route index                    element={<CustomerHome />} />
-          <Route path="auth/login"        element={<LoginPage />} />
-          <Route path="auth/register"     element={<RegisterPage />} />
+          <Route path="auth/:mode"        element={<AuthPage />} />
           <Route path="forgot-password"   element={<ForgotPasswordPage />} />
           <Route path="products"          element={<ProductsListPage />} />
           <Route path="products/:id"      element={<ProductDetailPage />} />

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { buildSeoDescription } from '@/utils/seoUtils';
 
 const SITE_NAME = 'Cuồng Điện Thoại';
-const DEFAULT_TITLE = 'Cuồng Điện Thoại - Tư vấn và mua smartphone chính hãng';
+const DEFAULT_TITLE = 'Cuồng Điện Thoại - Tư vấn smartphone bằng AI';
 const DEFAULT_DESCRIPTION =
   'Cuồng Điện Thoại giúp khách hàng tìm smartphone phù hợp theo nhu cầu, ngân sách, thông số và tư vấn AI.';
 const DEFAULT_IMAGE = '/favicon.svg';

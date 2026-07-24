@@ -4,6 +4,7 @@ using System.Text;
 using ECommerceBackend.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using ECommerceBackend.Time;
 
 namespace ECommerceBackend.Services.Email;
 
@@ -42,7 +43,7 @@ public sealed class SmtpEmailService : IEmailService
             $"Password reset OTP for {email}: {code}");
 
     public Task SendTestEmailAsync(string email, CancellationToken cancellationToken = default) =>
-        SendAsync(email, $"Test Gmail SMTP - {DateTime.Now:HH:mm dd/MM/yyyy}", BuildEmailLayout(
+        SendAsync(email, $"Test Gmail SMTP - {VietnamTime.Now:HH:mm dd/MM/yyyy}", BuildEmailLayout(
             "Gmail SMTP đã sẵn sàng",
             "Email này được gửi từ backend Cuồng Điện Thoại qua cấu hình SMTP.",
             "Chức năng gửi mã xác nhận và thông báo đơn hàng đang hoạt động."), cancellationToken);
@@ -71,10 +72,40 @@ public sealed class SmtpEmailService : IEmailService
     {
         order = await LoadOrderAsync(order.Orderid, cancellationToken) ?? order;
         if (string.IsNullOrWhiteSpace(order.Shippingemail)) return;
+        var statusLabel = OrderStatusLabel(order.Orderstatus);
         await SendAsync(order.Shippingemail, $"Đơn hàng #{order.Orderid} đã cập nhật trạng thái",
             BuildEmailLayout($"Trạng thái đơn hàng #{order.Orderid}",
-                $"Xin chào <strong>{Encode(order.Shippingname ?? "quý khách")}</strong>, đơn hàng hiện ở trạng thái <strong>{Encode(order.Orderstatus)}</strong>.",
+                $"Xin chào <strong>{Encode(order.Shippingname ?? "quý khách")}</strong>, đơn hàng hiện ở trạng thái <strong>{Encode(statusLabel)}</strong>.",
                 BuildOrderDetailsHtml(order)), cancellationToken);
+    }
+
+    public async Task SendShipmentStatusUpdatedAsync(
+        Order order,
+        Shipment shipment,
+        CancellationToken cancellationToken = default)
+    {
+        order = await LoadOrderAsync(order.Orderid, cancellationToken) ?? order;
+        if (string.IsNullOrWhiteSpace(order.Shippingemail)) return;
+
+        var statusLabel = ShipmentStatusLabel(shipment.Status);
+        var shipmentHtml = $"""
+            <table role="presentation" style="width:100%;border-collapse:collapse;margin:14px 0">
+              <tr><td><strong>Trạng thái giao hàng</strong></td><td style="text-align:right">{Encode(statusLabel)}</td></tr>
+              <tr><td><strong>Đơn vị vận chuyển</strong></td><td style="text-align:right">{Encode(shipment.Carrier)}</td></tr>
+              <tr><td><strong>Mã vận đơn</strong></td><td style="text-align:right">{Encode(shipment.Trackingcode)}</td></tr>
+              {(shipment.Estimateddeliveryat.HasValue ? $"<tr><td><strong>Dự kiến giao</strong></td><td style=\"text-align:right\">{FormatVietnamTime(shipment.Estimateddeliveryat, "dd/MM/yyyy")}</td></tr>" : string.Empty)}
+            </table>
+            {BuildOrderDetailsHtml(order)}
+            """;
+
+        await SendAsync(
+            order.Shippingemail,
+            $"{statusLabel} - đơn hàng #{order.Orderid}",
+            BuildEmailLayout(
+                $"Cập nhật giao hàng đơn #{order.Orderid}",
+                $"Xin chào <strong>{Encode(order.Shippingname ?? "quý khách")}</strong>, đơn hàng của bạn hiện ở trạng thái <strong>{Encode(statusLabel)}</strong>.",
+                shipmentHtml),
+            cancellationToken);
     }
 
     private Task<Order?> LoadOrderAsync(int orderId, CancellationToken cancellationToken) =>
@@ -98,7 +129,7 @@ public sealed class SmtpEmailService : IEmailService
         return $"""
             <table role="presentation" style="width:100%;border-collapse:collapse;margin:14px 0">
               <tr><td><strong>Mã đơn hàng</strong></td><td style="text-align:right">#{order.Orderid}</td></tr>
-              <tr><td><strong>Ngày đặt</strong></td><td style="text-align:right">{order.Orderdate:dd/MM/yyyy HH:mm}</td></tr>
+              <tr><td><strong>Ngày đặt</strong></td><td style="text-align:right">{FormatVietnamTime(order.Orderdate, "dd/MM/yyyy HH:mm")}</td></tr>
               <tr><td><strong>Người nhận</strong></td><td style="text-align:right">{Encode(order.Shippingname)}</td></tr>
               <tr><td><strong>Số điện thoại</strong></td><td style="text-align:right">{Encode(order.Shippingphone)}</td></tr>
               <tr><td><strong>Địa chỉ</strong></td><td style="text-align:right">{Encode(order.Shippingaddress)}</td></tr>
@@ -112,11 +143,14 @@ public sealed class SmtpEmailService : IEmailService
               <tr><td>Đã thanh toán</td><td style="text-align:right">{FormatCurrency(order.Paidamount ?? 0)}</td></tr>
               <tr><td>Còn lại</td><td style="text-align:right">{FormatCurrency(Math.Max(0, order.Finalamount - (order.Paidamount ?? 0)))}</td></tr>
               <tr><td>Phương thức</td><td style="text-align:right">{Encode(order.Paymentmethod)}</td></tr>
-              <tr><td>Trạng thái đơn</td><td style="text-align:right">{Encode(order.Orderstatus)}</td></tr>
-              <tr><td>Trạng thái thanh toán</td><td style="text-align:right">{Encode(order.Paymentstatus)}</td></tr>
+              <tr><td>Trạng thái đơn</td><td style="text-align:right">{Encode(OrderStatusLabel(order.Orderstatus))}</td></tr>
+              <tr><td>Trạng thái thanh toán</td><td style="text-align:right">{Encode(PaymentStatusLabel(order.Paymentstatus))}</td></tr>
             </table>
             """;
     }
+
+    private static string FormatVietnamTime(DateTime? value, string format) =>
+        value.HasValue ? VietnamTime.FromUtc(value.Value).ToString(format) : "—";
 
     private async Task SendAsync(string to, string subject, string body, CancellationToken cancellationToken, string? fallbackLog = null)
     {
@@ -131,23 +165,71 @@ public sealed class SmtpEmailService : IEmailService
             return;
         }
 
-        using var message = new MailMessage
+        try
         {
-            From = new MailAddress(string.IsNullOrWhiteSpace(_options.FromEmail) ? _options.Username : _options.FromEmail, _options.FromName),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = true,
-            SubjectEncoding = Encoding.UTF8,
-            BodyEncoding = Encoding.UTF8
-        };
-        message.To.Add(to);
-        using var client = new SmtpClient(_options.Host, _options.Port)
+            using var message = new MailMessage
+            {
+                From = new MailAddress(string.IsNullOrWhiteSpace(_options.FromEmail) ? _options.Username : _options.FromEmail, _options.FromName),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true,
+                SubjectEncoding = Encoding.UTF8,
+                BodyEncoding = Encoding.UTF8
+            };
+            message.To.Add(to);
+            using var client = new SmtpClient(_options.Host, _options.Port)
+            {
+                EnableSsl = _options.EnableSsl,
+                Credentials = new NetworkCredential(_options.Username, _options.Password)
+            };
+            await client.SendMailAsync(message, cancellationToken);
+        }
+        catch (Exception exception)
         {
-            EnableSsl = _options.EnableSsl,
-            Credentials = new NetworkCredential(_options.Username, _options.Password)
-        };
-        await client.SendMailAsync(message, cancellationToken);
+            _logger.LogError(
+                exception,
+                "Could not send email '{Subject}' to {Recipient}. The business operation remains completed.",
+                subject,
+                to);
+        }
     }
+
+    private static string ShipmentStatusLabel(string? status) => status switch
+    {
+        "PickedUp" => "Đơn vị vận chuyển đã nhận hàng",
+        "InTransit" => "Đơn hàng đang vận chuyển",
+        "OutForDelivery" => "Đơn hàng đang được giao",
+        "DeliveryFailed" => "Giao hàng chưa thành công",
+        "Delivered" => "Giao hàng thành công",
+        "DamageClaim" => "Đơn hàng gặp sự cố hư hỏng",
+        "LostClaim" => "Đơn hàng đang được xác minh thất lạc",
+        "ReturnedToWarehouse" => "Đơn hàng đã hoàn về cửa hàng",
+        _ => "Trạng thái giao hàng đã được cập nhật"
+    };
+
+    private static string OrderStatusLabel(string? status) => status switch
+    {
+        "Pending" => "Chờ cửa hàng xác nhận",
+        "Processing" => "Đang xử lý và chuẩn bị hàng",
+        "Shipped" => "Đã xuất giao",
+        "Completed" => "Giao hàng thành công",
+        "Cancelled" => "Đã hủy",
+        "Returned" => "Đã hoàn về cửa hàng",
+        _ => status ?? "Chưa xác định"
+    };
+
+    private static string PaymentStatusLabel(string? status) => status switch
+    {
+        "Unpaid" => "Chưa thanh toán",
+        "AwaitingDeposit" => "Chờ thanh toán tiền cọc",
+        "AwaitingFullPayment" => "Chờ thanh toán toàn bộ",
+        "DepositPaid" => "Đã thanh toán tiền cọc",
+        "CODPending" => "Thanh toán khi nhận hàng",
+        "Paid" => "Đã thanh toán",
+        "Cancelled" => "Đã hủy",
+        "Refunded" => "Đã hoàn tiền",
+        _ => status ?? "Chưa xác định"
+    };
 
     private static bool IsReservedTestAddress(string email)
     {

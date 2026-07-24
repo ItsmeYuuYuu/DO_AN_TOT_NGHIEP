@@ -5,7 +5,9 @@ using ECommerceBackend.Services.Checkout;
 using ECommerceBackend.Services.Email;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 
 namespace ECommerceBackend.Controllers
@@ -591,16 +593,22 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("lookup")]
+        [EnableRateLimiting("OrderLookupRequests")]
         public async Task<ActionResult<IEnumerable<OrderLookupDto>>> LookupOrders(
             [FromQuery] string? phone,
             [FromQuery] int? orderid)
         {
             if (string.IsNullOrWhiteSpace(phone))
                 return BadRequest(new ApiErrorDto("Vui lòng nhập số điện thoại để tra cứu.", null));
-            phone = phone.Trim();
-            if (!System.Text.RegularExpressions.Regex.IsMatch(phone, @"^0\d{9}$"))
+            if (!orderid.HasValue || orderid.Value <= 0)
+                return BadRequest(new ApiErrorDto("Vui lòng nhập mã đơn hàng để tra cứu.", null));
+
+            phone = NormalizePhone(phone);
+            if (!Regex.IsMatch(phone, @"^0\d{9}$"))
                 return BadRequest(new ApiErrorDto("Số điện thoại tra cứu phải gồm 10 chữ số và bắt đầu bằng 0.", null));
 
+            var currentUserId = GetClaimUserId();
+            var guestToken = Request.Headers["x-guest-session-token"].FirstOrDefault()?.Trim();
             var query = _context.Orders
                 .Include(o => o.Customer)
                 .Include(o => o.Orderitems)
@@ -611,10 +619,13 @@ namespace ECommerceBackend.Controllers
                             .ThenInclude(v => v!.Product)
                 .Include(o => o.Shipment)
                     .ThenInclude(shipment => shipment!.Histories)
-                .Where(o => o.Customer != null && o.Customer.Phone == phone);
-
-            if (orderid.HasValue)
-                query = query.Where(o => o.Orderid == orderid);
+                .Where(o =>
+                    o.Orderid == orderid.Value &&
+                    o.Shippingphone == phone &&
+                    ((currentUserId.HasValue && o.Userid == currentUserId.Value) ||
+                     (!string.IsNullOrWhiteSpace(guestToken) &&
+                      o.Checkouttype == "Guest" &&
+                      o.Guesttoken == guestToken)));
 
             var orders = await query
                 .OrderByDescending(o => o.Orderdate)
@@ -668,6 +679,14 @@ namespace ECommerceBackend.Controllers
             return Ok(result);
         }
 
+        private static string NormalizePhone(string phone)
+        {
+            var digits = Regex.Replace(phone, @"\D", string.Empty);
+            if (digits.Length == 11 && digits.StartsWith("84", StringComparison.Ordinal))
+                return $"0{digits[2..]}";
+            return digits;
+        }
+
         [HttpPost]
         [AllowAnonymous]
         public async Task<ActionResult<OrderDetailDto>> PostOrder([FromBody] CreateOrderRequestDto dto)
@@ -711,6 +730,13 @@ namespace ECommerceBackend.Controllers
             var shippingEmail = (dto.Customeremail ?? user?.Email)?.Trim();
             var shippingAddress = (dto.Shippingaddress ?? string.Empty).Trim();
             var guestToken = Request.Headers["x-guest-session-token"].FirstOrDefault();
+
+            if (isGuest && !Guid.TryParse(guestToken, out _))
+            {
+                return BadRequest(new ApiErrorDto(
+                    "Phiên đặt hàng vãng lai không hợp lệ. Vui lòng tải lại trang và thử lại.",
+                    null));
+            }
 
             if (string.IsNullOrWhiteSpace(shippingName) ||
                 string.IsNullOrWhiteSpace(shippingPhone) ||
@@ -1089,6 +1115,7 @@ namespace ECommerceBackend.Controllers
             {
                 await _checkoutAbuseProtection.ReleaseGuestPendingAsync(order.Guesttoken, order.Shippingphone);
             }
+            await _emailService.SendOrderStatusUpdatedAsync(order, HttpContext.RequestAborted);
 
             return Ok(new { orderid = order.Orderid, orderstatus = order.Orderstatus, paymentstatus = order.Paymentstatus });
         }
@@ -1125,6 +1152,63 @@ namespace ECommerceBackend.Controllers
             await transaction.CommitAsync();
             await _emailService.SendPaymentUpdatedAsync(order, HttpContext.RequestAborted);
             return Ok(result);
+        }
+
+        [HttpPost("{id}/customer-cancel")]
+        [Authorize(Roles = "Customer")]
+        public async Task<ActionResult<UpdateOrderStatusResponseDto>> CancelOrderByCustomer(
+            int id,
+            [FromBody] CustomerCancelOrderRequestDto dto)
+        {
+            var currentUserId = GetClaimUserId();
+            if (!currentUserId.HasValue)
+                return Unauthorized(new ApiErrorDto("Không xác định được tài khoản khách hàng.", null));
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            var order = await _context.Orders
+                .Include(item => item.Customer)
+                .Include(item => item.Orderitems)
+                    .ThenInclude(item => item.Package)
+                .Include(item => item.Orderitems)
+                    .ThenInclude(item => item.ImeiNavigation)
+                        .ThenInclude(item => item!.Variant)
+                            .ThenInclude(item => item!.Product)
+                .Include(item => item.Orderpayments)
+                .FirstOrDefaultAsync(item => item.Orderid == id);
+
+            if (order == null)
+                return NotFound(new ApiErrorDto("Đơn hàng không tồn tại.", null));
+            if (order.Userid != currentUserId.Value)
+                return StatusCode(403, new ApiErrorDto("Bạn không có quyền hủy đơn hàng này.", null));
+            if (order.Orderstatus != StatusPending)
+                return Conflict(new ApiErrorDto("Chỉ có thể hủy đơn hàng đang chờ xác nhận.", null));
+            if ((order.Paidamount ?? 0) > 0 ||
+                order.Paymentstatus is "Paid" or "DepositPaid")
+            {
+                return Conflict(new ApiErrorDto(
+                    "Đơn hàng đã ghi nhận thanh toán. Vui lòng liên hệ cửa hàng để được xử lý hoàn tiền.",
+                    null));
+            }
+
+            await ApplyInventoryForStatusAsync(order, StatusCancelled);
+            foreach (var payment in order.Orderpayments.Where(item => item.Status == "Pending"))
+            {
+                payment.Status = "Cancelled";
+            }
+
+            order.Orderstatus = StatusCancelled;
+            order.Paymentstatus = "Cancelled";
+            order.Cancellationreason = string.IsNullOrWhiteSpace(dto.Reason)
+                ? "Khách hàng chủ động hủy đơn trước khi cửa hàng xác nhận."
+                : $"Khách hàng hủy đơn: {dto.Reason.Trim()}";
+            order.Reservationexpiresat = null;
+            order.Paymenttoken = null;
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            await _emailService.SendOrderStatusUpdatedAsync(order, HttpContext.RequestAborted);
+
+            return Ok(new UpdateOrderStatusResponseDto(order.Orderid, order.Orderstatus));
         }
 
         [HttpPut("{id}")]

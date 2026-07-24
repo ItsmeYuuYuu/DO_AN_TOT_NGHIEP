@@ -1,6 +1,7 @@
 using ECommerceBackend.Models;
 using ECommerceBackend.Services;
 using ECommerceBackend.Services.Chat;
+using ECommerceBackend.Time;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -94,7 +95,7 @@ public static class DbInitializer
                 Fullname = "Quản trị viên hệ thống",
                 Email = "admin300475@gmail.com",
                 Phone = "0900000000",
-                Createdat = DateTime.Now,
+                Createdat = DateTime.UtcNow,
                 Isactive = true,
             };
             context.Users.Add(adminUser);
@@ -116,7 +117,7 @@ public static class DbInitializer
                 Fullname = "Nhân viên kho",
                 Email = "staff01@gmail.com",
                 Phone = "0911111111",
-                Createdat = DateTime.Now,
+                Createdat = DateTime.UtcNow,
                 Isactive = true,
             };
             context.Users.Add(warehouseUser);
@@ -281,7 +282,7 @@ public static class DbInitializer
                     {
                         Brandid = brand.Brandid,
                         Seriesname = seriesName,
-                        Createdat = DateTime.Now
+                        Createdat = DateTime.UtcNow
                     };
                     context.Productseries.Add(series);
                     existingSeries.Add(series);
@@ -410,17 +411,17 @@ public static class DbInitializer
             context.Orders.RemoveRange(context.Orders);
             await context.SaveChangesAsync();
 
-            var today = DateTime.Today;
+            var today = VietnamTime.Today;
 
             // Seed Orders
-            var order1 = new Order { Customerid = 1, Userid = 1, Orderdate = today.AddHours(7).AddMinutes(15), Totalamount = 24990000, Discountamount = 0, Finalamount = 24990000, Paymentmethod = "Momo", Orderstatus = "Completed" }; // today 07h
-            var order2 = new Order { Customerid = 2, Userid = 1, Orderdate = today.AddHours(13).AddMinutes(30), Totalamount = 34990000, Discountamount = 2000000, Finalamount = 32990000, Paymentmethod = "VNPay", Orderstatus = "Completed", Vouchercode = "GIAM2TR" }; // today 13h
-            var order3 = new Order { Customerid = 3, Userid = 1, Orderdate = today.AddHours(15).AddMinutes(45), Totalamount = 33990000, Discountamount = 0, Finalamount = 33990000, Paymentmethod = "Tiền mặt", Orderstatus = "Processing" }; // today 15h
-            var order4 = new Order { Customerid = 1, Userid = 1, Orderdate = today.AddHours(16).AddMinutes(10), Totalamount = 21990000, Discountamount = 0, Finalamount = 21990000, Paymentmethod = "Chuyển khoản", Orderstatus = "Pending" }; // today 16h
-            var order5 = new Order { Customerid = 2, Userid = 1, Orderdate = today.AddDays(-1).AddHours(10).AddMinutes(20), Totalamount = 34990000, Discountamount = 0, Finalamount = 34990000, Paymentmethod = "VNPay", Orderstatus = "Completed" }; // yesterday 10h
-            var order6 = new Order { Customerid = 3, Userid = 1, Orderdate = today.AddDays(-1).AddHours(14).AddMinutes(50), Totalamount = 24990000, Discountamount = 0, Finalamount = 24990000, Paymentmethod = "Momo", Orderstatus = "Cancelled" }; // yesterday 14h (Cancelled)
-            var order7 = new Order { Customerid = 1, Userid = 1, Orderdate = today.AddDays(-5).AddHours(11).AddMinutes(0), Totalamount = 21990000, Discountamount = 0, Finalamount = 21990000, Paymentmethod = "VNPay", Orderstatus = "Completed" }; // 5 days ago
-            var order8 = new Order { Customerid = 2, Userid = 1, Orderdate = today.AddMonths(-1).AddHours(16).AddMinutes(30), Totalamount = 34990000, Discountamount = 0, Finalamount = 34990000, Paymentmethod = "Tiền mặt", Orderstatus = "Completed" }; // same day last month
+            var order1 = new Order { Customerid = 1, Userid = 1, Orderdate = VietnamTime.ToUtc(today.AddHours(7).AddMinutes(15)), Totalamount = 24990000, Discountamount = 0, Finalamount = 24990000, Paymentmethod = "Momo", Orderstatus = "Completed" }; // today 07h
+            var order2 = new Order { Customerid = 2, Userid = 1, Orderdate = VietnamTime.ToUtc(today.AddHours(13).AddMinutes(30)), Totalamount = 34990000, Discountamount = 2000000, Finalamount = 32990000, Paymentmethod = "VNPay", Orderstatus = "Completed", Vouchercode = "GIAM2TR" }; // today 13h
+            var order3 = new Order { Customerid = 3, Userid = 1, Orderdate = VietnamTime.ToUtc(today.AddHours(15).AddMinutes(45)), Totalamount = 33990000, Discountamount = 0, Finalamount = 33990000, Paymentmethod = "Tiền mặt", Orderstatus = "Processing" }; // today 15h
+            var order4 = new Order { Customerid = 1, Userid = 1, Orderdate = VietnamTime.ToUtc(today.AddHours(16).AddMinutes(10)), Totalamount = 21990000, Discountamount = 0, Finalamount = 21990000, Paymentmethod = "Chuyển khoản", Orderstatus = "Pending" }; // today 16h
+            var order5 = new Order { Customerid = 2, Userid = 1, Orderdate = VietnamTime.ToUtc(today.AddDays(-1).AddHours(10).AddMinutes(20)), Totalamount = 34990000, Discountamount = 0, Finalamount = 34990000, Paymentmethod = "VNPay", Orderstatus = "Completed" }; // yesterday 10h
+            var order6 = new Order { Customerid = 3, Userid = 1, Orderdate = VietnamTime.ToUtc(today.AddDays(-1).AddHours(14).AddMinutes(50)), Totalamount = 24990000, Discountamount = 0, Finalamount = 24990000, Paymentmethod = "Momo", Orderstatus = "Cancelled" }; // yesterday 14h (Cancelled)
+            var order7 = new Order { Customerid = 1, Userid = 1, Orderdate = VietnamTime.ToUtc(today.AddDays(-5).AddHours(11)), Totalamount = 21990000, Discountamount = 0, Finalamount = 21990000, Paymentmethod = "VNPay", Orderstatus = "Completed" }; // 5 days ago
+            var order8 = new Order { Customerid = 2, Userid = 1, Orderdate = VietnamTime.ToUtc(today.AddMonths(-1).AddHours(16).AddMinutes(30)), Totalamount = 34990000, Discountamount = 0, Finalamount = 34990000, Paymentmethod = "Tiền mặt", Orderstatus = "Completed" }; // same day last month
 
             context.Orders.AddRange(order1, order2, order3, order4, order5, order6, order7, order8);
             await context.SaveChangesAsync();
@@ -572,7 +573,7 @@ public static class DbInitializer
                 section = new Homepageproductsection
                 {
                     Sectionkey = seed.Key,
-                    Createdat = DateTime.Now
+                    Createdat = DateTime.UtcNow
                 };
                 context.Homepageproductsections.Add(section);
                 sections.Add(section);
@@ -630,7 +631,7 @@ public static class DbInitializer
                     Productid = selectedProducts[index].Productid,
                     Displayorder = index,
                     Isactive = true,
-                    Createdat = DateTime.Now
+                    Createdat = DateTime.UtcNow
                 });
             }
         }
@@ -710,7 +711,7 @@ public static class DbInitializer
             bool waitingForConsultant,
             params (string Sku, int Rank, bool AddedToCart)[] recommendations)
         {
-            var start = DateTime.Now.AddDays(-recommendations.Length - 1);
+            var start = DateTime.UtcNow.AddDays(-recommendations.Length - 1);
             var session = new Chatsession
             {
                 Customerid = customer.Customerid,
@@ -1144,7 +1145,7 @@ public static class DbInitializer
                 user = new User
                 {
                     Username = seed.Username,
-                    Createdat = DateTime.Now
+                    Createdat = DateTime.UtcNow
                 };
                 context.Users.Add(user);
             }
@@ -1171,7 +1172,7 @@ public static class DbInitializer
                     Email = seed.Username,
                     Phone = seed.Phone,
                     Address = "Địa chỉ khách hàng demo",
-                    Createdat = DateTime.Now
+                    Createdat = DateTime.UtcNow
                 });
             }
             else
@@ -1579,7 +1580,7 @@ public static class DbInitializer
                     Seriesid = productSeries.Seriesid,
                     Productname = seed.Name,
                     Description = seed.Description,
-                    Createdat = DateTime.Now
+                    Createdat = DateTime.UtcNow
                 };
                 context.Products.Add(product);
                 products.Add(product);
@@ -1678,7 +1679,7 @@ public static class DbInitializer
                         Imei = imei,
                         Variantid = variant.Variantid,
                         Status = "InStock",
-                        Importedat = DateTime.Now
+                        Importedat = DateTime.UtcNow
                     });
                 }
             }

@@ -7,9 +7,17 @@ import { Skeleton } from '@/components/Skeleton';
 import { Seo } from '@/components/Seo';
 import { buildSeoDescription } from '@/utils/seoUtils';
 import { RichTextContent } from '@/components/RichTextContent';
+import { parseApiDate, VIETNAM_TIME_ZONE } from '@/utils/formatters';
 
 const formatDate = (date?: string) =>
-  date ? new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+  date
+    ? parseApiDate(date).toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        timeZone: VIETNAM_TIME_ZONE,
+      })
+    : '';
 
 const getNewsPath = (post: NewsItem) => `/news/${post.slug ?? post.postid}`;
 
@@ -50,7 +58,7 @@ const NewsPage: React.FC = () => {
     const description = buildSeoDescription(detailPost?.summary || detailPost?.content, 'Tin tức công nghệ mới nhất từ Cuồng Điện Thoại.');
 
     return (
-      <div className="customer-shell min-h-screen pb-16">
+      <div className="customer-shell min-h-screen pb-16 [font-family:'Segoe_UI',Tahoma,Arial,sans-serif]">
         <Seo
           title={detailPost ? `${detailPost.title} - Cuồng Điện Thoại` : 'Tin tức công nghệ - Cuồng Điện Thoại'}
           description={description}
@@ -82,7 +90,7 @@ const NewsPage: React.FC = () => {
           ) : !detailPost ? (
             <div className="customer-panel-soft px-6 py-20 text-center">
               <Newspaper className="mx-auto mb-5 text-[#1f2937]/25" size={54} />
-              <h1 className="customer-display text-3xl font-bold text-[#1f2937]">Không tìm thấy bài viết</h1>
+              <h1 className="text-3xl font-semibold tracking-[-0.025em] text-[#1f2937]">Không tìm thấy bài viết</h1>
               <p className="mt-3 text-sm text-slate-500">Bài viết có thể đã bị ẩn hoặc đường dẫn không còn tồn tại.</p>
             </div>
           ) : (
@@ -97,7 +105,7 @@ const NewsPage: React.FC = () => {
               )}
               <div className="p-6 md:p-10">
                 <p className="customer-label">Tin công nghệ</p>
-                <h1 className="customer-display mt-3 text-3xl font-bold leading-tight text-[#1f2937] md:text-5xl">
+                <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-[-0.025em] text-[#1f2937] md:text-5xl">
                   {detailPost.title}
                 </h1>
                 <div className="mt-5 flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400">
@@ -123,33 +131,31 @@ const NewsPage: React.FC = () => {
   const secondary = newsList.slice(1);
 
   return (
-    <div className="customer-shell min-h-screen pb-16">
+    <div className="customer-shell min-h-screen pb-16 [font-family:'Segoe_UI',Tahoma,Arial,sans-serif]">
       <Seo
         title="Tin tức công nghệ - Cuồng Điện Thoại"
         description="Cap nhat tin tuc smartphone, xu huong cong nghe va noi dung giup ban chon dien thoai phu hop hon."
         canonicalPath="/news"
         type="article"
       />
-      <section className="border-b customer-rule bg-[#ffffff] px-4 py-10">
-        <div className="customer-container grid gap-6 md:grid-cols-[1.2fr_0.8fr] md:items-end">
+      <section className="border-b customer-rule bg-[#ffffff] px-4 py-8">
+        <div className="customer-container flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="customer-label">Tech journal</p>
-            <h1 className="customer-display mt-2 text-4xl font-bold text-[#1f2937] md:text-5xl">
+            <p className="customer-label">Tin công nghệ</p>
+            <h1 className="mt-2 text-4xl font-semibold tracking-[-0.03em] text-[#1f2937] md:text-[2.75rem]">
               Tin tức & công nghệ
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
               Cập nhật sản phẩm, xu hướng smartphone và các nội dung giúp bạn chọn máy tỉnh táo hơn.
             </p>
           </div>
-          <div className="customer-panel-soft p-5">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center bg-[#1f2937] text-[#ffd166]">
-                <Newspaper size={24} />
-              </div>
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#c4000b]">Đang có</p>
-                <p className="customer-display text-3xl font-bold text-[#1f2937]">{newsList.length} bài viết</p>
-              </div>
+          <div className="flex w-fit items-center gap-3 rounded-full border border-[#f3b8bd] bg-[#fff7f7] px-5 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#c4000b] shadow-sm">
+              <Newspaper size={18} />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-[#9f2730]">Nội dung đang hiển thị</p>
+              <p className="text-base font-bold text-[#1f2937]">{newsList.length} bài viết</p>
             </div>
           </div>
         </div>
@@ -170,7 +176,7 @@ const NewsPage: React.FC = () => {
         ) : newsList.length === 0 ? (
           <div className="customer-panel-soft px-6 py-20 text-center">
             <Newspaper className="mx-auto mb-5 text-[#1f2937]/25" size={54} />
-            <h2 className="customer-display text-3xl font-bold text-[#1f2937]">Chưa có bài viết nào</h2>
+            <h2 className="text-3xl font-semibold tracking-[-0.025em] text-[#1f2937]">Chưa có bài viết nào</h2>
             <p className="mt-3 text-sm text-slate-500">Hãy quay lại sau để đọc thêm nội dung mới.</p>
           </div>
         ) : (
@@ -178,7 +184,7 @@ const NewsPage: React.FC = () => {
             {featured && (
               <Link
                 to={getNewsPath(featured)}
-                className="customer-panel mb-8 grid overflow-hidden transition hover:-translate-y-0.5 hover:shadow-xl md:grid-cols-[1fr_1fr]"
+                className="mb-8 grid overflow-hidden rounded-[24px] border border-[#e5e7eb] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.09)] transition hover:-translate-y-0.5 hover:border-[#f3b8bd] hover:shadow-[0_22px_50px_rgba(15,23,42,0.13)] md:grid-cols-[0.95fr_1.05fr]"
               >
                 {featured.thumbnail ? (
                   <img
@@ -192,11 +198,11 @@ const NewsPage: React.FC = () => {
                     <Newspaper size={68} />
                   </div>
                 )}
-                <div className="flex flex-col justify-center p-6 md:p-8">
-                  <span className="mb-4 w-fit bg-[#e30613] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white">
+                <div className="flex flex-col justify-center p-6 md:p-9">
+                  <span className="mb-4 w-fit rounded-full bg-[#fff1f2] px-3 py-1.5 text-[11px] font-bold text-[#c4000b]">
                     Nổi bật
                   </span>
-                  <h2 className="customer-display text-3xl font-bold leading-tight text-[#1f2937] md:text-4xl">
+                  <h2 className="text-2xl font-semibold leading-[1.25] tracking-[-0.025em] text-[#1f2937] md:text-[2rem]">
                     {featured.title}
                   </h2>
                   <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-500">{featured.summary}</p>
@@ -210,7 +216,11 @@ const NewsPage: React.FC = () => {
 
             <div className="grid gap-5 md:grid-cols-3">
               {secondary.map(post => (
-                <Link key={post.postid} to={getNewsPath(post)} className="product-card group bg-[#ffffff]">
+                <Link
+                  key={post.postid}
+                  to={getNewsPath(post)}
+                  className="group overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_12px_30px_rgba(15,23,42,0.07)] transition hover:-translate-y-1 hover:border-[#f3b8bd] hover:shadow-[0_18px_38px_rgba(15,23,42,0.11)]"
+                >
                   {post.thumbnail ? (
                     <img
                       src={post.thumbnail}
@@ -224,7 +234,7 @@ const NewsPage: React.FC = () => {
                     </div>
                   )}
                   <div className="p-4">
-                    <h3 className="line-clamp-2 text-base font-black leading-snug text-[#1f2937] group-hover:text-[#c4000b]">
+                    <h3 className="line-clamp-2 text-base font-semibold leading-snug text-[#1f2937] group-hover:text-[#c4000b]">
                       {post.title}
                     </h3>
                     <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">{post.summary}</p>

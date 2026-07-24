@@ -23,10 +23,9 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
+    config.headers['x-guest-session-token'] = getGuestCheckoutToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      config.headers['x-guest-session-token'] = getGuestCheckoutToken();
     }
     return config;
   },

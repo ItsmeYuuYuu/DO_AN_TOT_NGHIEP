@@ -4,6 +4,7 @@ import { Package, Plus, Filter, Edit2, History, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 import { notifyError } from '@/utils/notifications';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { formatDate, formatDateTime } from '@/utils/formatters';
 
 
 interface InventoryItem {
@@ -136,7 +137,7 @@ const StaffInventory: React.FC = () => {
     }
   };
 
-  const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('vi-VN') : '';
+  const fmtDate = (d?: string) => d ? formatDate(d) : '';
 
   return (
     <div>
@@ -331,7 +332,7 @@ const StaffInventory: React.FC = () => {
                           </p>
                         </div>
                         <p className="text-xs text-slate-400">
-                          {transaction.createdat ? new Date(transaction.createdat).toLocaleString('vi-VN') : '—'}
+                          {transaction.createdat ? formatDateTime(transaction.createdat) : '—'}
                         </p>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">

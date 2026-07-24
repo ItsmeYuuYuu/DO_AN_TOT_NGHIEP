@@ -17,7 +17,7 @@ import { chatSessionsApi } from '../../features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '../../features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 import { ChatAssistantSegments } from '@/features/chat/components/ChatAssistantSegments';
-import { formatDateTime } from '../../utils/formatters';
+import { formatDateTime, formatTime } from '../../utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
 import { Seo } from '@/components/Seo';
@@ -331,7 +331,7 @@ export default function CustomerChat() {
                       {formatDateTime(session.starttime)}
                     </span>
                   </span>
-                  <button
+                  {!session.handoffstatus && <button
                     type="button"
                     onClick={event => deleteSession(session.sessionid, event)}
                     onKeyDown={event => {
@@ -346,7 +346,7 @@ export default function CustomerChat() {
                     aria-label="Xóa cuộc hội thoại"
                   >
                     <Trash2 size={15} />
-                  </button>
+                  </button>}
                 </div>
               ))
             )}
@@ -519,7 +519,7 @@ export default function CustomerChat() {
                       )}
 
                     <span className={`mt-2 block text-[10px] ${isUser ? 'text-white/60' : 'text-slate-400'}`}>
-                      {message.sentat ? new Date(message.sentat).toLocaleTimeString() : 'Đang gửi...'}
+                      {message.sentat ? formatTime(message.sentat) : 'Đang gửi...'}
                     </span>
                   </div>
                 </div>

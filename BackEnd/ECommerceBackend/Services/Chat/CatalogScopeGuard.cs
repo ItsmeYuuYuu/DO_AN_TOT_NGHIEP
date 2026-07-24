@@ -40,9 +40,22 @@ public static class CatalogScopeGuard
         "gia vang", "co phieu", "chung khoan", "bitcoin", "tien ao", "tien dien tu"
     };
 
+    private static readonly string[] IncompatiblePhoneTerms =
+    {
+        "chip intel", "intel core", "core i3", "core i5", "core i7", "core i9",
+        "chip amd", "amd ryzen", "ryzen 3", "ryzen 5", "ryzen 7", "ryzen 9"
+    };
+
     public static CatalogScopeDecision Check(string message)
     {
         var normalized = ProductConsultationService.Normalize(message);
+
+        foreach (var term in IncompatiblePhoneTerms.OrderByDescending(value => value.Length))
+        {
+            if (TermIndex(normalized, term) >= 0)
+                return new CatalogScopeDecision(true, term);
+        }
+
         var phoneIndex = FirstTermIndex(normalized, PhoneTerms);
         var comparison = ContainsAny(normalized, "so sanh", "doi chieu", "khac nhau", "voi cai", "voi chiec");
 

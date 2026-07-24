@@ -112,6 +112,8 @@ export const ordersApi = {
     apiClient.post<PaymentActionResult>(`/Orders/${id}/simulate-payment`, { paymenttoken, success }),
   cancelPendingPayment: (id: number, paymenttoken: string) =>
     apiClient.post<{ orderid: number; orderstatus: string; paymentstatus: string }>(`/Orders/${id}/cancel-payment`, { paymenttoken }),
+  cancelByCustomer: (id: number, reason?: string) =>
+    apiClient.post<{ orderid: number; orderstatus: string }>(`/Orders/${id}/customer-cancel`, { reason }),
   confirmPayment: (id: number, amount?: number, transactionref?: string, note?: string) =>
     apiClient.post<PaymentActionResult>(`/Orders/${id}/confirm-payment`, { amount, transactionref, note }),
   delete: (id: number) => apiClient.delete(`/Orders/${id}`),

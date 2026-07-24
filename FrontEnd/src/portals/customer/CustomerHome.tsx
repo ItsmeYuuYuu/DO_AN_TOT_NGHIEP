@@ -131,9 +131,12 @@ const CustomerHome: React.FC = () => {
   const displaySections = hasConfiguredProducts ? homeSections : fallbackSections;
   const sideBanners = banners.slice(0, 2);
 
-  const saleEnd = new Date(now);
-  saleEnd.setHours(23, 59, 59, 999);
-  const saleRemainingSeconds = Math.max(0, Math.floor((saleEnd.getTime() - now.getTime()) / 1000));
+  const vietnamNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+  const elapsedVietnamSeconds =
+    vietnamNow.getUTCHours() * 3600 +
+    vietnamNow.getUTCMinutes() * 60 +
+    vietnamNow.getUTCSeconds();
+  const saleRemainingSeconds = Math.max(0, 24 * 60 * 60 - elapsedVietnamSeconds - 1);
   const countdown = {
     hours: String(Math.floor(saleRemainingSeconds / 3600)).padStart(2, '0'),
     minutes: String(Math.floor((saleRemainingSeconds % 3600) / 60)).padStart(2, '0'),

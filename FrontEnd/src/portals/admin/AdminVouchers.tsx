@@ -4,6 +4,7 @@ import { Plus, Edit2, Trash2, Tag, Percent, DollarSign, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { confirmAction, notifyError } from '@/utils/notifications';
+import { formatDate, formatDateInput } from '@/utils/formatters';
 
 
 interface Voucher {
@@ -58,8 +59,8 @@ const AdminVouchers: React.FC = () => {
     try {
       const payload = {
         ...formData,
-        validfrom: formData.validfrom || null,
-        validto: formData.validto || null,
+        validfrom: formData.validfrom ? `${formatDateInput(formData.validfrom)}T00:00:00` : null,
+        validto: formData.validto ? `${formatDateInput(formData.validto)}T23:59:59.999` : null,
         discountamount: formData.discountamount || null,
         discountpercentage: formData.discountpercentage || null,
       };
@@ -89,7 +90,7 @@ const AdminVouchers: React.FC = () => {
     }
   };
 
-  const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('vi-VN') : 'Không giới hạn';
+  const fmtDate = (d?: string) => d ? formatDate(d) : 'Không giới hạn';
 
   return (
     <div className="space-y-6">
@@ -190,14 +191,14 @@ const AdminVouchers: React.FC = () => {
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Từ ngày</label>
                   <input type="date"
-                    value={formData.validfrom ? formData.validfrom.split('T')[0] : ''}
+                    value={formData.validfrom ? formatDateInput(formData.validfrom) : ''}
                     onChange={e => setFormData({ ...formData, validfrom: e.target.value })}
                     className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-medium" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Đến ngày</label>
                   <input type="date"
-                    value={formData.validto ? formData.validto.split('T')[0] : ''}
+                    value={formData.validto ? formatDateInput(formData.validto) : ''}
                     onChange={e => setFormData({ ...formData, validto: e.target.value })}
                     className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-medium" />
                 </div>

@@ -33,9 +33,9 @@ namespace ECommerceBackend.Controllers
         private async Task<Customer?> GetCurrentCustomerAsync()
         {
             var claimUserId = User.FindFirst("userid")?.Value;
-            if (string.IsNullOrEmpty(claimUserId)) return null;
+            if (!int.TryParse(claimUserId, out var userId)) return null;
 
-            var dbUser = await _context.Users.FindAsync(int.Parse(claimUserId));
+            var dbUser = await _context.Users.FindAsync(userId);
             if (dbUser == null) return null;
 
             if (!string.IsNullOrEmpty(dbUser.Email))
@@ -145,9 +145,15 @@ namespace ECommerceBackend.Controllers
             if (!variantExists) 
                 return BadRequest(new ApiErrorDto($"Biến thể sản phẩm (VariantId: {dto.Variantid}) không tồn tại.", null));
 
+            var claimUserId = User.FindFirst("userid")?.Value;
+            var currentUserId = int.TryParse(claimUserId, out var parsedUserId)
+                ? parsedUserId
+                : (int?)null;
+
             var hasCompletedPurchase = await _context.Orderitems
                 .AnyAsync(item => item.Order != null &&
-                    item.Order.Customerid == cust.Customerid &&
+                    (item.Order.Customerid == cust.Customerid ||
+                     (currentUserId.HasValue && item.Order.Userid == currentUserId.Value)) &&
                     item.Order.Orderstatus == "Completed" &&
                     item.ImeiNavigation != null &&
                     item.ImeiNavigation.Variantid == dto.Variantid);

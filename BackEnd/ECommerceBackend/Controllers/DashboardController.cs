@@ -4,6 +4,7 @@ using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Dashboard;
 using ECommerceBackend.DTOs.Common;
 using Microsoft.AspNetCore.Authorization;
+using ECommerceBackend.Time;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,45 +26,45 @@ namespace ECommerceBackend.Controllers
 
         private (DateTime start, DateTime end) GetPeriodRanges(string period)
         {
-            var today = DateTime.Today;
-            DateTime start = today;
-            DateTime end = today.AddDays(1);
+            var today = VietnamTime.Today;
+            DateTime localStart = today;
+            DateTime localEnd = today.AddDays(1);
 
             switch (period.ToLower())
             {
                 case "today":
-                    start = today;
-                    end = today.AddDays(1);
+                    localStart = today;
+                    localEnd = today.AddDays(1);
                     break;
                 case "yesterday":
-                    start = today.AddDays(-1);
-                    end = today;
+                    localStart = today.AddDays(-1);
+                    localEnd = today;
                     break;
                 case "7d":
-                    start = today.AddDays(-6);
-                    end = today.AddDays(1);
+                    localStart = today.AddDays(-6);
+                    localEnd = today.AddDays(1);
                     break;
                 case "30d":
-                    start = today.AddDays(-29);
-                    end = today.AddDays(1);
+                    localStart = today.AddDays(-29);
+                    localEnd = today.AddDays(1);
                     break;
                 case "this_month":
                 default:
-                    start = new DateTime(today.Year, today.Month, 1);
-                    end = today.AddDays(1);
+                    localStart = new DateTime(today.Year, today.Month, 1);
+                    localEnd = today.AddDays(1);
                     break;
             }
 
-            return (start, end);
+            return (VietnamTime.ToUtc(localStart), VietnamTime.ToUtc(localEnd));
         }
 
         [HttpGet("today-results")]
         public async Task<ActionResult<TodaySalesResultsDto>> GetTodayResults()
         {
-            var today = DateTime.Today;
-            var tomorrow = today.AddDays(1);
+            var todayLocal = VietnamTime.Today;
+            var (today, tomorrow) = VietnamTime.GetUtcDayRange(todayLocal);
             var yesterday = today.AddDays(-1);
-            var sameDayLastMonth = today.AddMonths(-1);
+            var sameDayLastMonth = VietnamTime.ToUtc(todayLocal.AddMonths(-1));
             var sameDayLastMonthNext = sameDayLastMonth.AddDays(1);
 
             var orders = await _context.Orders
@@ -132,7 +133,9 @@ namespace ECommerceBackend.Controllers
                 // Group by hour of the day (00h to 23h)
                 for (int h = 0; h < 24; h++)
                 {
-                    decimal hourlyRev = orders.Where(o => o.Orderdate!.Value.Hour == h).Sum(o => o.Finalamount);
+                    decimal hourlyRev = orders
+                        .Where(o => VietnamTime.FromUtc(o.Orderdate!.Value).Hour == h)
+                        .Sum(o => o.Finalamount);
                     result.Add(new RevenueBreakdownItemDto($"{h:D2}h", hourlyRev));
                 }
             }
@@ -152,7 +155,9 @@ namespace ECommerceBackend.Controllers
 
                 foreach (var (d, label) in daysOfWeek)
                 {
-                    decimal dayRev = orders.Where(o => o.Orderdate!.Value.DayOfWeek == d).Sum(o => o.Finalamount);
+                    decimal dayRev = orders
+                        .Where(o => VietnamTime.FromUtc(o.Orderdate!.Value).DayOfWeek == d)
+                        .Sum(o => o.Finalamount);
                     result.Add(new RevenueBreakdownItemDto(label, dayRev));
                 }
             }
@@ -162,9 +167,12 @@ namespace ECommerceBackend.Controllers
                 int totalDays = (int)(end - start).TotalDays;
                 for (int i = 0; i < totalDays; i++)
                 {
-                    var date = start.AddDays(i);
-                    decimal dateRev = orders.Where(o => o.Orderdate!.Value.Date == date.Date).Sum(o => o.Finalamount);
-                    result.Add(new RevenueBreakdownItemDto(date.ToString("dd/MM"), dateRev));
+                    var utcDateStart = start.AddDays(i);
+                    var vietnamDate = VietnamTime.FromUtc(utcDateStart).Date;
+                    decimal dateRev = orders
+                        .Where(o => VietnamTime.FromUtc(o.Orderdate!.Value).Date == vietnamDate)
+                        .Sum(o => o.Finalamount);
+                    result.Add(new RevenueBreakdownItemDto(vietnamDate.ToString("dd/MM"), dateRev));
                 }
             }
 
@@ -218,7 +226,7 @@ namespace ECommerceBackend.Controllers
                         $"order_{o.Orderid}",
                         $"{staffName} vừa tạo {orderCode}",
                         customerName,
-                        o.Orderdate ?? DateTime.Now,
+                        o.Orderdate ?? DateTime.UtcNow,
                         o.Orderstatus,
                         o.Finalamount,
                         o.Orderstatus == "Completed" ? "invoice" : "order"
@@ -252,7 +260,7 @@ namespace ECommerceBackend.Controllers
                         $"audit_{l.Logid}",
                         actionDesc,
                         staffName,
-                        l.Createdat ?? DateTime.Now,
+                        l.Createdat ?? DateTime.UtcNow,
                         null,
                         null,
                         "audit"

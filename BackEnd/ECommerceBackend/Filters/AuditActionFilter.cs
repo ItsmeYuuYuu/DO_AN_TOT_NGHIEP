@@ -68,7 +68,7 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
         }
 
         // Ghi lại thời điểm bắt đầu (để đo thời gian nếu cần sau này)
-        var startedAt = DateTime.Now;
+        var startedAt = DateTime.UtcNow;
 
         // Thực thi action thực sự
         var executed = await next();

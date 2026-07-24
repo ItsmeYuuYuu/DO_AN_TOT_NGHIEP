@@ -133,6 +133,7 @@ namespace ECommerceBackend.DTOs.Orders
         string? Customername = null,
         [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại nhận hàng phải gồm 10 chữ số và bắt đầu bằng 0")]
         string? Customerphone = null,
+        [EmailAddress(ErrorMessage = "Địa chỉ email nhận thông báo không hợp lệ")]
         string? Customeremail = null
     );
 
@@ -233,6 +234,10 @@ namespace ECommerceBackend.DTOs.Orders
     public record BulkUpdateStatusRequestDto(
         [Required, MinLength(1, ErrorMessage = "Cần chọn ít nhất 1 đơn hàng")] List<int> OrderIds,
         [Required(ErrorMessage = "Trạng thái là bắt buộc")] string Status
+    );
+
+    public record CustomerCancelOrderRequestDto(
+        [StringLength(300)] string? Reason
     );
 
     public record BulkUpdateFailedItemDto(int OrderId, string Reason);

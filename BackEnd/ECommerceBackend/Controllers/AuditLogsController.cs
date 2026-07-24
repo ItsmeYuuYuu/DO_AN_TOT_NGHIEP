@@ -10,6 +10,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using ECommerceBackend.Time;
 
 namespace ECommerceBackend.Controllers
 {
@@ -77,8 +78,7 @@ namespace ECommerceBackend.Controllers
             var query = _context.Auditlogs.Include(a => a.User).AsQueryable();
             query = ApplyFilters(query, userId, action, tableName, fromDate, toDate);
 
-            var today = DateTime.Today;
-            var tomorrow = today.AddDays(1);
+            var (today, tomorrow) = VietnamTime.GetUtcDayRange(VietnamTime.Today);
 
             var totalLogs = await query.CountAsync();
             var todayLogs = await query.CountAsync(a => a.Createdat >= today && a.Createdat < tomorrow);
@@ -165,11 +165,13 @@ namespace ECommerceBackend.Controllers
                 GetDisplayAction(log.Action),
                 log.Tablename ?? "",
                 log.Recordid ?? "",
-                log.Createdat?.ToString("dd/MM/yyyy HH:mm") ?? ""
+                log.Createdat.HasValue
+                    ? VietnamTime.FromUtc(log.Createdat.Value).ToString("dd/MM/yyyy HH:mm")
+                    : ""
             }));
 
             var content = BuildXlsx(rows);
-            var fileName = $"audit_logs_{DateTime.Now:yyyy-MM-dd}.xlsx";
+            var fileName = $"audit_logs_{VietnamTime.Now:yyyy-MM-dd}.xlsx";
             return File(
                 content,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -201,18 +203,27 @@ namespace ECommerceBackend.Controllers
 
             if (fromDate.HasValue)
             {
-                query = query.Where(a => a.Createdat >= fromDate.Value);
+                var fromUtc = NormalizeFilterTime(fromDate.Value);
+                query = query.Where(a => a.Createdat >= fromUtc);
             }
 
             if (toDate.HasValue)
             {
-                var inclusiveToDate = toDate.Value.Date == toDate.Value
-                    ? toDate.Value.Date.AddDays(1).AddTicks(-1)
-                    : toDate.Value;
+                var inclusiveToDate = NormalizeFilterTime(toDate.Value);
                 query = query.Where(a => a.Createdat <= inclusiveToDate);
             }
 
             return query;
+        }
+
+        private static DateTime NormalizeFilterTime(DateTime value)
+        {
+            return value.Kind switch
+            {
+                DateTimeKind.Utc => value,
+                DateTimeKind.Local => value.ToUniversalTime(),
+                _ => VietnamTime.ToUtc(value)
+            };
         }
 
         private static string GetDisplayAction(string action)

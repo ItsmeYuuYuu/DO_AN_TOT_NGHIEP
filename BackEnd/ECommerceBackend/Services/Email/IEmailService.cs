@@ -19,4 +19,9 @@ public interface IEmailService
     Task SendPaymentUpdatedAsync(Order order, CancellationToken cancellationToken = default);
 
     Task SendOrderStatusUpdatedAsync(Order order, CancellationToken cancellationToken = default);
+
+    Task SendShipmentStatusUpdatedAsync(
+        Order order,
+        Shipment shipment,
+        CancellationToken cancellationToken = default);
 }

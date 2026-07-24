@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { Bot, CheckCircle2, Headphones, MessageSquare, Send, ShoppingCart, TrendingUp, User } from 'lucide-react';
+import { Bot, CheckCircle2, Headphones, History, MessageSquare, Send, ShoppingCart, TrendingUp, User } from 'lucide-react';
 import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatRecommendationMetrics, ChatSession } from '@/features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
@@ -12,6 +12,7 @@ const statusLabel: Record<string, string> = {
 };
 
 const ConsultantChats = () => {
+  const [viewMode, setViewMode] = useState<'queue' | 'history'>('queue');
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -23,13 +24,15 @@ const ConsultantChats = () => {
   const lastTypingSentRef = useRef(0);
 
   const loadQueue = useCallback(async () => {
-    const data = await chatSessionsApi.getHandoffs();
+    const data = viewMode === 'history'
+      ? await chatSessionsApi.getConsultationHistory()
+      : await chatSessionsApi.getHandoffs();
     setSessions(data);
     setActiveSession(current => {
       if (!current) return current;
       return data.find(item => item.sessionid === current.sessionid) ?? current;
     });
-  }, []);
+  }, [viewMode]);
 
   const loadMessages = useCallback(async (sessionId: number) => {
     try {
@@ -62,7 +65,7 @@ const ConsultantChats = () => {
 
   const selectSession = async (session: ChatSession) => {
     setActiveSession(session);
-    if (session.handoffstatus === 'InProgress') {
+    if (viewMode === 'history' || session.handoffstatus === 'InProgress') {
       await loadMessages(session.sessionid);
     } else {
       setMessages([]);
@@ -125,7 +128,7 @@ const ConsultantChats = () => {
             <h1 className="ops-hero-title">Tư vấn trực tiếp</h1>
           </div>
           <div className="rounded-full border border-red-100 bg-white px-4 py-2 text-sm font-black text-[#c4000b] shadow-sm">
-            {sessions.length} phiên đang chờ xử lý
+            {sessions.length} {viewMode === 'history' ? 'phiên tư vấn đã lưu' : 'phiên đang chờ xử lý'}
           </div>
         </div>
       </section>
@@ -159,8 +162,35 @@ const ConsultantChats = () => {
       <div className="grid min-h-[680px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] lg:grid-cols-[340px_1fr]">
         <aside className="border-r border-slate-200 bg-slate-50">
           <div className="border-b border-slate-200 bg-white p-4">
-            <p className="font-black text-[#172033]">Hàng chờ tư vấn</p>
-            <p className="text-xs font-semibold text-slate-400">Các phiên khách cần người thật hỗ trợ.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('queue');
+                  setActiveSession(null);
+                  setMessages([]);
+                }}
+                className={`px-3 py-2 text-xs font-black ${viewMode === 'queue' ? 'bg-[#e30613] text-white' : 'bg-slate-100 text-slate-600'}`}
+              >
+                Hàng đợi
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('history');
+                  setActiveSession(null);
+                  setMessages([]);
+                }}
+                className={`inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-black ${viewMode === 'history' ? 'bg-[#e30613] text-white' : 'bg-slate-100 text-slate-600'}`}
+              >
+                <History size={14} /> Lịch sử
+              </button>
+            </div>
+            <p className="mt-3 text-xs font-semibold text-slate-400">
+              {viewMode === 'history'
+                ? 'Xem lại nội dung và nhân viên đã phụ trách từng phiên.'
+                : 'Các phiên khách cần nhân viên hỗ trợ trực tiếp.'}
+            </p>
           </div>
           <div className="space-y-2 p-3">
             {sessions.map(session => (
@@ -193,7 +223,9 @@ const ConsultantChats = () => {
               </button>
             ))}
             {sessions.length === 0 && (
-              <div className="py-16 text-center text-sm font-semibold text-slate-400">Không có khách đang chờ.</div>
+              <div className="py-16 text-center text-sm font-semibold text-slate-400">
+                {viewMode === 'history' ? 'Chưa có lịch sử tư vấn.' : 'Không có khách đang chờ.'}
+              </div>
             )}
           </div>
         </aside>
@@ -215,7 +247,11 @@ const ConsultantChats = () => {
                     Phiên #{activeSession.sessionid} · {activeSession.title}
                   </p>
                 </div>
-                {activeSession.handoffstatus === 'Waiting' ? (
+                {viewMode === 'history' ? (
+                  <span className="text-xs font-bold text-slate-500">
+                    Phụ trách: {activeSession.assignedname ?? 'Chưa phân công'}
+                  </span>
+                ) : activeSession.handoffstatus === 'Waiting' ? (
                   <button
                     type="button"
                     disabled={busy}
@@ -237,7 +273,7 @@ const ConsultantChats = () => {
               </header>
 
               <div className="flex-1 space-y-4 overflow-y-auto bg-[#f6f8fb] p-5">
-                {activeSession.handoffstatus === 'Waiting' && (
+                {viewMode === 'queue' && activeSession.handoffstatus === 'Waiting' && (
                   <div className="flex h-full flex-col items-center justify-center gap-3 text-slate-400">
                     <MessageSquare size={46} className="text-slate-200" />
                     <p className="text-sm font-semibold">Tiếp nhận phiên để xem toàn bộ ngữ cảnh AI và trả lời khách.</p>
@@ -295,7 +331,7 @@ const ConsultantChats = () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              {activeSession.handoffstatus === 'InProgress' && (
+              {viewMode === 'queue' && activeSession.handoffstatus === 'InProgress' && (
                 <form onSubmit={send} className="flex gap-3 border-t border-slate-200 bg-white p-4">
                   <input
                     value={input}

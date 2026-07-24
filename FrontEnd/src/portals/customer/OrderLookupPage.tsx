@@ -3,6 +3,11 @@ import apiClient from '@/api/apiClient';
 import { Search, Package, CheckCircle2, Clock, Truck, XCircle, ChevronDown, ChevronUp, ArrowLeft, Star, RotateCcw, MessageCircle } from 'lucide-react';
 import { Seo } from '@/components/Seo';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { ordersApi } from '@/features/orders/api/ordersApi';
+import { getApiErrorMessage } from '@/utils/apiError';
+import { confirmAction, notifyError, notifySuccess } from '@/utils/notifications';
+import { formatDateTime } from '@/utils/formatters';
 
 interface OrderLookup {
   orderid: number;
@@ -104,12 +109,14 @@ const SHIPMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 const OrderLookupPage: React.FC = () => {
+  const { user, isLoggedIn } = useAuth();
   const [phone, setPhone] = useState('');
   const [orderId, setOrderId] = useState('');
   const [results, setResults] = useState<OrderLookup[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
   const [searchParams] = useSearchParams();
   const isDetailMode = searchParams.get('mode') === 'detail';
 
@@ -173,6 +180,7 @@ const OrderLookupPage: React.FC = () => {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) { setError('Vui lòng nhập số điện thoại.'); return; }
+    if (!orderId.trim()) { setError('Vui lòng nhập mã đơn hàng.'); return; }
     setLoading(true);
     setError(null);
     setResults(null);
@@ -190,8 +198,28 @@ const OrderLookupPage: React.FC = () => {
   };
 
   const fmtMoney = (n: number) => n.toLocaleString('vi-VN') + 'đ';
-  const fmtDate = (d?: string) =>
-    d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  const fmtDate = (d?: string) => d ? formatDateTime(d) : '';
+
+  const cancelOrder = async (order: OrderLookup) => {
+    const accepted = await confirmAction(
+      `Hủy đơn hàng #${order.orderid}? Tồn kho đã giữ cho đơn sẽ được trả lại.`,
+      { danger: true, confirmLabel: 'Hủy đơn' },
+    );
+    if (!accepted) return;
+
+    setCancellingOrderId(order.orderid);
+    try {
+      await ordersApi.cancelByCustomer(order.orderid);
+      setResults(current => current?.map(item => item.orderid === order.orderid
+        ? { ...item, orderstatus: 'Cancelled', paymentstatus: 'Cancelled' }
+        : item) ?? null);
+      notifySuccess('Đã hủy đơn hàng thành công.');
+    } catch (error: unknown) {
+      notifyError(getApiErrorMessage(error, 'Không thể hủy đơn hàng lúc này.'));
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
 
   const getStatus = (status?: string) =>
     STATUS_CONFIG[status ?? ''] ?? { label: status ?? 'Không rõ', color: 'bg-slate-100 text-slate-600', icon: <Package size={13} /> };
@@ -217,7 +245,7 @@ const OrderLookupPage: React.FC = () => {
               <Search className="text-[#e30613]" size={24} />
             </div>
             <h1 className="text-2xl font-black text-slate-800 mb-2">Tra cứu đơn hàng</h1>
-            <p className="text-slate-400 text-sm">Nhập số điện thoại đặt hàng để kiểm tra tình trạng đơn</p>
+              <p className="text-slate-400 text-sm">Nhập mã đơn và số điện thoại nhận hàng để kiểm tra tình trạng đơn</p>
           </div>
         </div>
       )}
@@ -235,21 +263,21 @@ const OrderLookupPage: React.FC = () => {
                 id="lookup-phone"
                 type="tel"
                 value={phone}
-                onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                inputMode="numeric"
-                pattern="0[0-9]{9}"
-                maxLength={10}
-                placeholder="VD: 0901234567"
+                onChange={e => setPhone(e.target.value.slice(0, 20))}
+                inputMode="tel"
+                maxLength={20}
+                placeholder="VD: 0901234567 hoặc +84 901 234 567"
                 className="w-full border border-slate-200 focus:border-[#e30613] rounded-2xl px-4 py-3 text-sm font-medium outline-none transition-colors"
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5" htmlFor="lookup-orderid">
-                Mã đơn hàng <span className="text-slate-400 font-medium normal-case">(không bắt buộc)</span>
+                Mã đơn hàng <span className="text-red-500">*</span>
               </label>
               <input
                 id="lookup-orderid"
                 type="number"
+                required
                 value={orderId}
                 onChange={e => setOrderId(e.target.value.replace(/\D/g, '').slice(0, 10))}
                 inputMode="numeric"
@@ -455,6 +483,19 @@ const OrderLookupPage: React.FC = () => {
                         {isDetailMode && (
                           <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
                             <Link to="/chat" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600"><MessageCircle size={14} /> Liên hệ tư vấn</Link>
+                            {isLoggedIn &&
+                              user?.rolename === 'Customer' &&
+                              (order.orderstatus ?? '').toLowerCase() === 'pending' && (
+                                <button
+                                  type="button"
+                                  disabled={cancellingOrderId === order.orderid}
+                                  onClick={() => void cancelOrder(order)}
+                                  className="inline-flex items-center gap-2 rounded-xl border border-[#e30613] px-4 py-2 text-xs font-black text-[#c4000b] transition hover:bg-[#fff1f2] disabled:opacity-50"
+                                >
+                                  <XCircle size={14} />
+                                  {cancellingOrderId === order.orderid ? 'Đang hủy...' : 'Hủy đơn'}
+                                </button>
+                              )}
                             {(order.orderstatus ?? '').toLowerCase() === 'completed' && (
                               <>
                                 <Link to="/returns" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600"><RotateCcw size={14} /> Yêu cầu trả hàng/hoàn tiền</Link>

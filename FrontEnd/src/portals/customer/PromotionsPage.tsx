@@ -3,6 +3,7 @@ import apiClient from '@/api/apiClient';
 import { Check, Clock, Copy, DollarSign, Percent, Tag } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 import { Seo } from '@/components/Seo';
+import { formatDate as formatVietnamDate, parseApiDate } from '@/utils/formatters';
 
 interface Voucher {
   vouchercode: string;
@@ -33,7 +34,7 @@ const PromotionsPage: React.FC = () => {
   };
 
   const formatDate = (date?: string) =>
-    date ? new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    date ? formatVietnamDate(date) : '';
 
   const formatDiscount = (voucher: Voucher) => {
     if (voucher.discountpercentage) return `Giảm ${voucher.discountpercentage}%`;
@@ -43,7 +44,7 @@ const PromotionsPage: React.FC = () => {
 
   const getExpiry = (voucher: Voucher) => {
     if (!voucher.validto) return 'Không giới hạn';
-    const diff = new Date(voucher.validto).getTime() - Date.now();
+    const diff = parseApiDate(voucher.validto).getTime() - Date.now();
     const days = Math.ceil(diff / 86_400_000);
     if (days < 0) return 'Đã hết hạn';
     if (days === 0) return 'Hết hạn hôm nay';
@@ -53,7 +54,7 @@ const PromotionsPage: React.FC = () => {
 
   const isExpiringSoon = (voucher: Voucher) => {
     if (!voucher.validto) return false;
-    const diff = new Date(voucher.validto).getTime() - Date.now();
+    const diff = parseApiDate(voucher.validto).getTime() - Date.now();
     return diff > 0 && diff < 3 * 86_400_000;
   };
 

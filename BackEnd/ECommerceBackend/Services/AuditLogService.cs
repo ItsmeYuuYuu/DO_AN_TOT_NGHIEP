@@ -110,7 +110,7 @@ public class AuditLogService : BackgroundService
                     Action    = log.Action,
                     TableName = log.Tablename,
                     RecordId  = log.Recordid,
-                    CreatedAt = log.Createdat ?? DateTime.Now,
+                    CreatedAt = log.Createdat ?? DateTime.UtcNow,
                 });
             }
         }
@@ -126,5 +126,5 @@ public record AuditLogEntry
     public string  Action    { get; init; } = string.Empty;
     public string? TableName { get; init; }
     public string? RecordId  { get; init; }
-    public DateTime CreatedAt { get; init; } = DateTime.Now;
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 }

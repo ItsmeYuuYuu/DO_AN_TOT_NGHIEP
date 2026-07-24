@@ -256,6 +256,24 @@ Database local hiện tại được duy trì bằng EF Core migrations và dữ
 có trong PostgreSQL. `DbInitializer` cũ đang bị loại khỏi compilation và không
 tự chạy khi backend khởi động.
 
+### Chạy nhanh trên Windows
+
+Sau khi PostgreSQL đã hoạt động và database đã được áp dụng migration, bấm đúp
+file `start-local.bat` ở thư mục gốc. Script sẽ mở Backend, Frontend và ngrok
+trong các cửa sổ terminal riêng. Backend dùng lại bản build hiện có để khởi động
+nhanh và chỉ build lại khi source C# thay đổi; nếu Frontend chưa có
+`node_modules`, script sẽ tự chạy `npm install`. Ngrok chuyển tiếp cổng HTTP
+`5240` qua địa chỉ:
+
+```text
+https://president-trapeze-skating.ngrok-free.dev
+```
+
+Đóng cửa sổ tương ứng để dừng từng dịch vụ.
+
+Máy cần cài và đăng nhập ngrok trước. Nếu `ngrok` chưa có trong `PATH`, Backend
+và Frontend vẫn được khởi động bình thường, còn public tunnel sẽ được bỏ qua.
+
 ### 3. Chạy backend
 
 ```powershell

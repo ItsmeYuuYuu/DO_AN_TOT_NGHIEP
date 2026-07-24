@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
+  ArrowUp,
   Bot,
   ChevronDown,
   ClipboardList,
@@ -28,6 +29,7 @@ import { categoriesApi, type Category } from '@/features/categories/api/categori
 import { productsApi, type Product } from '@/features/products/api/productsApi';
 import { productSeriesApi, type ProductSeries } from '@/features/productSeries/api/productSeriesApi';
 import Logo from '@/assets/Logo.png';
+import { formatTime } from '@/utils/formatters';
 
 const normalizeMenuText = (value: string) =>
   value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -47,12 +49,21 @@ export const CustomerLayout: React.FC = () => {
   const [aiWidgetLoading, setAiWidgetLoading] = useState(false);
   const [aiWidgetConsultantTyping, setAiWidgetConsultantTyping] = useState(false);
   const [aiWidgetError, setAiWidgetError] = useState<string | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const aiWidgetMessagesRef = useRef<HTMLDivElement>(null);
   const aiWidgetTypingSentRef = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { totalItems } = useCart();
   const { user, isLoggedIn, logout } = useAuth();
+
+  useEffect(() => {
+    const updateBackToTopVisibility = () => setShowBackToTop(window.scrollY > 480);
+
+    updateBackToTopVisibility();
+    window.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
+    return () => window.removeEventListener('scroll', updateBackToTopVisibility);
+  }, []);
 
   useEffect(() => {
     brandsApi.getAll()
@@ -67,6 +78,31 @@ export const CustomerLayout: React.FC = () => {
     productSeriesApi.getAll({ activeOnly: true })
       .then(response => setMenuSeries(response.data))
       .catch(() => setMenuSeries([]));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreLatestChat = async () => {
+      try {
+        const sessions = await chatSessionsApi.getMySessions();
+        const latestSession = sessions[0];
+        if (!latestSession || cancelled) return;
+
+        const messages = await chatSessionsApi.getMessages(latestSession.sessionid);
+        if (cancelled) return;
+
+        setAiWidgetSession(latestSession);
+        setAiWidgetMessages(messages);
+      } catch {
+        // A first-time visitor may not have a chat session to restore yet.
+      }
+    };
+
+    void restoreLatestChat();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -415,11 +451,11 @@ export const CustomerLayout: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="p-6">
+                  <div className="p-6 [font-family:'Segoe_UI',Tahoma,Arial,sans-serif]">
                     <div className="mb-5 flex items-end justify-between border-b customer-rule pb-4">
                       <div>
                         <p className="customer-label">Dòng máy</p>
-                        <h3 className="customer-display mt-1 text-3xl font-bold text-[#1f2937]">
+                        <h3 className="mt-1 text-3xl font-semibold tracking-[-0.025em] text-[#1f2937]">
                           {activePhoneBrand?.brandname}
                         </h3>
                       </div>
@@ -434,15 +470,17 @@ export const CustomerLayout: React.FC = () => {
                     </div>
 
                     {activePhoneBrand?.phoneSeries.length ? (
-                      <div className="grid grid-cols-2 border-l border-t customer-rule">
+                      <div className="grid grid-cols-2 gap-2.5">
                         {activePhoneBrand.phoneSeries.map(series => (
                           <NavLink
                             key={series.seriesid}
                             to={buildPhoneBrandUrl(activePhoneBrand.brandid, series.seriesname)}
-                            className="flex items-center justify-between border-b border-r customer-rule px-4 py-3 text-sm font-bold text-[#1f2937] hover:bg-[#ffd166]/30"
+                            className="flex items-center justify-between rounded-xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#1f2937] transition hover:border-[#f3b8bd] hover:bg-[#fff1f2] hover:text-[#c4000b]"
                           >
                             <span>{series.seriesname}</span>
-                            <span className="text-[10px] text-slate-400">{series.productcount}</span>
+                            <span className="rounded-full bg-[#fff1f2] px-2 py-0.5 text-[10px] font-semibold text-[#b4232d]">
+                              {series.productcount}
+                            </span>
                           </NavLink>
                         ))}
                       </div>
@@ -539,6 +577,17 @@ export const CustomerLayout: React.FC = () => {
 
       <main className="relative flex-1">
         <Outlet />
+        {showBackToTop && (
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-20 left-4 z-[9998] flex h-11 w-11 items-center justify-center rounded-full border border-[#f3b8bd] bg-white text-[#c4000b] shadow-[0_12px_30px_rgba(90,20,28,0.18)] transition hover:-translate-y-1 hover:border-[#e30613] hover:bg-[#e30613] hover:text-white sm:bottom-5 sm:left-5"
+            aria-label="Lên đầu trang"
+            title="Lên đầu trang"
+          >
+            <ArrowUp size={19} strokeWidth={2.4} />
+          </button>
+        )}
         {showAiWidget && (
           <div className="fixed bottom-20 right-4 z-[9999] sm:bottom-5 sm:right-5">
             {aiWidgetOpen ? (
@@ -673,7 +722,7 @@ export const CustomerLayout: React.FC = () => {
                             )}
 
                           <span className={`mt-2 block text-[10px] ${isUserMessage ? 'text-white/60' : 'text-slate-400'}`}>
-                            {message.sentat ? new Date(message.sentat).toLocaleTimeString() : 'Đang gửi...'}
+                            {message.sentat ? formatTime(message.sentat) : 'Đang gửi...'}
                           </span>
                         </div>
                       </div>

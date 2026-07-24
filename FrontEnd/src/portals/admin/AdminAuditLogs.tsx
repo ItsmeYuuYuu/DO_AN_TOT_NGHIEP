@@ -100,8 +100,8 @@ export default function AdminAuditLogs() {
     if (filterUserId) params.userId = parseInt(filterUserId);
     if (filterAction) params.action = filterAction;
     if (filterTableName) params.tableName = filterTableName;
-    if (filterFromDate) params.fromDate = new Date(filterFromDate).toISOString();
-    if (filterToDate) params.toDate = new Date(filterToDate).toISOString();
+    if (filterFromDate) params.fromDate = `${filterFromDate}T00:00:00`;
+    if (filterToDate) params.toDate = `${filterToDate}T23:59:59.999`;
     return params;
   }, [filterAction, filterFromDate, filterTableName, filterToDate, filterUserId]);
 

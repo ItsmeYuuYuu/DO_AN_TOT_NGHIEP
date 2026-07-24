@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/context/AuthContext';
 import { Button } from '@/components/Button';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
+import { formatDate } from '@/utils/formatters';
 
 const formatSkuToAttributes = (sku?: string) => {
   if (!sku) return 'Sản phẩm';
@@ -214,7 +215,7 @@ export const ProductReviews: React.FC<Props> = ({ productId, variantId }) => {
                          </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">{rev.createdat ? new Date(rev.createdat).toLocaleDateString('vi-VN') : ''}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{rev.createdat ? formatDate(rev.createdat) : ''}</p>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex">

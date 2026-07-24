@@ -10,6 +10,7 @@ using ECommerceBackend.Models;
 //using ECommerceBackend.Filters;
 using ECommerceBackend.Middlewares;
 using ECommerceBackend.DTOs.Common;
+using ECommerceBackend.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
@@ -115,6 +116,24 @@ builder.Services.AddRateLimiter(options =>
                 AutoReplenishment = true
             });
     });
+    options.AddPolicy("OrderLookupRequests", httpContext =>
+    {
+        var userId = httpContext.User.FindFirst("userid")?.Value;
+        var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var partitionKey = !string.IsNullOrWhiteSpace(userId)
+            ? $"order-lookup:user:{userId}"
+            : $"order-lookup:ip:{remoteIp}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 8,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
 });
 
 // ── Singleton Services ────────────────────────────────────────────────────────
@@ -154,8 +173,11 @@ builder.Services.AddControllers(options =>
         options.Filters.AddService<ECommerceBackend.Filters.AuditActionFilter>();
     })
     .AddJsonOptions(options =>
+    {
         options.JsonSerializerOptions.ReferenceHandler =
-            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles)
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
+    })
     .ConfigureApiBehaviorOptions(options =>
     {
         options.InvalidModelStateResponseFactory = context =>
@@ -185,8 +207,12 @@ if (string.IsNullOrEmpty(connectionString) || connectionString.Contains("YOUR_LO
     throw new InvalidOperationException("ECommerceBackend cannot start: ConnectionStrings:DefaultConnection is using placeholder. Run 'dotnet user-secrets set' to configure.");
 }
 
+var utcConnectionString = connectionString.Contains("Timezone=", StringComparison.OrdinalIgnoreCase)
+    ? connectionString
+    : $"{connectionString.TrimEnd(';')};Timezone=UTC";
+
 builder.Services.AddDbContext<ECommerceContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(utcConnectionString));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>

@@ -29,7 +29,7 @@ public sealed class ChatOrchestratorService : IChatOrchestratorService
             Sessionid = session.Sessionid,
             Sendertype = "user",
             Messagecontent = content.Trim(),
-            Sentat = DateTime.Now
+            Sentat = DateTime.UtcNow
         };
         _context.Chatmessages.Add(userMessage);
         await _context.SaveChangesAsync();
@@ -58,6 +58,10 @@ public sealed class ChatOrchestratorService : IChatOrchestratorService
             session.Sessionid,
             userMessage.Messagecontent,
             history));
+        var normalizedRecommendations = aiResponse.Recommendations
+            .GroupBy(item => item.ProductId)
+            .Select(group => group.First())
+            .ToList();
 
         var assistantMessage = new Chatmessage
         {
@@ -66,28 +70,28 @@ public sealed class ChatOrchestratorService : IChatOrchestratorService
             Messagecontent = aiResponse.Text,
             Responsetype = aiResponse.ResponseType,
             Quickreplies = ChatResponseMetadata.SerializeQuickReplies(aiResponse.QuickReplies),
-            Sentat = DateTime.Now
+            Sentat = DateTime.UtcNow
         };
         _context.Chatmessages.Add(assistantMessage);
         await _context.SaveChangesAsync();
 
-        var recommendationData = aiResponse.Recommendations
+        var recommendationData = normalizedRecommendations
             .Select((item, index) => new ChatRecommendationData
             {
                 Recommendationid = checked(assistantMessage.Messageid * 100 + index + 1),
                 Productid = item.ProductId,
                 Variantid = item.VariantId,
                 Rank = index + 1,
-                Createdat = DateTime.Now
+                Createdat = DateTime.UtcNow
             })
             .ToList();
         assistantMessage.Recommendations = recommendationData.Count == 0
             ? null
             : ChatRecommendationDataSerializer.Serialize(recommendationData);
-        session.Endtime = DateTime.Now;
+        session.Endtime = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        var cards = aiResponse.Recommendations.Select((item, index) => new ChatRecommendationDto(
+        var cards = normalizedRecommendations.Select((item, index) => new ChatRecommendationDto(
             recommendationData[index].Recommendationid,
             item.ProductId,
             item.ProductSlug,

@@ -28,7 +28,7 @@ import { brandsApi, type Brand } from '@/features/brands/api/brandsApi';
 import { categoriesApi, type Category } from '@/features/categories/api/categoriesApi';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
 import { productSeriesApi, type ProductSeries } from '@/features/productSeries/api/productSeriesApi';
-import Logo from '@/assets/Logo.png';
+import Logo from '@/assets/Logo.webp';
 import { formatTime } from '@/utils/formatters';
 
 const normalizeMenuText = (value: string) =>
@@ -126,17 +126,26 @@ export const CustomerLayout: React.FC = () => {
     [menuCategories],
   );
 
+  const visibleMenuCategories = useMemo(
+    () => menuCategories.filter(category =>
+      menuProducts.some(product => product.category?.id === category.categoryid)
+    ),
+    [menuCategories, menuProducts],
+  );
+
   const phoneMenuBrands = useMemo(
-    () => menuBrands.map(brand => ({
-      ...brand,
-      phoneSeries: menuSeries
-        .filter(series => series.brandid === brand.brandid)
-        .sort((a, b) => a.displayorder - b.displayorder || a.seriesname.localeCompare(b.seriesname)),
-      phoneProducts: menuProducts.filter(product =>
-        (!phoneCategory || product.category?.id === phoneCategory.categoryid) &&
-        product.brand?.id === brand.brandid
-      ),
-    })),
+    () => menuBrands
+      .map(brand => ({
+        ...brand,
+        phoneSeries: menuSeries
+          .filter(series => series.brandid === brand.brandid)
+          .sort((a, b) => a.displayorder - b.displayorder || a.seriesname.localeCompare(b.seriesname)),
+        phoneProducts: menuProducts.filter(product =>
+          (!phoneCategory || product.category?.id === phoneCategory.categoryid) &&
+          product.brand?.id === brand.brandid
+        ),
+      }))
+      .filter(brand => brand.phoneProducts.length > 0),
     [menuBrands, menuProducts, menuSeries, phoneCategory],
   );
 
@@ -158,6 +167,8 @@ export const CustomerLayout: React.FC = () => {
     const query = params.toString();
     return query ? `/products?${query}` : '/products';
   };
+
+  const buildCategoryUrl = (categoryId: number) => `/products?categoryId=${categoryId}`;
 
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
@@ -324,7 +335,7 @@ export const CustomerLayout: React.FC = () => {
         <div className="mx-auto max-w-7xl px-4">
           <div className="flex h-20 items-center gap-4 md:h-24 md:gap-7">
             <Link to="/" className="flex h-full shrink-0 items-center py-3">
-              <img src={Logo} alt="Cường Điện Thoại" className="h-full w-auto object-contain" />
+              <img src={Logo} alt="Cường Điện Thoại" width={400} height={188} className="h-full w-auto object-contain" />
             </Link>
 
             <form onSubmit={handleSearch} className="hidden max-w-2xl flex-1 md:block">
@@ -422,77 +433,92 @@ export const CustomerLayout: React.FC = () => {
               <span className="ml-2 rounded-full bg-[#e30613] px-1.5 py-0.5 text-[8px] text-white">NEW</span>
             </NavLink>
 
-            <div className="group/phone relative flex">
-              <button className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] group-hover/phone:bg-[#fff1f2] group-hover/phone:text-[#c4000b]">
-                Điện thoại <ChevronDown size={14} />
-              </button>
+            {visibleMenuCategories.map(category => (
+              category.categoryid === phoneCategory?.categoryid ? (
+                <div key={category.categoryid} className="group/phone relative flex">
+                  <Link
+                    to={buildCategoryUrl(category.categoryid)}
+                    className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] group-hover/phone:bg-[#fff1f2] group-hover/phone:text-[#c4000b]"
+                  >
+                    {category.categoryname} <ChevronDown size={14} />
+                  </Link>
 
-              <div className="pointer-events-none absolute left-0 top-full z-[999] w-[900px] max-w-[calc(100vw-2rem)] translate-y-2 pt-2 opacity-0 transition duration-200 group-hover/phone:pointer-events-auto group-hover/phone:translate-y-0 group-hover/phone:opacity-100">
-                <div className="grid min-h-80 grid-cols-[250px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
-                  <div className="bg-[#fff1f2] p-4 text-[#1f2937]">
-                    <p className="mb-3 text-[9px] font-black uppercase tracking-[0.2em] text-[#c4000b]">Hãng sản xuất</p>
-                    <div className="space-y-1">
-                      {phoneMenuBrands.map(brand => (
-                        <NavLink
-                          key={brand.brandid}
-                          to={buildPhoneBrandUrl(brand.brandid)}
-                          onMouseEnter={() => setActivePhoneBrandId(brand.brandid)}
-                          onFocus={() => setActivePhoneBrandId(brand.brandid)}
-                          className={`flex items-center justify-between px-3 py-2.5 text-sm font-bold ${
-                            activePhoneBrand?.brandid === brand.brandid
-                              ? 'rounded-2xl bg-[#e30613] text-white'
-                              : 'rounded-2xl text-[#4b5563] hover:bg-[#fee2e2] hover:text-[#c4000b]'
-                          }`}
-                        >
-                          <span>{brand.brandname}</span>
-                          <span className="text-[10px]">{brand.phoneProducts.length} máy</span>
-                        </NavLink>
-                      ))}
+                  <div className="pointer-events-none absolute left-0 top-full z-[999] w-[900px] max-w-[calc(100vw-2rem)] translate-y-2 pt-2 opacity-0 transition duration-200 group-hover/phone:pointer-events-auto group-hover/phone:translate-y-0 group-hover/phone:opacity-100">
+                    <div className="grid min-h-80 grid-cols-[250px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
+                      <div className="bg-[#fff1f2] p-4 text-[#1f2937]">
+                        <p className="mb-3 text-[9px] font-black uppercase tracking-[0.2em] text-[#c4000b]">Hãng sản xuất</p>
+                        <div className="space-y-1">
+                          {phoneMenuBrands.map(brand => (
+                            <NavLink
+                              key={brand.brandid}
+                              to={buildPhoneBrandUrl(brand.brandid)}
+                              onMouseEnter={() => setActivePhoneBrandId(brand.brandid)}
+                              onFocus={() => setActivePhoneBrandId(brand.brandid)}
+                              className={`flex items-center justify-between px-3 py-2.5 text-sm font-bold ${
+                                activePhoneBrand?.brandid === brand.brandid
+                                  ? 'rounded-2xl bg-[#e30613] text-white'
+                                  : 'rounded-2xl text-[#4b5563] hover:bg-[#fee2e2] hover:text-[#c4000b]'
+                              }`}
+                            >
+                              <span>{brand.brandname}</span>
+                              <span className="text-[10px]">{brand.phoneProducts.length} máy</span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-6 [font-family:'Segoe_UI',Tahoma,Arial,sans-serif]">
+                        <div className="mb-5 flex items-end justify-between border-b customer-rule pb-4">
+                          <div>
+                            <p className="customer-label">Dòng máy</p>
+                            <h3 className="mt-1 text-3xl font-semibold tracking-[-0.025em] text-[#1f2937]">
+                              {activePhoneBrand?.brandname}
+                            </h3>
+                          </div>
+                          {activePhoneBrand && (
+                            <NavLink
+                              to={buildPhoneBrandUrl(activePhoneBrand.brandid)}
+                              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#c4000b]"
+                            >
+                              Xem tất cả <ArrowRight size={14} />
+                            </NavLink>
+                          )}
+                        </div>
+
+                        {activePhoneBrand?.phoneSeries.length ? (
+                          <div className="grid grid-cols-2 gap-2.5">
+                            {activePhoneBrand.phoneSeries.map(series => (
+                              <NavLink
+                                key={series.seriesid}
+                                to={buildPhoneBrandUrl(activePhoneBrand.brandid, series.seriesname)}
+                                className="flex items-center justify-between rounded-xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#1f2937] transition hover:border-[#f3b8bd] hover:bg-[#fff1f2] hover:text-[#c4000b]"
+                              >
+                                <span>{series.seriesname}</span>
+                                <span className="rounded-full bg-[#fff1f2] px-2 py-0.5 text-[10px] font-semibold text-[#b4232d]">
+                                  {series.productcount}
+                                </span>
+                              </NavLink>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="border border-dashed customer-rule px-5 py-10 text-center text-sm text-slate-400">
+                            Chưa có dòng máy thuộc thương hiệu này.
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="p-6 [font-family:'Segoe_UI',Tahoma,Arial,sans-serif]">
-                    <div className="mb-5 flex items-end justify-between border-b customer-rule pb-4">
-                      <div>
-                        <p className="customer-label">Dòng máy</p>
-                        <h3 className="mt-1 text-3xl font-semibold tracking-[-0.025em] text-[#1f2937]">
-                          {activePhoneBrand?.brandname}
-                        </h3>
-                      </div>
-                      {activePhoneBrand && (
-                        <NavLink
-                          to={buildPhoneBrandUrl(activePhoneBrand.brandid)}
-                          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#c4000b]"
-                        >
-                          Xem tất cả <ArrowRight size={14} />
-                        </NavLink>
-                      )}
-                    </div>
-
-                    {activePhoneBrand?.phoneSeries.length ? (
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {activePhoneBrand.phoneSeries.map(series => (
-                          <NavLink
-                            key={series.seriesid}
-                            to={buildPhoneBrandUrl(activePhoneBrand.brandid, series.seriesname)}
-                            className="flex items-center justify-between rounded-xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-[#1f2937] transition hover:border-[#f3b8bd] hover:bg-[#fff1f2] hover:text-[#c4000b]"
-                          >
-                            <span>{series.seriesname}</span>
-                            <span className="rounded-full bg-[#fff1f2] px-2 py-0.5 text-[10px] font-semibold text-[#b4232d]">
-                              {series.productcount}
-                            </span>
-                          </NavLink>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="border border-dashed customer-rule px-5 py-10 text-center text-sm text-slate-400">
-                        Chưa có dòng máy thuộc thương hiệu này.
-                      </div>
-                    )}
                   </div>
                 </div>
-              </div>
-            </div>
+              ) : (
+                <NavLink
+                  key={category.categoryid}
+                  to={buildCategoryUrl(category.categoryid)}
+                  className="flex items-center rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#fff1f2] hover:text-[#c4000b]"
+                >
+                  {category.categoryname}
+                </NavLink>
+              )
+            ))}
 
             <NavLink
               to="/promotions"
@@ -539,6 +565,23 @@ export const CustomerLayout: React.FC = () => {
                 >
                   Tra cứu đơn
                 </Link>
+              </div>
+
+              <p className="customer-label mt-5">Danh mục sản phẩm</p>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {visibleMenuCategories.map(category => (
+                  <Link
+                    key={category.categoryid}
+                    to={buildCategoryUrl(category.categoryid)}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-2xl border border-[#e5e7eb] bg-white px-3 py-3 text-sm font-black text-[#1f2937] shadow-sm"
+                  >
+                    <span className="block truncate">{category.categoryname}</span>
+                    <span className="mt-1 block text-[10px] font-bold text-slate-400">
+                      {menuProducts.filter(product => product.category?.id === category.categoryid).length} sản phẩm
+                    </span>
+                  </Link>
+                ))}
               </div>
 
               <p className="customer-label mt-5">Hãng điện thoại</p>
@@ -816,7 +859,7 @@ export const CustomerLayout: React.FC = () => {
       <footer className="border-t-4 border-[#e30613] bg-[linear-gradient(135deg,#fff8f8_0%,#fff1f2_55%,#ffffff_100%)] text-[#1f2937]">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-[1.3fr_1fr_1fr_1.2fr]">
           <div>
-            <img src={Logo} alt="Cường Điện Thoại" className="h-16 w-auto object-contain" />
+            <img src={Logo} alt="Cường Điện Thoại" width={400} height={188} className="h-16 w-auto object-contain" />
             <p className="mt-5 max-w-sm text-sm leading-6 text-[#596273]">
               Cửa hàng thiết bị công nghệ tập trung vào dữ liệu sản phẩm rõ ràng, tư vấn đúng nhu cầu và quy trình hậu mãi có thể theo dõi.
             </p>

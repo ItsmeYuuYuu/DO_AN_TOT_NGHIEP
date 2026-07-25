@@ -87,6 +87,41 @@
     transform 680ms cubic-bezier(0.77, 0, 0.18, 1);
 }
 
+.auth-overlay-content {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  opacity: 0;
+  transform: translateY(1.75rem);
+}
+
+.auth-overlay-copy--register .auth-overlay-content {
+  align-items: flex-end;
+}
+
+.auth-motion-card.is-login .auth-overlay-copy--login .auth-overlay-content,
+.auth-motion-card.is-register .auth-overlay-copy--register .auth-overlay-content {
+  animation: auth-overlay-content-in 460ms cubic-bezier(0.22, 1, 0.36, 1) 620ms both;
+}
+
+.auth-motion-card.is-login .auth-overlay-copy--register .auth-overlay-content,
+.auth-motion-card.is-register .auth-overlay-copy--login .auth-overlay-content {
+  animation: none;
+}
+
+@keyframes auth-overlay-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .auth-overlay-copy--login {
   opacity: 1;
   pointer-events: auto;
@@ -205,6 +240,13 @@
   .auth-overlay,
   .auth-overlay-copy {
     transition-duration: 1ms;
+  }
+
+  .auth-overlay-content {
+    opacity: 1;
+    transform: none;
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
   }
 }
 
@@ -533,6 +575,70 @@
   .ops-button-secondary:hover {
     border-color: var(--ops-primary);
     color: var(--ops-primary);
+  }
+
+  .admin-dashboard-intro .admin-intro-hero,
+  .admin-dashboard-intro .admin-intro-stats > *,
+  .admin-dashboard-intro .admin-intro-analytics > *,
+  .admin-dashboard-intro .admin-intro-details > * {
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: admin-dashboard-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .admin-dashboard-intro .admin-intro-hero {
+    animation-delay: 40ms;
+  }
+
+  .admin-dashboard-intro .admin-intro-stats > :nth-child(1) { animation-delay: 130ms; }
+  .admin-dashboard-intro .admin-intro-stats > :nth-child(2) { animation-delay: 200ms; }
+  .admin-dashboard-intro .admin-intro-stats > :nth-child(3) { animation-delay: 270ms; }
+  .admin-dashboard-intro .admin-intro-stats > :nth-child(4) { animation-delay: 340ms; }
+
+  .admin-dashboard-intro .admin-intro-analytics > :nth-child(1) { animation-delay: 410ms; }
+  .admin-dashboard-intro .admin-intro-analytics > :nth-child(2) { animation-delay: 480ms; }
+  .admin-dashboard-intro .admin-intro-analytics > :nth-child(3) { animation-delay: 550ms; }
+
+  .admin-dashboard-intro .admin-intro-details > :nth-child(1) { animation-delay: 620ms; }
+  .admin-dashboard-intro .admin-intro-details > :nth-child(2) { animation-delay: 690ms; }
+
+  .admin-dashboard-intro .admin-intro-revenue-chart {
+    transform-origin: center bottom;
+    animation: admin-dashboard-chart 720ms 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes admin-dashboard-rise {
+    from {
+      opacity: 0;
+      transform: translateY(24px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes admin-dashboard-chart {
+    from {
+      opacity: 0;
+      transform: scaleY(0.35);
+    }
+    to {
+      opacity: 1;
+      transform: scaleY(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-dashboard-intro .admin-intro-hero,
+    .admin-dashboard-intro .admin-intro-stats > *,
+    .admin-dashboard-intro .admin-intro-analytics > *,
+    .admin-dashboard-intro .admin-intro-details > *,
+    .admin-dashboard-intro .admin-intro-revenue-chart {
+      opacity: 1;
+      transform: none;
+      animation: none;
+    }
   }
 
   /* Retail Product Card */

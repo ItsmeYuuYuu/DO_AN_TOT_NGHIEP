@@ -99,7 +99,12 @@ const NewsPage: React.FC = () => {
                 <img
                   src={detailPost.thumbnail}
                   alt={detailPost.title}
+                  width={1280}
+                  height={720}
                   className="aspect-video w-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
                   onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
                 />
               )}
@@ -190,7 +195,12 @@ const NewsPage: React.FC = () => {
                   <img
                     src={featured.thumbnail}
                     alt={featured.title}
+                    width={1280}
+                    height={720}
                     className="aspect-video h-full w-full object-cover md:aspect-auto"
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
                     onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 ) : (
@@ -225,7 +235,11 @@ const NewsPage: React.FC = () => {
                     <img
                       src={post.thumbnail}
                       alt={post.title}
+                      width={800}
+                      height={450}
                       className="aspect-video w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
                       onError={event => { (event.target as HTMLImageElement).style.display = 'none'; }}
                     />
                   ) : (

@@ -6,6 +6,7 @@ import { Edit2, Trash2, Sliders, Image, Check, X, Upload, LoaderCircle } from 'l
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError, notifySuccess } from '@/utils/notifications';
 import { getProductPath } from '@/features/products/utils/productLinks';
+import { ImagePositionEditor } from '@/components/ImagePositionEditor';
 
 
 export const AdminPromotionalContents: React.FC = () => {
@@ -24,6 +25,7 @@ export const AdminPromotionalContents: React.FC = () => {
   const [isactive, setIsactive] = useState(true);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageToFrame, setImageToFrame] = useState<File[]>([]);
 
   useEffect(() => {
     loadContents();
@@ -219,7 +221,8 @@ export const AdminPromotionalContents: React.FC = () => {
                   className="hidden"
                   disabled={uploadingImage}
                   onChange={event => {
-                    void handleImageUpload(event.target.files?.[0]);
+                    const file = event.target.files?.[0];
+                    if (file) setImageToFrame([file]);
                     event.target.value = '';
                   }}
                 />
@@ -372,6 +375,21 @@ export const AdminPromotionalContents: React.FC = () => {
           )}
         </div>
       </div>
+      {imageToFrame.length > 0 && (
+        <ImagePositionEditor
+          files={imageToFrame}
+          title={activeTab === 'Slider' ? 'Căn ảnh slider chính' : 'Căn ảnh banner phụ'}
+          aspectRatio={16 / 9}
+          outputWidth={1600}
+          outputHeight={900}
+          backgroundColor="#ffffff"
+          onCancel={() => setImageToFrame([])}
+          onComplete={async files => {
+            setImageToFrame([]);
+            await handleImageUpload(files[0]);
+          }}
+        />
+      )}
     </div>
   );
 };

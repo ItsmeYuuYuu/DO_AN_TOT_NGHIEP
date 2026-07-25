@@ -26,7 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import Logo from '@/assets/Logo.png';
+import Logo from '@/assets/Logo.webp';
 import { Seo } from '@/components/Seo';
 
 interface NavItem {
@@ -128,7 +128,7 @@ export const AdminLayout: React.FC = () => {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
         <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
           <Link to="/admin" className="flex min-w-0 items-center gap-3">
-            <img src={Logo} alt="Admin Logo" className="h-12 w-auto shrink-0 object-contain" />
+            <img src={Logo} alt="Admin Logo" width={400} height={188} className="h-12 w-auto shrink-0 object-contain" />
             <div className="hidden min-w-0 sm:block">
               <p className="text-sm font-black leading-tight text-[#172033]">Trung tâm quản trị</p>
               <p className="truncate text-[11px] text-slate-400">Điều phối sản phẩm, đơn hàng và nhân sự</p>

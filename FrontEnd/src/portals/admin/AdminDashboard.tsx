@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Bot,
   DollarSign,
   FileText,
   History,
@@ -21,6 +22,7 @@ import type {
   TopCustomer,
   TopProduct,
 } from '@/features/dashboard/api/dashboardApi';
+import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 
 interface StatCardProps {
   title: string;
@@ -197,6 +199,12 @@ const StatCard = ({ title, value, hint, trend, icon, tone, loading }: StatCardPr
 );
 
 const AdminDashboard: React.FC = () => {
+  const [playIntro] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const shouldPlay = window.sessionStorage.getItem('admin-dashboard-intro') === '1';
+    window.sessionStorage.removeItem('admin-dashboard-intro');
+    return shouldPlay;
+  });
   const [todayResults, setTodayResults] = useState<TodaySalesResults | null>(null);
   const [todayLoading, setTodayLoading] = useState(true);
   const [todayError, setTodayError] = useState<string | null>(null);
@@ -223,6 +231,8 @@ const AdminDashboard: React.FC = () => {
   const [orderStatusData, setOrderStatusData] = useState<OrderStatusDistribution[]>([]);
   const [orderStatusLoading, setOrderStatusLoading] = useState(true);
   const [orderStatusPeriod, setOrderStatusPeriod] = useState('30d');
+  const [aiRecommendationCount, setAiRecommendationCount] = useState(0);
+  const [aiMetricsLoading, setAiMetricsLoading] = useState(true);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; label: string; revenue: number } | null>(null);
@@ -305,6 +315,18 @@ const AdminDashboard: React.FC = () => {
     }
   }, [orderStatusPeriod]);
 
+  const fetchAiRecommendationMetrics = useCallback(async () => {
+    setAiMetricsLoading(true);
+    try {
+      const result = await chatSessionsApi.getRecommendationMetrics(30);
+      setAiRecommendationCount(result.totalrecommendations);
+    } catch {
+      setAiRecommendationCount(0);
+    } finally {
+      setAiMetricsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchTodayResults();
   }, [fetchTodayResults, refreshKey]);
@@ -314,6 +336,7 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => { fetchTopProducts(); }, [fetchTopProducts, refreshKey]);
   useEffect(() => { fetchTopCustomers(); }, [fetchTopCustomers, refreshKey]);
   useEffect(() => { fetchOrderStatusDistribution(); }, [fetchOrderStatusDistribution, refreshKey]);
+  useEffect(() => { fetchAiRecommendationMetrics(); }, [fetchAiRecommendationMetrics, refreshKey]);
 
   useEffect(() => {
     if ((revenuePeriod === 'today' || revenuePeriod === 'yesterday') && revenueGroupBy !== 'hour') {
@@ -340,8 +363,8 @@ const AdminDashboard: React.FC = () => {
     : (['day', 'dayofweek'] as const);
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6 pb-10">
-      <section className="ops-hero overflow-hidden">
+    <div className={`mx-auto max-w-[1600px] space-y-6 pb-10 ${playIntro ? 'admin-dashboard-intro' : ''}`}>
+      <section className="ops-hero admin-intro-hero overflow-hidden">
         <div className="grid gap-6 p-6 lg:grid-cols-[1.4fr_0.6fr] lg:items-end">
           <div>
             <h1 className="ops-hero-title">Tổng quan vận hành</h1>
@@ -351,7 +374,7 @@ const AdminDashboard: React.FC = () => {
             onClick={() => setRefreshKey(prev => prev + 1)}
             className="ops-hero-action"
           >
-            <RefreshCw size={16} className={`${todayLoading || revenueLoading || activitiesLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw size={16} className={`${todayLoading || revenueLoading || activitiesLoading || aiMetricsLoading ? 'animate-spin' : ''}`} />
             Tải lại dữ liệu
           </button>
         </div>
@@ -362,7 +385,7 @@ const AdminDashboard: React.FC = () => {
         )}
       </section>
 
-      <div className="grid gap-5 md:grid-cols-3">
+      <div className="admin-intro-stats grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Doanh thu hôm nay"
           value={todayResults ? formatCurrency(todayResults.netRevenueToday) : '0đ'}
@@ -388,9 +411,17 @@ const AdminDashboard: React.FC = () => {
           tone="bg-slate-100 text-[#172033]"
           loading={todayLoading}
         />
+        <StatCard
+          title="AI đề xuất (30 ngày)"
+          value={`${aiRecommendationCount} lượt`}
+          hint="sản phẩm được AI gợi ý"
+          icon={<Bot size={24} />}
+          tone="bg-violet-50 text-violet-700"
+          loading={aiMetricsLoading}
+        />
       </div>
 
-      <div id="phan-tich" className="grid scroll-mt-32 gap-6 lg:grid-cols-4">
+      <div id="phan-tich" className="admin-intro-analytics grid scroll-mt-32 gap-6 lg:grid-cols-4">
         <section className="ops-card flex h-[460px] flex-col p-6 lg:col-span-2">
           <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-start">
             <div>
@@ -445,7 +476,7 @@ const AdminDashboard: React.FC = () => {
             ) : (
               <div className="relative h-full w-full overflow-hidden rounded-[24px] border border-slate-100 bg-gradient-to-br from-white via-[#fff7f7] to-[#f8fafc] p-3">
                 <div className="relative h-[calc(100%-36px)] w-full">
-                  <svg viewBox="0 0 720 260" preserveAspectRatio="none" className="h-full w-full">
+                  <svg viewBox="0 0 720 260" preserveAspectRatio="none" className="admin-intro-revenue-chart h-full w-full">
                     <defs>
                       <linearGradient id="revenue-area-gradient" x1="0" x2="0" y1="0" y2="1">
                         <stop offset="0%" stopColor="#e30613" stopOpacity="0.34" />
@@ -596,7 +627,7 @@ const AdminDashboard: React.FC = () => {
         </section>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="admin-intro-details grid gap-6 lg:grid-cols-2">
         <section className="ops-card p-6">
           <div className="mb-4 flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
             <div>

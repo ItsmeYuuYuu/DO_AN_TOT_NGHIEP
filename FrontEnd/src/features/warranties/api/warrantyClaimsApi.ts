@@ -1,4 +1,5 @@
 import apiClient from '@/api/apiClient';
+import { optimizeImageUploads } from '@/utils/imageUpload';
 
 export interface WarrantyClaimHistory {
   historyid: number;
@@ -72,9 +73,10 @@ export const warrantyClaimsApi = {
   ) => apiClient.patch<WarrantyClaim>(`/WarrantyClaims/${claimId}/status`, payload),
   getEmployees: () =>
     apiClient.get<WarrantyEmployee[]>('/WarrantyClaims/employees'),
-  uploadImages: (files: File[]) => {
+  uploadImages: async (files: File[]) => {
     const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
+    const optimizedFiles = await optimizeImageUploads(files);
+    optimizedFiles.forEach(file => formData.append('files', file));
     return apiClient.post<WarrantyImageUpload[]>('/WarrantyImages/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

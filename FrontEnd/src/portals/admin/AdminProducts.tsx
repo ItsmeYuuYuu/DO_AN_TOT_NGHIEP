@@ -17,6 +17,8 @@ import { confirmAction, notifyError, notifySuccess } from '@/utils/notifications
 
 
 const PAGE_SIZE = 10;
+type DiscountFilter = 'all' | 'discounted' | 'regular';
+type ProductSort = 'id-desc' | 'id-asc';
 
 const AdminProducts: React.FC = () => {
   const { user } = useAuth();
@@ -27,7 +29,8 @@ const AdminProducts: React.FC = () => {
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [filterBrand, setFilterBrand] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-  const [filterDiscount, setFilterDiscount] = useState(false);
+  const [filterDiscount, setFilterDiscount] = useState<DiscountFilter>('all');
+  const [sortBy, setSortBy] = useState<ProductSort>('id-desc');
   const [cleaningImages, setCleaningImages] = useState(false);
   const [brands, setBrands] = useState<{ brandid: number; brandname: string }[]>([]);
   const [categories, setCategories] = useState<{ categoryid: number; categoryname: string }[]>([]);
@@ -37,26 +40,56 @@ const AdminProducts: React.FC = () => {
     categoriesApi.getAll().then(response => setCategories(response.data)).catch(() => setCategories([]));
   }, []);
 
-  const filtered = useMemo(() => products.filter(product => {
-    const keyword = search.trim().toLowerCase();
-    const matchSearch =
-      !keyword ||
-      product.productname.toLowerCase().includes(keyword) ||
-      (product.brand?.name ?? '').toLowerCase().includes(keyword) ||
-      (product.series?.name ?? '').toLowerCase().includes(keyword);
-    const matchBrand = filterBrand ? product.brand?.id.toString() === filterBrand : true;
-    const matchCategory = filterCategory ? product.category?.id.toString() === filterCategory : true;
-    const matchDiscount = filterDiscount
-      ? product.productvariants?.some(variant => variant.saleprice && variant.saleprice < variant.baseprice)
-      : true;
-    return matchSearch && matchBrand && matchCategory && matchDiscount;
-  }), [filterBrand, filterCategory, filterDiscount, products, search]);
+  const filtered = useMemo(() => products
+    .filter(product => {
+      const keyword = search.trim().toLowerCase();
+      const matchSearch =
+        !keyword ||
+        product.productname.toLowerCase().includes(keyword) ||
+        (product.brand?.name ?? '').toLowerCase().includes(keyword) ||
+        (product.seriesname ?? product.series?.name ?? '').toLowerCase().includes(keyword);
+      const matchBrand = filterBrand ? product.brand?.id.toString() === filterBrand : true;
+      const matchCategory = filterCategory ? product.category?.id.toString() === filterCategory : true;
+      const hasDiscount = product.productvariants?.some(variant =>
+        variant.saleprice !== undefined &&
+        variant.saleprice !== null &&
+        variant.saleprice > 0 &&
+        variant.saleprice < variant.baseprice
+      ) ?? false;
+      const matchDiscount =
+        filterDiscount === 'all' ||
+        (filterDiscount === 'discounted' && hasDiscount) ||
+        (filterDiscount === 'regular' && !hasDiscount);
+      return matchSearch && matchBrand && matchCategory && matchDiscount;
+    })
+    .sort((left, right) =>
+      sortBy === 'id-desc'
+        ? right.productid - left.productid
+        : left.productid - right.productid
+    ), [filterBrand, filterCategory, filterDiscount, products, search, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const availableBrands = useMemo(() => {
+    const brandIds = new Set(
+      products
+        .filter(product =>
+          !filterCategory || product.category?.id.toString() === filterCategory
+        )
+        .map(product => product.brand?.id)
+        .filter((brandId): brandId is number => brandId !== undefined),
+    );
+
+    return brands.filter(brand => brandIds.has(brand.brandid));
+  }, [brands, filterCategory, products]);
   const totalVariants = products.reduce((total, product) => total + (product.productvariants?.length ?? 0), 0);
   const discountedProducts = products.filter(product =>
-    product.productvariants?.some(variant => variant.saleprice && variant.saleprice < variant.baseprice),
+    product.productvariants?.some(variant =>
+      variant.saleprice !== undefined &&
+      variant.saleprice !== null &&
+      variant.saleprice > 0 &&
+      variant.saleprice < variant.baseprice
+    ),
   ).length;
   const totalStock = products.reduce(
     (total, product) => total + (product.productvariants ?? []).reduce((sum, variant) => sum + (variant.stockquantity ?? 0), 0),
@@ -101,7 +134,8 @@ const AdminProducts: React.FC = () => {
     setSearch('');
     setFilterBrand('');
     setFilterCategory('');
-    setFilterDiscount(false);
+    setFilterDiscount('all');
+    setSortBy('id-desc');
     setPage(1);
   };
 
@@ -145,7 +179,9 @@ const AdminProducts: React.FC = () => {
           <span className="inline-flex bg-red-50 px-2.5 py-1 text-xs font-black text-[#c4000b]">
             {product.brand?.name ?? '—'}
           </span>
-          {product.series?.name && <p className="text-[11px] font-bold text-slate-400">{product.series.name}</p>}
+          {(product.seriesname ?? product.series?.name) && (
+            <p className="text-[11px] font-bold text-slate-400">{product.seriesname ?? product.series?.name}</p>
+          )}
         </div>
       ),
     },
@@ -270,23 +306,55 @@ const AdminProducts: React.FC = () => {
             />
           </div>
           <select className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]" value={filterBrand} onChange={event => { setFilterBrand(event.target.value); setPage(1); }}>
-            <option value="">Tất cả thương hiệu</option>
-            {brands.map(brand => <option key={brand.brandid} value={brand.brandid}>{brand.brandname}</option>)}
+            <option value="">
+              {availableBrands.length > 0 ? 'Tất cả thương hiệu' : 'Chưa có thương hiệu có sản phẩm'}
+            </option>
+            {availableBrands.map(brand => <option key={brand.brandid} value={brand.brandid}>{brand.brandname}</option>)}
           </select>
-          <select className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]" value={filterCategory} onChange={event => { setFilterCategory(event.target.value); setPage(1); }}>
+          <select
+            className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]"
+            value={filterCategory}
+            onChange={event => {
+              setFilterCategory(event.target.value);
+              setFilterBrand('');
+              setPage(1);
+            }}
+          >
             <option value="">Tất cả danh mục</option>
             {categories.map(category => <option key={category.categoryid} value={category.categoryid}>{category.categoryname}</option>)}
           </select>
-          <label className="flex cursor-pointer items-center gap-2 text-sm font-black text-[#172033]">
-            <input type="checkbox" checked={filterDiscount} onChange={event => { setFilterDiscount(event.target.checked); setPage(1); }} className="accent-[#e30613]" />
-            Đang giảm giá
-          </label>
-          {(search || filterBrand || filterCategory || filterDiscount) && (
+          <select
+            className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]"
+            value={filterDiscount}
+            onChange={event => {
+              setFilterDiscount(event.target.value as DiscountFilter);
+              setPage(1);
+            }}
+          >
+            <option value="all">Tất cả mức giá</option>
+            <option value="discounted">Đang giảm giá ({discountedProducts})</option>
+            <option value="regular">Không giảm giá ({products.length - discountedProducts})</option>
+          </select>
+          <select
+            className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]"
+            value={sortBy}
+            onChange={event => {
+              setSortBy(event.target.value as ProductSort);
+              setPage(1);
+            }}
+          >
+            <option value="id-desc">ID mới nhất</option>
+            <option value="id-asc">ID cũ nhất</option>
+          </select>
+          {(search || filterBrand || filterCategory || filterDiscount !== 'all' || sortBy !== 'id-desc') && (
             <button type="button" onClick={resetFilters} className="text-xs font-black uppercase tracking-wide text-slate-400 hover:text-[#172033]">
               Xóa lọc
             </button>
           )}
         </div>
+        <p className="mt-3 text-xs font-semibold text-slate-400">
+          Đang hiển thị {filtered.length}/{products.length} sản phẩm phù hợp.
+        </p>
       </section>
 
       <DataTable columns={columns} data={paged} keyField="productid" loading={loading} emptyMessage="Chưa có sản phẩm phù hợp." />

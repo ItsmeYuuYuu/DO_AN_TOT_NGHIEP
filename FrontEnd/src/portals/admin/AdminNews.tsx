@@ -10,6 +10,7 @@ import { productsApi } from '@/features/products/api/productsApi';
 import { LoaderCircle, Upload } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
+import { ImagePositionEditor } from '@/components/ImagePositionEditor';
 
 
 const AdminNews: React.FC = () => {
@@ -21,6 +22,7 @@ const AdminNews: React.FC = () => {
   const [error, setError] = useState('');
   const [uploadedThumbnailFileName, setUploadedThumbnailFileName] = useState<string | null>(null);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [thumbnailToFrame, setThumbnailToFrame] = useState<File[]>([]);
 
   useEffect(() => {
     fetchNews();
@@ -211,7 +213,8 @@ const AdminNews: React.FC = () => {
                 className="hidden"
                 disabled={uploadingThumbnail}
                 onChange={event => {
-                  void handleThumbnailUpload(event.target.files?.[0]);
+                  const file = event.target.files?.[0];
+                  if (file) setThumbnailToFrame([file]);
                   event.target.value = '';
                 }}
               />
@@ -261,6 +264,21 @@ const AdminNews: React.FC = () => {
             <Button onClick={handleSave} isLoading={saving}>Lưu tin tức</Button>
           </div>
         </div>
+        {thumbnailToFrame.length > 0 && (
+          <ImagePositionEditor
+            files={thumbnailToFrame}
+            title="Căn ảnh thumbnail tin tức"
+            aspectRatio={16 / 9}
+            outputWidth={1600}
+            outputHeight={900}
+            backgroundColor="#ffffff"
+            onCancel={() => setThumbnailToFrame([])}
+            onComplete={async files => {
+              setThumbnailToFrame([]);
+              await handleThumbnailUpload(files[0]);
+            }}
+          />
+        )}
       </Modal>
     </div>
   );

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Seo } from '@/components/Seo';
-import Logo from '@/assets/Logo.png';
+import Logo from '@/assets/Logo.webp';
 import { authApi } from '@/features/auth/api/authApi';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { saveSession } from '@/features/auth/utils/authUtils';
@@ -230,7 +230,7 @@ export default function AuthPage() {
           >
             <div className="w-full max-w-lg">
               <Link to="/" className="mb-7 inline-flex lg:hidden">
-                <img src={Logo} alt="Cuồng Điện Thoại" className="h-14 w-auto object-contain" />
+                <img src={Logo} alt="Cuồng Điện Thoại" width={400} height={188} className="h-14 w-auto object-contain" />
               </Link>
               <h1 className="text-4xl font-bold tracking-[-0.03em] text-[#1f2937]">Đăng ký</h1>
               <p className="mt-2 text-sm font-medium text-slate-500">
@@ -362,7 +362,7 @@ export default function AuthPage() {
           >
             <div className="w-full max-w-md">
               <Link to="/" className="mb-8 inline-flex lg:hidden">
-                <img src={Logo} alt="Cuồng Điện Thoại" className="h-14 w-auto object-contain" />
+                <img src={Logo} alt="Cuồng Điện Thoại" width={400} height={188} className="h-14 w-auto object-contain" />
               </Link>
               <h1 className="text-4xl font-bold tracking-[-0.03em] text-[#1f2937]">Đăng nhập</h1>
               <p className="mt-2 text-sm font-medium text-slate-500">
@@ -430,33 +430,37 @@ export default function AuthPage() {
 
           <aside className="auth-overlay">
             <div className="auth-overlay-copy auth-overlay-copy--login">
-              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#c4000b]">
-                Cuồng Điện Thoại
-              </p>
-              <h2 className="mt-3 text-4xl font-bold leading-tight tracking-[-0.03em] text-[#b0000a]">
-                Chưa có tài khoản?
-              </h2>
-              <p className="mt-5 max-w-sm leading-7 text-[#4b5563]">
-                Đăng ký để lưu lịch sử mua hàng, theo dõi bảo hành và đặt hàng nhanh hơn.
-              </p>
-              <button type="button" onClick={() => switchMode('register')} className="auth-overlay-button">
-                Tạo tài khoản
-              </button>
+              <div className="auth-overlay-content">
+                <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#c4000b]">
+                  Cuồng Điện Thoại
+                </p>
+                <h2 className="mt-3 text-4xl font-bold leading-tight tracking-[-0.03em] text-[#b0000a]">
+                  Chưa có tài khoản?
+                </h2>
+                <p className="mt-5 max-w-sm leading-7 text-[#4b5563]">
+                  Đăng ký để lưu lịch sử mua hàng, theo dõi bảo hành và đặt hàng nhanh hơn.
+                </p>
+                <button type="button" onClick={() => switchMode('register')} className="auth-overlay-button">
+                  Tạo tài khoản
+                </button>
+              </div>
             </div>
 
             <div className="auth-overlay-copy auth-overlay-copy--register">
-              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#c4000b]">
-                Cuồng Điện Thoại
-              </p>
-              <h2 className="mt-3 text-4xl font-bold leading-tight tracking-[-0.03em] text-[#b0000a]">
-                Đã là thành viên?
-              </h2>
-              <p className="mt-5 max-w-sm leading-7 text-[#4b5563]">
-                Đăng nhập để tiếp tục theo dõi đơn hàng và các quyền lợi của bạn.
-              </p>
-              <button type="button" onClick={() => switchMode('login')} className="auth-overlay-button">
-                Đăng nhập
-              </button>
+              <div className="auth-overlay-content">
+                <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#c4000b]">
+                  Cuồng Điện Thoại
+                </p>
+                <h2 className="mt-3 text-4xl font-bold leading-tight tracking-[-0.03em] text-[#b0000a]">
+                  Đã là thành viên?
+                </h2>
+                <p className="mt-5 max-w-sm leading-7 text-[#4b5563]">
+                  Đăng nhập để tiếp tục theo dõi đơn hàng và các quyền lợi của bạn.
+                </p>
+                <button type="button" onClick={() => switchMode('login')} className="auth-overlay-button">
+                  Đăng nhập
+                </button>
+              </div>
             </div>
           </aside>
         </div>

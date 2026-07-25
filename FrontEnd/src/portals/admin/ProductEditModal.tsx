@@ -14,6 +14,7 @@ import { Input } from '@/components/Input';
 import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { Modal } from '@/components/Modal';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { ImagePositionEditor } from '@/components/ImagePositionEditor';
 import { removeImageFromRichText } from '@/utils/richText';
 import { productsApi } from '@/features/products/api/productsApi';
 import type { UpdateFullProduct, UpdateFullProductVariant, UploadedProductImage } from '@/features/products/api/productsApi';
@@ -21,6 +22,7 @@ import { PRODUCT_CONDITION_OPTIONS } from '@/features/products/constants/product
 import { ProductSeriesInput } from '@/features/productSeries/components/ProductSeriesInput';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { normalizeSku } from '@/features/products/utils/sku';
 
 interface ProductEditModalProps {
   productId: number | null;
@@ -76,6 +78,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
   const [seriesname, setSeriesname] = useState('');
   const [variants, setVariants] = useState<EditVariant[]>([]);
   const [uploadingVariant, setUploadingVariant] = useState<string | null>(null);
+  const [imagesToFrame, setImagesToFrame] = useState<{ variant: EditVariant; files: File[] } | null>(null);
   const descriptionImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -524,9 +527,20 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                       <div className="lg:col-span-2">
                         <label className="mb-1 block text-xs font-bold text-slate-600">SKU *</label>
-                        <input disabled={contentOnly} className={inputClass} value={variant.sku} onChange={event =>
-                          updateVariant(variant.clientId, current => ({ ...current, sku: event.target.value }))
-                        } />
+                        <input
+                          disabled={contentOnly}
+                          className={inputClass}
+                          value={variant.sku}
+                          onChange={event =>
+                            updateVariant(variant.clientId, current => ({ ...current, sku: event.target.value }))
+                          }
+                          onBlur={() =>
+                            updateVariant(variant.clientId, current => ({
+                              ...current,
+                              sku: normalizeSku(current.sku),
+                            }))
+                          }
+                        />
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-bold text-slate-600">Tình trạng</label>
@@ -589,7 +603,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                             onChange={event => {
                               const files = Array.from(event.target.files ?? []);
                               event.target.value = '';
-                              void uploadImages(variant, files);
+                              if (files.length > 0) setImagesToFrame({ variant, files });
                             }}
                           />
                         </label>
@@ -694,6 +708,21 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
             </Button>
           </div>
         </div>
+      )}
+      {imagesToFrame && (
+        <ImagePositionEditor
+          files={imagesToFrame.files}
+          title="Căn ảnh sản phẩm"
+          aspectRatio={1}
+          outputWidth={1200}
+          outputHeight={1200}
+          onCancel={() => setImagesToFrame(null)}
+          onComplete={async files => {
+            const targetVariant = variants.find(item => item.clientId === imagesToFrame.variant.clientId);
+            setImagesToFrame(null);
+            if (targetVariant) await uploadImages(targetVariant, files);
+          }}
+        />
       )}
     </Modal>
   );

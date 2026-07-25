@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authApi } from '@/features/auth/api/authApi';
 import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound, Mail, ShieldCheck } from 'lucide-react';
-import Logo from '@/assets/Logo.png';
+import Logo from '@/assets/Logo.webp';
 import { Seo } from '@/components/Seo';
 
 type RecoveryStep = 'request' | 'reset' | 'done';
@@ -108,7 +108,7 @@ const ForgotPasswordPage: React.FC = () => {
             <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/5" />
             <div>
               <Link to="/" className="inline-flex rounded-2xl bg-white px-5 py-3 shadow-[0_14px_30px_rgba(227,6,19,0.18)]">
-                <img src={Logo} alt="Cuồng Điện Thoại" className="h-16 w-auto object-contain" />
+                <img src={Logo} alt="Cuồng Điện Thoại" width={400} height={188} className="h-16 w-auto object-contain" />
               </Link>
               <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#ffd166]">Account recovery</p>
               <h1 className="customer-display mt-3 max-w-md text-5xl font-black leading-[0.95]">Lấy lại quyền truy cập tài khoản.</h1>
@@ -130,7 +130,7 @@ const ForgotPasswordPage: React.FC = () => {
           <section className="p-6 md:p-10 lg:p-14">
             <div className="mx-auto max-w-md">
               <Link to="/" className="mb-8 inline-flex lg:hidden">
-                <img src={Logo} alt="Cuồng Điện Thoại" className="h-14 w-auto object-contain" />
+                <img src={Logo} alt="Cuồng Điện Thoại" width={400} height={188} className="h-14 w-auto object-contain" />
               </Link>
 
               <p className="customer-label">Khôi phục tài khoản</p>

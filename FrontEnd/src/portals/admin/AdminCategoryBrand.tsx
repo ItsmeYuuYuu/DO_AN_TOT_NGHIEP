@@ -177,9 +177,6 @@ const BrandSection: React.FC = () => {
         <h3 className="font-bold text-slate-800">Thương hiệu <span className="text-slate-400 font-normal text-sm">({filtered.length})</span></h3>
         <Button size="sm" onClick={openCreate}>+ Thêm thương hiệu</Button>
       </div>
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-5 text-[#c4000b]">
-        Menu Điện thoại ngoài trang khách được đồng bộ tự động từ danh sách thương hiệu tại đây. Thương hiệu vẫn hiển thị dù chưa có sản phẩm; các dòng máy bên cạnh được lấy từ sản phẩm đã gắn thương hiệu và danh mục Điện thoại.
-      </div>
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">{error}</div>}
       <div className="max-w-xs">
         <Input placeholder="Tìm thương hiệu..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />

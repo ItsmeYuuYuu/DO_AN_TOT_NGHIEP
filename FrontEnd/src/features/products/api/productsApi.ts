@@ -1,4 +1,19 @@
 import apiClient from '@/api/apiClient';
+import { optimizeImageUploads } from '@/utils/imageUpload';
+
+let allProductsRequest: ReturnType<typeof apiClient.get<Product[]>> | null = null;
+
+const getAllProducts = () => {
+  if (!allProductsRequest) {
+    allProductsRequest = apiClient
+      .get<Product[]>('/Products')
+      .finally(() => {
+        allProductsRequest = null;
+      });
+  }
+
+  return allProductsRequest;
+};
 
 export interface Product {
   productid: number;
@@ -113,7 +128,7 @@ export interface UpdateFullProduct {
 }
 
 export const productsApi = {
-  getAll: () => apiClient.get<Product[]>('/Products'),
+  getAll: getAllProducts,
   getById: (id: number) => apiClient.get<Product>(`/Products/${id}`),
   getFullDetail: (idOrSlug: number | string) => {
     const value = String(idOrSlug);
@@ -126,9 +141,10 @@ export const productsApi = {
   create: (data: Partial<Product>) => apiClient.post<Product>('/Products', data),
   createFull: (data: CreateFullProduct) => apiClient.post<Product>('/Products/full', data),
   updateFull: (id: number, data: UpdateFullProduct) => apiClient.put(`/Products/${id}/full`, data),
-  uploadImages: (files: File[]) => {
+  uploadImages: async (files: File[]) => {
     const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
+    const optimizedFiles = await optimizeImageUploads(files);
+    optimizedFiles.forEach(file => formData.append('files', file));
     return apiClient.post<UploadedProductImage[]>('/ProductImages/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60_000,

@@ -1,4 +1,5 @@
 import apiClient from '@/api/apiClient';
+import { optimizeImageUploads } from '@/utils/imageUpload';
 
 export interface ReturnRequestHistory {
   historyid: number;
@@ -191,9 +192,10 @@ export const returnRequestsApi = {
       note,
     }),
   getEmployees: () => apiClient.get<ReturnEmployee[]>('/ReturnRequests/employees'),
-  uploadImages: (files: File[]) => {
+  uploadImages: async (files: File[]) => {
     const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
+    const optimizedFiles = await optimizeImageUploads(files);
+    optimizedFiles.forEach(file => formData.append('files', file));
     return apiClient.post<ReturnImageUpload[]>('/ReturnImages/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

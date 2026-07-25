@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 const SPLASH_SESSION_KEY = 'cuong-dien-thoai:splash-seen';
-const SPLASH_DURATION_MS = 800;
+const SPLASH_DURATION_MS = 400;
 
 export function InitialSplash({ children }: { children: React.ReactNode }) {
   const [isVisible, setIsVisible] = useState(

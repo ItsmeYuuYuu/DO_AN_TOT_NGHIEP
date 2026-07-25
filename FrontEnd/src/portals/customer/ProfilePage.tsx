@@ -312,7 +312,11 @@ const ProfilePage: React.FC = () => {
             </button>
 
             {user.rolename === 'Admin' && (
-              <Link to="/admin" className="flex items-center justify-between gap-3 rounded-lg p-3 text-sm font-semibold text-[#c4000b] hover:bg-[#fff1f2]">
+              <Link
+                to="/admin"
+                onClick={() => window.sessionStorage.setItem('admin-dashboard-intro', '1')}
+                className="flex items-center justify-between gap-3 rounded-lg p-3 text-sm font-semibold text-[#c4000b] hover:bg-[#fff1f2]"
+              >
                 <span className="flex items-center gap-2"><LayoutDashboard size={16} /> Vào trang quản trị</span>
                 <ChevronRight size={14} />
               </Link>

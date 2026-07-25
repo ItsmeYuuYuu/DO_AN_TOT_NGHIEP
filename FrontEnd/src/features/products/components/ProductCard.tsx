@@ -65,7 +65,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <img
             src={mainImage}
             alt={product.productname}
+            width={800}
+            height={800}
             className="h-full w-full object-contain p-5 transition duration-500 group-hover:scale-[1.06] sm:p-7"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">

@@ -66,6 +66,7 @@ const CustomerHome: React.FC = () => {
   const [sliders, setSliders] = useState<PromotionalContent[]>([]);
   const [homeSections, setHomeSections] = useState<HomepageProductSection[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [preloadedSlide, setPreloadedSlide] = useState<number | null>(null);
   const [isSliderPaused, setIsSliderPaused] = useState(false);
   const [now, setNow] = useState(() => new Date());
 
@@ -87,6 +88,10 @@ const CustomerHome: React.FC = () => {
     }, 5000);
     return () => window.clearInterval(interval);
   }, [sliders, isSliderPaused]);
+
+  useEffect(() => {
+    setPreloadedSlide(null);
+  }, [activeSlide]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -130,6 +135,9 @@ const CustomerHome: React.FC = () => {
     section.items.some(item => item.isactive !== false && item.product));
   const displaySections = hasConfiguredProducts ? homeSections : fallbackSections;
   const sideBanners = banners.slice(0, 2);
+  const nextSlide = sliders.length > 1 ? (activeSlide + 1) % sliders.length : activeSlide;
+  const visibleSlides = sliders.filter((_, index) =>
+    index === activeSlide || (preloadedSlide === nextSlide && index === nextSlide));
 
   const vietnamNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
   const elapsedVietnamSeconds =
@@ -174,17 +182,31 @@ const CustomerHome: React.FC = () => {
           >
             {sliders.length > 0 ? (
               <>
-                {sliders.map((slider, index) => (
+                {visibleSlides.map(slider => {
+                  const index = sliders.findIndex(item => item.contentid === slider.contentid);
+                  const isActive = index === activeSlide;
+
+                  return (
                   <div
                     key={slider.contentid}
                     className={`absolute inset-0 transition-opacity duration-700 ${
-                      index === activeSlide ? 'z-10 opacity-100' : 'z-0 opacity-0'
+                      isActive ? 'z-10 opacity-100' : 'z-0 opacity-0'
                     }`}
                   >
                     <img
                       src={slider.imageurl}
                       alt={slider.title || 'Chương trình nổi bật'}
+                      width={1280}
+                      height={720}
                       className="h-full w-full object-cover"
+                      loading={isActive ? 'eager' : 'lazy'}
+                      decoding="async"
+                      fetchPriority={isActive ? 'high' : 'low'}
+                      onLoad={() => {
+                        if (isActive && sliders.length > 1) {
+                          window.setTimeout(() => setPreloadedSlide(nextSlide), 1200);
+                        }
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1f2937]/65 via-transparent to-transparent" />
                     {slider.title && (
@@ -200,7 +222,8 @@ const CustomerHome: React.FC = () => {
                       />
                     )}
                   </div>
-                ))}
+                  );
+                })}
 
                 {sliders.length > 1 && (
                   <>
@@ -266,7 +289,11 @@ const CustomerHome: React.FC = () => {
                 <img
                   src={banner.imageurl}
                   alt={banner.title || 'Ưu đãi nổi bật'}
+                  width={640}
+                  height={360}
                   className="h-full w-full object-cover transition duration-500 hover:scale-105"
+                  decoding="async"
+                  fetchPriority="low"
                 />
                 {banner.linkurl && (
                   <Link to={banner.linkurl} className="absolute inset-0" aria-label={banner.title || 'Xem ưu đãi'} />

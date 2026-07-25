@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { Bot, CheckCircle2, Headphones, History, MessageSquare, Send, ShoppingCart, TrendingUp, User } from 'lucide-react';
+import { Bot, CheckCircle2, Headphones, History, MessageSquare, Send, User } from 'lucide-react';
 import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
-import type { ChatMessage, ChatRecommendationMetrics, ChatSession } from '@/features/chat/api/chatSessionsApi';
+import type { ChatMessage, ChatSession } from '@/features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 
 const statusLabel: Record<string, string> = {
@@ -19,8 +19,7 @@ const ConsultantChats = () => {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [customerTyping, setCustomerTyping] = useState(false);
-  const [metrics, setMetrics] = useState<ChatRecommendationMetrics | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesPaneRef = useRef<HTMLDivElement>(null);
   const lastTypingSentRef = useRef(0);
 
   const loadQueue = useCallback(async () => {
@@ -34,19 +33,27 @@ const ConsultantChats = () => {
     });
   }, [viewMode]);
 
-  const loadMessages = useCallback(async (sessionId: number) => {
+  const loadMessages = useCallback(async (sessionId: number, forceScroll = false) => {
+    const pane = messagesPaneRef.current;
+    const distanceFromBottom = pane
+      ? pane.scrollHeight - pane.scrollTop - pane.clientHeight
+      : 0;
+    const shouldScroll = forceScroll || !pane || distanceFromBottom < 96;
+
     try {
       setMessages(await chatSessionsApi.getMessages(sessionId));
-      window.setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      if (shouldScroll) {
+        window.setTimeout(() => {
+          const currentPane = messagesPaneRef.current;
+          currentPane?.scrollTo({
+            top: currentPane.scrollHeight,
+            behavior: forceScroll ? 'auto' : 'smooth',
+          });
+        }, 50);
+      }
     } catch {
       setMessages([]);
     }
-  }, []);
-
-  useEffect(() => {
-    chatSessionsApi.getRecommendationMetrics()
-      .then(setMetrics)
-      .catch(() => setMetrics(null));
   }, []);
 
   useEffect(() => {
@@ -66,7 +73,7 @@ const ConsultantChats = () => {
   const selectSession = async (session: ChatSession) => {
     setActiveSession(session);
     if (viewMode === 'history' || session.handoffstatus === 'InProgress') {
-      await loadMessages(session.sessionid);
+      await loadMessages(session.sessionid, true);
     } else {
       setMessages([]);
     }
@@ -78,7 +85,7 @@ const ConsultantChats = () => {
     try {
       const updated = await chatSessionsApi.acceptHandoff(activeSession.sessionid);
       setActiveSession(updated);
-      await Promise.all([loadQueue(), loadMessages(updated.sessionid)]);
+      await Promise.all([loadQueue(), loadMessages(updated.sessionid, true)]);
     } finally {
       setBusy(false);
     }
@@ -91,7 +98,7 @@ const ConsultantChats = () => {
     try {
       await chatSessionsApi.postConsultantMessage(activeSession.sessionid, input.trim());
       setInput('');
-      await loadMessages(activeSession.sessionid);
+      await loadMessages(activeSession.sessionid, true);
     } finally {
       setBusy(false);
     }
@@ -133,34 +140,8 @@ const ConsultantChats = () => {
         </div>
       </section>
 
-      {metrics && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="ops-card p-4">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center bg-violet-50 text-violet-700">
-              <Bot size={19} />
-            </div>
-            <p className="text-2xl font-black text-[#172033]">{metrics.totalrecommendations}</p>
-            <p className="text-xs font-bold text-slate-400">Lượt AI đề xuất sản phẩm</p>
-          </div>
-          <div className="ops-card p-4">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center bg-red-50 text-[#c4000b]">
-              <ShoppingCart size={19} />
-            </div>
-            <p className="text-2xl font-black text-[#172033]">{metrics.addtocartrate}%</p>
-            <p className="text-xs font-bold text-slate-400">{metrics.addedtocart} lượt thêm vào giỏ</p>
-          </div>
-          <div className="ops-card p-4">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center bg-emerald-50 text-emerald-700">
-              <TrendingUp size={19} />
-            </div>
-            <p className="text-2xl font-black text-[#172033]">{metrics.orderrate}%</p>
-            <p className="text-xs font-bold text-slate-400">{metrics.ordered} đơn từ đề xuất</p>
-          </div>
-        </div>
-      )}
-
-      <div className="grid min-h-[680px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] lg:grid-cols-[340px_1fr]">
-        <aside className="border-r border-slate-200 bg-slate-50">
+      <div className="grid min-h-[680px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] lg:h-[clamp(560px,72vh,760px)] lg:min-h-0 lg:grid-cols-[340px_1fr]">
+        <aside className="flex min-h-0 flex-col border-r border-slate-200 bg-slate-50">
           <div className="border-b border-slate-200 bg-white p-4">
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -192,7 +173,7 @@ const ConsultantChats = () => {
                 : 'Các phiên khách cần nhân viên hỗ trợ trực tiếp.'}
             </p>
           </div>
-          <div className="space-y-2 p-3">
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-3">
             {sessions.map(session => (
               <button
                 key={session.sessionid}
@@ -230,7 +211,7 @@ const ConsultantChats = () => {
           </div>
         </aside>
 
-        <section className="flex min-w-0 flex-col">
+        <section className="flex min-h-0 min-w-0 flex-col">
           {!activeSession ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-white text-slate-400">
               <Headphones size={54} className="text-slate-200" />
@@ -272,7 +253,10 @@ const ConsultantChats = () => {
                 )}
               </header>
 
-              <div className="flex-1 space-y-4 overflow-y-auto bg-[#f6f8fb] p-5">
+              <div
+                ref={messagesPaneRef}
+                className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-[#f6f8fb] p-5"
+              >
                 {viewMode === 'queue' && activeSession.handoffstatus === 'Waiting' && (
                   <div className="flex h-full flex-col items-center justify-center gap-3 text-slate-400">
                     <MessageSquare size={46} className="text-slate-200" />
@@ -328,7 +312,6 @@ const ConsultantChats = () => {
                     </div>
                   </div>
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {viewMode === 'queue' && activeSession.handoffstatus === 'InProgress' && (

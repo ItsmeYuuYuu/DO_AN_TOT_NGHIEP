@@ -4,6 +4,7 @@ import { Input } from '@/components/Input';
 import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { Modal } from '@/components/Modal';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { ImagePositionEditor } from '@/components/ImagePositionEditor';
 import { removeImageFromRichText } from '@/utils/richText';
 import { brandsApi } from '@/features/brands/api/brandsApi';
 import { categoriesApi } from '@/features/categories/api/categoriesApi';
@@ -24,6 +25,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { buildProductVariantSku, normalizeSku } from '@/features/products/utils/sku';
 
 interface ProductFormWizardProps {
   isOpen: boolean;
@@ -109,6 +111,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   const [variantStock, setVariantStock] = useState<number | ''>('');
   const [activeImages, setActiveImages] = useState<WizardImage[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [imagesToFrame, setImagesToFrame] = useState<File[]>([]);
 
   // List of added variants
   interface VariantState {
@@ -153,13 +156,13 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
   // Auto-generate SKU based on product name and active options
   useEffect(() => {
     if (productname) {
-      const cleanName = productname.substring(0, 5).toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9]/g, '');
-      const cleanColor = activeColor.replace(/\s+/g, '').replace(/%/g, '').toUpperCase();
-      const cleanRam = activeRam.replace(/\s+/g, '').replace(/%/g, '').toUpperCase();
-      const cleanRom = activeRom.replace(/\s+/g, '').replace(/%/g, '').toUpperCase();
-      const cleanCond = activeCondition.replace(/\s+/g, '').replace(/%/g, '').toUpperCase();
-      const cleanOrigin = activeOrigin.replace(/\s+/g, '').replace(/%/g, '').toUpperCase();
-      setVariantSku(`${cleanName}-${cleanColor}-${cleanRam}-${cleanRom}-${cleanCond}-${cleanOrigin}`);
+      setVariantSku(buildProductVariantSku(productname, [
+        activeColor,
+        activeRam,
+        activeRom,
+        activeCondition,
+        activeOrigin,
+      ]));
     }
   }, [productname, activeColor, activeRam, activeRom, activeCondition, activeOrigin]);
 
@@ -193,6 +196,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
     setVariantStock('');
     setActiveImages([]);
     setUploadingImages(false);
+    setImagesToFrame([]);
   };
 
   // Step 2 Helpers
@@ -311,7 +315,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
       setError('Vui lòng nhập mã SKU cho biến thể.');
       return;
     }
-    const cleanSku = variantSku.trim();
+    const cleanSku = normalizeSku(variantSku);
     if (variants.some(v => v.sku === cleanSku)) {
       setError(`Mã SKU [${cleanSku}] đã được thêm.`);
       return;
@@ -743,7 +747,12 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
               {/* Variant Details Inputs */}
               <div className="border-t border-slate-200/50 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="col-span-2 sm:col-span-2">
-                  <Input label="Mã SKU Biến thể" value={variantSku} onChange={e => setVariantSku(e.target.value)} />
+                  <Input
+                    label="Mã SKU Biến thể"
+                    value={variantSku}
+                    onChange={e => setVariantSku(e.target.value)}
+                    onBlur={() => setVariantSku(current => normalizeSku(current))}
+                  />
                 </div>
                 <div>
                   <CurrencyInput label="Giá gốc *" value={variantBasePrice} onChange={setVariantBasePrice} />
@@ -792,7 +801,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
                     onChange={event => {
                       const files = Array.from(event.target.files ?? []);
                       event.target.value = '';
-                      void handleUploadImages(files);
+                      if (files.length > 0) setImagesToFrame(files);
                     }}
                   />
                 </label>
@@ -1019,6 +1028,20 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
         </div>
 
       </div>
+      {imagesToFrame.length > 0 && (
+        <ImagePositionEditor
+          files={imagesToFrame}
+          title="Căn ảnh sản phẩm"
+          aspectRatio={1}
+          outputWidth={1200}
+          outputHeight={1200}
+          onCancel={() => setImagesToFrame([])}
+          onComplete={async files => {
+            setImagesToFrame([]);
+            await handleUploadImages(files);
+          }}
+        />
+      )}
     </Modal>
   );
 };

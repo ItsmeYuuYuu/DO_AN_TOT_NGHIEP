@@ -2,16 +2,12 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type Mou
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Bot,
-  Camera,
   Headphones,
   MessageSquare,
   Plus,
-  Search,
   Send,
-  Sparkles,
   Trash2,
   User,
-  Zap,
 } from 'lucide-react';
 import { chatSessionsApi } from '../../features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '../../features/chat/api/chatSessionsApi';
@@ -22,13 +18,6 @@ import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
 import { Seo } from '@/components/Seo';
 
-
-const quickPrompts = [
-  { label: 'Chụp ảnh đẹp', prompt: 'Tìm máy chụp ảnh đẹp trong tầm giá hợp lý', icon: Camera },
-  { label: 'Pin dùng lâu', prompt: 'Gợi ý điện thoại pin lâu, sạc nhanh, dùng cả ngày', icon: Zap },
-  { label: 'Chơi game', prompt: 'Tìm máy chơi game mượt, máy mát, hiệu năng tốt', icon: Sparkles },
-  { label: 'So sánh 3 máy', prompt: 'So sánh 3 điện thoại đáng mua theo giá, camera, pin và cấu hình', icon: Search },
-];
 
 export default function CustomerChat() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -420,19 +409,6 @@ export default function CustomerChat() {
               )}
             </div>
 
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 md:mt-5">
-              {quickPrompts.map(({ label, prompt, icon: Icon }) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => submitMessage(prompt)}
-                  disabled={loading}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-4 py-2.5 text-xs font-black text-[#1f2937] transition hover:border-[#e30613] hover:bg-white hover:text-[#c4000b] disabled:opacity-50"
-                >
-                  <Icon size={14} /> {label}
-                </button>
-              ))}
-            </div>
           </header>
 
           <div ref={messagesPaneRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(180deg,#fffafa_0%,#fff4f5_100%)] p-3 md:space-y-6 md:p-6">

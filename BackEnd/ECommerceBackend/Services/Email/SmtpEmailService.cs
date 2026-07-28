@@ -139,6 +139,7 @@ public sealed class SmtpEmailService : IEmailService
             <table role="presentation" style="width:100%;border-collapse:collapse;margin-top:14px">
               <tr><td>Tạm tính</td><td style="text-align:right">{FormatCurrency(order.Totalamount)}</td></tr>
               <tr><td>Giảm giá</td><td style="text-align:right">-{FormatCurrency(order.Discountamount ?? 0)}</td></tr>
+              <tr><td>Phí vận chuyển</td><td style="text-align:right">{FormatCurrency(order.Shippingfee)}</td></tr>
               <tr><td style="padding-top:8px"><strong>Thành tiền</strong></td><td style="padding-top:8px;text-align:right;color:#e30613"><strong>{FormatCurrency(order.Finalamount)}</strong></td></tr>
               <tr><td>Đã thanh toán</td><td style="text-align:right">{FormatCurrency(order.Paidamount ?? 0)}</td></tr>
               <tr><td>Còn lại</td><td style="text-align:right">{FormatCurrency(Math.Max(0, order.Finalamount - (order.Paidamount ?? 0)))}</td></tr>

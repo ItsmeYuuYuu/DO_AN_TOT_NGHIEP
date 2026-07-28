@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ECommerceBackend.Models;
@@ -51,15 +53,20 @@ namespace ECommerceBackend.Controllers
         [HttpPost]
         public async Task<IActionResult> ProcessWebhook([FromBody] SepayWebhookDto payload)
         {
-            // 1. Verify ApiKey if configured in appsettings
+            // 1. Fail closed and compare the complete API key instead of accepting substrings.
             var configuredKey = _configuration["Sepay:ApiKey"];
-            if (!string.IsNullOrEmpty(configuredKey))
+            if (string.IsNullOrWhiteSpace(configuredKey))
             {
-                var authHeader = Request.Headers["Authorization"].ToString();
-                if (string.IsNullOrEmpty(authHeader) || !authHeader.Contains(configuredKey))
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
                 {
-                    return Unauthorized(new { message = "Unauthorized webhook request." });
-                }
+                    message = "Webhook authentication is not configured."
+                });
+            }
+
+            var authHeader = Request.Headers.Authorization.ToString();
+            if (!HasValidApiKey(authHeader, configuredKey))
+            {
+                return Unauthorized(new { message = "Unauthorized webhook request." });
             }
 
             // 2. We only process incoming transfers ("in")
@@ -82,9 +89,37 @@ namespace ECommerceBackend.Controllers
             }
 
             int orderId = int.Parse(match.Groups[1].Value);
+            var transactionReference = payload.Id > 0
+                ? $"SEPAY-{payload.Id}"
+                : payload.ReferenceCode?.Trim();
+            if (string.IsNullOrWhiteSpace(transactionReference))
+            {
+                return BadRequest(new { message = "A SePay transaction identifier is required." });
+            }
 
             // 4. Retrieve order in a database transaction
             using var dbTransaction = await _context.Database.BeginTransactionAsync();
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT 1 FROM orders WHERE orderid = {orderId} FOR UPDATE");
+
+            var alreadyProcessed = await _context.Orderpayments
+                .AsNoTracking()
+                .AnyAsync(item =>
+                    item.Provider == "SEPAY" &&
+                    item.Status == "Success" &&
+                    item.Transactionref == transactionReference);
+            if (alreadyProcessed)
+            {
+                await dbTransaction.CommitAsync();
+                return Ok(new
+                {
+                    success = true,
+                    duplicate = true,
+                    message = "Transaction was already processed.",
+                    orderId
+                });
+            }
+
             var order = await _context.Orders
                 .Include(item => item.Orderpayments)
                 .FirstOrDefaultAsync(item => item.Orderid == orderId);
@@ -138,9 +173,7 @@ namespace ECommerceBackend.Controllers
 
             payment.Amount = acceptedAmount;
             payment.Status = "Success";
-            payment.Transactionref = string.IsNullOrWhiteSpace(payload.ReferenceCode)
-                ? $"SEPAY-{payload.Id}"
-                : payload.ReferenceCode.Trim();
+            payment.Transactionref = transactionReference;
             payment.Paidat = now;
 
             order.Paidamount = (order.Paidamount ?? 0) + acceptedAmount;
@@ -164,6 +197,33 @@ namespace ECommerceBackend.Controllers
             await _emailService.SendPaymentUpdatedAsync(order, HttpContext.RequestAborted);
 
             return Ok(new { success = true, message = "Payment confirmed successfully.", orderId = order.Orderid, newStatus = order.Paymentstatus });
+        }
+
+        private static bool HasValidApiKey(string authorizationHeader, string configuredKey)
+        {
+            if (string.IsNullOrWhiteSpace(authorizationHeader))
+            {
+                return false;
+            }
+
+            var suppliedValue = authorizationHeader.Trim();
+            var separatorIndex = suppliedValue.IndexOf(' ');
+            if (separatorIndex >= 0)
+            {
+                var scheme = suppliedValue[..separatorIndex];
+                if (!scheme.Equals("Apikey", StringComparison.OrdinalIgnoreCase) &&
+                    !scheme.Equals("Bearer", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                suppliedValue = suppliedValue[(separatorIndex + 1)..].Trim();
+            }
+
+            var suppliedBytes = Encoding.UTF8.GetBytes(suppliedValue);
+            var configuredBytes = Encoding.UTF8.GetBytes(configuredKey.Trim());
+            return suppliedBytes.Length == configuredBytes.Length &&
+                   CryptographicOperations.FixedTimeEquals(suppliedBytes, configuredBytes);
         }
     }
 }

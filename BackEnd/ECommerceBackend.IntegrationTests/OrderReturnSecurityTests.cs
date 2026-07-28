@@ -73,7 +73,9 @@ public sealed class OrderReturnSecurityTests : IClassFixture<IntegrationTestFact
             null,
             "Integration Customer A",
             "0900000001",
-            "it.a@example.test");
+            "it.a@example.test",
+            "Thành phố Hồ Chí Minh",
+            "Phường Bến Nghé");
 
         var response = await customerA.PostAsJsonAsync("/api/Orders", payload);
         var created = await response.Content.ReadFromJsonAsync<OrderDetailDto>();
@@ -82,7 +84,7 @@ public sealed class OrderReturnSecurityTests : IClassFixture<IntegrationTestFact
         Assert.NotNull(created);
         Assert.Equal("Pending", created.Orderstatus);
         Assert.Equal("COD", created.Paymentmethod);
-        Assert.Equal(900_000m, created.Finalamount);
+        Assert.Equal(930_000m, created.Finalamount);
     }
 
     [Fact]

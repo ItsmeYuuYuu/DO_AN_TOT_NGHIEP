@@ -20,6 +20,7 @@ import { warrantyPackagesApi, type WarrantyPackage } from '@/features/orders/api
 import { useCart } from '@/features/orders/context/CartContext';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { formatCurrency } from '@/utils/formatters';
+import { calculateShippingFee, getShippingZoneLabel } from '@/features/orders/shippingPolicy';
 
 interface CheckoutForm {
   fullname: string;
@@ -39,6 +40,7 @@ interface CreatedOrder {
   orderid: number;
   requiredpayment?: number;
   finalamount?: number;
+  shippingfee?: number;
   paymentstatus?: string;
   checkouttype?: string;
   paymenttoken?: string;
@@ -133,7 +135,6 @@ const CheckoutPage: React.FC = () => {
     }
   }, [form.paymentMethod, isHoChiMinhCity, isLoggedIn]);
 
-  const shipping = totalPrice >= 2_000_000 ? 0 : 30_000;
   const totalWarrantyPrice = useMemo(() => items.reduce((sum, item) => {
     const packageId = selectedPackages[item.variantId];
     if (!packageId) return sum;
@@ -141,19 +142,23 @@ const CheckoutPage: React.FC = () => {
     return sum + (warrantyPackage?.price || 0) * item.quantity;
   }, 0), [items, packages, selectedPackages]);
 
+  const merchandiseGross = totalPrice + totalWarrantyPrice;
   const discountAmount = useMemo(() => {
     if (!appliedVoucher) return 0;
     if (appliedVoucher.discountpercentage) {
-      return Math.round(totalPrice * (appliedVoucher.discountpercentage / 100));
+      return Math.round(merchandiseGross * (appliedVoucher.discountpercentage / 100));
     }
     return appliedVoucher.discountamount || 0;
-  }, [appliedVoucher, totalPrice]);
+  }, [appliedVoucher, merchandiseGross]);
 
-  const grandTotal = Math.max(0, totalPrice + shipping + totalWarrantyPrice - discountAmount);
+  const merchandiseAmount = Math.max(0, merchandiseGross - discountAmount);
+  const shippingQuote = calculateShippingFee(merchandiseAmount, form.provinceName, form.wardName);
+  const shipping = shippingQuote.fee;
+  const grandTotal = merchandiseAmount + shipping;
   const requiredPayment = form.paymentMethod === 'COD'
     ? 0
     : form.paymentOption === 'Deposit30'
-      ? Math.round(grandTotal * 0.3)
+      ? Math.round(merchandiseAmount * 0.3)
       : grandTotal;
 
   const handleApplyVoucher = async () => {
@@ -325,6 +330,8 @@ const CheckoutPage: React.FC = () => {
         customerphone: form.phone,
         customeremail: form.email || null,
         shippingaddress: shippingAddress,
+        shippingprovince: form.provinceName,
+        shippingward: form.wardName,
         paymentmethod: form.paymentMethod,
         paymentoption: form.paymentMethod === 'COD' ? null : form.paymentOption,
         vouchercode: appliedVoucher?.vouchercode || null,
@@ -516,7 +523,7 @@ const CheckoutPage: React.FC = () => {
             {form.paymentMethod !== 'COD' && (
               <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {[
-                  { value: 'Deposit30', label: 'Đặt cọc 30%', desc: formatCurrency(Math.round(grandTotal * 0.3)) },
+                  { value: 'Deposit30', label: 'Đặt cọc 30% hàng hóa', desc: formatCurrency(Math.round(merchandiseAmount * 0.3)) },
                   { value: 'Full', label: 'Thanh toán 100%', desc: formatCurrency(grandTotal) },
                 ].map(option => (
                   <label
@@ -536,7 +543,10 @@ const CheckoutPage: React.FC = () => {
                       className="mr-2 accent-[#e30613]"
                     />
                     <span className="text-sm font-black text-[#1f2937]">{option.label}</span>
-                    <p className="mt-1 text-xs text-slate-500">Cần thanh toán: {option.desc}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Cần thanh toán: {option.desc}
+                      {option.value === 'Deposit30' && ' · Phí giao hàng thu cùng số tiền còn lại'}
+                    </p>
                   </label>
                 ))}
               </div>
@@ -646,7 +656,7 @@ const CheckoutPage: React.FC = () => {
                 <span>Tạm tính</span><span>{formatCurrency(totalPrice)}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Vận chuyển</span>
+                <span>Vận chuyển · {getShippingZoneLabel(shippingQuote.zone)}</span>
                 <span className={shipping === 0 ? 'font-bold text-emerald-700' : ''}>
                   {shipping === 0 ? 'Miễn phí' : formatCurrency(shipping)}
                 </span>
@@ -671,6 +681,12 @@ const CheckoutPage: React.FC = () => {
                 <div className="flex justify-between bg-[#ffd166]/25 px-3 py-2 font-black text-[#1f2937]">
                   <span>Cần thanh toán trước</span>
                   <span>{formatCurrency(requiredPayment)}</span>
+                </div>
+              )}
+              {form.paymentMethod !== 'COD' && form.paymentOption === 'Deposit30' && (
+                <div className="flex justify-between px-3 text-xs font-semibold text-slate-500">
+                  <span>Còn lại khi nhận hàng (đã gồm phí giao hàng)</span>
+                  <span>{formatCurrency(grandTotal - requiredPayment)}</span>
                 </div>
               )}
             </div>

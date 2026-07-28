@@ -277,7 +277,9 @@ const PaymentSimulationPage: React.FC = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between gap-4"><span className="text-slate-500">Người nhận</span><span className="text-right font-bold text-slate-800">{checkout.shippingname ?? 'Khách hàng'}</span></div>
                 <div className="flex justify-between gap-4"><span className="text-slate-500">Phương thức</span><span className="text-right font-bold text-slate-800">{provider}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-slate-500">Giá trị đơn</span><span className="font-bold text-slate-800">{formatCurrency(checkout.finalamount)}</span></div>
+                <div className="flex justify-between gap-4"><span className="text-slate-500">Giá trị hàng hóa</span><span className="font-bold text-slate-800">{formatCurrency(Math.max(0, checkout.finalamount - checkout.shippingfee))}</span></div>
+                <div className="flex justify-between gap-4"><span className="text-slate-500">Phí vận chuyển</span><span className="font-bold text-slate-800">{formatCurrency(checkout.shippingfee)}</span></div>
+                <div className="flex justify-between gap-4"><span className="text-slate-500">Tổng đơn hàng</span><span className="font-bold text-slate-800">{formatCurrency(checkout.finalamount)}</span></div>
               </div>
 
               <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-center">

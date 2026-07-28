@@ -32,7 +32,11 @@ import Logo from '@/assets/Logo.webp';
 import { formatTime } from '@/utils/formatters';
 
 const normalizeMenuText = (value: string) =>
-  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase();
 
 export const CustomerLayout: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -668,28 +672,9 @@ export const CustomerLayout: React.FC = () => {
                   className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#f8fafc] p-3"
                 >
                   {aiWidgetMessages.length === 0 && !aiWidgetLoading && (
-                    <>
-                      <div className="rounded-2xl bg-white p-3 text-sm leading-6 text-[#1f2937] shadow-sm">
-                        Em là trợ lý AI của Cuồng Điện Thoại. Anh/chị đang muốn tìm máy theo nhu cầu, ngân sách hay cần so sánh vài mẫu đang phân vân?
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          'Máy chụp ảnh đẹp',
-                          'Máy chơi game mượt',
-                          'So sánh sản phẩm',
-                        ].map(prompt => (
-                          <button
-                            key={prompt}
-                            type="button"
-                            disabled={aiWidgetLoading}
-                            onClick={() => void startAiChat(prompt)}
-                            className="rounded-full border border-[#e5e7eb] bg-white px-3 py-2 text-[11px] font-bold text-[#1f2937] hover:border-[#e30613] hover:text-[#c4000b] disabled:opacity-60"
-                          >
-                            {prompt}
-                          </button>
-                        ))}
-                      </div>
-                    </>
+                    <div className="rounded-2xl bg-white p-3 text-sm leading-6 text-[#1f2937] shadow-sm">
+                      Em là trợ lý AI của Cuồng Điện Thoại. Anh/chị đang muốn tìm máy theo nhu cầu, ngân sách hay cần so sánh vài mẫu đang phân vân?
+                    </div>
                   )}
 
                   {aiWidgetMessages.map((message, index) => {

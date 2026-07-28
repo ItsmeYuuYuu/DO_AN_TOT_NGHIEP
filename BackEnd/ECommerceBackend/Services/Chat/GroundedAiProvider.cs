@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -520,7 +521,14 @@ public sealed class GroundedAiProvider : IAiProvider
         {
             return BuildComparisonResponse(productGroups);
         }
-        var heading = comparison
+        var familyFallback =
+            ProductConsultationService.TryGetSpecificModelFallbackFamily(
+                userMessage,
+                products,
+                out var fallbackFamily);
+        var heading = familyFallback
+            ? $"Em chưa tìm thấy sản phẩm khớp chính xác với model anh/chị yêu cầu trong dữ liệu cửa hàng. Tuy nhiên, cửa hàng đang có sản phẩm cùng dòng {CultureInfo.GetCultureInfo("vi-VN").TextInfo.ToTitleCase(fallbackFamily)} gần nhất để anh/chị tham khảo:"
+            : comparison
             ? $"Em đã lọc ra {productCount} sản phẩm với {variantCount} phiên bản để anh/chị so sánh trước. Em sẽ đặt các điểm quan trọng cạnh nhau để mình dễ chọn hơn:"
             : $"Em đã lọc theo nhu cầu của anh/chị và thấy {productCount} sản phẩm với {variantCount} phiên bản khá phù hợp. Em chọn mỗi máy một phiên bản đại diện, ưu tiên giá và tồn kho rõ ràng để mình dễ cân nhắc:";
         var lines = productGroups.Select((group, index) =>

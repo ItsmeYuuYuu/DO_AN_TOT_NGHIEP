@@ -626,6 +626,13 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("shippingemail");
 
+                    b.Property<decimal>("Shippingfee")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("shippingfee")
+                        .HasDefaultValueSql("0");
+
                     b.Property<string>("Shippingname")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -789,6 +796,10 @@ namespace ECommerceBackend.Migrations
                     b.HasIndex(new[] { "Transactiontype", "Transactionref" }, "ux_orderpayments_active_refund_reference")
                         .IsUnique()
                         .HasFilter("\"Transactiontype\" = 'Refund' AND status <> 'Failed' AND transactionref IS NOT NULL");
+
+                    b.HasIndex(new[] { "Provider", "Transactionref" }, "ux_orderpayments_sepay_transaction_reference")
+                        .IsUnique()
+                        .HasFilter("provider = 'SEPAY' AND status = 'Success' AND transactionref IS NOT NULL");
 
                     b.ToTable("orderpayments", (string)null);
                 });

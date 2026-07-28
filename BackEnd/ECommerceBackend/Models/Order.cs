@@ -43,6 +43,8 @@ public partial class Order
 
     public string? Shippingaddress { get; set; }
 
+    public decimal Shippingfee { get; set; }
+
     public string? Customernote { get; set; }
 
     public DateTime? Reservationexpiresat { get; set; }

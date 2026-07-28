@@ -21,6 +21,7 @@ $apiOutput = Join-Path $workDir "api"
 $webOutput = Join-Path $workDir "web"
 $apiArchive = Join-Path $workDir "api.tar.gz"
 $webArchive = Join-Path $workDir "web.tar.gz"
+$migrationBundle = Join-Path $workDir "efbundle"
 
 function Invoke-External {
     param(
@@ -68,7 +69,7 @@ try {
 
     New-Item -ItemType Directory -Force $apiOutput, $webOutput | Out-Null
 
-    Write-Host "`n[1/6] Publishing ASP.NET Core API..." -ForegroundColor Cyan
+    Write-Host "`n[1/7] Publishing ASP.NET Core API..." -ForegroundColor Cyan
     Invoke-External "dotnet" @(
         "publish",
         $backendProject,
@@ -77,7 +78,17 @@ try {
         "--nologo"
     )
 
-    Write-Host "`n[2/6] Building React frontend..." -ForegroundColor Cyan
+    Write-Host "`n[2/7] Creating EF Core migration bundle..." -ForegroundColor Cyan
+    Invoke-External "dotnet" @(
+        "ef", "migrations", "bundle",
+        "--project", $backendProject,
+        "--configuration", "Release",
+        "--target-runtime", "linux-x64",
+        "--force",
+        "--output", $migrationBundle
+    )
+
+    Write-Host "`n[3/7] Building React frontend..." -ForegroundColor Cyan
     if (-not (Test-Path (Join-Path $frontendRoot "node_modules"))) {
         Invoke-External "npm" @("ci") $frontendRoot
     }
@@ -96,28 +107,30 @@ try {
         throw "Frontend package does not contain index.html."
     }
 
-    Write-Host "`n[3/6] Packaging release $releaseId..." -ForegroundColor Cyan
+    Write-Host "`n[4/7] Packaging release $releaseId..." -ForegroundColor Cyan
     Invoke-External "tar" @("-czf", $apiArchive, "-C", $apiOutput, ".")
     Invoke-External "tar" @("-czf", $webArchive, "-C", $webOutput, ".")
 
-    Write-Host "`n[4/6] Creating remote release directory..." -ForegroundColor Cyan
+    Write-Host "`n[5/7] Creating remote release directory..." -ForegroundColor Cyan
     Invoke-External "ssh" @($target, "mkdir -p '$remoteReleaseDir'")
 
-    Write-Host "`n[5/6] Uploading release..." -ForegroundColor Cyan
+    Write-Host "`n[6/7] Uploading release..." -ForegroundColor Cyan
     Invoke-External "scp" @(
         $apiArchive,
         $webArchive,
+        $migrationBundle,
         $remoteDeployScript,
         "${target}:$remoteReleaseDir/"
     )
 
-    Write-Host "`n[6/6] Activating release with health check and rollback..." -ForegroundColor Cyan
+    Write-Host "`n[7/7] Activating release with health check and rollback..." -ForegroundColor Cyan
     $remoteCommand = @(
         "chmod 750 '$remoteReleaseDir/deploy-release.sh' &&",
         "sudo bash '$remoteReleaseDir/deploy-release.sh'",
         "--release-id '$releaseId'",
         "--api-archive '$remoteReleaseDir/api.tar.gz'",
         "--web-archive '$remoteReleaseDir/web.tar.gz'",
+        "--migration-bundle '$remoteReleaseDir/efbundle'",
         "--site-url '$SiteUrl'"
     ) -join " "
 

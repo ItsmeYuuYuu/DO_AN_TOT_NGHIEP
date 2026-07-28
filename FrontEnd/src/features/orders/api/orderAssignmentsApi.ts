@@ -28,6 +28,7 @@ export interface OrderWorkflowItem {
   shippingname?: string;
   shippingphone?: string;
   shippingaddress?: string;
+  shippingfee: number;
   itemcount: number;
   devices: OrderWorkflowDevice[];
   assignment?: OrderAssignment;

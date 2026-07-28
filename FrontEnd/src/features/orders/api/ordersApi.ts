@@ -19,6 +19,7 @@ export interface Order {
   shippingphone?: string;
   shippingemail?: string;
   shippingaddress?: string;
+  shippingfee?: number;
   customernote?: string;
   reservationexpiresat?: string;
   paymenttoken?: string;
@@ -79,6 +80,7 @@ export interface PaymentCheckout {
   paymentmethod?: string;
   paymentstatus?: string;
   finalamount: number;
+  shippingfee: number;
   requiredpayment: number;
   paidamount: number;
   reservationexpiresat?: string;

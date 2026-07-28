@@ -98,7 +98,7 @@ public class OrderAssignmentsController : ControllerBase
             order.Orderid, order.Orderdate, order.Orderstatus, order.Paymentmethod,
             order.Paymentstatus, order.Finalamount, order.Paidamount ?? 0,
             order.Checkouttype, order.Shippingname, order.Shippingphone,
-            order.Shippingaddress, order.Orderitems.Count, devices,
+            order.Shippingaddress, order.Shippingfee, order.Orderitems.Count, devices,
             await GetAssignmentAsync(order.Orderid, department));
     }
 
@@ -262,7 +262,7 @@ public class OrderAssignmentsController : ControllerBase
         {
             Orderid = orderId, Carrier = carrier,
             Trackingcode = $"{carrier.Replace("&", "")}-DEMO-{now:yyyyMMdd}-{orderId:D6}",
-            Shippingfee = dto.Shippingfee, Status = "AwaitingPickup",
+            Shippingfee = order.Shippingfee, Status = "AwaitingPickup",
             Estimateddeliveryat = dto.Estimateddeliveryat, Createdbyuserid = CurrentUserId(),
             Createdat = now, Updatedat = now
         };

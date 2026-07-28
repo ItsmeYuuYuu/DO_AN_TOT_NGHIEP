@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Minus, Plus, ShieldCheck, ShoppingBag, Tag, Tras
 import { useCart } from '@/features/orders/context/CartContext';
 import { formatCurrency } from '@/utils/formatters';
 import { Seo } from '@/components/Seo';
+import { calculateShippingFee } from '@/features/orders/shippingPolicy';
 
 const CartPage: React.FC = () => {
   const { items, totalItems, totalPrice, removeFromCart, updateQuantity, clearCart } = useCart();
@@ -37,7 +38,7 @@ const CartPage: React.FC = () => {
     );
   }
 
-  const shipping = totalPrice >= 2_000_000 ? 0 : 30_000;
+  const { fee: shipping } = calculateShippingFee(totalPrice);
   const grandTotal = totalPrice + shipping;
 
   return (
@@ -146,7 +147,7 @@ const CartPage: React.FC = () => {
                 <span className="font-bold text-[#1f2937]">{formatCurrency(totalPrice)}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Phí vận chuyển</span>
+                <span>Phí vận chuyển dự kiến</span>
                 <span className={`font-bold ${shipping === 0 ? 'text-emerald-700' : 'text-[#1f2937]'}`}>
                   {shipping === 0 ? 'Miễn phí' : formatCurrency(shipping)}
                 </span>
@@ -154,12 +155,15 @@ const CartPage: React.FC = () => {
               {shipping > 0 && (
                 <div className="flex gap-2 border border-[#e5e7eb] bg-[#ffffff] p-3 text-xs leading-5 text-slate-500">
                   <Truck className="mt-0.5 shrink-0 text-[#c4000b]" size={15} />
-                  <span>Mua thêm {formatCurrency(2_000_000 - totalPrice)} để được miễn phí vận chuyển.</span>
+                  <span>
+                    Phí chính xác theo địa chỉ: 30.000đ nội thành TP.HCM, 50.000đ ngoại thành
+                    hoặc ngoài TP.HCM. Mua thêm {formatCurrency(2_000_000 - totalPrice)} để được miễn phí.
+                  </span>
                 </div>
               )}
               <div className="border-t border-[#e5e7eb] pt-4">
                 <div className="flex justify-between">
-                  <span className="font-black text-[#1f2937]">Tổng cộng</span>
+                  <span className="font-black text-[#1f2937]">Tổng tạm tính từ</span>
                   <span className="text-2xl font-black text-[#c4000b]">{formatCurrency(grandTotal)}</span>
                 </div>
               </div>

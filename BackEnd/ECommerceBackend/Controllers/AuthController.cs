@@ -46,6 +46,7 @@ namespace ECommerceBackend.Controllers
         /// Xác thực người dùng và trả về JWT Access Token.
         /// </summary>
         [HttpPost("login")]
+        [EnableRateLimiting("LoginRequests")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Username) ||
@@ -175,6 +176,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost("registration-code")]
+        [EnableRateLimiting("RegistrationOtpRequests")]
         public async Task<IActionResult> RequestRegistrationCode([FromBody] RegistrationOtpRequestDto req)
         {
             var email = req.Email.Trim().ToLowerInvariant();

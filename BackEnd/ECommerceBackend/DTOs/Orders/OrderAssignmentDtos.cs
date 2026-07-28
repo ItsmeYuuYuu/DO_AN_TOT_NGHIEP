@@ -28,6 +28,7 @@ public record OrderWorkflowItemDto(
     string? Shippingname,
     string? Shippingphone,
     string? Shippingaddress,
+    decimal Shippingfee,
     int Itemcount,
     List<OrderWorkflowDeviceDto> Devices,
     OrderAssignmentDto? Assignment

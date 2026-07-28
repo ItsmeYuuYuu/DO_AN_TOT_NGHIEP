@@ -70,7 +70,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
   const [confirmedImeis, setConfirmedImeis] = useState<Set<string>>(new Set());
   const [shippingNote, setShippingNote] = useState('');
   const [carrier, setCarrier] = useState('GHN');
-  const [shippingFee, setShippingFee] = useState(30000);
+  const [shippingFee, setShippingFee] = useState(0);
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
 
   const canAssign = user?.rolename === 'Admin' || user?.rolename === 'Manager';
@@ -124,7 +124,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
     setConfirmedImeis(new Set());
     setShippingNote('');
     setCarrier(item.checkouttype === 'Guest' ? INTERNAL_CARRIER : 'GHN');
-    setShippingFee(30000);
+    setShippingFee(item.shippingfee);
     setEstimatedDeliveryDate('');
   };
 
@@ -134,7 +134,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
     setConfirmedImeis(new Set());
     setShippingNote('');
     setCarrier('GHN');
-    setShippingFee(30000);
+    setShippingFee(0);
     setEstimatedDeliveryDate('');
   };
 
@@ -361,26 +361,33 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
       </div>
 
       {verificationOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-[#e30613]">Đối chiếu thiết bị</p>
-                <h2 className="text-xl font-black text-[#172033]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#172033]/45 p-4 backdrop-blur-[2px]">
+          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.24)]">
+            <div className="flex items-center justify-between px-7 py-5">
+              <div className="flex items-center gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff1f2] text-[#e30613]">
+                  <ScanLine size={22} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#c4000b]">Đối chiếu thiết bị</p>
+                  <h2 className="mt-0.5 text-xl font-black text-[#172033]">
                   Đơn #{String(verificationOrder.orderid).padStart(5, '0')}
-                </h2>
+                  </h2>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={closeImeiVerification}
-                className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                aria-label="Đóng"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-[#172033]"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="max-h-[70vh] space-y-5 overflow-y-auto p-6">
-              <div className="border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto border-y border-slate-100 bg-[#f8fafc] px-7 py-6">
+              <div className="flex gap-3 rounded-2xl border border-red-100 bg-[#fff7f7] p-4 text-sm font-semibold leading-6 text-slate-600">
+                <ScanLine size={19} className="mt-0.5 shrink-0 text-[#e30613]" />
                 Đối chiếu IMEI trên máy thực tế với từng dòng bên dưới. Hệ thống chỉ cho xuất giao khi đã xác nhận đủ toàn bộ thiết bị.
               </div>
 
@@ -390,8 +397,10 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                   return (
                     <label
                       key={device.imei}
-                      className={`flex cursor-pointer items-center gap-4 border-2 p-4 transition-colors ${
-                        checked ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-red-300'
+                      className={`flex cursor-pointer items-center gap-4 rounded-2xl border p-4 shadow-sm transition-all ${
+                        checked
+                          ? 'border-emerald-300 bg-emerald-50/80'
+                          : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-red-200 hover:shadow-md'
                       }`}
                     >
                       <input
@@ -400,15 +409,15 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                         onChange={() => toggleImei(device.imei)}
                         className="h-5 w-5 accent-emerald-600"
                       />
-                      <div className="flex h-11 w-11 items-center justify-center bg-white text-[#e30613] shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-100 bg-[#fff7f7] text-[#e30613]">
                         <Smartphone size={22} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-black text-[#172033]">
                           {device.productname ?? device.variantsku ?? 'Thiết bị'}
                         </p>
-                        <p className="font-mono text-sm font-black text-[#c4000b]">{device.imei}</p>
-                        <p className="text-xs font-semibold text-slate-400">
+                        <p className="mt-0.5 font-mono text-sm font-bold tracking-wide text-[#c4000b]">{device.imei}</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-400">
                           {device.variantsku ?? 'Không có SKU'} · Kho: {device.inventorystatus ?? '—'}
                         </p>
                       </div>
@@ -418,24 +427,24 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                 })}
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-black uppercase text-slate-500">Ghi chú đóng gói</label>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Ghi chú đóng gói</label>
                 <textarea
                   value={shippingNote}
                   onChange={event => setShippingNote(event.target.value)}
                   placeholder="Ví dụ: Đã kiểm tra ngoại hình, niêm phong và phụ kiện..."
-                  className="min-h-24 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#e30613]"
+                  className="min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-semibold text-[#172033] outline-none transition focus:border-[#e30613] focus:bg-white focus:ring-4 focus:ring-red-50"
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                <label className="text-xs font-black uppercase text-slate-500">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="rounded-2xl border border-slate-200 bg-white p-4 text-xs font-bold uppercase tracking-wide text-slate-500 shadow-sm">
                   Đơn vị vận chuyển
                   <select
                     value={carrier}
                     onChange={event => setCarrier(event.target.value)}
                     disabled={isGuestShipment}
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case text-[#172033] disabled:cursor-not-allowed disabled:bg-slate-100"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold normal-case text-[#172033] outline-none focus:border-[#e30613] disabled:cursor-not-allowed disabled:text-slate-500"
                   >
                     <option value={INTERNAL_CARRIER}>Cửa hàng giao nội thành TP.HCM</option>
                     {!isGuestShipment && <option value="GHN">GHN</option>}
@@ -444,26 +453,36 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                     {!isGuestShipment && <option value="J&T">J&T</option>}
                   </select>
                 </label>
-                <label className="text-xs font-black uppercase text-slate-500">
+                <label className="rounded-2xl border border-slate-200 bg-white p-4 text-xs font-bold uppercase tracking-wide text-slate-500 shadow-sm">
                   Phí vận chuyển
-                  <input type="number" min={0} value={shippingFee} onChange={event => setShippingFee(Number(event.target.value))} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold normal-case text-[#172033]" />
+                  <span className="mt-2 flex min-h-12 items-center rounded-xl bg-[#fff7f7] px-3 text-base font-black normal-case text-[#c4000b]">
+                    {shippingFee === 0 ? 'Miễn phí' : formatCurrency(shippingFee)}
+                  </span>
                 </label>
-                <label className="text-xs font-black uppercase text-slate-500">
+                <label className="rounded-2xl border border-slate-200 bg-white p-4 text-xs font-bold uppercase tracking-wide text-slate-500 shadow-sm">
                   Ngày giao dự kiến
-                  <input type="date" value={estimatedDeliveryDate} onChange={event => setEstimatedDeliveryDate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold normal-case text-[#172033]" />
+                  <input type="date" value={estimatedDeliveryDate} onChange={event => setEstimatedDeliveryDate(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold normal-case text-[#172033] outline-none focus:border-[#e30613]" />
                 </label>
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <p className="text-sm font-black text-slate-600">
-                Đã xác nhận {confirmedImeis.size}/{verificationOrder.devices.length} IMEI
-              </p>
+            <div className="flex flex-col gap-4 bg-white px-7 py-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-black text-[#172033]">
+                  Đã xác nhận {confirmedImeis.size}/{verificationOrder.devices.length} IMEI
+                </p>
+                <div className="mt-2 h-1.5 w-44 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    style={{ width: `${verificationOrder.devices.length === 0 ? 0 : (confirmedImeis.size / verificationOrder.devices.length) * 100}%` }}
+                  />
+                </div>
+              </div>
               <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={closeImeiVerification}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-600 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50"
                 >
                   Hủy
                 </button>
@@ -477,7 +496,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                     shippingFee < 0
                   }
                   onClick={confirmShipment}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#e30613] px-5 py-2.5 text-sm font-black text-white hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#e30613] px-5 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(227,6,19,0.2)] transition hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
                 >
                   <PackageCheck size={17} />
                   {workingId === verificationOrder.orderid ? 'Đang xuất kho...' : 'Xác nhận xuất giao'}

@@ -216,7 +216,9 @@ public class ReturnRequestsController : ControllerBase
 
         // Allocate the amount actually owed after an order-level discount to each
         // item. This prevents a return from reimbursing more than was paid.
-        var refundableOrderTotal = Math.Clamp(order.Finalamount, 0m, orderGross);
+        // The original delivery fee has already been consumed and is not part of
+        // the merchandise value eligible for return/refund.
+        var refundableOrderTotal = Math.Clamp(order.Finalamount - order.Shippingfee, 0m, orderGross);
         var selectedIds = selectedItems.Select(item => item.Orderitemid).ToHashSet();
         var amounts = new Dictionary<int, decimal>();
         decimal allocated = 0m;

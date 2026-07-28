@@ -458,6 +458,10 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Shippingaddress)
                 .HasMaxLength(500)
                 .HasColumnName("shippingaddress");
+            entity.Property(e => e.Shippingfee)
+                .HasPrecision(18, 2)
+                .HasDefaultValueSql("0")
+                .HasColumnName("shippingfee");
             entity.Property(e => e.Customernote)
                 .HasMaxLength(500)
                 .HasColumnName("customernote");
@@ -527,6 +531,9 @@ public partial class ECommerceContext : DbContext
             entity.HasIndex(e => new { e.Transactiontype, e.Transactionref }, "ux_orderpayments_active_refund_reference")
                 .IsUnique()
                 .HasFilter("\"Transactiontype\" = 'Refund' AND status <> 'Failed' AND transactionref IS NOT NULL");
+            entity.HasIndex(e => new { e.Provider, e.Transactionref }, "ux_orderpayments_sepay_transaction_reference")
+                .IsUnique()
+                .HasFilter("provider = 'SEPAY' AND status = 'Success' AND transactionref IS NOT NULL");
 
             entity.HasOne(d => d.Order).WithMany(p => p.Orderpayments)
                 .HasForeignKey(d => d.Orderid)

@@ -24,19 +24,25 @@ namespace ECommerceBackend.Controllers
 
         private readonly ECommerceContext _context;
         private readonly ICheckoutAbuseProtectionService _checkoutAbuseProtection;
+        private readonly IShippingFeePolicy _shippingFeePolicy;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _environment;
 
         public OrdersController(
             ECommerceContext context,
             ICheckoutAbuseProtectionService checkoutAbuseProtection,
+            IShippingFeePolicy shippingFeePolicy,
             IEmailService emailService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IWebHostEnvironment environment)
         {
             _context = context;
             _checkoutAbuseProtection = checkoutAbuseProtection;
+            _shippingFeePolicy = shippingFeePolicy;
             _emailService = emailService;
             _configuration = configuration;
+            _environment = environment;
         }
 
         private static OrderListItemDto MapToDto(Order o)
@@ -106,6 +112,7 @@ namespace ECommerceBackend.Controllers
                 o.Shippingphone,
                 o.Shippingemail,
                 o.Shippingaddress,
+                o.Shippingfee,
                 o.Customernote,
                 o.Reservationexpiresat,
                 o.Paymenttoken,
@@ -138,6 +145,7 @@ namespace ECommerceBackend.Controllers
                 mapped.Shippingphone,
                 mapped.Shippingemail,
                 mapped.Shippingaddress,
+                mapped.Shippingfee,
                 mapped.Customernote,
                 mapped.Reservationexpiresat,
                 mapped.Paymenttoken,
@@ -639,6 +647,7 @@ namespace ECommerceBackend.Controllers
                 o.Totalamount,
                 o.Discountamount,
                 o.Finalamount,
+                o.Shippingfee,
                 o.Paymentmethod,
                 o.Paymentstatus,
                 o.Vouchercode,
@@ -792,6 +801,7 @@ namespace ECommerceBackend.Controllers
                     Shippingphone = shippingPhone,
                     Shippingemail = shippingEmail,
                     Shippingaddress = shippingAddress,
+                    Shippingfee = 0,
                     Customernote = dto.Note,
                     Guesttoken = isGuest ? guestToken : null
                 };
@@ -887,7 +897,13 @@ namespace ECommerceBackend.Controllers
                     }
                 }
 
-                order.Finalamount = Math.Max(0, order.Totalamount - (order.Discountamount ?? 0));
+                var merchandiseAmount = Math.Max(0, order.Totalamount - (order.Discountamount ?? 0));
+                var shippingQuote = _shippingFeePolicy.Calculate(
+                    merchandiseAmount,
+                    dto.Shippingprovince,
+                    dto.Shippingward);
+                order.Shippingfee = shippingQuote.Fee;
+                order.Finalamount = merchandiseAmount + order.Shippingfee;
 
                 var paymentOption = NormalizePaymentOption(dto.Paymentoption);
                 if (isGuest && paymentMethod != "COD" && string.IsNullOrEmpty(paymentOption))
@@ -911,7 +927,8 @@ namespace ECommerceBackend.Controllers
                 {
                     order.Paymentstatus = "AwaitingDeposit";
                     order.Depositpercentage = 30;
-                    order.Requiredpayment = Math.Round(order.Finalamount * 0.3m, 0, MidpointRounding.AwayFromZero);
+                    // Phí giao hàng được thu cùng phần còn lại, không tính vào tiền cọc 30%.
+                    order.Requiredpayment = Math.Round(merchandiseAmount * 0.3m, 0, MidpointRounding.AwayFromZero);
                     order.Reservationexpiresat = DateTime.UtcNow.AddMinutes(15);
                     order.Paymenttoken = Guid.NewGuid().ToString("N");
                 }
@@ -1008,6 +1025,7 @@ namespace ECommerceBackend.Controllers
                 order.Paymentmethod,
                 order.Paymentstatus,
                 order.Finalamount,
+                order.Shippingfee,
                 amountDue,
                 order.Paidamount ?? 0,
                 order.Reservationexpiresat,
@@ -1024,6 +1042,12 @@ namespace ECommerceBackend.Controllers
             int id,
             [FromBody] SimulatePaymentRequestDto dto)
         {
+            if (!_environment.IsDevelopment() &&
+                !_environment.IsEnvironment("Testing"))
+            {
+                return NotFound();
+            }
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             var order = await _context.Orders
                 .Include(item => item.Orderitems)

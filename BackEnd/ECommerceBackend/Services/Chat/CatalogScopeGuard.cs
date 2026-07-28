@@ -32,7 +32,9 @@ public static class CatalogScopeGuard
         "may loc nuoc", "binh nong lanh", "ban ghe", "cai ban", "cai ghe", "giuong", "tu quan ao",
 
         // Vehicles, fashion, food, health and other retail domains
-        "o to", "xe hoi", "xe may", "xe dap", "giay", "dep", "ao", "quan", "tui xach",
+        "o to", "xe hoi", "xe may", "xe dap",
+        "giay dep", "doi giay", "doi dep", "dep sandal", "dep le",
+        "ao", "quan", "tui xach",
         "my pham", "nuoc hoa", "son moi", "do an", "thuc pham", "banh", "sua", "thuoc",
         "sach", "truyen", "do choi", "bat dong san", "ve may bay", "khach san",
 

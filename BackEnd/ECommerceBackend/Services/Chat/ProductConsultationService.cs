@@ -62,6 +62,13 @@ public sealed class ProductConsultationService : IProductConsultationService
         "dien", "thoai", "smartphone", "phone", "mobile", "may", "san", "pham", "dong", "series", "model"
     };
 
+    private static readonly HashSet<string> GenericModelQualifierWords = new(StringComparer.Ordinal)
+    {
+        "pro", "max", "plus", "ultra", "mini", "lite", "air", "fe", "se",
+        "new", "seal", "likenew", "phone", "smartphone", "mobile", "series",
+        "5g", "4g", "3g"
+    };
+
     private readonly ECommerceContext _context;
     private readonly AiAssistantOptions _options;
 
@@ -255,14 +262,157 @@ public sealed class ProductConsultationService : IProductConsultationService
             }
         }
 
-        return candidates
+        var rankedCandidates = candidates
             .OrderByDescending(candidate => candidate.Score)
             .ThenByDescending(candidate => candidate.Result.Stock > 0)
             .ThenBy(candidate => candidate.Result.Price)
-            .Take(Math.Clamp(_options.MaxRetrievedVariants, 1, 10))
             .Select(candidate => candidate.Result)
             .ToList();
+
+        return RestrictToNamedModelMatches(normalizedQuery, rankedCandidates)
+            .Take(Math.Clamp(_options.MaxRetrievedVariants, 1, 10))
+            .ToList();
     }
+
+    internal static IReadOnlyList<ProductConsultationResult> RestrictToNamedModelMatches(
+        string userMessage,
+        IReadOnlyList<ProductConsultationResult> products)
+    {
+        if (products.Count == 0)
+            return products;
+
+        var normalizedQuery = Normalize(userMessage);
+        var exactProductIds = products
+            .Where(product => IsExactProductNameMatch(normalizedQuery, product))
+            .Select(product => product.ProductId)
+            .ToHashSet();
+        if (exactProductIds.Count > 0)
+        {
+            return products
+                .Where(product => exactProductIds.Contains(product.ProductId))
+                .ToList();
+        }
+
+        if (!TryGetRequestedModelFamily(normalizedQuery, products, out var requestedFamily))
+            return products;
+
+        var familyProductIds = products
+            .Where(product => GetModelFamilyTokens(product).Contains(requestedFamily))
+            .Select(product => product.ProductId)
+            .ToHashSet();
+        return familyProductIds.Count == 0
+            ? products
+            : products
+                .Where(product => familyProductIds.Contains(product.ProductId))
+                .ToList();
+    }
+
+    internal static bool TryGetSpecificModelFallbackFamily(
+        string userMessage,
+        IReadOnlyList<ProductConsultationResult> products,
+        out string family)
+    {
+        family = string.Empty;
+        if (products.Count == 0)
+            return false;
+
+        var normalizedQuery = Normalize(userMessage);
+        if (!Regex.IsMatch(normalizedQuery, @"\d") ||
+            products.Any(product => IsExactProductNameMatch(normalizedQuery, product)))
+        {
+            return false;
+        }
+
+        return TryGetRequestedModelFamily(normalizedQuery, products, out family);
+    }
+
+    private static bool IsExactProductNameMatch(
+        string normalizedQuery,
+        ProductConsultationResult product)
+    {
+        var compactQuery = CompactAlphaNumeric(normalizedQuery);
+        var normalizedProductName = Normalize(product.ProductName);
+        var compactFullName = CompactAlphaNumeric(normalizedProductName);
+        if (compactFullName.Length >= 4 &&
+            compactQuery.Contains(compactFullName, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var normalizedBrand = Normalize(product.Brand);
+        var modelName = Regex.Replace(
+            normalizedProductName,
+            $@"\b{Regex.Escape(normalizedBrand)}\b",
+            " ",
+            RegexOptions.IgnoreCase);
+        var compactModelName = CompactAlphaNumeric(modelName);
+        return compactModelName.Length >= 4 &&
+               compactQuery.Contains(compactModelName, StringComparison.Ordinal);
+    }
+
+    private static bool TryGetRequestedModelFamily(
+        string normalizedQuery,
+        IReadOnlyList<ProductConsultationResult> products,
+        out string family)
+    {
+        family = string.Empty;
+        var queryTokens = SplitAlphaNumericTokens(normalizedQuery).ToHashSet(StringComparer.Ordinal);
+        var familyFrequency = products
+            .GroupBy(product => product.ProductId)
+            .Select(group => group.First())
+            .SelectMany(product => GetModelFamilyTokens(product).Distinct())
+            .Where(queryTokens.Contains)
+            .GroupBy(token => token, StringComparer.Ordinal)
+            .Select(group => new
+            {
+                Token = group.Key,
+                ProductCount = group.Count()
+            })
+            .OrderBy(item => item.ProductCount)
+            .ThenByDescending(item => item.Token.Length)
+            .FirstOrDefault();
+        if (familyFrequency == null)
+            return false;
+
+        family = familyFrequency.Token;
+        return true;
+    }
+
+    private static HashSet<string> GetModelFamilyTokens(ProductConsultationResult product)
+    {
+        var nameTokens = SplitAlphaNumericTokens(Normalize(product.ProductName))
+            .Where(token => token.All(char.IsLetter))
+            .ToList();
+        var brandTokens = SplitAlphaNumericTokens(Normalize(product.Brand))
+            .Where(token => token.All(char.IsLetter))
+            .ToList();
+        var familyTokens = nameTokens
+            .Where(token =>
+                token.Length >= 3 &&
+                !brandTokens.Contains(token) &&
+                !GenericModelQualifierWords.Contains(token))
+            .ToHashSet(StringComparer.Ordinal);
+
+        // Multi-word brands such as Google Pixel use the final brand word as the model family.
+        // iPhone is both the brand-facing name and the recognizable product family.
+        if (familyTokens.Count == 0 &&
+            (brandTokens.Count > 1 || brandTokens.Contains("iphone")))
+        {
+            var fallback = brandTokens.LastOrDefault(token =>
+                token.Length >= 3 && !GenericModelQualifierWords.Contains(token));
+            if (!string.IsNullOrWhiteSpace(fallback))
+                familyTokens.Add(fallback);
+        }
+
+        return familyTokens;
+    }
+
+    private static IEnumerable<string> SplitAlphaNumericTokens(string value) =>
+        Regex.Matches(value, @"[\p{L}]+|\p{N}+")
+            .Select(match => match.Value);
+
+    private static string CompactAlphaNumeric(string value) =>
+        string.Concat(SplitAlphaNumericTokens(value));
 
     internal static string Normalize(string value)
     {
@@ -311,6 +461,21 @@ public sealed class ProductConsultationService : IProductConsultationService
     private static bool MatchesCatalogTerm(string query, string catalogTerm)
     {
         if (catalogTerm.Length >= 3 && query.Contains(catalogTerm, StringComparison.Ordinal))
+            return true;
+
+        var splitQueryTokens = SplitAlphaNumericTokens(query)
+            .ToHashSet(StringComparer.Ordinal);
+        var splitCatalogTokens = SplitAlphaNumericTokens(catalogTerm);
+        var hasSharedModelFamily = splitCatalogTokens.Any(token =>
+            token.Length >= 4 &&
+            token.Any(char.IsLetter) &&
+            !GenericCatalogTermWords.Contains(token) &&
+            !GenericModelQualifierWords.Contains(token) &&
+            splitQueryTokens.Contains(token));
+        var queryHasGeneration = splitQueryTokens.Any(token => token.All(char.IsDigit));
+        var catalogHasGeneration = splitCatalogTokens.Any(token => token.All(char.IsDigit));
+
+        if (hasSharedModelFamily && queryHasGeneration && catalogHasGeneration)
             return true;
 
         var queryTokens = Regex.Matches(query, @"[\p{L}\p{N}]+")

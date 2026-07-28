@@ -128,6 +128,32 @@ builder.Services.AddRateLimiter(options =>
                 AutoReplenishment = true
             });
     });
+    options.AddPolicy("LoginRequests", httpContext =>
+    {
+        var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            $"login:{remoteIp}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
+    options.AddPolicy("RegistrationOtpRequests", httpContext =>
+    {
+        var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            $"registration-otp:{remoteIp}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
     options.AddPolicy("OrderLookupRequests", httpContext =>
     {
         var userId = httpContext.User.FindFirst("userid")?.Value;
@@ -179,6 +205,7 @@ else
     });
 }
 builder.Services.AddScoped<ECommerceBackend.Services.Checkout.ICheckoutAbuseProtectionService, ECommerceBackend.Services.Checkout.CheckoutAbuseProtectionService>();
+builder.Services.AddSingleton<ECommerceBackend.Services.Checkout.IShippingFeePolicy, ECommerceBackend.Services.Checkout.ShippingFeePolicy>();
 builder.Services.AddScoped<ECommerceBackend.Services.Returns.IReturnRefundPolicyService, ECommerceBackend.Services.Returns.ReturnRefundPolicyService>();
 builder.Services.AddHostedService<ECommerceBackend.Services.Checkout.ExpiredOrderCleanupService>();
 

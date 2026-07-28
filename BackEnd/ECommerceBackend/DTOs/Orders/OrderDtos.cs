@@ -50,6 +50,7 @@ namespace ECommerceBackend.DTOs.Orders
         string? Shippingphone,
         string? Shippingemail,
         string? Shippingaddress,
+        decimal Shippingfee,
         string? Customernote,
         DateTime? Reservationexpiresat,
         string? Paymenttoken,
@@ -80,6 +81,7 @@ namespace ECommerceBackend.DTOs.Orders
             string? Shippingphone,
             string? Shippingemail,
             string? Shippingaddress,
+            decimal Shippingfee,
             string? Customernote,
             DateTime? Reservationexpiresat,
             string? Paymenttoken,
@@ -106,6 +108,7 @@ namespace ECommerceBackend.DTOs.Orders
             Shippingphone,
             Shippingemail,
             Shippingaddress,
+            Shippingfee,
             Customernote,
             Reservationexpiresat,
             Paymenttoken,
@@ -134,7 +137,9 @@ namespace ECommerceBackend.DTOs.Orders
         [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại nhận hàng phải gồm 10 chữ số và bắt đầu bằng 0")]
         string? Customerphone = null,
         [EmailAddress(ErrorMessage = "Địa chỉ email nhận thông báo không hợp lệ")]
-        string? Customeremail = null
+        string? Customeremail = null,
+        string? Shippingprovince = null,
+        string? Shippingward = null
     );
 
     public record UpdateOrderRequestDto(string? Paymentmethod, string? Vouchercode);
@@ -165,6 +170,7 @@ namespace ECommerceBackend.DTOs.Orders
         string? Paymentmethod,
         string? Paymentstatus,
         decimal Finalamount,
+        decimal Shippingfee,
         decimal Requiredpayment,
         decimal Paidamount,
         DateTime? Reservationexpiresat,
@@ -218,6 +224,7 @@ namespace ECommerceBackend.DTOs.Orders
         decimal Totalamount,
         decimal? Discountamount,
         decimal Finalamount,
+        decimal Shippingfee,
         string? Paymentmethod,
         string? Paymentstatus,
         string? Vouchercode,

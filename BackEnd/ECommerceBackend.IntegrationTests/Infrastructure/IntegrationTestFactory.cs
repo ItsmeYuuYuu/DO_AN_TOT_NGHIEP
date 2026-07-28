@@ -36,7 +36,8 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DefaultConnection"] = _testConnectionString,
-                ["Email:Enabled"] = "false"
+                ["Email:Enabled"] = "false",
+                ["Sepay:ApiKey"] = "integration-sepay-key"
             });
         });
         builder.ConfigureServices(services =>

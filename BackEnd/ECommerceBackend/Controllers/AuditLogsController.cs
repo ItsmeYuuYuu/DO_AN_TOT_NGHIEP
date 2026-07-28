@@ -154,7 +154,7 @@ namespace ECommerceBackend.Controllers
 
             var rows = new List<string[]>
             {
-                new[] { "ID", "User ID", "Người dùng", "Thao tác", "Bảng / Đối tượng", "Record ID", "Thời gian" }
+                new[] { "ID", "User ID", "Người dùng", "Thao tác", "Bảng / Đối tượng", "ID đối tượng", "Thời gian" }
             };
 
             rows.AddRange(logs.Select(log => new[]
@@ -193,12 +193,16 @@ namespace ECommerceBackend.Controllers
 
             if (!string.IsNullOrWhiteSpace(action))
             {
-                query = query.Where(a => a.Action.Contains(action));
+                var actionPattern = $"%{action.Trim()}%";
+                query = query.Where(a => EF.Functions.ILike(a.Action, actionPattern));
             }
 
             if (!string.IsNullOrWhiteSpace(tableName))
             {
-                query = query.Where(a => a.Tablename != null && a.Tablename.Contains(tableName));
+                var tablePattern = $"%{tableName.Trim()}%";
+                query = query.Where(a =>
+                    a.Tablename != null &&
+                    EF.Functions.ILike(a.Tablename, tablePattern));
             }
 
             if (fromDate.HasValue)

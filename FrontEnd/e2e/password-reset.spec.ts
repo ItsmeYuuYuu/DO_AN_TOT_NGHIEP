@@ -1,7 +1,8 @@
 import { expect, test, type Route } from '@playwright/test';
+import { API_ROUTE_PATTERN } from './config';
 
 test('customer requests a one-time code and resets the password', async ({ page }) => {
-  await page.route('https://localhost:7035/api/**', async (route: Route) => {
+  await page.route(API_ROUTE_PATTERN, async (route: Route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
 

@@ -177,6 +177,7 @@ const ProductDetailPage: React.FC = () => {
               <ProductPurchasePanel
                 productId={product.productid}
                 productName={product.productname}
+                isActive={product.isactive !== false}
                 variants={product.productvariants || []}
                 selectedVariant={selectedVariant}
                 onSelectVariant={setSelectedVariant}

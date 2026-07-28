@@ -261,7 +261,7 @@ export const ImagePositionEditor: React.FC<ImagePositionEditorProps> = ({
               <canvas
                 ref={canvasRef}
                 style={{ aspectRatio: String(aspectRatio) }}
-                className="max-h-[58vh] w-full cursor-grab touch-none rounded-xl border border-slate-300 bg-white shadow-lg active:cursor-grabbing"
+                className="block h-auto max-h-[58vh] w-auto max-w-full cursor-grab touch-none rounded-xl border border-slate-300 bg-white shadow-lg active:cursor-grabbing"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}

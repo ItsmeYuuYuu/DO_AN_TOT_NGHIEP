@@ -318,7 +318,7 @@ namespace ECommerceBackend.Controllers
             Order order,
             decimal amountDue)
         {
-            var content = $"CDT{order.Orderid} THANH TOAN DON HANG";
+            var content = $"CDT{order.Orderid:D3} THANH TOAN DON HANG";
             var encodedContent = Uri.EscapeDataString(content);
             var encodedAmount = Uri.EscapeDataString(((long)amountDue).ToString());
 
@@ -799,9 +799,15 @@ namespace ECommerceBackend.Controllers
 
                 foreach (var reqItem in dto.Items)
                 {
-                    var variant = await _context.Productvariants.FindAsync(reqItem.Variantid);
+                    var variant = await _context.Productvariants
+                        .Include(item => item.Product)
+                        .FirstOrDefaultAsync(item => item.Variantid == reqItem.Variantid);
                     if (variant == null)
                         return BadRequest(new ApiErrorDto($"VariantId {reqItem.Variantid} không tồn tại.", null));
+                    if (variant.Product?.Isactive == false)
+                        return Conflict(new ApiErrorDto(
+                            $"Sản phẩm {variant.Product.Productname} đã ngừng kinh doanh.",
+                            null));
 
                     var availableItems = await _context.Inventoryitems
                         .Where(i => i.Variantid == reqItem.Variantid && i.Status == "InStock")

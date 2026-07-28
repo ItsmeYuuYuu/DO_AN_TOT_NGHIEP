@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { Boxes, ImageOff, Package, Plus, Search, Tags, Trash2, Wrench } from 'lucide-react';
+import { Ban, Boxes, ImageOff, Package, Play, Plus, Search, Tags, Trash2, Wrench } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { DataTable } from '@/components/DataTable';
 import { Pagination } from '@/components/Pagination';
@@ -19,10 +19,11 @@ import { confirmAction, notifyError, notifySuccess } from '@/utils/notifications
 const PAGE_SIZE = 10;
 type DiscountFilter = 'all' | 'discounted' | 'regular';
 type ProductSort = 'id-desc' | 'id-asc';
+type BusinessStatusFilter = 'all' | 'active' | 'inactive';
 
 const AdminProducts: React.FC = () => {
   const { user } = useAuth();
-  const { products, loading, error, refetch, deleteProduct } = useProducts();
+  const { products, loading, error, refetch, deleteProduct } = useProducts(true);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -30,6 +31,7 @@ const AdminProducts: React.FC = () => {
   const [filterBrand, setFilterBrand] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterDiscount, setFilterDiscount] = useState<DiscountFilter>('all');
+  const [filterBusinessStatus, setFilterBusinessStatus] = useState<BusinessStatusFilter>('all');
   const [sortBy, setSortBy] = useState<ProductSort>('id-desc');
   const [cleaningImages, setCleaningImages] = useState(false);
   const [brands, setBrands] = useState<{ brandid: number; brandname: string }[]>([]);
@@ -60,13 +62,17 @@ const AdminProducts: React.FC = () => {
         filterDiscount === 'all' ||
         (filterDiscount === 'discounted' && hasDiscount) ||
         (filterDiscount === 'regular' && !hasDiscount);
-      return matchSearch && matchBrand && matchCategory && matchDiscount;
+      const matchBusinessStatus =
+        filterBusinessStatus === 'all' ||
+        (filterBusinessStatus === 'active' && product.isactive) ||
+        (filterBusinessStatus === 'inactive' && !product.isactive);
+      return matchSearch && matchBrand && matchCategory && matchDiscount && matchBusinessStatus;
     })
     .sort((left, right) =>
       sortBy === 'id-desc'
         ? right.productid - left.productid
         : left.productid - right.productid
-    ), [filterBrand, filterCategory, filterDiscount, products, search, sortBy]);
+    ), [filterBrand, filterBusinessStatus, filterCategory, filterDiscount, products, search, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -106,6 +112,30 @@ const AdminProducts: React.FC = () => {
     }
   };
 
+  const handleBusinessStatus = async (product: Product) => {
+    const nextActive = !product.isactive;
+    const confirmed = await confirmAction(
+      nextActive
+        ? `Mở bán lại sản phẩm "${product.productname}"?`
+        : `Ngừng kinh doanh sản phẩm "${product.productname}"? Khách vẫn xem được thông tin nhưng không thể mua hoặc thêm vào giỏ.`,
+      {
+        title: nextActive ? 'Mở bán lại' : 'Ngừng kinh doanh',
+        confirmLabel: nextActive ? 'Mở bán' : 'Ngừng kinh doanh',
+        danger: !nextActive,
+      },
+    );
+    if (!confirmed) return;
+
+    try {
+      const response = await productsApi.updateBusinessStatus(product.productid, nextActive);
+      notifySuccess(response.data.message);
+      await refetch();
+    } catch (err) {
+      const message = axios.isAxiosError(err) ? err.response?.data?.message : null;
+      notifyError(message || 'Không thể cập nhật trạng thái kinh doanh.');
+    }
+  };
+
   const handleCleanupUnusedImages = async () => {
     const confirmed = await confirmAction(
       'Dọn các file ảnh sản phẩm không còn được database tham chiếu và đã cũ hơn 24 giờ?',
@@ -135,6 +165,7 @@ const AdminProducts: React.FC = () => {
     setFilterBrand('');
     setFilterCategory('');
     setFilterDiscount('all');
+    setFilterBusinessStatus('all');
     setSortBy('id-desc');
     setPage(1);
   };
@@ -166,6 +197,11 @@ const AdminProducts: React.FC = () => {
               <p className="mt-1 text-xs font-semibold text-slate-400">
                 {product.category?.name ?? 'Chưa có danh mục'} · {product.productvariants?.length ?? 0} biến thể
               </p>
+              {!product.isactive && (
+                <span className="mt-1 inline-flex bg-amber-50 px-2 py-0.5 text-[10px] font-black uppercase text-amber-700">
+                  Ngừng kinh doanh
+                </span>
+              )}
             </div>
           </div>
         );
@@ -223,9 +259,9 @@ const AdminProducts: React.FC = () => {
     {
       key: 'actions',
       header: 'Thao tác',
-      className: 'w-36',
+      className: 'w-64',
       render: (product: Product) => (
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           <button
             type="button"
             onClick={() => setEditingProductId(product.productid)}
@@ -233,6 +269,20 @@ const AdminProducts: React.FC = () => {
           >
             <Wrench size={12} /> Sửa
           </button>
+          {(user?.rolename === 'Admin' || user?.rolename === 'Manager') && (
+            <button
+              type="button"
+              onClick={() => { void handleBusinessStatus(product); }}
+              className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-black ${
+                product.isactive
+                  ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              }`}
+            >
+              {product.isactive ? <Ban size={12} /> : <Play size={12} />}
+              {product.isactive ? 'Ngừng bán' : 'Mở bán'}
+            </button>
+          )}
           {user?.rolename === 'Admin' && (
             <button
               type="button"
@@ -337,6 +387,18 @@ const AdminProducts: React.FC = () => {
           </select>
           <select
             className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]"
+            value={filterBusinessStatus}
+            onChange={event => {
+              setFilterBusinessStatus(event.target.value as BusinessStatusFilter);
+              setPage(1);
+            }}
+          >
+            <option value="all">Tất cả trạng thái</option>
+            <option value="active">Đang kinh doanh</option>
+            <option value="inactive">Ngừng kinh doanh</option>
+          </select>
+          <select
+            className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-[#172033]"
             value={sortBy}
             onChange={event => {
               setSortBy(event.target.value as ProductSort);
@@ -346,7 +408,7 @@ const AdminProducts: React.FC = () => {
             <option value="id-desc">ID mới nhất</option>
             <option value="id-asc">ID cũ nhất</option>
           </select>
-          {(search || filterBrand || filterCategory || filterDiscount !== 'all' || sortBy !== 'id-desc') && (
+          {(search || filterBrand || filterCategory || filterDiscount !== 'all' || filterBusinessStatus !== 'all' || sortBy !== 'id-desc') && (
             <button type="button" onClick={resetFilters} className="text-xs font-black uppercase tracking-wide text-slate-400 hover:text-[#172033]">
               Xóa lọc
             </button>

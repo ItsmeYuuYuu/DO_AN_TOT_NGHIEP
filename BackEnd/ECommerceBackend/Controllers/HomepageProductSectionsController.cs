@@ -73,7 +73,8 @@ public class HomepageProductSectionsController : ControllerBase
             product.Brand != null ? new LookupDto(product.Brand.Brandid, product.Brand.Brandname) : null,
             product.Category != null ? new LookupDto(product.Category.Categoryid, product.Category.Categoryname) : null,
             null,
-            variants
+            variants,
+            product.Isactive
         );
     }
 

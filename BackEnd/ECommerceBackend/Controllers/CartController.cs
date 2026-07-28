@@ -197,9 +197,13 @@ namespace ECommerceBackend.Controllers
                     return BadRequest(new ApiErrorDto("Số lượng thêm vào phải lớn hơn 0."));
 
                 // Verify variant exists
-                var variant = await _context.Productvariants.FindAsync(dto.VariantId);
+                var variant = await _context.Productvariants
+                    .Include(item => item.Product)
+                    .FirstOrDefaultAsync(item => item.Variantid == dto.VariantId);
                 if (variant == null)
                     return NotFound(new ApiErrorDto("Không tìm thấy phiên bản sản phẩm này."));
+                if (variant.Product?.Isactive == false)
+                    return Conflict(new ApiErrorDto("Sản phẩm này đã ngừng kinh doanh."));
 
                 var cart = await GetOrCreateCartAsync(userId);
                 var items = GetCartItemsFromJson(cart.Cartcontent);
@@ -264,6 +268,15 @@ namespace ECommerceBackend.Controllers
                 }
                 else
                 {
+                    var isActive = await _context.Productvariants.AnyAsync(item =>
+                        item.Variantid == dto.VariantId &&
+                        item.Product != null &&
+                        item.Product.Isactive);
+                    if (!isActive)
+                    {
+                        return Conflict(new ApiErrorDto("Sản phẩm này đã ngừng kinh doanh."));
+                    }
+
                     var availableStock = await _context.Inventoryitems.CountAsync(item =>
                         item.Variantid == dto.VariantId &&
                         item.Status == "InStock");
@@ -330,8 +343,10 @@ namespace ECommerceBackend.Controllers
                     {
                         if (item.Quantity <= 0) continue;
 
-                        var variant = await _context.Productvariants.FindAsync(item.VariantId);
-                        if (variant == null) continue;
+                        var variant = await _context.Productvariants
+                            .Include(productVariant => productVariant.Product)
+                            .FirstOrDefaultAsync(productVariant => productVariant.Variantid == item.VariantId);
+                        if (variant == null || variant.Product?.Isactive == false) continue;
 
                         var existingItem = items.FirstOrDefault(ci => ci.VariantId == item.VariantId);
                         var availableStock = await _context.Inventoryitems.CountAsync(inventory =>

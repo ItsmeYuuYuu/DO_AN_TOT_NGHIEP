@@ -354,7 +354,7 @@ export default function AdminAuditLogs() {
             },
           },
           { key: 'tablename', header: 'Bảng / Đối tượng', render: (log: AuditLog) => <span className="font-mono text-xs">{log.tablename || '-'}</span> },
-          { key: 'recordid', header: 'Record ID', render: (log: AuditLog) => <span className="font-mono text-xs">{log.recordid || '-'}</span> },
+          { key: 'recordid', header: 'ID đối tượng', render: (log: AuditLog) => <span className="font-mono text-xs">{log.recordid || '-'}</span> },
           { key: 'createdat', header: 'Thời gian', render: (log: AuditLog) => <span className="text-sm">{formatDateTime(log.createdat)}</span> },
         ]}
         data={logs}

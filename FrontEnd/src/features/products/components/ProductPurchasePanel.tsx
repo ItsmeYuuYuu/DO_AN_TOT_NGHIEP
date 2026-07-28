@@ -8,6 +8,7 @@ import { useCart } from '@/features/orders/context/CartContext';
 interface ProductPurchasePanelProps {
   productId: number;
   productName: string;
+  isActive: boolean;
   variants: FullProductVariant[];
   selectedVariant: FullProductVariant | null;
   onSelectVariant: (v: FullProductVariant) => void;
@@ -46,6 +47,7 @@ const getVariantOptions = (variant: FullProductVariant) => {
 export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
   productId,
   productName,
+  isActive,
   variants,
   selectedVariant,
   onSelectVariant,
@@ -140,7 +142,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
   };
 
   const handleAddToCart = async () => {
-    if (!selectedVariant || isOutOfStock) return false;
+    if (!isActive || !selectedVariant || isOutOfStock) return false;
     const images = selectedVariant.productimages ?? [];
     const primary = images.find(image => image.ismain) ?? images[0];
 
@@ -197,10 +199,10 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-black ${
-            isOutOfStock ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-800'
+            !isActive || isOutOfStock ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-800'
           }`}>
             <PackageCheck size={15} />
-            {isOutOfStock ? 'Tạm hết hàng' : `Còn ${stock} sản phẩm`}
+            {!isActive ? 'Ngừng kinh doanh' : isOutOfStock ? 'Tạm hết hàng' : `Còn ${stock} sản phẩm`}
           </span>
         </div>
       </div>
@@ -289,35 +291,44 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
             {cartError}
           </div>
         )}
-        <button
-          type="button"
-          onClick={async () => {
-            const added = await handleAddToCart();
-            if (added) navigate('/cart');
-          }}
-          disabled={isOutOfStock}
-          className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#e30613] px-4 py-3 text-white shadow-[0_12px_26px_rgba(227,6,19,0.22)] transition hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
-        >
-          <span className="flex items-center gap-2 text-sm font-black uppercase">
-            <Zap size={17} className="fill-current" /> {isOutOfStock ? 'Tạm hết hàng' : 'Mua ngay'}
-          </span>
-        </button>
+        {!isActive ? (
+          <div className="flex min-h-12 items-center justify-center rounded-full bg-slate-200 px-4 py-3 text-sm font-black uppercase text-slate-500 sm:col-span-2">
+            Ngừng kinh doanh
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={async () => {
+                const added = await handleAddToCart();
+                if (added) navigate('/cart');
+              }}
+              disabled={isOutOfStock}
+              className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#e30613] px-4 py-3 text-white shadow-[0_12px_26px_rgba(227,6,19,0.22)] transition hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+            >
+              <span className="flex items-center gap-2 text-sm font-black uppercase">
+                <Zap size={17} className="fill-current" />
+                {isOutOfStock ? 'Tạm hết hàng' : 'Mua ngay'}
+              </span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => { void handleAddToCart(); }}
-          disabled={isOutOfStock}
-          className={`flex min-h-12 items-center justify-center gap-2 rounded-full border px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 ${
-            addedToCart
-              ? 'border-emerald-600 bg-emerald-600 text-white'
-              : inCart
-                ? 'border-[#ffd166] bg-[#ffd166]/25 text-[#1f2937]'
-                : 'border-[#1f2937] bg-white text-[#1f2937] hover:bg-[#1f2937] hover:text-white'
-          }`}
-        >
-          {addedToCart ? <Check size={17} /> : <ShoppingCart size={17} />}
-          {addedToCart ? 'Đã thêm' : inCart ? 'Trong giỏ' : 'Thêm vào giỏ'}
-        </button>
+            <button
+              type="button"
+              onClick={() => { void handleAddToCart(); }}
+              disabled={isOutOfStock}
+              className={`flex min-h-12 items-center justify-center gap-2 rounded-full border px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 ${
+                addedToCart
+                  ? 'border-emerald-600 bg-emerald-600 text-white'
+                  : inCart
+                    ? 'border-[#ffd166] bg-[#ffd166]/25 text-[#1f2937]'
+                    : 'border-[#1f2937] bg-white text-[#1f2937] hover:bg-[#1f2937] hover:text-white'
+              }`}
+            >
+              {addedToCart ? <Check size={17} /> : <ShoppingCart size={17} />}
+              {addedToCart ? 'Đã thêm' : inCart ? 'Trong giỏ' : 'Thêm vào giỏ'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

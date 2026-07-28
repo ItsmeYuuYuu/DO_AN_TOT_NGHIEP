@@ -1,26 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { productsApi } from '../api/productsApi';
 import type { CreateFullProduct, Product } from '../api/productsApi';
 
-export const useProducts = () => {
+export const useProducts = (includeInactive = false) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await productsApi.getAll();
+      const res = await productsApi.getAll(includeInactive);
       setProducts(res.data);
     } catch {
       setError('Không thể tải danh sách sản phẩm.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [includeInactive]);
 
-  useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => { void fetchProducts(); }, [fetchProducts]);
 
   const deleteProduct = async (id: number) => {
     await productsApi.delete(id);

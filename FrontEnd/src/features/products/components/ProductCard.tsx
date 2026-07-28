@@ -41,7 +41,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const discount = getDiscountPercent(displayVariant?.baseprice, displayVariant?.saleprice);
   const imageTone = imageTones[product.productid % imageTones.length];
   const price = displayVariant ? displayVariant.saleprice ?? displayVariant.baseprice : undefined;
-  const isAvailable = !hasStockData || stock > 0;
+  const isActive = product.isactive !== false;
+  const isAvailable = isActive && (!hasStockData || stock > 0);
   const productPath = getProductPath(product);
 
   return (
@@ -90,7 +91,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             isAvailable ? 'text-emerald-700' : 'text-slate-400'
           }`}>
             <PackageCheck size={13} />
-            {availabilityLabel}
+            {isActive ? availabilityLabel : 'Ngừng kinh doanh'}
           </span>
         </div>
 

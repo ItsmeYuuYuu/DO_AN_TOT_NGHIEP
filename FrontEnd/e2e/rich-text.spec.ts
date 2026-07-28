@@ -1,4 +1,5 @@
 import { expect, test, type Route } from '@playwright/test';
+import { API_ROUTE_PATTERN } from './config';
 
 const adminSession = {
   accessToken: 'e2e-admin-token',
@@ -14,7 +15,7 @@ const adminSession = {
 };
 
 test('product detail safely renders CKEditor HTML and legacy images', async ({ page }) => {
-  await page.route('https://localhost:7035/api/**', async (route: Route) => {
+  await page.route(API_ROUTE_PATTERN, async (route: Route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith('/Products/9901/full-detail')) {
       await route.fulfill({
@@ -66,7 +67,7 @@ test('product form loads CKEditor and applies formatting', async ({ page }) => {
   await page.addInitScript(session => {
     window.localStorage.setItem('ec_session', JSON.stringify(session));
   }, adminSession);
-  await page.route('https://localhost:7035/api/**', async (route: Route) => {
+  await page.route(API_ROUTE_PATTERN, async (route: Route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith('/cart')) {
       await route.fulfill({ json: { userId: 1, items: [] } });

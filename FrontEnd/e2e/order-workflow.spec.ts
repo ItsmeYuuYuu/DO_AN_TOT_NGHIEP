@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { API_ROUTE_PATTERN } from './config';
 
 const adminSession = {
   accessToken: 'e2e-admin-token',
@@ -51,7 +52,7 @@ const guestCodOrder = {
 
 test('guest COD order can be handed off by Sales', async ({ page }) => {
   await authenticateAsAdmin(page);
-  await page.route('https://localhost:7035/api/**', async (route: Route) => {
+  await page.route(API_ROUTE_PATTERN, async (route: Route) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/OrderAssignments/queue/Sales')) {
       await route.fulfill({
@@ -83,7 +84,7 @@ test('guest warehouse shipment uses internal HCMC store delivery', async ({ page
   await authenticateAsAdmin(page);
   let shipped = false;
 
-  await page.route('https://localhost:7035/api/**', async (route: Route) => {
+  await page.route(API_ROUTE_PATTERN, async (route: Route) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/OrderAssignments/queue/Warehouse')) {
       await route.fulfill({ json: shipped ? [] : [guestCodOrder] });

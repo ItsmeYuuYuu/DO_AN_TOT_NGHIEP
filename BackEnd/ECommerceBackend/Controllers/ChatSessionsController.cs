@@ -498,6 +498,7 @@ namespace ECommerceBackend.Controllers
 
             var productIds = recommendations.Select(item => item.Productid).Distinct().ToList();
             var productNames = await _context.Products
+                .Where(product => product.Isactive)
                 .AsNoTracking()
                 .Where(item => productIds.Contains(item.Productid))
                 .ToDictionaryAsync(item => item.Productid, item => item.Productname);

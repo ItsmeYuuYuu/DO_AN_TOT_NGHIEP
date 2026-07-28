@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { API_ROUTE_PATTERN } from './config';
 
 const cartItem = {
   variantId: 501,
@@ -13,7 +14,7 @@ const cartItem = {
 
 async function mockCheckoutApi(page: Page) {
   await page.route('https://provinces.open-api.vn/**', route => route.fulfill({ json: [] }));
-  await page.route('https://localhost:7035/api/**', async (route: Route) => {
+  await page.route(API_ROUTE_PATTERN, async (route: Route) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/WarrantyPackages')) {
       await route.fulfill({ json: [] });

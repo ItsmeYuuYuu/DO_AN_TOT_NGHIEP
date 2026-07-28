@@ -1,12 +1,20 @@
 @echo off
 setlocal
+cd /d "%~dp0"
+
+if exist "%~dp0.env" (
+    for /f "usebackq eol=# tokens=1,* delims==" %%A in ("%~dp0.env") do (
+        set "%%A=%%B"
+    )
+) else (
+    echo [CANH BAO] Chua co file .env. Hay copy .env.example thanh .env.
+)
 
 if /i "%~1"=="backend" goto run_backend
 if /i "%~1"=="frontend" goto run_frontend
 if /i "%~1"=="ngrok" goto run_ngrok
 
 title Cuong Dien Thoai - Khoi dong he thong
-cd /d "%~dp0"
 
 echo ================================================
 echo   CUONG DIEN THOAI - KHOI DONG LOCAL
@@ -113,10 +121,15 @@ exit /b
 :run_ngrok
 title Cuong Dien Thoai - Ngrok
 echo Dang mo public tunnel...
-echo Public URL: https://president-trapeze-skating.ngrok-free.dev
 echo Local target: http://localhost:5240
 echo.
-ngrok http --domain=president-trapeze-skating.ngrok-free.dev 5240
+if defined NGROK_DOMAIN (
+    echo Public URL: https://%NGROK_DOMAIN%
+    ngrok http --domain=%NGROK_DOMAIN% 5240
+) else (
+    echo Chua cau hinh NGROK_DOMAIN, ngrok se cap URL tam thoi.
+    ngrok http 5240
+)
 echo.
 echo Ngrok da dung hoac gap loi.
 pause

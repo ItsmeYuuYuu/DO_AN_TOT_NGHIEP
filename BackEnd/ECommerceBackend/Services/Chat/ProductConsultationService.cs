@@ -119,6 +119,7 @@ public sealed class ProductConsultationService : IProductConsultationService
 
         var productQuery = _context.Products
             .AsNoTracking()
+            .Where(product => product.Isactive)
             .Include(product => product.Brand)
             .Include(product => product.Category)
             .Include(product => product.Productvariants)

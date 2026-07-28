@@ -47,7 +47,7 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
             ["HomepageProductSections"] = "contents",
             ["News"]                = "contents",
             ["Reviews"]             = "reviews",
-            ["ChatSessions"]        = "chatmessages",
+            ["ChatSessions"]        = "chatsessions",
             ["Auth"]                = "users",  // Login / change-password
         };
 
@@ -59,9 +59,21 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var httpMethod = context.HttpContext.Request.Method;
+        var controllerName = context.ActionDescriptor.RouteValues.TryGetValue("controller", out var ctrl)
+            ? ctrl ?? "Unknown" : "Unknown";
+        var actionName = context.ActionDescriptor.RouteValues.TryGetValue("action", out var act)
+            ? act ?? httpMethod : httpMethod;
 
         // Bỏ qua GET, HEAD, OPTIONS
         if (!LoggedMethods.Contains(httpMethod))
+        {
+            await next();
+            return;
+        }
+
+        // Trạng thái đang nhập chỉ tồn tại tạm thời và không làm thay đổi dữ liệu nghiệp vụ.
+        if (controllerName.Equals("ChatSessions", StringComparison.OrdinalIgnoreCase) &&
+            actionName.Equals("SetTyping", StringComparison.OrdinalIgnoreCase))
         {
             await next();
             return;
@@ -99,12 +111,14 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
         }
 
         // ── Xác định tên action và bảng bị tác động ─────────────────────────
-        var controllerName = context.ActionDescriptor.RouteValues.TryGetValue("controller", out var ctrl)
-            ? ctrl ?? "Unknown" : "Unknown";
-        var actionName = context.ActionDescriptor.RouteValues.TryGetValue("action", out var act)
-            ? act ?? httpMethod : httpMethod;
         var tableName = ControllerToTable.TryGetValue(controllerName, out var tbl)
             ? tbl : controllerName.ToLower();
+        var isChatMessageAction =
+            controllerName.Equals("ChatSessions", StringComparison.OrdinalIgnoreCase) &&
+            (actionName.Equals("PostChatMessage", StringComparison.OrdinalIgnoreCase) ||
+             actionName.Equals("PostConsultantMessage", StringComparison.OrdinalIgnoreCase));
+        if (isChatMessageAction)
+            tableName = "chatmessages";
 
         // Tạo mô tả action thân thiện hơn
         var friendlyAction = BuildFriendlyAction(httpMethod, actionName, controllerName);
@@ -121,6 +135,10 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
         {
             recordId = created.RouteValues?.Values.FirstOrDefault()?.ToString();
         }
+        if (isChatMessageAction)
+        {
+            recordId = TryGetResultProperty(executed.Result, "Messageid") ?? recordId;
+        }
 
         // ── Enqueue (non-blocking, fire-and-forget) ──────────────────────────
         _auditLogService.Enqueue(new AuditLogEntry
@@ -131,6 +149,16 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
             RecordId  = recordId,
             CreatedAt = startedAt,
         });
+    }
+
+    private static string? TryGetResultProperty(IActionResult? result, string propertyName)
+    {
+        if (result is not ObjectResult { Value: { } value }) return null;
+
+        var property = value.GetType()
+            .GetProperties()
+            .FirstOrDefault(item => item.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase));
+        return property?.GetValue(value)?.ToString();
     }
 
     private static string BuildFriendlyAction(string method, string action, string controller)

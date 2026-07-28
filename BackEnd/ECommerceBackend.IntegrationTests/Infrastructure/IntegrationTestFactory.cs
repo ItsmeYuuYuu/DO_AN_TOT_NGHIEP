@@ -335,19 +335,44 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
             var directory = new DirectoryInfo(start);
             while (directory != null)
             {
+                var envPath = Path.Combine(directory.FullName, ".env");
+                if (File.Exists(envPath))
+                {
+                    var connectionLine = File.ReadLines(envPath)
+                        .Select(line => line.Trim())
+                        .FirstOrDefault(line =>
+                            line.StartsWith(
+                                "ConnectionStrings__DefaultConnection=",
+                                StringComparison.OrdinalIgnoreCase));
+                    if (connectionLine != null)
+                    {
+                        var connectionString = connectionLine[(connectionLine.IndexOf('=') + 1)..].Trim();
+                        if (!string.IsNullOrWhiteSpace(connectionString))
+                        {
+                            return connectionString.Trim('"', '\'');
+                        }
+                    }
+                }
+
                 var settingsPath = Path.Combine(directory.FullName, "BackEnd", "ECommerceBackend", "appsettings.json");
                 if (File.Exists(settingsPath))
                 {
                     using var json = JsonDocument.Parse(File.ReadAllText(settingsPath));
-                    return json.RootElement.GetProperty("ConnectionStrings").GetProperty("DefaultConnection").GetString()
-                        ?? throw new InvalidOperationException("DefaultConnection is missing.");
+                    var connectionString = json.RootElement
+                        .GetProperty("ConnectionStrings")
+                        .GetProperty("DefaultConnection")
+                        .GetString();
+                    if (!string.IsNullOrWhiteSpace(connectionString))
+                    {
+                        return connectionString;
+                    }
                 }
                 directory = directory.Parent;
             }
         }
 
         throw new InvalidOperationException(
-            "Cannot locate appsettings.json. Set E2E_SOURCE_CONNECTION to a PostgreSQL connection with CREATE DATABASE permission.");
+            "Cannot locate a PostgreSQL source connection. Configure .env or set E2E_SOURCE_CONNECTION.");
     }
 }
 

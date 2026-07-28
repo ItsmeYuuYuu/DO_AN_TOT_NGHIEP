@@ -727,6 +727,9 @@ public partial class ECommerceContext : DbContext
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.Isactive)
+                .HasDefaultValue(true)
+                .HasColumnName("isactive");
             entity.Property(e => e.Productname)
                 .HasMaxLength(200)
                 .HasColumnName("productname");

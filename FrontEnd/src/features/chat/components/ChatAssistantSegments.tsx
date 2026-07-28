@@ -61,7 +61,7 @@ export const ChatAssistantSegments = ({
   content,
   progressive = false,
   compact = false,
-  delayMs = 3000,
+  delayMs = 500,
   children,
 }: ChatAssistantSegmentsProps) => {
   const segments = useMemo(() => splitAssistantSegments(content), [content]);

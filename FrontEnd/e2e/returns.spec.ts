@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { API_ROUTE_PATTERN } from './config';
 
 const session = {
   accessToken: 'e2e-mocked-token',
@@ -42,7 +43,7 @@ const completedOrder = {
 
 async function mockReturnsApi(page: Page, initialRequests: unknown[] = []) {
   let requests: unknown[] = initialRequests;
-  await page.route('https://localhost:7035/api/**', async (route: Route) => {
+  await page.route(API_ROUTE_PATTERN, async (route: Route) => {
     const url = new URL(route.request().url());
     const method = route.request().method();
     if (url.pathname.endsWith('/cart')) {

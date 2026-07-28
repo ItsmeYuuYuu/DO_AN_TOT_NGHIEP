@@ -70,7 +70,8 @@ namespace ECommerceBackend.Controllers
                 p.Brand != null ? new LookupDto(p.Brand.Brandid, p.Brand.Brandname) : null,
                 p.Category != null ? new LookupDto(p.Category.Categoryid, p.Category.Categoryname) : null,
                 p.Seriesname,
-                variants
+                variants,
+                p.Isactive
             );
         }
 
@@ -97,7 +98,8 @@ namespace ECommerceBackend.Controllers
                 p.Brand != null ? new LookupDto(p.Brand.Brandid, p.Brand.Brandname) : null,
                 p.Category != null ? new LookupDto(p.Category.Categoryid, p.Category.Categoryname) : null,
                 p.Seriesname,
-                variants
+                variants,
+                p.Isactive
             );
         }
 
@@ -132,9 +134,9 @@ namespace ECommerceBackend.Controllers
 
         // GET: api/Products
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductListItemDto>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductListItemDto>>> GetProducts([FromQuery] bool includeInactive = false)
         {
-            var products = await _context.Products
+            var query = _context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Category)
                 
@@ -142,9 +144,31 @@ namespace ECommerceBackend.Controllers
                     
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Inventoryitems)
-                .ToListAsync();
+                .AsQueryable();
+
+            var products = await query.ToListAsync();
 
             return Ok(products.Select(MapToDto));
+        }
+
+        [HttpPatch("{id}/business-status")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> UpdateBusinessStatus(int id, [FromBody] UpdateProductBusinessStatusDto dto)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
+
+            product.Isactive = dto.Isactive;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                product.Productid,
+                product.Isactive,
+                message = product.Isactive
+                    ? "Sản phẩm đã được mở bán lại."
+                    : "Sản phẩm đã ngừng kinh doanh."
+            });
         }
 
         // GET: api/Products/search?q=&categoryId=&brandId=&minPrice=&maxPrice=
@@ -295,7 +319,8 @@ namespace ECommerceBackend.Controllers
                 product.Seriesname,
                 variants,
                 reviewSummary,
-                relatedProducts
+                relatedProducts,
+                product.Isactive
             );
 
             return result;

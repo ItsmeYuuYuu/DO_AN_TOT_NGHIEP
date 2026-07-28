@@ -21,6 +21,8 @@ public partial class Product
 
     public DateTime? Createdat { get; set; }
 
+    public bool Isactive { get; set; } = true;
+
     public virtual Brand? Brand { get; set; }
 
     public virtual Category? Category { get; set; }

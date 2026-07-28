@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { getAccessToken, clearSession } from '@/features/auth/utils/authUtils';
+import { resolveMediaUrlsDeep } from '@/utils/mediaUrl';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7035/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const GUEST_CHECKOUT_TOKEN_KEY = 'ec_guest_checkout_token';
 
 function getGuestCheckoutToken(): string {
@@ -34,7 +35,10 @@ apiClient.interceptors.request.use(
 
 // ── Response interceptor — handle 401 globally ────────────────────────────────
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    response.data = resolveMediaUrlsDeep(response.data);
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       // Token expired or invalid — clear session and redirect to login

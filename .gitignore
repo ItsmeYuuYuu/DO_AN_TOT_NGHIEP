@@ -28,16 +28,20 @@ publish/
 *.publishsettings
 
 # Secrets and environment-specific config
-# appsettings.Development.json can be committed for this local-demo project if needed.
-# appsettings.json is currently committed because the thesis demo runs locally.
+.env
+.env.*
+!.env.example
+!FrontEnd/.env.development
+!FrontEnd/.env.production
+!FrontEnd/.env.example
+appsettings.Local.json
+appsettings.Production.json
 
 # Frontend (Node.js/React)
 node_modules/
 dist/
 dist-ssr/
 *.local
-.env
-.env.*.local
 .eslintcache
 
 # Logs

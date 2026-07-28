@@ -12,6 +12,7 @@ using ECommerceBackend.Middlewares;
 using ECommerceBackend.DTOs.Common;
 using ECommerceBackend.Serialization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
 using System.Threading.RateLimiting;
@@ -20,6 +21,7 @@ using System.Threading.RateLimiting;
 // Keep UTC DateTime values compatible until those columns are migrated to timestamptz.
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
+LoadEnvironmentFile();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, services, configuration) => configuration
@@ -30,12 +32,22 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 
 // ── JWT Settings & Startup Secret Validation ─────────────────────────────────
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
-var secretKey   = jwtSection["SecretKey"]!;
+var secretKey   = jwtSection["SecretKey"];
 var issuer      = jwtSection["Issuer"]!;
 var audience    = jwtSection["Audience"]!;
 
-if (string.IsNullOrEmpty(secretKey) || secretKey.Contains("Dev_Safe_Placeholder_Key"))
+var usesDevelopmentSecret = string.IsNullOrWhiteSpace(secretKey) ||
+    secretKey.Contains("Dev_Safe_Placeholder_Key", StringComparison.Ordinal);
+if (usesDevelopmentSecret && !builder.Environment.IsDevelopment() &&
+    !builder.Environment.IsEnvironment("Testing"))
 {
+    throw new InvalidOperationException(
+        "JwtSettings:SecretKey must be configured with a secure value outside Development.");
+}
+
+if (usesDevelopmentSecret)
+{
+    secretKey = "Dev_Safe_Placeholder_Key_Must_Be_At_Least_32_Chars_Long";
     Console.ForegroundColor = ConsoleColor.Yellow;
     Console.WriteLine("=========================================================================");
     Console.WriteLine("WARNING: Using dev-safe placeholder JWT SecretKey.");
@@ -44,7 +56,7 @@ if (string.IsNullOrEmpty(secretKey) || secretKey.Contains("Dev_Safe_Placeholder_
     Console.ResetColor();
 }
 
-var key         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+var key         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!));
 
 // ── Authentication & Authorization ───────────────────────────────────────────
 builder.Services
@@ -55,7 +67,7 @@ builder.Services
     })
     .AddJwtBearer(options =>
     {
-        options.RequireHttpsMetadata = false; // dev-only; set true in prod
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.SaveToken            = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -153,7 +165,19 @@ builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatTypingService, EC
 builder.Services.AddScoped<ECommerceBackend.Services.Email.IEmailService, ECommerceBackend.Services.Email.SmtpEmailService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Email.IRegistrationOtpService, ECommerceBackend.Services.Email.RegistrationOtpService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Email.IPasswordResetService, ECommerceBackend.Services.Email.PasswordResetService>();
-builder.Services.AddDistributedMemoryCache();
+var redisConnection = builder.Configuration.GetConnectionString("Redis");
+if (string.IsNullOrWhiteSpace(redisConnection))
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+else
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnection;
+        options.InstanceName = "ECommerce:";
+    });
+}
 builder.Services.AddScoped<ECommerceBackend.Services.Checkout.ICheckoutAbuseProtectionService, ECommerceBackend.Services.Checkout.CheckoutAbuseProtectionService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Returns.IReturnRefundPolicyService, ECommerceBackend.Services.Returns.ReturnRefundPolicyService>();
 builder.Services.AddHostedService<ECommerceBackend.Services.Checkout.ExpiredOrderCleanupService>();
@@ -166,6 +190,18 @@ builder.Services.AddScoped<ECommerceBackend.Filters.AuditActionFilter>();
 
 // ── Health Checks ─────────────────────────────────────────────────────────────
 builder.Services.AddHealthChecks();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
+
+    // The production backend is expected to be reachable only through Nginx.
+    // This also supports Docker networks where the proxy address is dynamic.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // ── Controllers + JSON + Global Audit Filter ─────────────────────────────────
 builder.Services.AddControllers(options =>
@@ -215,15 +251,32 @@ builder.Services.AddDbContext<ECommerceContext>(options =>
     options.UseNpgsql(utcConnectionString));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
+var allowedOrigins = (builder.Configuration["Cors:AllowedOrigins"] ?? string.Empty)
+    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+if (allowedOrigins.Length == 0 && builder.Environment.IsDevelopment())
+{
+    allowedOrigins =
+    [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:4173",
+        "http://localhost:3000"
+    ];
+}
+
 builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins(
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://localhost:4173",
-            "http://localhost:3000")
-        .AllowAnyMethod()
-        .AllowAnyHeader()));
+    {
+        if (allowedOrigins.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "Cors:AllowedOrigins must be configured outside Development.");
+        }
+
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    }));
 
 // ── Swagger (with JWT Bearer support) ────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
@@ -264,6 +317,7 @@ if (!app.Environment.IsEnvironment("Testing"))
 */
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+app.UseForwardedHeaders();
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
@@ -296,5 +350,55 @@ app.MapControllers();
 app.MapHealthChecks("/api/health");
 
 app.Run();
+
+static void LoadEnvironmentFile()
+{
+    var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+    FileInfo? envFile = null;
+
+    for (var level = 0; directory != null && level < 6; level++, directory = directory.Parent)
+    {
+        var candidate = new FileInfo(Path.Combine(directory.FullName, ".env"));
+        if (candidate.Exists)
+        {
+            envFile = candidate;
+            break;
+        }
+    }
+
+    if (envFile == null)
+    {
+        return;
+    }
+
+    foreach (var rawLine in File.ReadLines(envFile.FullName))
+    {
+        var line = rawLine.Trim();
+        if (line.Length == 0 || line.StartsWith('#'))
+        {
+            continue;
+        }
+
+        var separatorIndex = line.IndexOf('=');
+        if (separatorIndex <= 0)
+        {
+            continue;
+        }
+
+        var key = line[..separatorIndex].Trim();
+        var value = line[(separatorIndex + 1)..].Trim();
+        if (value.Length >= 2 &&
+            ((value.StartsWith('"') && value.EndsWith('"')) ||
+             (value.StartsWith('\'') && value.EndsWith('\''))))
+        {
+            value = value[1..^1];
+        }
+
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(key)))
+        {
+            Environment.SetEnvironmentVariable(key, value);
+        }
+    }
+}
 
 public partial class Program { }

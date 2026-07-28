@@ -30,7 +30,8 @@ namespace ECommerceBackend.DTOs.Products
         LookupDto? Brand,
         LookupDto? Category,
         string? Seriesname,
-        List<ProductVariantDto>? Productvariants
+        List<ProductVariantDto>? Productvariants,
+        bool Isactive = true
     );
 
     public record ProductDetailDto : ProductListItemDto
@@ -44,8 +45,9 @@ namespace ECommerceBackend.DTOs.Products
             LookupDto? Brand,
             LookupDto? Category,
             string? Seriesname,
-            List<ProductVariantDto>? Productvariants
-        ) : base(Productid, Slug, Productname, Description, Createdat, Brand, Category, Seriesname, Productvariants) { }
+            List<ProductVariantDto>? Productvariants,
+            bool Isactive = true
+        ) : base(Productid, Slug, Productname, Description, Createdat, Brand, Category, Seriesname, Productvariants, Isactive) { }
     }
 
     public record ReviewSummaryDto(double AvgRating, int TotalReviews, int Star5, int Star4, int Star3, int Star2, int Star1);
@@ -68,8 +70,9 @@ namespace ECommerceBackend.DTOs.Products
             string? Seriesname,
             List<ProductVariantDto>? Productvariants,
             ReviewSummaryDto? ReviewSummary = null,
-            List<ProductListItemDto>? RelatedProducts = null
-        ) : base(Productid, Slug, Productname, Description, Createdat, Brand, Category, Seriesname, Productvariants)
+            List<ProductListItemDto>? RelatedProducts = null,
+            bool Isactive = true
+        ) : base(Productid, Slug, Productname, Description, Createdat, Brand, Category, Seriesname, Productvariants, Isactive)
         {
             this.ReviewSummary = ReviewSummary;
             this.RelatedProducts = RelatedProducts;
@@ -91,6 +94,8 @@ namespace ECommerceBackend.DTOs.Products
         int? Brandid,
         string? Seriesname
     );
+
+    public record UpdateProductBusinessStatusDto(bool Isactive);
 
     public record CreateProductVariantRequestDto(
         [Required] int? Productid,

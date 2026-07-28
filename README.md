@@ -235,13 +235,11 @@ CREATE DATABASE "ECommerDB";
 
 Database dự án đang sử dụng là `ECommerDB`, không phải `ecommerdb`.
 
-Cập nhật connection string trong
-`BackEnd/ECommerceBackend/appsettings.json`, hoặc dùng User Secrets:
+Cấu hình connection string và JWT trong file `.env` ở thư mục gốc:
 
-```powershell
-cd BackEnd/ECommerceBackend
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=ECommerDB;Username=postgres;Password=YOUR_PASSWORD"
-dotnet user-secrets set "JwtSettings:SecretKey" "YOUR_LOCAL_SECRET_KEY_MINIMUM_32_CHARACTERS"
+```env
+ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=ECommerDB;Username=postgres;Password=YOUR_PASSWORD
+JwtSettings__SecretKey=YOUR_LOCAL_SECRET_KEY_MINIMUM_32_CHARACTERS
 ```
 
 ### 2. Áp dụng migration
@@ -302,11 +300,23 @@ npm run dev
 Frontend mặc định chạy tại `http://localhost:5173` và gọi API
 `https://localhost:7035/api`.
 
-Để đổi địa chỉ backend, tạo `FrontEnd/.env.local`:
+Để đổi địa chỉ backend local, cập nhật `FrontEnd/.env.development`:
 
 ```env
 VITE_API_URL=https://localhost:7035/api
 ```
+
+### Cấu hình bằng `.env`
+
+Backend không còn lưu mật khẩu PostgreSQL, JWT secret, tài khoản ngân hàng hoặc
+SePay key trong `appsettings.json`. Lần đầu chạy, copy `.env.example` thành
+`.env`, điền cấu hình local rồi bấm `start-local.bat`. File `.env` thật đã được
+Git bỏ qua.
+
+Frontend local dùng `FrontEnd/.env.development`; bản build production dùng
+`FrontEnd/.env.production` và gọi API qua đường dẫn tương đối `/api`. Hướng dẫn
+cho VPS nằm tại
+[`docs/deployment/environment-configuration.md`](docs/deployment/environment-configuration.md).
 
 ## Tài khoản demo
 

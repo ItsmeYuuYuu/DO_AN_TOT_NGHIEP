@@ -47,6 +47,10 @@ interface EditVariant {
   baseprice: number | '';
   saleprice: number | '';
   quantity: number | '';
+  color: string;
+  ram: string;
+  storage: string;
+  origin: string;
   specs: { key: string; value: string }[];
   images: EditImage[];
   expanded: boolean;
@@ -56,6 +60,64 @@ const inputClass =
   'w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#e30613] disabled:bg-slate-100 disabled:text-slate-500';
 
 const newClientId = () => crypto.randomUUID();
+
+const OPTION_SPEC_NAMES = new Set([
+  'màu sắc',
+  'màu',
+  'ram',
+  'dung lượng ram',
+  'bộ nhớ trong',
+  'bộ nhớ',
+  'rom',
+  'tình trạng',
+  'xuất xứ',
+]);
+
+const getAttributeValue = (
+  attributes: { attributename: string; valuename: string }[] | undefined,
+  names: string[],
+) => attributes?.find(attribute =>
+  names.includes(attribute.attributename.trim().toLocaleLowerCase('vi-VN'))
+)?.valuename ?? '';
+
+const isOptionSpec = (key: string) =>
+  OPTION_SPEC_NAMES.has(key.trim().toLocaleLowerCase('vi-VN'));
+
+const COMMON_TECH_SPECS = [
+  'Kích thước màn hình',
+  'Công nghệ màn hình',
+  'Độ phân giải',
+  'Tần số quét',
+  'Chipset',
+  'Camera sau',
+  'Camera trước',
+  'Dung lượng pin',
+  'Công suất sạc',
+  'Hệ điều hành',
+  'Kết nối',
+  'SIM',
+  'Wi-Fi',
+  'Bluetooth',
+  'NFC',
+  'Chuẩn kháng nước, bụi',
+  'Bảo mật',
+  'Cảm biến',
+  'Âm thanh',
+  'Kích thước',
+  'Trọng lượng',
+  'Điểm nổi bật tư vấn',
+];
+
+const VARIANT_OPTION_VALUES = {
+  color: [
+    'Đen', 'Trắng', 'Xám', 'Bạc', 'Vàng', 'Vàng đồng', 'Đỏ', 'Hồng',
+    'Tím', 'Xanh dương', 'Xanh lá', 'Xanh ngọc', 'Cam',
+    'Đen Titan', 'Trắng Titan', 'Xám Titan', 'Titan tự nhiên',
+  ],
+  ram: ['2GB', '3GB', '4GB', '6GB', '8GB', '12GB', '16GB', '18GB', '24GB'],
+  storage: ['32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB'],
+  origin: ['Chính hãng', 'Nhập khẩu', 'Xách tay'],
+} as const;
 
 export const ProductEditModal: React.FC<ProductEditModalProps> = ({
   productId,
@@ -103,10 +165,16 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
           baseprice: variant.baseprice,
           saleprice: variant.saleprice ?? '',
           quantity: variant.stockquantity ?? 0,
-          specs: (variant.attributes ?? []).map(attribute => ({
-            key: attribute.attributename,
-            value: attribute.valuename,
-          })),
+          color: getAttributeValue(variant.attributes, ['màu sắc', 'màu']),
+          ram: getAttributeValue(variant.attributes, ['ram', 'dung lượng ram']),
+          storage: getAttributeValue(variant.attributes, ['bộ nhớ trong', 'bộ nhớ', 'rom']),
+          origin: getAttributeValue(variant.attributes, ['xuất xứ']),
+          specs: (variant.attributes ?? [])
+            .filter(attribute => !isOptionSpec(attribute.attributename))
+            .map(attribute => ({
+              key: attribute.attributename,
+              value: attribute.valuename,
+            })),
           images: (variant.productimages ?? []).map(image => ({ ...image })),
           expanded: index === 0,
         })));
@@ -151,6 +219,10 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
         baseprice: '',
         saleprice: '',
         quantity: 0,
+        color: '',
+        ram: '',
+        storage: '',
+        origin: 'Chính hãng',
         specs: [],
         images: [],
         expanded: true,
@@ -265,6 +337,18 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
     }));
   };
 
+  const addCommonSpecs = (variant: EditVariant) => {
+    updateVariant(variant.clientId, current => {
+      const existingNames = new Set(
+        current.specs.map(spec => spec.key.trim().toLocaleLowerCase('vi-VN'))
+      );
+      const missingSpecs = COMMON_TECH_SPECS
+        .filter(name => !existingNames.has(name.toLocaleLowerCase('vi-VN')))
+        .map(key => ({ key, value: '' }));
+      return { ...current, specs: [...current.specs, ...missingSpecs] };
+    });
+  };
+
   const validate = () => {
     if (!productname.trim()) return 'Vui lòng nhập tên sản phẩm.';
     if (!categoryid) return 'Vui lòng chọn danh mục.';
@@ -325,8 +409,15 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
         baseprice: Number(variant.baseprice),
         saleprice: variant.saleprice === '' ? undefined : Number(variant.saleprice),
         quantity: Number(variant.quantity),
-        specs: variant.specs
-          .filter(spec => spec.key.trim())
+        specs: [
+          { key: 'Màu sắc', value: variant.color.trim() },
+          { key: 'RAM', value: variant.ram.trim() },
+          { key: 'Bộ nhớ trong', value: variant.storage.trim() },
+          { key: 'Tình trạng', value: variant.condition.trim() },
+          { key: 'Xuất xứ', value: variant.origin.trim() },
+          ...variant.specs,
+        ]
+          .filter(spec => spec.key.trim() && spec.value.trim())
           .map(spec => ({ key: spec.key.trim(), value: spec.value.trim() })),
         images: variant.images.map(image => ({
           imageurl: image.imageurl,
@@ -584,6 +675,44 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                     </div>
 
                     <div className="space-y-3 border-t border-slate-100 pt-4">
+                      <div>
+                        <h4 className="text-xs font-bold uppercase text-slate-600">Lựa chọn biến thể</h4>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          Các giá trị khách dùng để chọn đúng phiên bản sản phẩm.
+                        </p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {([
+                          ['color', 'Màu sắc'],
+                          ['ram', 'RAM'],
+                          ['storage', 'Bộ nhớ trong'],
+                          ['origin', 'Xuất xứ'],
+                        ] as const).map(([field, label]) => (
+                          <div key={field}>
+                            <label className="mb-1 block text-xs font-bold text-slate-600">{label}</label>
+                            <select
+                              disabled={contentOnly}
+                              className={inputClass}
+                              value={variant[field]}
+                              onChange={event => updateVariant(variant.clientId, current => ({
+                                ...current,
+                                [field]: event.target.value,
+                              }))}
+                            >
+                              <option value="">Chọn {label.toLocaleLowerCase('vi-VN')}</option>
+                              {variant[field] && !VARIANT_OPTION_VALUES[field].some(value => value === variant[field]) && (
+                                <option value={variant[field]}>{variant[field]}</option>
+                              )}
+                              {VARIANT_OPTION_VALUES[field].map(value => (
+                                <option key={value} value={value}>{value}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 border-t border-slate-100 pt-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="text-xs font-bold uppercase text-slate-600">Hình ảnh ({variant.images.length}/8)</h4>
@@ -647,17 +776,31 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
 
                     <div className="space-y-3 border-t border-slate-100 pt-4">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase text-slate-600">Thông số kỹ thuật</h4>
-                        <button
-                          type="button"
-                          onClick={() => updateVariant(variant.clientId, current => ({
-                            ...current,
-                            specs: [...current.specs, { key: '', value: '' }],
-                          }))}
-                          className="inline-flex items-center gap-1 rounded-2xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200"
-                        >
-                          <Plus size={14} /> Thêm thông số
-                        </button>
+                        <div>
+                          <h4 className="text-xs font-bold uppercase text-slate-600">Thông số kỹ thuật bổ sung</h4>
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            Giá trị có thể xuống dòng; không nhập lại màu, RAM, bộ nhớ, tình trạng và xuất xứ.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => addCommonSpecs(variant)}
+                            className="rounded-2xl bg-red-50 px-3 py-2 text-xs font-bold text-[#c4000b] hover:bg-red-100"
+                          >
+                            Thêm mẫu điện thoại
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateVariant(variant.clientId, current => ({
+                              ...current,
+                              specs: [...current.specs, { key: '', value: '' }],
+                            }))}
+                            className="inline-flex items-center gap-1 rounded-2xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200"
+                          >
+                            <Plus size={14} /> Thêm thông số
+                          </button>
+                        </div>
                       </div>
                       {variant.specs.length === 0 ? (
                         <p className="rounded-2xl bg-slate-50 py-5 text-center text-xs text-slate-400">Chưa có thông số kỹ thuật.</p>
@@ -665,12 +808,27 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                         <div className="space-y-2">
                           {variant.specs.map((spec, specIndex) => (
                             <div key={specIndex} className="flex items-start gap-2">
-                              <input
+                              <select
                                 className={inputClass}
-                                placeholder="Tên thông số"
                                 value={spec.key}
                                 onChange={event => updateSpec(variant, specIndex, 'key', event.target.value)}
-                              />
+                              >
+                                <option value="">Chọn tên thông số</option>
+                                {spec.key && !COMMON_TECH_SPECS.includes(spec.key) && (
+                                  <option value={spec.key}>{spec.key}</option>
+                                )}
+                                {COMMON_TECH_SPECS.map(name => (
+                                  <option
+                                    key={name}
+                                    value={name}
+                                    disabled={variant.specs.some((item, index) =>
+                                      index !== specIndex && item.key === name
+                                    )}
+                                  >
+                                    {name}
+                                  </option>
+                                ))}
+                              </select>
                               <textarea
                                 rows={3}
                                 className={`${inputClass} resize-y`}

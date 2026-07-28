@@ -1,18 +1,19 @@
 import apiClient from '@/api/apiClient';
 import { optimizeImageUploads } from '@/utils/imageUpload';
 
-let allProductsRequest: ReturnType<typeof apiClient.get<Product[]>> | null = null;
+const allProductsRequests = new Map<boolean, ReturnType<typeof apiClient.get<Product[]>>>();
 
-const getAllProducts = () => {
-  if (!allProductsRequest) {
-    allProductsRequest = apiClient
-      .get<Product[]>('/Products')
+const getAllProducts = (includeInactive = false) => {
+  if (!allProductsRequests.has(includeInactive)) {
+    const request = apiClient
+      .get<Product[]>('/Products', { params: { includeInactive } })
       .finally(() => {
-        allProductsRequest = null;
+        allProductsRequests.delete(includeInactive);
       });
+    allProductsRequests.set(includeInactive, request);
   }
 
-  return allProductsRequest;
+  return allProductsRequests.get(includeInactive)!;
 };
 
 export interface Product {
@@ -24,6 +25,7 @@ export interface Product {
   categoryid?: number;
   seriesname?: string;
   createdat?: string;
+  isactive: boolean;
   brand?: { id: number; name: string };
   category?: { id: number; name: string };
   /** Legacy optional shape retained while consumers migrate to seriesname. */
@@ -141,6 +143,8 @@ export const productsApi = {
   create: (data: Partial<Product>) => apiClient.post<Product>('/Products', data),
   createFull: (data: CreateFullProduct) => apiClient.post<Product>('/Products/full', data),
   updateFull: (id: number, data: UpdateFullProduct) => apiClient.put(`/Products/${id}/full`, data),
+  updateBusinessStatus: (id: number, isactive: boolean) =>
+    apiClient.patch(`/Products/${id}/business-status`, { isactive }),
   uploadImages: async (files: File[]) => {
     const formData = new FormData();
     const optimizedFiles = await optimizeImageUploads(files);

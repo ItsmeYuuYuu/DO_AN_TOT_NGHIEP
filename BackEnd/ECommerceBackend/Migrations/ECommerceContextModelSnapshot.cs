@@ -820,6 +820,12 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
+                    b.Property<bool>("Isactive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("isactive");
+
                     b.Property<string>("Productname")
                         .IsRequired()
                         .HasMaxLength(200)

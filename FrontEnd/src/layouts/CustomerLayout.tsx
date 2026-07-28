@@ -24,6 +24,7 @@ import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '@/features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 import { ChatAssistantSegments } from '@/features/chat/components/ChatAssistantSegments';
+import { ChatLinkifiedText } from '@/features/chat/components/ChatLinkifiedText';
 import { brandsApi, type Brand } from '@/features/brands/api/brandsApi';
 import { categoriesApi, type Category } from '@/features/categories/api/categoriesApi';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
@@ -181,24 +182,7 @@ export const CustomerLayout: React.FC = () => {
     setMobileMenuOpen(false);
   };
 
-  const renderMiniChatText = (content: string) =>
-    content.split(/(\[[^\]]+\]\(\/products\/[A-Za-z0-9-]+\)|\/products\/[A-Za-z0-9-]+)/g).map((part, index) => {
-      const markdownLink = part.match(/^\[([^\]]+)\]\((\/products\/[A-Za-z0-9-]+)\)$/);
-      const rawProductLink = part.match(/^\/products\/[A-Za-z0-9-]+$/);
-      if (!markdownLink && !rawProductLink) return part;
-
-      const to = markdownLink?.[2] ?? part;
-      const label = markdownLink?.[1] ?? part;
-      return (
-        <Link
-          key={`${part}-${index}`}
-          to={to}
-          className="font-black text-[#c4000b] underline underline-offset-2"
-        >
-          {label}
-        </Link>
-      );
-    });
+  const renderMiniChatText = (content: string) => <ChatLinkifiedText text={content} />;
 
   const ensureAiWidgetSession = async () => {
     if (aiWidgetSession) return aiWidgetSession;
@@ -244,24 +228,41 @@ export const CustomerLayout: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!aiWidgetSession?.sessionid || aiWidgetSession.handoffstatus !== 'InProgress') return;
+    const sessionId = aiWidgetSession?.sessionid;
+    const handoffStatus = aiWidgetSession?.handoffstatus;
+    if (
+      !sessionId ||
+      (handoffStatus !== 'Waiting' && handoffStatus !== 'InProgress')
+    ) {
+      return;
+    }
 
-    const timer = window.setInterval(async () => {
+    let cancelled = false;
+    const refreshHandoff = async () => {
       try {
         const [session, latestMessages, typing] = await Promise.all([
-          chatSessionsApi.getSession(aiWidgetSession.sessionid),
-          chatSessionsApi.getMessages(aiWidgetSession.sessionid),
-          chatSessionsApi.getTypingStatus(aiWidgetSession.sessionid),
+          chatSessionsApi.getSession(sessionId),
+          chatSessionsApi.getMessages(sessionId),
+          chatSessionsApi.getTypingStatus(sessionId),
         ]);
+        if (cancelled) return;
         setAiWidgetSession(session);
         setAiWidgetMessages(latestMessages);
         setAiWidgetConsultantTyping(typing.consultantTyping);
       } catch {
         // Keep the current widget state during transient polling errors.
       }
+    };
+
+    void refreshHandoff();
+    const timer = window.setInterval(() => {
+      void refreshHandoff();
     }, 3000);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, [aiWidgetSession?.handoffstatus, aiWidgetSession?.sessionid]);
 
   const handleAiWidgetSubmit = (event: React.FormEvent) => {

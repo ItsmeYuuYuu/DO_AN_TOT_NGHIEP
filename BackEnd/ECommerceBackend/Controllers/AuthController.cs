@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using ECommerceBackend.Models;
 using ECommerceBackend.DTOs.Auth;
 using ECommerceBackend.DTOs.Common;
+using ECommerceBackend.Services.Auth;
 using ECommerceBackend.Services.Email;
 
 namespace ECommerceBackend.Controllers
@@ -23,6 +24,7 @@ namespace ECommerceBackend.Controllers
         private readonly IRegistrationOtpService _registrationOtpService;
         private readonly IPasswordResetService _passwordResetService;
         private readonly IEmailService _emailService;
+        private readonly IStaffSessionService _staffSessionService;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
@@ -31,6 +33,7 @@ namespace ECommerceBackend.Controllers
             IRegistrationOtpService registrationOtpService,
             IPasswordResetService passwordResetService,
             IEmailService emailService,
+            IStaffSessionService staffSessionService,
             ILogger<AuthController> logger)
         {
             _context = context;
@@ -38,6 +41,7 @@ namespace ECommerceBackend.Controllers
             _registrationOtpService = registrationOtpService;
             _passwordResetService = passwordResetService;
             _emailService = emailService;
+            _staffSessionService = staffSessionService;
             _logger = logger;
         }
 
@@ -79,15 +83,17 @@ namespace ECommerceBackend.Controllers
             var expiryMins   = int.Parse(jwt["ExpiryMinutes"] ?? "480");
 
             var roleName = user.Role?.Rolename ?? "Customer";
+            var sessionId = Guid.NewGuid().ToString("N");
 
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub,   user.Userid.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? user.Username),
-                new Claim(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
+                new Claim(JwtRegisteredClaimNames.Jti,   sessionId),
                 new Claim("userid",   user.Userid.ToString()),
                 new Claim("username", user.Username),
                 new Claim("fullname", user.Fullname),
+                new Claim("sessionid", sessionId),
                 new Claim(ClaimTypes.Role, roleName),
             };
 
@@ -104,6 +110,15 @@ namespace ECommerceBackend.Controllers
             );
 
             var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+            if (StaffSessionPolicy.RequiresSingleSession(roleName))
+            {
+                await _staffSessionService.ActivateAsync(
+                    user.Userid,
+                    sessionId,
+                    TimeSpan.FromMinutes(expiryMins),
+                    HttpContext.RequestAborted);
+            }
 
             return Ok(new LoginResponseDto(
                 Userid:      user.Userid,
@@ -123,8 +138,22 @@ namespace ECommerceBackend.Controllers
         /// </summary>
         [HttpPost("logout")]
         [Microsoft.AspNetCore.Authorization.Authorize]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
+            var roleName = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userIdValue = User.FindFirst("userid")?.Value;
+            var sessionId = User.FindFirst("sessionid")?.Value;
+
+            if (StaffSessionPolicy.RequiresSingleSession(roleName) &&
+                int.TryParse(userIdValue, out var userId) &&
+                !string.IsNullOrWhiteSpace(sessionId))
+            {
+                await _staffSessionService.RevokeAsync(
+                    userId,
+                    sessionId,
+                    HttpContext.RequestAborted);
+            }
+
             return Ok(new ApiMessageDto("Đăng xuất thành công."));
         }
 

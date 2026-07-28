@@ -90,6 +90,14 @@ export default function AuthPage() {
     if (mode === 'login' && state?.username) {
       setLoginId(state.username);
     }
+
+    if (mode === 'login') {
+      const authNotice = sessionStorage.getItem('ec_auth_notice');
+      if (authNotice) {
+        setLoginError(authNotice);
+        sessionStorage.removeItem('ec_auth_notice');
+      }
+    }
   }, [location.state, mode]);
 
   if (mode !== 'login' && mode !== 'register') {

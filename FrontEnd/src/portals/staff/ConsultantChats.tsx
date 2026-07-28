@@ -4,6 +4,7 @@ import { Bot, CheckCircle2, Headphones, History, MessageSquare, Send, User } fro
 import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '@/features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
+import { ChatLinkifiedText } from '@/features/chat/components/ChatLinkifiedText';
 
 const statusLabel: Record<string, string> = {
   Waiting: 'Đang chờ',
@@ -288,7 +289,16 @@ const ConsultantChats = () => {
                             ? 'border-violet-100 bg-white text-slate-700'
                             : 'border-teal-600 bg-teal-600 text-white'
                       }`}>
-                        <p className="whitespace-pre-wrap">{message.messagecontent}</p>
+                        <p className="whitespace-pre-wrap">
+                          <ChatLinkifiedText
+                            text={message.messagecontent}
+                            linkClassName={
+                              fromAssistant
+                                ? 'font-black text-[#c4000b] underline underline-offset-2'
+                                : 'font-black text-current underline underline-offset-2'
+                            }
+                          />
+                        </p>
                         {message.responsetype === 'comparison' && message.recommendations && (
                           <ChatComparisonTable recommendations={message.recommendations} />
                         )}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { ChatLinkifiedText } from './ChatLinkifiedText';
 
 interface ChatAssistantSegmentsProps {
   content: string;
@@ -8,25 +8,6 @@ interface ChatAssistantSegmentsProps {
   delayMs?: number;
   children?: ReactNode;
 }
-
-const renderChatLinks = (content: string) =>
-  content.split(/(\[[^\]]+\]\(\/products\/[A-Za-z0-9-]+\)|\/products\/[A-Za-z0-9-]+)/g).map((part, index) => {
-    const markdownLink = part.match(/^\[([^\]]+)\]\((\/products\/[A-Za-z0-9-]+)\)$/);
-    const rawProductLink = part.match(/^\/products\/[A-Za-z0-9-]+$/);
-    if (!markdownLink && !rawProductLink) return part;
-
-    const to = markdownLink?.[2] ?? part;
-    const label = markdownLink?.[1] ?? part;
-    return (
-      <Link
-        key={`${part}-${index}`}
-        to={to}
-        className="font-black text-[#c4000b] underline underline-offset-2"
-      >
-        {label}
-      </Link>
-    );
-  });
 
 const splitAssistantSegments = (content: string) => {
   const lines = content
@@ -101,7 +82,7 @@ export const ChatAssistantSegments = ({
                     key={`${line}-${lineIndex}`}
                     className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-semibold text-amber-900"
                   >
-                    {renderChatLinks(line)}
+                    <ChatLinkifiedText text={line} />
                   </div>
                 );
               }
@@ -117,7 +98,7 @@ export const ChatAssistantSegments = ({
                         : 'text-slate-700'
                   }
                 >
-                  {renderChatLinks(line)}
+                  <ChatLinkifiedText text={line} />
                 </div>
               );
             })}

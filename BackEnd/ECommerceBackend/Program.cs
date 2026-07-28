@@ -1,4 +1,5 @@
 using System.Text;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -79,6 +80,54 @@ builder.Services
             ValidAudience            = audience,
             ValidateLifetime         = true,
             ClockSkew                = TimeSpan.Zero, // No slack on expiry
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var roleName = context.Principal?.FindFirst(ClaimTypes.Role)?.Value;
+                if (!ECommerceBackend.Services.Auth.StaffSessionPolicy.RequiresSingleSession(roleName))
+                {
+                    return;
+                }
+
+                var userIdValue = context.Principal?.FindFirst("userid")?.Value;
+                var sessionId = context.Principal?.FindFirst("sessionid")?.Value;
+                if (!int.TryParse(userIdValue, out var userId) ||
+                    string.IsNullOrWhiteSpace(sessionId))
+                {
+                    context.HttpContext.Items["StaffSessionReplaced"] = true;
+                    context.Fail("Staff session is missing.");
+                    return;
+                }
+
+                var staffSessionService = context.HttpContext.RequestServices
+                    .GetRequiredService<ECommerceBackend.Services.Auth.IStaffSessionService>();
+                var isActive = await staffSessionService.IsActiveAsync(
+                    userId,
+                    sessionId,
+                    context.HttpContext.RequestAborted);
+
+                if (!isActive)
+                {
+                    context.HttpContext.Items["StaffSessionReplaced"] = true;
+                    context.Fail("Staff session has been replaced.");
+                }
+            },
+            OnChallenge = async context =>
+            {
+                if (context.HttpContext.Items.ContainsKey("StaffSessionReplaced"))
+                {
+                    context.HandleResponse();
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    context.Response.ContentType = "application/json; charset=utf-8";
+                    await context.Response.WriteAsJsonAsync(new
+                    {
+                        message = "Phiên đăng nhập đã được mở trên thiết bị khác. Vui lòng đăng nhập lại.",
+                        code = "STAFF_SESSION_REPLACED"
+                    });
+                }
+            }
         };
     });
 
@@ -204,6 +253,9 @@ else
         options.InstanceName = "ECommerce:";
     });
 }
+builder.Services.AddSingleton<
+    ECommerceBackend.Services.Auth.IStaffSessionService,
+    ECommerceBackend.Services.Auth.StaffSessionService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Checkout.ICheckoutAbuseProtectionService, ECommerceBackend.Services.Checkout.CheckoutAbuseProtectionService>();
 builder.Services.AddSingleton<ECommerceBackend.Services.Checkout.IShippingFeePolicy, ECommerceBackend.Services.Checkout.ShippingFeePolicy>();
 builder.Services.AddScoped<ECommerceBackend.Services.Returns.IReturnRefundPolicyService, ECommerceBackend.Services.Returns.ReturnRefundPolicyService>();

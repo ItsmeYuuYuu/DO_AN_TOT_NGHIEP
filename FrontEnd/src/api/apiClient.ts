@@ -41,6 +41,13 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
+      if (error.response?.data?.code === 'STAFF_SESSION_REPLACED') {
+        sessionStorage.setItem(
+          'ec_auth_notice',
+          error.response.data.message ||
+            'Phiên đăng nhập đã được mở trên thiết bị khác. Vui lòng đăng nhập lại.',
+        );
+      }
       // Token expired or invalid — clear session and redirect to login
       clearSession();
       window.location.href = '/auth/login';

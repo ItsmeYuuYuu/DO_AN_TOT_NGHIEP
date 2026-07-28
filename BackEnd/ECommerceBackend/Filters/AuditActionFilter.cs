@@ -72,8 +72,12 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
         }
 
         // Trạng thái đang nhập chỉ tồn tại tạm thời và không làm thay đổi dữ liệu nghiệp vụ.
+        // Chat messages are already persisted in chatmessages. Audit only the
+        // important handoff/session lifecycle events, not every message/typing ping.
         if (controllerName.Equals("ChatSessions", StringComparison.OrdinalIgnoreCase) &&
-            actionName.Equals("SetTyping", StringComparison.OrdinalIgnoreCase))
+            (actionName.Equals("SetTyping", StringComparison.OrdinalIgnoreCase) ||
+             actionName.Equals("PostChatMessage", StringComparison.OrdinalIgnoreCase) ||
+             actionName.Equals("PostConsultantMessage", StringComparison.OrdinalIgnoreCase)))
         {
             await next();
             return;
@@ -113,13 +117,6 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
         // ── Xác định tên action và bảng bị tác động ─────────────────────────
         var tableName = ControllerToTable.TryGetValue(controllerName, out var tbl)
             ? tbl : controllerName.ToLower();
-        var isChatMessageAction =
-            controllerName.Equals("ChatSessions", StringComparison.OrdinalIgnoreCase) &&
-            (actionName.Equals("PostChatMessage", StringComparison.OrdinalIgnoreCase) ||
-             actionName.Equals("PostConsultantMessage", StringComparison.OrdinalIgnoreCase));
-        if (isChatMessageAction)
-            tableName = "chatmessages";
-
         // Tạo mô tả action thân thiện hơn
         var friendlyAction = BuildFriendlyAction(httpMethod, actionName, controllerName);
 
@@ -135,11 +132,6 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
         {
             recordId = created.RouteValues?.Values.FirstOrDefault()?.ToString();
         }
-        if (isChatMessageAction)
-        {
-            recordId = TryGetResultProperty(executed.Result, "Messageid") ?? recordId;
-        }
-
         // ── Enqueue (non-blocking, fire-and-forget) ──────────────────────────
         _auditLogService.Enqueue(new AuditLogEntry
         {
@@ -149,16 +141,6 @@ public class AuditActionFilter : Attribute, IAsyncActionFilter
             RecordId  = recordId,
             CreatedAt = startedAt,
         });
-    }
-
-    private static string? TryGetResultProperty(IActionResult? result, string propertyName)
-    {
-        if (result is not ObjectResult { Value: { } value }) return null;
-
-        var property = value.GetType()
-            .GetProperties()
-            .FirstOrDefault(item => item.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase));
-        return property?.GetValue(value)?.ToString();
     }
 
     private static string BuildFriendlyAction(string method, string action, string controller)

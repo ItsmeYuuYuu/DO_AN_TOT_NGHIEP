@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   Bot,
   Headphones,
@@ -13,6 +13,7 @@ import { chatSessionsApi } from '../../features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '../../features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 import { ChatAssistantSegments } from '@/features/chat/components/ChatAssistantSegments';
+import { ChatLinkifiedText } from '@/features/chat/components/ChatLinkifiedText';
 import { formatDateTime, formatTime } from '../../utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
@@ -198,24 +199,7 @@ export default function CustomerChat() {
     }
   };
 
-  const renderMessageContent = (content: string) =>
-    content.split(/(\[[^\]]+\]\(\/products\/[A-Za-z0-9-]+\)|\/products\/[A-Za-z0-9-]+)/g).map((part, index) => {
-      const markdownLink = part.match(/^\[([^\]]+)\]\((\/products\/[A-Za-z0-9-]+)\)$/);
-      const rawProductLink = part.match(/^\/products\/[A-Za-z0-9-]+$/);
-      if (!markdownLink && !rawProductLink) return part;
-
-      const to = markdownLink?.[2] ?? part;
-      const label = markdownLink?.[1] ?? part;
-      return (
-        <Link
-          key={`${part}-${index}`}
-          to={to}
-          className="font-black text-[#c4000b] underline underline-offset-2"
-        >
-          {label}
-        </Link>
-      );
-    });
+  const renderMessageContent = (content: string) => <ChatLinkifiedText text={content} />;
 
   const renderAssistantMessageContent = (content: string) => {
     const lines = content.split('\n');

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace ECommerceBackend.DTOs.Inventory
@@ -53,5 +54,32 @@ namespace ECommerceBackend.DTOs.Inventory
         string? ProductName,
         int InStockQuantity,
         int Threshold
+    );
+
+    public record InventoryVariantOptionDto(
+        int Variantid,
+        string Sku,
+        string ProductName,
+        string? Condition,
+        int InStockQuantity
+    );
+
+    public record BatchImportInventoryRequestDto(
+        [Required(ErrorMessage = "Biến thể sản phẩm là bắt buộc")]
+        int? Variantid,
+
+        [Required(ErrorMessage = "Danh sách IMEI là bắt buộc")]
+        [MinLength(1, ErrorMessage = "Phải nhập ít nhất một IMEI")]
+        [MaxLength(500, ErrorMessage = "Mỗi lần chỉ được nhập tối đa 500 IMEI")]
+        List<string> Imeis,
+
+        DateTime? Importedat = null
+    );
+
+    public record BatchImportInventoryResultDto(
+        int Variantid,
+        string Sku,
+        int ImportedCount,
+        IReadOnlyList<string> Imeis
     );
 }

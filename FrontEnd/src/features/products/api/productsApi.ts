@@ -102,7 +102,6 @@ export interface CreateFullProductVariant {
   saleprice?: number;
   specs?: CreateVariantSpec[];
   images: CreateProductImage[];
-  quantity?: number;
 }
 
 export interface CreateFullProduct {
@@ -111,13 +110,11 @@ export interface CreateFullProduct {
   categoryid?: number;
   brandid?: number;
   seriesname: string;
-  totalquantity: number;
   variants?: CreateFullProductVariant[];
 }
 
 export interface UpdateFullProductVariant extends CreateFullProductVariant {
   variantid?: number;
-  quantity: number;
 }
 
 export interface UpdateFullProduct {

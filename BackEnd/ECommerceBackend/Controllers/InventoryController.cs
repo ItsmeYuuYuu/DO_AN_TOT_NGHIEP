@@ -84,7 +84,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("low-stock")]
-        [Authorize(Roles = "Admin,Manager,Warehouse")]
+        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant")]
         public async Task<ActionResult<IEnumerable<LowStockVariantDto>>> GetLowStock(
             [FromQuery] int threshold = 2)
         {
@@ -111,13 +111,142 @@ namespace ECommerceBackend.Controllers
                 threshold)));
         }
 
+        [HttpGet("variant-options")]
+        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant")]
+        public async Task<ActionResult<IEnumerable<InventoryVariantOptionDto>>> GetVariantOptions()
+        {
+            var variants = await _context.Productvariants
+                .AsNoTracking()
+                .Where(variant => variant.Product != null && variant.Product.Isactive)
+                .OrderBy(variant => variant.Product!.Productname)
+                .ThenBy(variant => variant.Sku)
+                .Select(variant => new InventoryVariantOptionDto(
+                    variant.Variantid,
+                    variant.Sku ?? $"SKU-{variant.Variantid}",
+                    variant.Product!.Productname,
+                    variant.Condition,
+                    variant.Inventoryitems.Count(item => item.Status == "InStock")))
+                .ToListAsync();
+
+            return Ok(variants);
+        }
+
+        [HttpPost("import-batch")]
+        [Authorize(Roles = "Admin,Warehouse")]
+        public async Task<ActionResult<BatchImportInventoryResultDto>> ImportBatch(
+            [FromBody] BatchImportInventoryRequestDto dto)
+        {
+            if (!dto.Variantid.HasValue)
+                return BadRequest(new { message = "Vui lòng chọn đúng sản phẩm và SKU cần nhập kho." });
+
+            var variant = await _context.Productvariants
+                .Include(item => item.Product)
+                .FirstOrDefaultAsync(item => item.Variantid == dto.Variantid.Value);
+            if (variant == null)
+                return BadRequest(new { message = "Sản phẩm hoặc SKU đã chọn không tồn tại." });
+
+            var normalizedImeis = dto.Imeis
+                .Select(imei => imei?.Trim() ?? string.Empty)
+                .Where(imei => !string.IsNullOrWhiteSpace(imei))
+                .ToList();
+            if (normalizedImeis.Count == 0)
+                return BadRequest(new { message = "Vui lòng nhập ít nhất một IMEI." });
+
+            var invalidImeis = normalizedImeis
+                .Where(imei => imei.Length != 15 || imei.Any(character => !char.IsDigit(character)))
+                .Distinct()
+                .ToList();
+            if (invalidImeis.Count > 0)
+            {
+                return BadRequest(new
+                {
+                    message = $"IMEI phải gồm đúng 15 chữ số. Dữ liệu không hợp lệ: {string.Join(", ", invalidImeis.Take(5))}."
+                });
+            }
+
+            var duplicatedInRequest = normalizedImeis
+                .GroupBy(imei => imei)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .ToList();
+            if (duplicatedInRequest.Count > 0)
+            {
+                return BadRequest(new
+                {
+                    message = $"Danh sách đang chứa IMEI trùng: {string.Join(", ", duplicatedInRequest.Take(5))}."
+                });
+            }
+
+            var existingImeis = await _context.Inventoryitems
+                .Where(item => normalizedImeis.Contains(item.Imei))
+                .Select(item => item.Imei)
+                .ToListAsync();
+            if (existingImeis.Count > 0)
+            {
+                return Conflict(new
+                {
+                    message = $"IMEI đã tồn tại trong hệ thống: {string.Join(", ", existingImeis.Take(5))}."
+                });
+            }
+
+            var importedAt = dto.Importedat ?? DateTime.UtcNow;
+            var userId = GetClaimUserId();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var imei in normalizedImeis)
+                {
+                    var item = new Inventoryitem
+                    {
+                        Imei = imei,
+                        Variantid = variant.Variantid,
+                        Status = "InStock",
+                        Importedat = importedAt
+                    };
+                    item.Inventorytransactions.Add(new Inventorytransaction
+                    {
+                        Userid = userId,
+                        Transactiontype = "Import",
+                        Fromstatus = null,
+                        Tostatus = "InStock",
+                        Note = $"Nhập kho theo SKU {variant.Sku}.",
+                        Createdat = DateTime.UtcNow
+                    });
+                    _context.Inventoryitems.Add(item);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (DbUpdateException)
+            {
+                await transaction.RollbackAsync();
+                return Conflict(new { message = "Không thể nhập kho vì có IMEI bị trùng hoặc dữ liệu vừa thay đổi." });
+            }
+
+            return Ok(new BatchImportInventoryResultDto(
+                variant.Variantid,
+                variant.Sku ?? $"SKU-{variant.Variantid}",
+                normalizedImeis.Count,
+                normalizedImeis));
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin,Warehouse")]
         public async Task<ActionResult<InventoryItemDto>> PostInventoryItem([FromBody] CreateInventoryItemRequestDto dto)
         {
+            var imei = dto.Imei.Trim();
+            if (imei.Length != 15 || imei.Any(character => !char.IsDigit(character)))
+                return BadRequest(new { message = "IMEI phải gồm đúng 15 chữ số." });
+            if (!dto.Variantid.HasValue ||
+                !await _context.Productvariants.AnyAsync(variant => variant.Variantid == dto.Variantid.Value))
+                return BadRequest(new { message = "Sản phẩm hoặc SKU đã chọn không tồn tại." });
+            if (await _context.Inventoryitems.AnyAsync(item => item.Imei == imei))
+                return Conflict(new { message = "IMEI đã tồn tại trong hệ thống." });
+
             var item = new Inventoryitem
             {
-                Imei = dto.Imei,
+                Imei = imei,
                 Variantid = dto.Variantid,
                 Status = dto.Status ?? "InStock",
                 Importedat = dto.Importedat ?? DateTime.UtcNow,

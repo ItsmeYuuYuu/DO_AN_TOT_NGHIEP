@@ -103,13 +103,6 @@ namespace ECommerceBackend.Controllers
             );
         }
 
-        private static string GenerateTemporaryInventoryCode(int variantId)
-        {
-            // Product creation only knows a quantity, not each device's real IMEI.
-            // Use a compact, explicit placeholder for quantity-only stock records.
-            return $"TMP-{variantId}-{Guid.NewGuid():N}";
-        }
-
         private IQueryable<Product> ProductDetailQuery() =>
             _context.Products
                 .Include(p => p.Brand)
@@ -375,14 +368,6 @@ namespace ECommerceBackend.Controllers
             if (dto.Variants == null || dto.Variants.Count == 0)
                 return BadRequest(new ApiErrorDto("Sản phẩm phải có ít nhất một biến thể.", null));
 
-            var allocatedQuantity = dto.Variants.Sum(variant => variant.Quantity ?? 0);
-            if (allocatedQuantity != dto.Totalquantity)
-            {
-                return BadRequest(new ApiErrorDto(
-                    $"Tổng số lượng các biến thể ({allocatedQuantity}) phải bằng số lượng lô hàng ({dto.Totalquantity}).",
-                    null));
-            }
-
             var requestedSkus = dto.Variants?
                 .Select(v => v.Sku.Trim())
                 .ToList() ?? new List<string>();
@@ -465,22 +450,6 @@ namespace ECommerceBackend.Controllers
                         var images = vDto.Images ?? new List<CreateProductImageDto>();
                         var urls = images.OrderByDescending(i => i.Ismain).Select(i => i.Imageurl.Trim()).ToList(); variant.Imageurls = JsonSerializer.Serialize(urls); await _context.SaveChangesAsync();
 
-                        // Auto-generate inventory items (stock) if Quantity is provided
-                        if (vDto.Quantity.HasValue && vDto.Quantity.Value > 0)
-                        {
-                            for (int idx = 1; idx <= vDto.Quantity.Value; idx++)
-                            {
-                                var item = new Inventoryitem
-                                {
-                                    Imei = GenerateTemporaryInventoryCode(variant.Variantid),
-                                    Variantid = variant.Variantid,
-                                    Status = "InStock",
-                                    Importedat = DateTime.UtcNow
-                                };
-                                _context.Inventoryitems.Add(item);
-                            }
-                            await _context.SaveChangesAsync();
-                        }
                     }
                 }
 
@@ -578,12 +547,10 @@ namespace ECommerceBackend.Controllers
                 {
                     var current = product.Productvariants.First(variant =>
                         variant.Variantid == variantDto.Variantid);
-                    var currentQuantity = current.Inventoryitems.Count(item => item.Status == "InStock");
                     if (!string.Equals(current.Sku, variantDto.Sku.Trim(), StringComparison.Ordinal) ||
                         !string.Equals(current.Condition ?? "", variantDto.Condition?.Trim() ?? "", StringComparison.Ordinal) ||
                         current.Baseprice != variantDto.Baseprice ||
-                        current.Saleprice != variantDto.Saleprice ||
-                        currentQuantity != variantDto.Quantity)
+                        current.Saleprice != variantDto.Saleprice)
                     {
                         return StatusCode(403, new ApiErrorDto(
                             "Nhân viên nội dung chỉ được sửa tên, mô tả, hình ảnh và thông số; không được sửa giá, SKU, tình trạng hoặc tồn kho.",
@@ -607,28 +574,12 @@ namespace ECommerceBackend.Controllers
                 .Where(variant => !requestedExistingIds.Contains(variant.Variantid))
                 .ToList();
             var protectedVariant = variantsToDelete.FirstOrDefault(variant =>
-                variant.Inventoryitems.Any(item =>
-                    item.Orderitems.Any() ||
-                    !item.Imei.StartsWith("TMP-", StringComparison.OrdinalIgnoreCase)));
+                variant.Inventoryitems.Any());
             if (protectedVariant != null)
             {
                 return Conflict(new ApiErrorDto(
-                    $"Không thể xóa biến thể '{protectedVariant.Sku}' vì đã có IMEI thật hoặc lịch sử đơn hàng.",
+                    $"Không thể xóa biến thể '{protectedVariant.Sku}' vì đã có thiết bị trong kho hoặc lịch sử đơn hàng.",
                     null));
-            }
-
-            foreach (var variantDto in dto.Variants.Where(variant => variant.Variantid.HasValue))
-            {
-                var variant = product.Productvariants.First(item => item.Variantid == variantDto.Variantid);
-                var realInStock = variant.Inventoryitems.Count(item =>
-                    item.Status == "InStock" &&
-                    !item.Imei.StartsWith("TMP-", StringComparison.OrdinalIgnoreCase));
-                if (variantDto.Quantity < realInStock)
-                {
-                    return Conflict(new ApiErrorDto(
-                        $"Tồn kho của SKU '{variant.Sku}' không thể thấp hơn {realInStock} IMEI thật đang còn hàng.",
-                        null));
-                }
             }
 
             var removedImageUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -707,34 +658,6 @@ namespace ECommerceBackend.Controllers
                     var images = variantDto.Images!;
                     var urls2 = images.OrderByDescending(i => i.Ismain).Select(i => i.Imageurl.Trim()).ToList(); variant.Imageurls = JsonSerializer.Serialize(urls2);
 
-                    var realInStock = variant.Inventoryitems.Count(item =>
-                        item.Status == "InStock" &&
-                        !item.Imei.StartsWith("TMP-", StringComparison.OrdinalIgnoreCase));
-                    var temporaryInStock = variant.Inventoryitems
-                        .Where(item =>
-                            item.Status == "InStock" &&
-                            item.Imei.StartsWith("TMP-", StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    var requiredTemporaryCount = variantDto.Quantity - realInStock;
-
-                    if (temporaryInStock.Count > requiredTemporaryCount)
-                    {
-                        _context.Inventoryitems.RemoveRange(
-                            temporaryInStock.Take(temporaryInStock.Count - requiredTemporaryCount));
-                    }
-                    else
-                    {
-                        for (var index = temporaryInStock.Count; index < requiredTemporaryCount; index++)
-                        {
-                            _context.Inventoryitems.Add(new Inventoryitem
-                            {
-                                Imei = GenerateTemporaryInventoryCode(variant.Variantid),
-                                Variantid = variant.Variantid,
-                                Status = "InStock",
-                                Importedat = DateTime.UtcNow
-                            });
-                        }
-                    }
                 }
 
                 await _context.SaveChangesAsync();
@@ -836,7 +759,7 @@ namespace ECommerceBackend.Controllers
             var inventoryCodes = inventoryItems.Select(i => i.Imei).ToList();
             var localImageUrls = product.Productvariants
                 .Where(v => !string.IsNullOrEmpty(v.Imageurls))
-                .SelectMany(v => JsonSerializer.Deserialize<List<string>>(v.Imageurls) ?? new List<string>())
+                .SelectMany(v => JsonSerializer.Deserialize<List<string>>(v.Imageurls!) ?? new List<string>())
                 .ToList();
 
             var hasOrderHistory = inventoryCodes.Count > 0 &&

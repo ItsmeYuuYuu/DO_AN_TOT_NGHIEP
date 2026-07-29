@@ -1,11 +1,11 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import apiClient from '@/api/apiClient';
-import { Package, Plus, Filter, Edit2, History, X } from 'lucide-react';
+import { Check, Edit2, Filter, History, Package, Plus, Search, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
-import { notifyError } from '@/utils/notifications';
+import { notifyError, notifySuccess } from '@/utils/notifications';
+import { getApiErrorMessage } from '@/utils/apiError';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { formatDate, formatDateTime } from '@/utils/formatters';
-
 
 interface InventoryItem {
   imei: string;
@@ -18,9 +18,7 @@ interface InventoryItem {
 
 interface InventoryTransaction {
   transactionid: number;
-  imei: string;
   orderid?: number;
-  userid?: number;
   username?: string;
   transactiontype: string;
   fromstatus?: string;
@@ -34,58 +32,117 @@ interface LowStockVariant {
   variantSku?: string;
   productName?: string;
   inStockQuantity: number;
-  threshold: number;
 }
+
+interface VariantOption {
+  variantid: number;
+  sku: string;
+  productName: string;
+  condition?: string;
+  inStockQuantity: number;
+}
+
+const splitImeis = (value: string) =>
+  value
+    .split(/[\s,;]+/)
+    .map(imei => imei.trim())
+    .filter(Boolean);
+
+const normalizeSearch = (value?: string | number) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 
 const StaffInventory: React.FC = () => {
   const { user } = useAuth();
   const canManageInventory = user?.rolename === 'Admin' || user?.rolename === 'Warehouse';
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [variantOptions, setVariantOptions] = useState<VariantOption[]>([]);
+  const [lowStockVariants, setLowStockVariants] = useState<LowStockVariant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  
+  const [statusFilter, setStatusFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [variantSearch, setVariantSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
-  const [formData, setFormData] = useState<{ imei: string; variantid: number | ''; status: string }>({ imei: '', variantid: '', status: 'InStock' });
+  const [formData, setFormData] = useState<{ variantid: number | ''; status: string }>({
+    variantid: '',
+    status: 'InStock',
+  });
+  const [imeiBatch, setImeiBatch] = useState('');
   const [saving, setSaving] = useState(false);
   const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
   const [transactions, setTransactions] = useState<InventoryTransaction[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [lowStockVariants, setLowStockVariants] = useState<LowStockVariant[]>([]);
+  const parsedImeis = useMemo(() => splitImeis(imeiBatch), [imeiBatch]);
+  const normalizedSearchTerm = useMemo(() => normalizeSearch(searchTerm), [searchTerm]);
+  const filteredItems = useMemo(() => {
+    if (!normalizedSearchTerm) return items;
+
+    return items.filter(item =>
+      [item.imei, item.productName, item.variantSku]
+        .some(value => normalizeSearch(value).includes(normalizedSearchTerm)));
+  }, [items, normalizedSearchTerm]);
+  const filteredLowStockVariants = useMemo(() => {
+    if (!normalizedSearchTerm) return lowStockVariants;
+
+    return lowStockVariants.filter(variant =>
+      [variant.productName, variant.variantSku]
+        .some(value => normalizeSearch(value).includes(normalizedSearchTerm)));
+  }, [lowStockVariants, normalizedSearchTerm]);
+  const filteredVariantOptions = useMemo(() => {
+    const keyword = normalizeSearch(variantSearch);
+    if (!keyword) return variantOptions;
+
+    return variantOptions.filter(option =>
+      [option.productName, option.sku, option.condition, option.variantid]
+        .some(value => normalizeSearch(value).includes(keyword)));
+  }, [variantOptions, variantSearch]);
+  const selectedVariant = useMemo(
+    () => variantOptions.find(option => option.variantid === Number(formData.variantid)),
+    [formData.variantid, variantOptions],
+  );
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       const url = statusFilter ? `/Inventory/status/${statusFilter}` : '/Inventory';
-      const [itemsResponse, lowStockResponse] = await Promise.all([
+      const [itemsResponse, lowStockResponse, variantOptionsResponse] = await Promise.all([
         apiClient.get<InventoryItem[]>(url),
         apiClient.get<LowStockVariant[]>('/Inventory/low-stock', { params: { threshold: 2 } }),
+        apiClient.get<VariantOption[]>('/Inventory/variant-options'),
       ]);
       setItems(itemsResponse.data);
-      setLowStockVariants(lowStockResponse.data);
-    } catch (err) {
-      console.error(err);
+      setLowStockVariants(canManageInventory ? lowStockResponse.data : []);
+      setVariantOptions(variantOptionsResponse.data);
+    } catch (error) {
+      console.error(error);
       setItems([]);
+      notifyError(getApiErrorMessage(error, 'Không thể tải dữ liệu tồn kho.'));
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [canManageInventory, statusFilter]);
 
-  useEffect(() => { fetchItems(); }, [fetchItems]);
+  useEffect(() => {
+    void fetchItems();
+  }, [fetchItems]);
 
   const openAddModal = () => {
     setEditingItem(null);
-    setFormData({ imei: '', variantid: '', status: 'InStock' });
+    setFormData({ variantid: '', status: 'InStock' });
+    setImeiBatch('');
+    setVariantSearch('');
     setIsModalOpen(true);
   };
 
   const openEditModal = (item: InventoryItem) => {
     setEditingItem(item);
-    setFormData({ 
-      imei: item.imei, 
-      variantid: item.variantid ?? '', 
-      status: item.status ?? 'InStock' 
-    });
+    setFormData({ variantid: item.variantid ?? '', status: item.status ?? 'InStock' });
+    setImeiBatch(item.imei);
+    setVariantSearch(`${item.productName ?? ''} ${item.variantSku ?? ''}`.trim());
     setIsModalOpen(true);
   };
 
@@ -108,46 +165,48 @@ const StaffInventory: React.FC = () => {
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!canManageInventory) {
       notifyError('Tài khoản hiện tại chỉ có quyền xem kho hàng.');
       return;
     }
+
     setSaving(true);
     try {
       if (editingItem) {
         await apiClient.put(`/Inventory/${editingItem.imei}`, {
           variantid: Number(formData.variantid),
-          status: formData.status
+          status: formData.status,
         });
+        notifySuccess(`Đã cập nhật thiết bị ${editingItem.imei}.`);
       } else {
-        await apiClient.post('/Inventory', {
-          imei: formData.imei,
+        const response = await apiClient.post<{ importedCount: number }>('/Inventory/import-batch', {
           variantid: Number(formData.variantid),
-          status: formData.status
+          imeis: parsedImeis,
         });
+        notifySuccess(`Đã nhập kho ${response.data.importedCount} thiết bị theo IMEI thực tế.`);
       }
-      fetchItems();
+
       closeModal();
-    } catch {
-      notifyError(editingItem ? 'Không thể cập nhật IMEI này.' : 'Không thể lưu dữ liệu. Có thể IMEI đã tồn tại.');
+      await fetchItems();
+    } catch (error) {
+      notifyError(getApiErrorMessage(error, editingItem ? 'Không thể cập nhật thiết bị.' : 'Không thể nhập kho.'));
     } finally {
       setSaving(false);
     }
   };
 
-  const fmtDate = (d?: string) => d ? formatDate(d) : '';
-
   return (
     <div>
       <div className="ops-hero mb-6 flex items-center justify-between gap-4 p-6">
         <div>
-          <h1 className="ops-hero-title">Quản lý IMEI tồn kho</h1>
+          <h1 className="ops-hero-title">Quản lý thiết bị và IMEI</h1>
+          <p className="mt-1 text-sm text-slate-500">Mỗi IMEI tương ứng với một máy vật lý thực tế trong kho.</p>
         </div>
         {canManageInventory ? (
           <button onClick={openAddModal} className="ops-hero-action">
-            <Plus size={18} /> Thêm IMEI
+            <Plus size={18} /> Nhập kho theo IMEI
           </button>
         ) : (
           <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-slate-500">
@@ -156,23 +215,47 @@ const StaffInventory: React.FC = () => {
         )}
       </div>
 
-      <div className="flex items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-[0_10px_28px_rgba(15,23,42,0.06)] border border-slate-100">
-        <div className="flex items-center gap-2">
-          <Filter size={18} className="text-slate-400" />
-          <span className="text-sm font-bold text-slate-600 uppercase">Lọc trạng thái:</span>
+      <div className="mb-6 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
+          <div className="relative">
+            <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={searchTerm}
+              onChange={event => setSearchTerm(event.target.value)}
+              placeholder="Tìm theo tên sản phẩm, SKU hoặc IMEI..."
+              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-11 text-sm font-medium outline-none transition focus:border-[#e30613] focus:bg-white"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                aria-label="Xóa từ khóa"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          <div className="relative">
+            <Filter size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <select
+              value={statusFilter}
+              onChange={event => setStatusFilter(event.target.value)}
+              className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-700 outline-none transition focus:border-[#e30613] focus:bg-white"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="InStock">Trong kho</option>
+              <option value="Sold">Đã bán</option>
+              <option value="Reserved">Đã giữ cho đơn hàng</option>
+              <option value="Shipping">Đang giao</option>
+              <option value="Defective">Lỗi</option>
+            </select>
+          </div>
         </div>
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="border border-slate-200 rounded-2xl text-sm px-3 py-1.5 bg-slate-50 focus:outline-none focus:border-[#e30613] font-medium"
-        >
-          <option value="">Tất cả</option>
-          <option value="InStock">InStock (Trong kho)</option>
-          <option value="Sold">Sold (Đã bán)</option>
-          <option value="Reserved">Reserved (Đã đặt trước)</option>
-          <option value="Shipping">Shipping (Đang giao)</option>
-          <option value="Defective">Defective (Lỗi)</option>
-        </select>
+        <p className="mt-2 text-xs text-slate-400">
+          Đang hiển thị <span className="font-bold text-slate-700">{filteredItems.length}/{items.length}</span> thiết bị.
+          Có thể tìm SKU trước khi bấm nhập kho.
+        </p>
       </div>
 
       {lowStockVariants.length > 0 && (
@@ -180,36 +263,48 @@ const StaffInventory: React.FC = () => {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="font-black text-amber-900">Cảnh báo tồn kho thấp</h2>
-              <p className="text-sm text-amber-700">
-                {lowStockVariants.length} cấu hình còn tối đa 2 máy sẵn sàng bán.
-              </p>
+              <p className="text-sm text-amber-700">{lowStockVariants.length} SKU còn tối đa 2 máy sẵn sàng bán.</p>
             </div>
-            <span className="rounded-full bg-amber-200 px-3 py-1 text-xs font-black text-amber-900">
-              Cần nhập kho
-            </span>
+            <button onClick={openAddModal} className="rounded-full bg-amber-200 px-3 py-1 text-xs font-black text-amber-900">
+              Nhập kho
+            </button>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {lowStockVariants.slice(0, 6).map(variant => (
-              <div key={variant.variantid} className="rounded-xl border border-amber-200 bg-white/80 px-3 py-2">
-                <p className="truncate text-xs font-bold text-slate-800">
-                  {variant.productName ?? `Variant #${variant.variantid}`}
-                </p>
+            {filteredLowStockVariants.slice(0, 6).map(variant => (
+              <button
+                type="button"
+                key={variant.variantid}
+                onClick={() => {
+                  setFormData({ variantid: variant.variantid, status: 'InStock' });
+                  setImeiBatch('');
+                  setVariantSearch(`${variant.productName ?? ''} ${variant.variantSku ?? ''}`.trim());
+                  setEditingItem(null);
+                  setIsModalOpen(true);
+                }}
+                className="rounded-xl border border-amber-200 bg-white/80 px-3 py-2 text-left hover:border-amber-400"
+              >
+                <p className="truncate text-xs font-bold text-slate-800">{variant.productName ?? `SKU #${variant.variantid}`}</p>
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <span className="truncate text-[11px] text-slate-400">{variant.variantSku ?? 'Không có SKU'}</span>
-                  <span className={`text-xs font-black ${variant.inStockQuantity === 0 ? 'text-red-600' : 'text-amber-700'}`}>
+                  <span className={variant.inStockQuantity === 0 ? 'text-xs font-black text-red-600' : 'text-xs font-black text-amber-700'}>
                     {variant.inStockQuantity} máy
                   </span>
                 </div>
-              </div>
+              </button>
             ))}
+            {filteredLowStockVariants.length === 0 && (
+              <p className="col-span-full rounded-xl border border-dashed border-amber-300 bg-white/70 px-4 py-5 text-center text-sm text-amber-800">
+                Không có SKU tồn kho thấp khớp với từ khóa đang tìm.
+              </p>
+            )}
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-[0_10px_28px_rgba(15,23,42,0.06)] border border-slate-100 overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+        <table className="w-full border-collapse text-left">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <tr className="border-b border-slate-100 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
               <th className="p-4">IMEI</th>
               <th className="p-4">Sản phẩm</th>
               <th className="p-4">SKU</th>
@@ -221,34 +316,27 @@ const StaffInventory: React.FC = () => {
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr><td colSpan={6} className="p-4"><Skeleton className="h-10 w-full" /></td></tr>
-            ) : items.length === 0 ? (
-              <tr><td colSpan={6} className="p-8 text-center text-slate-400">Không có dữ liệu</td></tr>
-            ) : items.map(item => (
-              <tr key={item.imei} className="hover:bg-red-50/40 transition-colors">
-                <td className="p-4 font-bold text-slate-800 flex items-center gap-2">
-                  <Package size={16} className="text-[#e30613]" /> {item.imei}
-                </td>
+            ) : filteredItems.length === 0 ? (
+              <tr><td colSpan={6} className="p-8 text-center text-slate-400">Không có thiết bị phù hợp.</td></tr>
+            ) : filteredItems.map(item => (
+              <tr key={item.imei} className="transition-colors hover:bg-red-50/40">
+                <td className="flex items-center gap-2 p-4 font-bold text-slate-800"><Package size={16} className="text-[#e30613]" /> {item.imei}</td>
                 <td className="p-4 text-sm font-bold text-slate-700">{item.productName || `Variant #${item.variantid}`}</td>
                 <td className="p-4 text-sm text-slate-500">{item.variantSku}</td>
-                <td className="p-4 text-sm text-slate-500">{fmtDate(item.importedat)}</td>
+                <td className="p-4 text-sm text-slate-500">{item.importedat ? formatDate(item.importedat) : '—'}</td>
                 <td className="p-4 text-center">
-                  <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider
-                    ${item.status === 'InStock' ? 'bg-green-100 text-green-700' :
-                      item.status === 'Sold' ? 'bg-slate-100 text-slate-500' :
-                      item.status === 'Shipping' ? 'bg-blue-50 text-blue-700' :
-                      item.status === 'Defective' ? 'bg-red-100 text-red-700' :
-                      'bg-orange-100 text-orange-700'}`}>
-                    {item.status}
-                  </span>
+                  <span className={`inline-block rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                    item.status === 'InStock' ? 'bg-green-100 text-green-700'
+                      : item.status === 'Sold' ? 'bg-slate-100 text-slate-500'
+                        : item.status === 'Shipping' ? 'bg-blue-50 text-blue-700'
+                          : item.status === 'Defective' ? 'bg-red-100 text-red-700'
+                            : 'bg-orange-100 text-orange-700'
+                  }`}>{item.status}</span>
                 </td>
                 <td className="p-4 text-right">
-                  <button onClick={() => openHistory(item)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-2xl transition-colors" title="Lịch sử kho">
-                    <History size={16} />
-                  </button>
+                  <button onClick={() => void openHistory(item)} className="rounded-2xl p-2 text-slate-500 hover:bg-slate-100" title="Lịch sử kho"><History size={16} /></button>
                   {canManageInventory && (
-                    <button onClick={() => openEditModal(item)} className="p-2 text-[#e30613] hover:bg-red-50 rounded-2xl transition-colors">
-                      <Edit2 size={16} />
-                    </button>
+                    <button onClick={() => openEditModal(item)} className="rounded-2xl p-2 text-[#e30613] hover:bg-red-50" title="Cập nhật trạng thái"><Edit2 size={16} /></button>
                   )}
                 </td>
               </tr>
@@ -258,46 +346,126 @@ const StaffInventory: React.FC = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <h2 className="text-lg font-black text-slate-800">{editingItem ? 'Sửa IMEI' : 'Thêm IMEI Mới'}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-black text-slate-800">{editingItem ? 'Cập nhật thiết bị' : 'Nhập kho thiết bị'}</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  {editingItem ? 'Chỉ cập nhật SKU hoặc trạng thái của máy đã tồn tại.' : 'Chọn SKU rồi quét hoặc dán danh sách IMEI thực tế.'}
+                </p>
+              </div>
               <button onClick={closeModal} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
             </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
+            <form onSubmit={handleSave} className="space-y-4 p-6">
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">IMEI *</label>
-                <input type="text" required disabled={!!editingItem}
-                  value={formData.imei}
-                  onChange={e => setFormData({ ...formData, imei: e.target.value })}
-                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-bold uppercase disabled:bg-slate-100" />
+                <label className="mb-1 block text-xs font-bold uppercase text-slate-600">Sản phẩm / SKU *</label>
+                <div className="relative">
+                  <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={variantSearch}
+                    onChange={event => setVariantSearch(event.target.value)}
+                    placeholder="Nhập tên sản phẩm hoặc SKU..."
+                    className="h-11 w-full rounded-xl border-2 border-slate-200 pl-11 pr-4 text-sm font-medium outline-none focus:border-[#e30613]"
+                    autoFocus={!editingItem}
+                  />
+                </div>
+                <div className="mt-2 max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-1.5">
+                  {filteredVariantOptions.length === 0 ? (
+                    <p className="px-3 py-6 text-center text-sm text-slate-400">Không tìm thấy sản phẩm hoặc SKU phù hợp.</p>
+                  ) : (
+                    filteredVariantOptions.slice(0, 50).map(option => {
+                      const isSelected = option.variantid === Number(formData.variantid);
+                      return (
+                        <button
+                          type="button"
+                          key={option.variantid}
+                          onClick={() => {
+                            setFormData({ ...formData, variantid: option.variantid });
+                            setVariantSearch(`${option.productName} ${option.sku}`);
+                          }}
+                          className={`mb-1 flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition last:mb-0 ${
+                            isSelected
+                              ? 'border-red-200 bg-red-50'
+                              : 'border-transparent bg-white hover:border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                            isSelected ? 'bg-[#e30613] text-white' : 'bg-slate-100 text-slate-400'
+                          }`}>
+                            {isSelected ? <Check size={16} /> : <Package size={15} />}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-black text-slate-800">{option.productName}</span>
+                            <span className="block truncate font-mono text-xs text-slate-500">{option.sku}</span>
+                          </span>
+                          <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${
+                            option.inStockQuantity === 0
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {option.inStockQuantity} máy
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+                {selectedVariant && (
+                  <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                    Đã chọn <span className="font-black">{selectedVariant.productName}</span>
+                    {' — '}<span className="font-mono font-bold">{selectedVariant.sku}</span>
+                  </p>
+                )}
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Variant ID *</label>
-                <input type="number" required
-                  value={formData.variantid}
-                  onChange={e => setFormData({ ...formData, variantid: Number(e.target.value) })}
-                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-medium" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Trạng thái</label>
-                <select
-                  value={formData.status}
-                  onChange={e => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-medium"
+
+              {editingItem ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase text-slate-600">IMEI</label>
+                    <input value={editingItem.imei} disabled className="w-full rounded-xl border-2 border-slate-200 bg-slate-100 px-4 py-2.5 font-mono text-sm font-bold" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase text-slate-600">Trạng thái</label>
+                    <select
+                      value={formData.status}
+                      onChange={event => setFormData({ ...formData, status: event.target.value })}
+                      className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium"
+                    >
+                      <option value="InStock">Trong kho</option>
+                      <option value="Reserved">Đã giữ cho đơn hàng</option>
+                      <option value="Shipping">Đang giao</option>
+                      <option value="Sold">Đã bán</option>
+                      <option value="Defective">Lỗi</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className="block text-xs font-bold uppercase text-slate-600">Danh sách IMEI *</label>
+                    <span className="text-xs font-bold text-[#e30613]">{parsedImeis.length} thiết bị</span>
+                  </div>
+                  <textarea
+                    required
+                    rows={7}
+                    value={imeiBatch}
+                    onChange={event => setImeiBatch(event.target.value)}
+                    placeholder={'Mỗi dòng một IMEI gồm đúng 15 chữ số\nVí dụ:\n356789012345678\n356789012345679'}
+                    className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 font-mono text-sm focus:border-[#e30613] focus:outline-none"
+                  />
+                  <p className="mt-2 text-xs text-slate-500">Có thể dùng máy quét mã vạch; hệ thống tự tách theo dòng, dấu phẩy hoặc khoảng trắng và chặn IMEI trùng.</p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={closeModal} className="flex-1 rounded-xl bg-slate-100 py-2.5 font-bold text-slate-600 hover:bg-slate-200">Hủy</button>
+                <button
+                  type="submit"
+                  disabled={saving || formData.variantid === '' || (!editingItem && parsedImeis.length === 0)}
+                  className="flex-1 rounded-xl bg-[#e30613] py-2.5 font-bold text-white hover:bg-[#c4000b] disabled:opacity-60"
                 >
-                  <option value="InStock">InStock</option>
-                  <option value="Sold">Sold</option>
-                  <option value="Reserved">Reserved</option>
-                  <option value="Shipping">Shipping</option>
-                  <option value="Defective">Defective</option>
-                </select>
-              </div>
-              <div className="pt-4 flex gap-3">
-                <button type="button" onClick={closeModal} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Hủy</button>
-                <button type="submit" disabled={saving || !formData.imei || formData.variantid === ''} 
-                  className="flex-1 py-2 bg-[#e30613] text-white font-bold rounded-xl hover:bg-[#c4000b] disabled:opacity-60 transition-colors">
-                  {saving ? 'Đang lưu...' : 'Lưu lại'}
+                  {saving ? 'Đang lưu...' : editingItem ? 'Lưu thay đổi' : `Nhập kho ${parsedImeis.length} máy`}
                 </button>
               </div>
             </form>
@@ -306,19 +474,17 @@ const StaffInventory: React.FC = () => {
       )}
 
       {historyItem && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
               <div>
                 <h2 className="text-lg font-black text-slate-800">Lịch sử giao dịch kho</h2>
                 <p className="text-xs font-mono font-bold text-[#e30613]">{historyItem.imei}</p>
               </div>
               <button onClick={() => setHistoryItem(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
             </div>
-            <div className="p-6 max-h-[65vh] overflow-y-auto">
-              {historyLoading ? (
-                <Skeleton className="h-24 w-full" />
-              ) : transactions.length === 0 ? (
+            <div className="max-h-[65vh] overflow-y-auto p-6">
+              {historyLoading ? <Skeleton className="h-24 w-full" /> : transactions.length === 0 ? (
                 <p className="py-10 text-center text-sm text-slate-400">IMEI này chưa có lịch sử giao dịch.</p>
               ) : (
                 <div className="space-y-3">
@@ -327,13 +493,9 @@ const StaffInventory: React.FC = () => {
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <p className="text-sm font-black text-slate-800">{transaction.transactiontype}</p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {transaction.fromstatus ?? 'Khởi tạo'} → <span className="font-bold text-[#c4000b]">{transaction.tostatus}</span>
-                          </p>
+                          <p className="mt-1 text-xs text-slate-500">{transaction.fromstatus ?? 'Khởi tạo'} → <span className="font-bold text-[#c4000b]">{transaction.tostatus}</span></p>
                         </div>
-                        <p className="text-xs text-slate-400">
-                          {transaction.createdat ? formatDateTime(transaction.createdat) : '—'}
-                        </p>
+                        <p className="text-xs text-slate-400">{transaction.createdat ? formatDateTime(transaction.createdat) : '—'}</p>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
                         {transaction.orderid && <span>Đơn #{transaction.orderid}</span>}

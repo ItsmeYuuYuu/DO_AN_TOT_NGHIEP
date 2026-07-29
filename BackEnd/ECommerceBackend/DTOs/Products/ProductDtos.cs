@@ -130,8 +130,7 @@ namespace ECommerceBackend.DTOs.Products
         [Range(0, double.MaxValue, ErrorMessage = "Giá cơ bản không hợp lệ")] decimal Baseprice,
         [Range(0, double.MaxValue, ErrorMessage = "Giá khuyến mãi không hợp lệ")] decimal? Saleprice,
         List<VariantSpecDto>? Specs,
-        List<CreateProductImageDto>? Images,
-        [Range(0, 10000, ErrorMessage = "Số lượng tồn kho phải từ 0 đến 10000")] int? Quantity = null
+        List<CreateProductImageDto>? Images
     );
 
     public record CreateFullProductDto(
@@ -140,7 +139,6 @@ namespace ECommerceBackend.DTOs.Products
         int? Categoryid,
         int? Brandid,
         [Required(ErrorMessage = "Dòng máy (series) là bắt buộc"), StringLength(100)] string Seriesname,
-        [Range(0, 10000, ErrorMessage = "Tổng số lượng lô hàng phải từ 0 đến 10000")] int Totalquantity,
         List<CreateFullProductVariantDto>? Variants
     );
 
@@ -151,8 +149,7 @@ namespace ECommerceBackend.DTOs.Products
         [Range(0, double.MaxValue)] decimal Baseprice,
         [Range(0, double.MaxValue)] decimal? Saleprice,
         List<VariantSpecDto>? Specs,
-        List<CreateProductImageDto>? Images,
-        [Range(0, 10000)] int Quantity
+        List<CreateProductImageDto>? Images
     );
 
     public record UpdateFullProductDto(

@@ -62,7 +62,7 @@ namespace ECommerceBackend.Controllers
             return cart;
         }
         
-        private List<CartItemJson> GetCartItemsFromJson(string json)
+        private List<CartItemJson> GetCartItemsFromJson(string? json)
         {
             if (string.IsNullOrWhiteSpace(json))
                 return new List<CartItemJson>();

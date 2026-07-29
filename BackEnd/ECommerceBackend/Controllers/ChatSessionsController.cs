@@ -192,7 +192,7 @@ namespace ECommerceBackend.Controllers
             var variant = await _context.Productvariants
                 .AsNoTracking()
                 .Include(item => item.Product)
-                    .ThenInclude(product => product.Brand)
+                    .ThenInclude(product => product!.Brand)
                 .Include(item => item.Inventoryitems)
                 .FirstOrDefaultAsync(item =>
                     item.Variantid == recommendation.Variantid &&

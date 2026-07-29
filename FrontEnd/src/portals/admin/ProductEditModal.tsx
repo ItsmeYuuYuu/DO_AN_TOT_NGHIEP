@@ -374,9 +374,6 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
       if (variant.saleprice !== '' && Number(variant.saleprice) > Number(variant.baseprice)) {
         return `Giá giảm của SKU ${variant.sku} không được lớn hơn giá gốc.`;
       }
-      if (variant.quantity === '' || Number(variant.quantity) < 0) {
-        return `Tồn kho của SKU ${variant.sku} không hợp lệ.`;
-      }
       if (variant.images.length === 0) {
         return `SKU ${variant.sku} phải có ít nhất một hình ảnh.`;
       }
@@ -408,7 +405,6 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
         condition: variant.condition.trim(),
         baseprice: Number(variant.baseprice),
         saleprice: variant.saleprice === '' ? undefined : Number(variant.saleprice),
-        quantity: Number(variant.quantity),
         specs: [
           { key: 'Màu sắc', value: variant.color.trim() },
           { key: 'RAM', value: variant.ram.trim() },
@@ -664,13 +660,9 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
                         } className={inputClass} />
                       </div>
                       <div>
-                        <label className="mb-1 block text-xs font-bold text-slate-600">Tồn kho *</label>
-                        <input disabled={contentOnly} type="number" min={0} className={inputClass} value={variant.quantity} onChange={event =>
-                          updateVariant(variant.clientId, current => ({
-                            ...current,
-                            quantity: event.target.value ? Number(event.target.value) : '',
-                          }))
-                        } />
+                        <label className="mb-1 block text-xs font-bold text-slate-600">Tồn kho hiện tại</label>
+                        <input disabled className={inputClass} value={`${variant.quantity || 0} máy`} />
+                        <p className="mt-1 text-[11px] text-slate-500">Tồn kho chỉ thay đổi qua nghiệp vụ nhập/xuất IMEI.</p>
                       </div>
                     </div>
 

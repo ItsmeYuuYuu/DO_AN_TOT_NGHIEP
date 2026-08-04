@@ -91,6 +91,37 @@ const CheckoutPage: React.FC = () => {
     warrantyPackagesApi.getAll().then(setPackages).catch(console.error);
   }, []);
 
+  const defaultWarrantyPackage = useMemo(() => {
+    if (packages.length === 0) return undefined;
+
+    return packages.find(pkg =>
+      pkg.packagename
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim() === 'mac dinh')
+      ?? packages.find(pkg => pkg.price === 0)
+      ?? packages[0];
+  }, [packages]);
+
+  useEffect(() => {
+    if (!defaultWarrantyPackage || items.length === 0) return;
+
+    setSelectedPackages(previous => {
+      const next = { ...previous };
+      let changed = false;
+
+      items.forEach(item => {
+        if (!next[item.variantId]) {
+          next[item.variantId] = defaultWarrantyPackage.packageid;
+          changed = true;
+        }
+      });
+
+      return changed ? next : previous;
+    });
+  }, [defaultWarrantyPackage, items]);
+
   useEffect(() => {
     let active = true;
     loadVietnamAdministrativeUnits()
@@ -588,18 +619,14 @@ const CheckoutPage: React.FC = () => {
                       </span>
                       <select
                         className="customer-input py-2 text-xs"
-                        value={selectedPackages[item.variantId] || ''}
+                        value={selectedPackages[item.variantId] ?? defaultWarrantyPackage?.packageid ?? ''}
                         onChange={event => {
-                          const value = event.target.value;
-                          setSelectedPackages(prev => {
-                            const next = { ...prev };
-                            if (!value) delete next[item.variantId];
-                            else next[item.variantId] = parseInt(value);
-                            return next;
-                          });
+                          setSelectedPackages(prev => ({
+                            ...prev,
+                            [item.variantId]: Number(event.target.value),
+                          }));
                         }}
                       >
-                        <option value="">Không mua bảo hành mở rộng</option>
                         {packages.map(pkg => (
                           <option key={pkg.packageid} value={pkg.packageid}>
                             {pkg.packagename} (+{formatCurrency(pkg.price)}/sp)

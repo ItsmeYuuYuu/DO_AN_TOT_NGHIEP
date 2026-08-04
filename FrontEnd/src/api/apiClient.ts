@@ -5,6 +5,20 @@ import { resolveMediaUrlsDeep } from '@/utils/mediaUrl';
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const GUEST_CHECKOUT_TOKEN_KEY = 'ec_guest_checkout_token';
 
+// Authentication forms must receive their 401 response so they can show a
+// validation message without the global session-expired redirect reloading
+// the page (for example, when a user enters an incorrect password).
+const isAuthenticationRequest = (url?: string) => {
+  if (!url) return false;
+  return [
+    '/auth/login',
+    '/auth/register',
+    '/auth/registration-code',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+  ].some(endpoint => url.includes(endpoint));
+};
+
 function getGuestCheckoutToken(): string {
   let token = localStorage.getItem(GUEST_CHECKOUT_TOKEN_KEY);
   if (!token) {
@@ -40,7 +54,7 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isAuthenticationRequest(error.config?.url)) {
       if (error.response?.data?.code === 'STAFF_SESSION_REPLACED') {
         sessionStorage.setItem(
           'ec_auth_notice',

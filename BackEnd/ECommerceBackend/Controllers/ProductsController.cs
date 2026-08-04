@@ -139,6 +139,9 @@ namespace ECommerceBackend.Controllers
                     .ThenInclude(v => v.Inventoryitems)
                 .AsQueryable();
 
+            if (!includeInactive)
+                query = query.Where(p => p.Isactive);
+
             var products = await query.ToListAsync();
 
             return Ok(products.Select(MapToDto));
@@ -182,6 +185,7 @@ namespace ECommerceBackend.Controllers
                     
                 .Include(p => p.Productvariants)
                     .ThenInclude(v => v.Inventoryitems)
+                .Where(p => p.Isactive)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(q))

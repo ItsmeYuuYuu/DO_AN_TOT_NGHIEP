@@ -106,7 +106,8 @@ public class HomepageProductSectionsController : ControllerBase
                     .Include(product => product.Category)
                     .Include(product => product.Productvariants)
                         .ThenInclude(variant => variant.Inventoryitems)
-                    .Where(p => productIds.Contains(p.Productid))
+                    .Where(p => productIds.Contains(p.Productid)
+                        && (!activeItemsOnly || p.Isactive))
                     .ToDictionaryAsync(p => p.Productid);
 
                 int order = 0;

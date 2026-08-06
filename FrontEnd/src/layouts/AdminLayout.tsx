@@ -123,7 +123,7 @@ export const AdminLayout: React.FC = () => {
   }, [location.hash]);
 
   return (
-    <div className="ops-shell min-h-screen">
+    <div className="ops-shell design-system-shell min-h-screen">
       <Seo title="Admin Portal - Cuồng Điện Thoại" description="Khu vực quản trị nội bộ của Cuồng Điện Thoại." noIndex />
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
         <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">

@@ -91,7 +91,7 @@ const CategorySection: React.FC = () => {
               <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400 text-sm">Không có danh mục.</td></tr>
             ) : paged.map(cat => (
               <tr key={cat.categoryid} className="hover:bg-red-50/40 transition-colors">
-                <td className="px-4 py-3 font-mono text-xs text-slate-400">#{cat.categoryid}</td>
+                <td className="px-4 py-3 text-xs text-slate-400">#{cat.categoryid}</td>
                 <td className="px-4 py-3 font-semibold text-slate-800">{cat.categoryname}</td>
                 <td className="px-4 py-3 text-sm text-slate-500 max-w-xs"><span className="line-clamp-1">{cat.description ?? '—'}</span></td>
                 <td className="px-4 py-3"><span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">{cat.productcount ?? 0} sp</span></td>
@@ -200,7 +200,7 @@ const BrandSection: React.FC = () => {
               <tr><td colSpan={4} className="px-4 py-10 text-center text-slate-400 text-sm">Không có thương hiệu.</td></tr>
             ) : paged.map(b => (
               <tr key={b.brandid} className="hover:bg-red-50/40 transition-colors">
-                <td className="px-4 py-3 font-mono text-xs text-slate-400">#{b.brandid}</td>
+                <td className="px-4 py-3 text-xs text-slate-400">#{b.brandid}</td>
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center gap-2 font-semibold text-slate-800">
                     <span className="w-7 h-7 rounded-2xl bg-slate-100 flex items-center justify-center text-xs font-black text-slate-600">
@@ -336,7 +336,7 @@ const SeriesSection: React.FC = () => {
               <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-400 text-sm">Không có dòng máy.</td></tr>
             ) : paged.map(series => (
               <tr key={series.seriesid} className="hover:bg-red-50/40 transition-colors">
-                <td className="px-4 py-3 font-mono text-xs text-slate-400">#{series.seriesid}</td>
+                <td className="px-4 py-3 text-xs text-slate-400">#{series.seriesid}</td>
                 <td className="px-4 py-3 font-semibold text-slate-800">{series.seriesname}</td>
                 <td className="px-4 py-3 text-slate-600">{series.brandname}</td>
                 <td className="px-4 py-3 text-slate-500">{series.displayorder}</td>

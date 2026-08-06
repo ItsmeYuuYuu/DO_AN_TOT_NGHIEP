@@ -66,7 +66,6 @@ const CustomerHome: React.FC = () => {
   const [sliders, setSliders] = useState<PromotionalContent[]>([]);
   const [homeSections, setHomeSections] = useState<HomepageProductSection[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [preloadedSlide, setPreloadedSlide] = useState<number | null>(null);
   const [isSliderPaused, setIsSliderPaused] = useState(false);
   const [now, setNow] = useState(() => new Date());
 
@@ -90,22 +89,26 @@ const CustomerHome: React.FC = () => {
   }, [sliders, isSliderPaused]);
 
   useEffect(() => {
-    setPreloadedSlide(null);
-  }, [activeSlide]);
-
-  useEffect(() => {
     const interval = window.setInterval(() => {
-      if (window.matchMedia('(min-width: 768px)').matches) return;
-
       document.querySelectorAll<HTMLDivElement>('.customer-home-product-carousel').forEach(carousel => {
-        if (carousel.scrollWidth <= carousel.clientWidth) return;
+        if (
+          carousel.scrollWidth <= carousel.clientWidth + 1
+          || carousel.matches(':hover')
+          || carousel.contains(document.activeElement)
+        ) return;
 
-        const step = carousel.clientWidth;
-        const currentPage = Math.round(carousel.scrollLeft / step);
-        const lastPage = Math.ceil((carousel.scrollWidth - carousel.clientWidth) / step);
-        const nextPage = currentPage >= lastPage ? 0 : currentPage + 1;
+        const firstCard = carousel.firstElementChild as HTMLElement | null;
+        if (!firstCard) return;
 
-        carousel.scrollTo({ left: nextPage * step, behavior: 'smooth' });
+        const styles = window.getComputedStyle(carousel);
+        const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
+        const step = firstCard.getBoundingClientRect().width + gap;
+        const maxScrollLeft = carousel.scrollWidth - carousel.clientWidth;
+        const nextScrollLeft = carousel.scrollLeft + step >= maxScrollLeft - 1
+          ? 0
+          : Math.min(carousel.scrollLeft + step, maxScrollLeft);
+
+        carousel.scrollTo({ left: nextScrollLeft, behavior: 'smooth' });
       });
     }, 5000);
 
@@ -120,7 +123,7 @@ const CustomerHome: React.FC = () => {
       title: 'Sản phẩm đang có',
       subtitle: 'Các mẫu máy nổi bật hiện có trong cửa hàng.',
       theme: 'LightBlue',
-      items: featuredProducts.slice(0, 5).map((product, index) => ({
+      items: featuredProducts.slice(0, 8).map((product, index) => ({
         itemid: product.productid,
         sectionid: 0,
         productid: product.productid,
@@ -134,10 +137,13 @@ const CustomerHome: React.FC = () => {
   const hasConfiguredProducts = homeSections.some(section =>
     section.items.some(item => item.isactive !== false && item.product));
   const displaySections = hasConfiguredProducts ? homeSections : fallbackSections;
-  const sideBanners = banners.slice(0, 2);
+  const sideBanners = banners.slice(0, 3);
   const nextSlide = sliders.length > 1 ? (activeSlide + 1) % sliders.length : activeSlide;
+  const previousSlide = sliders.length > 1
+    ? (activeSlide - 1 + sliders.length) % sliders.length
+    : activeSlide;
   const visibleSlides = sliders.filter((_, index) =>
-    index === activeSlide || (preloadedSlide === nextSlide && index === nextSlide));
+    index === previousSlide || index === activeSlide || index === nextSlide);
 
   const vietnamNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
   const elapsedVietnamSeconds =
@@ -168,9 +174,9 @@ const CustomerHome: React.FC = () => {
       />
 
       <section className="border-b customer-rule bg-white px-3 py-3 sm:px-4 md:py-6">
-        <div className="mx-auto grid max-w-7xl gap-3 lg:grid-cols-12">
+        <div className="mx-auto max-w-7xl">
           <div
-            className="group relative min-h-[240px] overflow-hidden rounded-2xl bg-[#1f2937] shadow-[0_24px_60px_rgba(15,23,42,0.18)] sm:min-h-[330px] lg:col-span-8 lg:min-h-[440px]"
+            className="group relative aspect-[16/10] overflow-hidden rounded-xl bg-[#1f2937] shadow-[0_18px_44px_rgba(15,23,42,0.15)] sm:aspect-[16/7] lg:aspect-[16/6]"
             onMouseEnter={() => setIsSliderPaused(true)}
             onMouseLeave={() => setIsSliderPaused(false)}
             onFocusCapture={() => setIsSliderPaused(true)}
@@ -199,14 +205,9 @@ const CustomerHome: React.FC = () => {
                       width={1280}
                       height={720}
                       className="h-full w-full object-cover"
-                      loading={isActive ? 'eager' : 'lazy'}
+                      loading={index === 0 ? 'eager' : 'lazy'}
                       decoding="async"
                       fetchPriority={isActive ? 'high' : 'low'}
-                      onLoad={() => {
-                        if (isActive && sliders.length > 1) {
-                          window.setTimeout(() => setPreloadedSlide(nextSlide), 1200);
-                        }
-                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1f2937]/65 via-transparent to-transparent" />
                     {slider.title && (
@@ -225,7 +226,7 @@ const CustomerHome: React.FC = () => {
                   );
                 })}
 
-                {sliders.length > 1 && (
+                {false && sliders.length > 1 && (
                   <>
                     <button
                       type="button"
@@ -247,7 +248,7 @@ const CustomerHome: React.FC = () => {
                 )}
               </>
             ) : (
-              <div className="customer-grid-pattern relative flex h-full min-h-[330px] flex-col justify-between rounded-2xl p-7 text-white md:p-10 lg:min-h-[440px]">
+              <div className="customer-grid-pattern relative flex h-full flex-col justify-between rounded-xl p-7 text-white md:p-10">
                 <div className="flex items-center justify-between">
                   <span className="border border-[#ffd166] px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-[#ffd166]">
                     Tech selection 2026
@@ -280,18 +281,18 @@ const CustomerHome: React.FC = () => {
             )}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1">
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
             {sideBanners.map(banner => (
               <div
                 key={banner.contentid}
-                className="relative min-h-36 overflow-hidden rounded-xl bg-[#e8f1ef] shadow-[0_16px_38px_rgba(15,23,42,0.1)] sm:min-h-52 sm:rounded-2xl"
+                className="relative aspect-[16/9] overflow-hidden rounded-xl bg-[#e8f1ef] shadow-[0_12px_28px_rgba(15,23,42,0.1)]"
               >
                 <img
                   src={banner.imageurl}
                   alt={banner.title || 'Ưu đãi nổi bật'}
                   width={640}
                   height={360}
-                  className="h-full w-full object-cover transition duration-500 hover:scale-105"
+                  className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"
                   decoding="async"
                   fetchPriority="low"
                 />
@@ -301,10 +302,10 @@ const CustomerHome: React.FC = () => {
               </div>
             ))}
 
-            {Array.from({ length: Math.max(0, 2 - sideBanners.length) }).map((_, index) => (
+            {Array.from({ length: Math.max(0, 3 - sideBanners.length) }).map((_, index) => (
               <div
                 key={`banner-placeholder-${index}`}
-                className="flex min-h-36 items-center justify-center rounded-xl border border-dashed border-[#d7dce3] bg-white/70 p-4 text-center text-sm font-bold text-slate-400 shadow-[0_16px_38px_rgba(15,23,42,0.06)] sm:min-h-52 sm:rounded-2xl sm:p-6"
+                className="flex aspect-[16/9] items-center justify-center rounded-xl border border-dashed border-[#d7dce3] bg-white/70 p-4 text-center text-sm font-bold text-slate-400 shadow-[0_12px_28px_rgba(15,23,42,0.06)] sm:p-6"
               >
                 Chưa cấu hình banner phụ {sideBanners.length + index + 1}
               </div>
@@ -332,13 +333,10 @@ const CustomerHome: React.FC = () => {
       </section>
 
       <section className="mx-auto max-w-7xl px-3 pt-5 sm:px-4 md:pt-8">
-        <div className="relative overflow-hidden rounded-[26px] border border-[#eef1f5] bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:p-6">
-          <span className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-[#e30613]/8 blur-2xl" />
-          <span className="pointer-events-none absolute -bottom-28 right-10 h-72 w-72 rounded-full bg-[#ffd166]/25 blur-2xl" />
-
-          <div className="relative grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
-            <div className="rounded-[24px] border border-[#ffe1e4] bg-[linear-gradient(135deg,#fff7f7_0%,#ffffff_52%,#fff5df_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] md:p-7">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#e30613] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white shadow-[0_10px_22px_rgba(227,6,19,0.22)]">
+        <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)] md:p-6">
+          <div className="grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
+            <div className="border-l-4 border-[#e30613] bg-[#fffafa] p-5 md:p-7">
+              <div className="inline-flex items-center gap-2 border-l-2 border-[#e30613] pl-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#c4000b]">
                 <Sparkles size={13} /> Tư vấn thông minh
               </div>
               <h2 className="customer-display mt-4 max-w-md text-3xl font-bold leading-tight text-[#172033] md:text-4xl">
@@ -347,7 +345,7 @@ const CustomerHome: React.FC = () => {
               <p className="mt-3 max-w-md text-sm font-medium leading-7 text-slate-600">
                 Chọn nhanh nhu cầu, AI sẽ hỏi thêm ngân sách rồi lọc máy theo dữ liệu sản phẩm thật của cửa hàng.
               </p>
-              <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold text-slate-500">
+              <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs font-bold text-slate-600 [&>span]:border-l [&>span]:border-slate-300 [&>span]:!rounded-none [&>span]:!bg-transparent [&>span]:!px-0 [&>span]:!py-0 [&>span]:!shadow-none [&>span]:pl-2 [&>span:first-child]:border-l-0 [&>span:first-child]:pl-0">
                 <span className="rounded-full bg-white px-3 py-2 shadow-sm">Camera</span>
                 <span className="rounded-full bg-white px-3 py-2 shadow-sm">Gaming</span>
                 <span className="rounded-full bg-white px-3 py-2 shadow-sm">Pin lâu</span>
@@ -362,25 +360,23 @@ const CustomerHome: React.FC = () => {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              {NEED_CARDS.map(({ icon: Icon, title, description, prompt, tone }) => (
+              {NEED_CARDS.map(({ icon: Icon, title, description, prompt }) => (
                 <Link
                   key={title}
                   to={`/chat?q=${encodeURIComponent(prompt)}`}
-                  className={`group relative overflow-hidden rounded-[24px] border border-white ${tone} p-5 shadow-[0_14px_34px_rgba(15,23,42,0.08)] ring-1 ring-slate-900/5 transition hover:-translate-y-1 hover:shadow-[0_22px_52px_rgba(227,6,19,0.14)]`}
+                  className="group border border-[#e5e7eb] bg-white p-5 transition hover:border-[#e30613] hover:bg-[#fffafa]"
                 >
-                  <span className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/60" />
-                  <span className="absolute bottom-0 left-0 h-1 w-0 bg-[#e30613] transition-all duration-300 group-hover:w-full" />
-                  <div className="relative flex items-start justify-between gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-white text-[#e30613] shadow-[0_10px_24px_rgba(15,23,42,0.1)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#fff1f2] text-[#e30613]">
                       <Icon size={22} strokeWidth={2.1} />
                     </div>
-                    <span className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-[#e30613] opacity-0 transition group-hover:opacity-100">
+                    <span className="mt-1 text-[#e30613] opacity-0 transition group-hover:opacity-100">
                       <ArrowRight size={15} />
                     </span>
                   </div>
-                  <h3 className="relative mt-5 text-[21px] font-black leading-tight text-[#172033]">{title}</h3>
-                  <p className="relative mt-2 min-h-12 text-sm font-medium leading-6 text-slate-600">{description}</p>
-                  <span className="relative mt-5 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-[#c4000b]">
+                  <h3 className="mt-5 text-[21px] font-black leading-tight text-[#172033]">{title}</h3>
+                  <p className="mt-2 min-h-12 text-sm font-medium leading-6 text-slate-600">{description}</p>
+                  <span className="mt-5 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-[#c4000b]">
                     Bắt đầu tư vấn <ArrowRight size={14} className="transition group-hover:translate-x-1" />
                   </span>
                 </Link>
@@ -410,7 +406,7 @@ const CustomerHome: React.FC = () => {
               products: section.items
                 .filter(item => item.isactive !== false && item.product)
                 .sort((a, b) => (a.displayorder ?? 0) - (b.displayorder ?? 0))
-                .slice(0, 5)
+                .slice(0, 8)
                 .map(item => item.product!),
             }))
             .filter(section => section.products.length > 0)
@@ -421,16 +417,10 @@ const CustomerHome: React.FC = () => {
                   key={section.sectionid || section.sectionkey}
                   className={`relative overflow-hidden rounded-2xl p-3 shadow-[0_22px_55px_rgba(15,23,42,0.12)] sm:p-4 md:p-6 ${
                     isRed
-                      ? 'bg-[radial-gradient(circle_at_top_right,rgba(255,209,102,0.32),transparent_22rem),linear-gradient(135deg,#f20615_0%,#c4000b_48%,#780006_100%)] ring-1 ring-red-900/10'
+                      ? 'bg-gradient-to-r from-[#e30613] via-[#ca000c] to-[#a80009] ring-1 ring-red-900/10'
                       : 'bg-gradient-to-br from-[#eaf4ff] via-[#f4f9ff] to-[#dcecff]'
                   }`}
                 >
-                  {isRed && (
-                    <>
-                      <span className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10" />
-                      <span className="pointer-events-none absolute -bottom-20 left-8 h-56 w-56 rounded-full bg-black/10" />
-                    </>
-                  )}
                   <div className="relative mb-4 flex flex-col justify-between gap-3 sm:mb-5 md:flex-row md:items-end">
                     <div>
                       {isRed && (
@@ -474,19 +464,17 @@ const CustomerHome: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="relative md:hidden">
-                    <div className="customer-home-product-carousel -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      {section.products.map(product => (
-                        <div key={`${section.sectionkey}-mobile-${product.productid}`} className="w-[calc((100%_-_12px)/2)] shrink-0 snap-start">
-                          <ProductCard product={product} compact />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="relative hidden gap-3 sm:gap-4 md:grid md:grid-cols-3 xl:grid-cols-5">
+                  <div
+                    className="customer-home-product-carousel relative -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-1 pt-3 pb-5 [scrollbar-width:none] md:gap-4 [&::-webkit-scrollbar]:hidden"
+                    aria-label={`${section.title} - danh sách sản phẩm tự động chuyển sau mỗi 5 giây`}
+                  >
                     {section.products.map(product => (
-                      <ProductCard key={`${section.sectionkey}-${product.productid}`} product={product} compact />
+                      <div
+                        key={`${section.sectionkey}-${product.productid}`}
+                        className="w-[calc((100%_-_12px)/2)] shrink-0 snap-start md:w-[calc((100%_-_32px)/3)] xl:w-[calc((100%_-_64px)/5)]"
+                      >
+                        <ProductCard product={product} compact />
+                      </div>
                     ))}
                   </div>
                 </div>

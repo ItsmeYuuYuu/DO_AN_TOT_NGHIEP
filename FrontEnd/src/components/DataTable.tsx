@@ -24,7 +24,7 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-100/80">
             <tr>
@@ -55,7 +55,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
       <table className="w-full text-sm">
         <thead className="border-b border-slate-200 bg-slate-100/80">
           <tr>

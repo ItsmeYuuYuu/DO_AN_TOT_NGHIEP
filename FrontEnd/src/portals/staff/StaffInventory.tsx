@@ -397,7 +397,7 @@ const StaffInventory: React.FC = () => {
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-black text-slate-800">{option.productName}</span>
-                            <span className="block truncate font-mono text-xs text-slate-500">{option.sku}</span>
+                            <span className="block truncate text-xs text-slate-500">{option.sku}</span>
                           </span>
                           <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${
                             option.inStockQuantity === 0
@@ -414,7 +414,7 @@ const StaffInventory: React.FC = () => {
                 {selectedVariant && (
                   <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
                     Đã chọn <span className="font-black">{selectedVariant.productName}</span>
-                    {' — '}<span className="font-mono font-bold">{selectedVariant.sku}</span>
+                    {' — '}<span className="font-bold">{selectedVariant.sku}</span>
                   </p>
                 )}
               </div>
@@ -423,7 +423,7 @@ const StaffInventory: React.FC = () => {
                 <>
                   <div>
                     <label className="mb-1 block text-xs font-bold uppercase text-slate-600">IMEI</label>
-                    <input value={editingItem.imei} disabled className="w-full rounded-xl border-2 border-slate-200 bg-slate-100 px-4 py-2.5 font-mono text-sm font-bold" />
+                    <input value={editingItem.imei} disabled className="w-full rounded-xl border-2 border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold" />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-bold uppercase text-slate-600">Trạng thái</label>
@@ -452,7 +452,7 @@ const StaffInventory: React.FC = () => {
                     value={imeiBatch}
                     onChange={event => setImeiBatch(event.target.value)}
                     placeholder={'Mỗi dòng một IMEI gồm đúng 15 chữ số\nVí dụ:\n356789012345678\n356789012345679'}
-                    className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 font-mono text-sm focus:border-[#e30613] focus:outline-none"
+                    className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#e30613] focus:outline-none"
                   />
                   <p className="mt-2 text-xs text-slate-500">Có thể dùng máy quét mã vạch; hệ thống tự tách theo dòng, dấu phẩy hoặc khoảng trắng và chặn IMEI trùng.</p>
                 </div>
@@ -479,7 +479,7 @@ const StaffInventory: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
               <div>
                 <h2 className="text-lg font-black text-slate-800">Lịch sử giao dịch kho</h2>
-                <p className="text-xs font-mono font-bold text-[#e30613]">{historyItem.imei}</p>
+                <p className="text-xs font-bold text-[#e30613]">{historyItem.imei}</p>
               </div>
               <button onClick={() => setHistoryItem(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
             </div>

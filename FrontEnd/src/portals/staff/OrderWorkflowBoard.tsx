@@ -226,7 +226,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                 return (
                   <tr key={item.orderid} className="align-top transition hover:bg-red-50/40">
                     <td className="px-5 py-4">
-                      <p className="font-mono text-sm font-black text-[#c4000b]">#{String(item.orderid).padStart(5, '0')}</p>
+                      <p className="text-sm font-black text-[#c4000b]">#{String(item.orderid).padStart(5, '0')}</p>
                       <p className="mt-1 text-xs font-semibold text-slate-400">
                         {item.orderdate ? formatDateTime(item.orderdate) : '—'} · {item.itemcount} sản phẩm
                       </p>
@@ -416,7 +416,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                         <p className="truncate text-sm font-black text-[#172033]">
                           {device.productname ?? device.variantsku ?? 'Thiết bị'}
                         </p>
-                        <p className="mt-0.5 font-mono text-sm font-bold tracking-wide text-[#c4000b]">{device.imei}</p>
+                        <p className="mt-0.5 text-sm font-bold tracking-wide text-[#c4000b]">{device.imei}</p>
                         <p className="mt-1 text-xs font-semibold text-slate-400">
                           {device.variantsku ?? 'Không có SKU'} · Kho: {device.inventorystatus ?? '—'}
                         </p>

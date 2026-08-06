@@ -187,7 +187,7 @@ const AdminOrders: React.FC = () => {
       key: 'orderid',
       header: 'Mã đơn',
       render: (order: Order) => (
-        <button onClick={() => setViewOrder(order)} className="font-mono text-xs font-black text-[#c4000b] hover:underline">
+        <button onClick={() => setViewOrder(order)} className="text-xs font-black text-[#c4000b] hover:underline">
           #{String(order.orderid).padStart(5, '0')}
         </button>
       ),

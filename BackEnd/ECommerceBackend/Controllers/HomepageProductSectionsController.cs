@@ -14,6 +14,8 @@ namespace ECommerceBackend.Controllers;
 public class HomepageProductSectionsController : ControllerBase
 {
     private const string HomepageSectionType = "HomepageProductSection";
+    private const int MaxProductsPerSection = 8;
+    private const string NewArrivalsSectionKey = "new-arrivals";
     private sealed record HomepageSectionData(
         string Sectionkey,
         string? Subtitle,
@@ -98,36 +100,63 @@ public class HomepageProductSectionsController : ControllerBase
     {
         var data = ParseSectionData(section);
         var items = new List<HomepageProductSectionItemDto>();
-        var productIds = data.Productids;
-        if (productIds.Count > 0)
-        {
-                var products = await _context.Products
-                    .Include(product => product.Brand)
-                    .Include(product => product.Category)
-                    .Include(product => product.Productvariants)
-                        .ThenInclude(variant => variant.Inventoryitems)
-                    .Where(p => productIds.Contains(p.Productid)
-                        && (!activeItemsOnly || p.Isactive))
-                    .ToDictionaryAsync(p => p.Productid);
+        var productsQuery = _context.Products
+            .Include(product => product.Brand)
+            .Include(product => product.Category)
+            .Include(product => product.Productvariants)
+                .ThenInclude(variant => variant.Inventoryitems)
+            .Where(product => !activeItemsOnly || product.Isactive);
 
-                int order = 0;
-                foreach (var pid in productIds)
+        if (string.Equals(data.Sectionkey, NewArrivalsSectionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            var newestProducts = await productsQuery
+                .OrderByDescending(product => product.Createdat ?? DateTime.MinValue)
+                .ThenByDescending(product => product.Productid)
+                .Take(MaxProductsPerSection)
+                .ToListAsync();
+
+            for (var index = 0; index < newestProducts.Count; index++)
+            {
+                var product = newestProducts[index];
+                items.Add(new HomepageProductSectionItemDto(
+                    index + 1,
+                    section.Contentid,
+                    product.Productid,
+                    index,
+                    true,
+                    section.Createdat,
+                    MapProduct(product)
+                ));
+            }
+        }
+        else
+        {
+            var productIds = data.Productids;
+            if (productIds.Count > 0)
+            {
+                var products = await productsQuery
+                    .Where(product => productIds.Contains(product.Productid))
+                    .ToDictionaryAsync(product => product.Productid);
+
+                var order = 0;
+                foreach (var productId in productIds)
                 {
-                    if (products.TryGetValue(pid, out var p))
+                    if (products.TryGetValue(productId, out var product))
                     {
                         items.Add(new HomepageProductSectionItemDto(
                             order + 1,
                             section.Contentid,
-                            pid,
+                            productId,
                             order,
                             true,
                             section.Createdat,
-                            MapProduct(p)
+                            MapProduct(product)
                         ));
                         order++;
-                        if (activeItemsOnly && order >= 5) break;
+                        if (activeItemsOnly && order >= MaxProductsPerSection) break;
                     }
                 }
+            }
         }
 
         return new HomepageProductSectionDto(
@@ -217,12 +246,21 @@ public class HomepageProductSectionsController : ControllerBase
             return NotFound(new ApiErrorDto("Không tìm thấy vùng hiển thị trang chủ.", null));
         }
 
+        var currentData = ParseSectionData(section);
+        var isNewArrivalsSection = string.Equals(
+            currentData.Sectionkey,
+            NewArrivalsSectionKey,
+            StringComparison.OrdinalIgnoreCase);
+        var requestedProductIds = currentData.Productids;
+
+        if (!isNewArrivalsSection)
+        {
         var requestedItems = (dto.Items ?? new List<UpdateHomepageProductSectionItemDto>())
             .GroupBy(item => item.Productid)
             .Select(group => group.First())
-            .Take(5)
+            .Take(MaxProductsPerSection)
             .ToList();
-        var requestedProductIds = requestedItems.Select(item => item.Productid).ToList();
+        requestedProductIds = requestedItems.Select(item => item.Productid).ToList();
         var existingProductIds = await _context.Products
             .Where(product => requestedProductIds.Contains(product.Productid))
             .Select(product => product.Productid)
@@ -234,8 +272,9 @@ public class HomepageProductSectionsController : ControllerBase
             return BadRequest(new ApiErrorDto($"Sản phẩm #{missingProductId} không tồn tại.", null));
         }
 
+        }
+
         section.Title = dto.Title.Trim();
-        var currentData = ParseSectionData(section);
         var theme = string.IsNullOrWhiteSpace(dto.Theme) ? "LightBlue" : dto.Theme.Trim();
         section.Displayorder = dto.Displayorder ?? 0;
         section.Isactive = dto.Isactive ?? true;

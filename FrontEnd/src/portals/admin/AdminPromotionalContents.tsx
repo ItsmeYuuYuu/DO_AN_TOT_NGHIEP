@@ -273,7 +273,7 @@ export const AdminPromotionalContents: React.FC = () => {
                 className="w-full px-3 py-2 text-sm rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#e30613] text-slate-800"
               />
               {activeTab === 'Banner' && (
-                <p className="mt-1 text-[11px] font-medium text-slate-400">Trang chủ lấy 2 banner phụ đầu tiên theo thứ tự này.</p>
+                <p className="mt-1 text-[11px] font-medium text-slate-400">Trang chủ lấy 3 banner phụ đầu tiên theo thứ tự này.</p>
               )}
             </div>
 

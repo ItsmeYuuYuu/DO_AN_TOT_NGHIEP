@@ -94,7 +94,7 @@ const AdminWarrantyPackages: React.FC = () => {
       key: 'packageid',
       header: 'ID',
       className: 'w-16',
-      render: (p: WarrantyPackage) => <span className="text-slate-500 font-mono text-xs">#{p.packageid}</span>,
+      render: (p: WarrantyPackage) => <span className="text-xs text-slate-500">#{p.packageid}</span>,
     },
     {
       key: 'packagename',

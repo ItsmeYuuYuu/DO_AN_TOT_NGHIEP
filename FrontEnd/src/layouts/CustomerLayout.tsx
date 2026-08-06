@@ -318,14 +318,14 @@ export const CustomerLayout: React.FC = () => {
     aiWidgetSession?.handoffstatus === 'Waiting' || aiWidgetSession?.handoffstatus === 'InProgress';
 
   return (
-    <div className="customer-shell flex min-h-screen flex-col">
+    <div className="customer-shell design-system-shell flex min-h-screen flex-col">
       <div className="hidden border-b border-[#fecdd3] bg-[#fff1f2] px-4 py-2 text-[#7f1d1d] md:block">
-        <div className="mx-auto flex max-w-7xl items-center justify-between text-xs font-semibold [font-family:'Segoe_UI',Tahoma,Arial,sans-serif]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between text-xs font-semibold">
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-2"><Phone size={12} /> Hotline 1800 0000</span>
             <span className="flex items-center gap-2"><MapPin size={12} /> Hệ thống cửa hàng</span>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="hidden items-center gap-6">
             <Link to="/order-lookup" className="flex items-center gap-2 hover:text-[#c4000b]">
               <ClipboardList size={12} /> Tra cứu đơn
             </Link>
@@ -429,7 +429,7 @@ export const CustomerLayout: React.FC = () => {
             </div>
           </form>
 
-          <nav className="relative hidden h-12 items-stretch border-t customer-rule [font-family:'Segoe_UI',Tahoma,Arial,sans-serif] md:flex">
+          <nav className="relative hidden h-12 items-stretch border-t customer-rule md:flex">
             <NavLink
               to="/products?sort=newest"
               className="flex items-center rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#fff1f2] hover:text-[#c4000b]"
@@ -472,7 +472,7 @@ export const CustomerLayout: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="p-6 [font-family:'Segoe_UI',Tahoma,Arial,sans-serif]">
+                      <div className="p-6">
                         <div className="mb-5 flex items-end justify-between border-b customer-rule pb-4">
                           <div>
                             <p className="customer-label">Dòng máy</p>
@@ -536,6 +536,18 @@ export const CustomerLayout: React.FC = () => {
               className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#ffd166]"
             >
               So sánh bằng AI
+            </NavLink>
+            <NavLink
+              to="/order-lookup"
+              className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#fff1f2] hover:text-[#c4000b]"
+            >
+              <ClipboardList size={14} /> Tra cứu đơn
+            </NavLink>
+            <NavLink
+              to="/news"
+              className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#fff1f2] hover:text-[#c4000b]"
+            >
+              <Newspaper size={14} /> Tin công nghệ
             </NavLink>
           </nav>
 
@@ -842,7 +854,7 @@ export const CustomerLayout: React.FC = () => {
         )}
       </main>
 
-      <footer className="border-t-4 border-[#e30613] bg-[linear-gradient(135deg,#fff8f8_0%,#fff1f2_55%,#ffffff_100%)] text-[#1f2937]">
+      <footer className="border-t border-slate-200 bg-[#fffafa] text-[#1f2937]">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-[1.3fr_1fr_1fr_1.2fr]">
           <div>
             <img src={Logo} alt="Cường Điện Thoại" width={400} height={188} className="h-16 w-auto object-contain" />
@@ -876,7 +888,7 @@ export const CustomerLayout: React.FC = () => {
             <p className="mt-5 text-sm leading-6 text-[#596273]">
               Sản phẩm mới, cập nhật giá và nội dung công nghệ đáng chú ý.
             </p>
-            <div className="mt-5 flex overflow-hidden rounded-full border border-[#f3b8bd] bg-white shadow-sm">
+            <div className="mt-5 flex overflow-hidden rounded-lg border border-slate-300 bg-white">
               <input
                 type="email"
                 placeholder="Email của bạn"
@@ -884,7 +896,7 @@ export const CustomerLayout: React.FC = () => {
               />
               <button
                 type="button"
-                className="rounded-full bg-[#e30613] px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-[#c4000b]"
+                className="bg-[#e30613] px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-[#c4000b]"
               >
                 Gửi
               </button>

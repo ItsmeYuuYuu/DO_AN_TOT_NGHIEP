@@ -120,7 +120,7 @@ const AdminUsers: React.FC = () => {
     {
       key: 'userid',
       header: '#',
-      render: (u: UserItem) => <span className="font-mono text-xs text-slate-400">#{u.userid}</span>,
+      render: (u: UserItem) => <span className="text-xs text-slate-400">#{u.userid}</span>,
       className: 'w-12',
     },
     {

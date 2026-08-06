@@ -149,7 +149,7 @@ const AdminCustomers: React.FC = () => {
     {
       key: 'customerid',
       header: '#',
-      render: (c: Customer) => <span className="font-mono text-xs text-slate-400">#{c.customerid}</span>,
+      render: (c: Customer) => <span className="text-xs text-slate-400">#{c.customerid}</span>,
       className: 'w-12',
     },
     {
@@ -170,7 +170,7 @@ const AdminCustomers: React.FC = () => {
     {
       key: 'phone',
       header: 'Số điện thoại',
-      render: (c: Customer) => <span className="text-sm text-slate-600 font-mono">{c.phone ?? '—'}</span>,
+      render: (c: Customer) => <span className="text-sm text-slate-600">{c.phone ?? '—'}</span>,
     },
     {
       key: 'address',

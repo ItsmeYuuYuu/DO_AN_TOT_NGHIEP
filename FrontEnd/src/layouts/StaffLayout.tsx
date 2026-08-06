@@ -125,7 +125,7 @@ export const StaffLayout: React.FC = () => {
   }, [location.pathname]);
 
   return (
-    <div className="ops-shell min-h-screen">
+    <div className="ops-shell design-system-shell min-h-screen">
       <Seo title="Staff Portal - Cuồng Điện Thoại" description="Khu vực nhân viên nội bộ của Cuồng Điện Thoại." noIndex />
 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">

@@ -174,7 +174,7 @@ const AdminProducts: React.FC = () => {
     {
       key: 'productid',
       header: '#',
-      render: (product: Product) => <span className="font-mono text-xs font-black text-slate-400">#{product.productid}</span>,
+      render: (product: Product) => <span className="text-xs font-black text-slate-400">#{product.productid}</span>,
       className: 'w-16',
     },
     {

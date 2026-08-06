@@ -7,6 +7,12 @@ import { formatCurrency } from '@/utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { notifyError, notifySuccess } from '@/utils/notifications';
 
+const MAX_SECTION_PRODUCTS = 8;
+const NEW_ARRIVALS_SECTION_KEY = 'new-arrivals';
+
+const isNewArrivalsSectionKey = (sectionKey?: string) =>
+  sectionKey?.trim().toLowerCase() === NEW_ARRIVALS_SECTION_KEY;
+
 const getProductImage = (product: Product) => {
   const firstVariant = product.productvariants?.[0];
   return firstVariant?.productimages?.find(image => image.ismain)?.imageurl
@@ -109,7 +115,7 @@ export const AdminHomepageSections: React.FC = () => {
       [...activeSection.items]
         .sort((a, b) => (a.displayorder ?? 0) - (b.displayorder ?? 0))
         .filter(item => item.isactive !== false)
-        .slice(0, 5)
+        .slice(0, MAX_SECTION_PRODUCTS)
         .map(item => item.productid),
     );
     const titleText = `${activeSection.sectionkey} ${activeSection.title}`.toLowerCase();
@@ -140,6 +146,8 @@ export const AdminHomepageSections: React.FC = () => {
     || activeSectionText.includes('sale');
   const isBestSellerSection = activeSectionText.includes('bán chạy')
     || activeSectionText.includes('best');
+
+  const isNewArrivalsSection = isNewArrivalsSectionKey(activeSection?.sectionkey);
 
   const filteredProducts = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -196,8 +204,8 @@ export const AdminHomepageSections: React.FC = () => {
       if (current.includes(productId)) {
         return current.filter(id => id !== productId);
       }
-      if (current.length >= 5) {
-        notifyError('Mỗi vùng trang chủ chỉ nên chọn tối đa 5 sản phẩm.');
+      if (current.length >= MAX_SECTION_PRODUCTS) {
+        notifyError(`Mỗi vùng trang chủ chỉ được chọn tối đa ${MAX_SECTION_PRODUCTS} sản phẩm.`);
         return current;
       }
       return [...current, productId];
@@ -216,7 +224,7 @@ export const AdminHomepageSections: React.FC = () => {
   };
 
   const selectTopProducts = () => {
-    const productIds = filteredProducts.slice(0, 5).map(product => product.productid);
+    const productIds = filteredProducts.slice(0, MAX_SECTION_PRODUCTS).map(product => product.productid);
     if (productIds.length === 0) {
       notifyError('Không có sản phẩm phù hợp với bộ lọc hiện tại.');
       return;
@@ -239,11 +247,13 @@ export const AdminHomepageSections: React.FC = () => {
         theme,
         displayorder: activeSection.displayorder ?? 0,
         isactive,
-        items: selectedProductIds.map((productid, index) => ({
-          productid,
-          displayorder: index,
-          isactive: true,
-        })),
+        items: isNewArrivalsSection
+          ? []
+          : selectedProductIds.map((productid, index) => ({
+              productid,
+              displayorder: index,
+              isactive: true,
+            })),
       });
       notifySuccess('Đã lưu cấu hình sản phẩm trang chủ.');
       await loadData();
@@ -342,10 +352,27 @@ export const AdminHomepageSections: React.FC = () => {
               <section className="ops-card p-5">
                 <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-center">
                   <div>
-                    <h2 className="text-lg font-black text-slate-900">Sản phẩm đã chọn ({selectedProductIds.length}/5)</h2>
-                    <p className="text-xs text-slate-400">Thứ tự ở đây chính là thứ tự hiển thị ngoài trang chủ.</p>
+                    <h2 className="text-lg font-black text-slate-900">
+                      {isNewArrivalsSection
+                        ? `Sản phẩm mới nhất (${selectedProductIds.length}/${MAX_SECTION_PRODUCTS})`
+                        : `Sản phẩm đã chọn (${selectedProductIds.length}/${MAX_SECTION_PRODUCTS})`}
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      {isNewArrivalsSection
+                        ? 'Danh sách được cập nhật tự động khi có sản phẩm mới được thêm vào cửa hàng.'
+                        : 'Thứ tự ở đây chính là thứ tự hiển thị ngoài trang chủ.'}
+                    </p>
                   </div>
                 </div>
+
+                {isNewArrivalsSection && (
+                  <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                    <p className="font-bold">Danh sách tự động theo ngày thêm vào cửa hàng</p>
+                    <p className="mt-1 text-xs text-sky-700">
+                      Hệ thống luôn lấy tối đa 8 sản phẩm đang kinh doanh có ngày thêm mới nhất. Không cần chọn hoặc sắp xếp thủ công.
+                    </p>
+                  </div>
+                )}
 
                 {selectedProducts.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm font-bold text-slate-400">
@@ -384,7 +411,7 @@ export const AdminHomepageSections: React.FC = () => {
                               </div>
                             );
                           })()}
-                          <div className="mt-2 flex items-center gap-1.5">
+                          <div className={`mt-2 flex items-center gap-1.5 ${isNewArrivalsSection ? 'hidden' : ''}`}>
                             <button type="button" onClick={() => moveProduct(product.productid, -1)} disabled={index === 0} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 disabled:opacity-30">
                               <ArrowUp size={14} />
                             </button>
@@ -402,7 +429,7 @@ export const AdminHomepageSections: React.FC = () => {
                 )}
               </section>
 
-              <section className="ops-card p-5">
+              <section className={isNewArrivalsSection ? 'hidden' : 'ops-card p-5'}>
                 <div className="mb-4 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
                   <div>
                     <h2 className="text-lg font-black text-slate-900">Danh sách sản phẩm</h2>
@@ -455,7 +482,7 @@ export const AdminHomepageSections: React.FC = () => {
                       onClick={selectTopProducts}
                       className="min-h-10 whitespace-nowrap rounded-xl bg-[#e30613] px-4 text-xs font-bold text-white transition hover:bg-[#c4000b]"
                     >
-                      Chọn 5 sản phẩm đầu
+                      Chọn {MAX_SECTION_PRODUCTS} sản phẩm đầu
                     </button>
                   </div>
                 </div>

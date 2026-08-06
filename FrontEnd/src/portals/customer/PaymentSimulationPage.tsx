@@ -270,7 +270,7 @@ const PaymentSimulationPage: React.FC = () => {
               {checkout.reservationexpiresat && (
                 <div className={`flex items-center justify-between rounded-2xl px-4 py-3 ${expired ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
                   <span className="flex items-center gap-2 font-bold"><Clock3 size={18} /> Thời gian giữ hàng</span>
-                  <span className="font-mono text-lg font-black tabular-nums">{countdown}</span>
+                  <span className="text-lg font-black tabular-nums">{countdown}</span>
                 </div>
               )}
 

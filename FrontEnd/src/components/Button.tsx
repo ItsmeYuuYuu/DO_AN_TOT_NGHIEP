@@ -9,10 +9,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses = {
-  primary: 'bg-[#e30613] text-white hover:bg-[#c4000b] shadow-sm active:bg-[#9f0009]',
-  secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 active:bg-slate-300',
-  danger: 'bg-red-500 text-white hover:bg-red-600 shadow-sm active:bg-red-700',
-  outline: 'bg-transparent text-[#c4000b] border border-red-200 hover:bg-red-50',
+  primary: 'border border-[#e30613] bg-[#e30613] text-white hover:bg-[#c4000b] active:bg-[#9f0009]',
+  secondary: 'border border-slate-300 bg-white text-slate-800 hover:border-slate-400 hover:bg-slate-50 active:bg-slate-100',
+  danger: 'border border-[#c4000b] bg-[#c4000b] text-white hover:bg-[#9f0009] active:bg-[#820007]',
+  outline: 'border border-slate-400 bg-white text-slate-800 hover:border-[#e30613] hover:text-[#c4000b]',
   ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900',
 };
 
@@ -37,7 +37,7 @@ export const Button: React.FC<ButtonProps> = ({
     <button
       className={`
         inline-flex items-center justify-center
-        rounded-xl font-semibold transition-all duration-200
+        rounded-lg font-semibold transition-colors duration-200
         disabled:cursor-not-allowed disabled:opacity-50
         ${fullWidth ? 'w-full' : ''}
         ${variantClasses[variant]}

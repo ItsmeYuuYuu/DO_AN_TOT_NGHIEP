@@ -606,21 +606,21 @@ public static class DbInitializer
                 "shock-sale" => products
                     .Where(product => product.Productvariants.Any(variant =>
                         variant.Saleprice.HasValue && variant.Saleprice < variant.Baseprice))
-                    .Take(5)
+                    .Take(8)
                     .ToList(),
                 "flagship" => products
                     .Where(product =>
                         product.Productname.Contains("Pro", StringComparison.OrdinalIgnoreCase) ||
                         product.Productname.Contains("Ultra", StringComparison.OrdinalIgnoreCase) ||
                         product.Productname.Contains("Fold", StringComparison.OrdinalIgnoreCase))
-                    .Take(5)
+                    .Take(8)
                     .ToList(),
-                _ => products.Take(5).ToList()
+                _ => products.Take(8).ToList()
             };
 
             if (selectedProducts.Count == 0)
             {
-                selectedProducts = products.Take(5).ToList();
+                selectedProducts = products.Take(8).ToList();
             }
 
             for (var index = 0; index < selectedProducts.Count; index++)

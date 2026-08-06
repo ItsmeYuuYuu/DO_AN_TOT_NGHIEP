@@ -58,7 +58,7 @@ const NewsPage: React.FC = () => {
     const description = buildSeoDescription(detailPost?.summary || detailPost?.content, 'Tin tức công nghệ mới nhất từ Cuồng Điện Thoại.');
 
     return (
-      <div className="customer-shell min-h-screen pb-16 [font-family:'Segoe_UI',Tahoma,Arial,sans-serif]">
+      <div className="customer-shell min-h-screen pb-16">
         <Seo
           title={detailPost ? `${detailPost.title} - Cuồng Điện Thoại` : 'Tin tức công nghệ - Cuồng Điện Thoại'}
           description={description}
@@ -136,7 +136,7 @@ const NewsPage: React.FC = () => {
   const secondary = newsList.slice(1);
 
   return (
-    <div className="customer-shell min-h-screen pb-16 [font-family:'Segoe_UI',Tahoma,Arial,sans-serif]">
+    <div className="customer-shell min-h-screen pb-16">
       <Seo
         title="Tin tức công nghệ - Cuồng Điện Thoại"
         description="Cap nhat tin tuc smartphone, xu huong cong nghe va noi dung giup ban chon dien thoai phu hop hon."

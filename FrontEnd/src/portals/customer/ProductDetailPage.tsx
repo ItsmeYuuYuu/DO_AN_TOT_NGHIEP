@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  BadgeCheck,
   ChevronRight,
   Headphones,
   MessageCircleMore,
@@ -225,15 +224,6 @@ const ProductDetailPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                <BadgeCheck className="mt-0.5 shrink-0 text-emerald-700" size={20} />
-                <div>
-                  <p className="text-sm font-black text-emerald-900">Giá theo đúng phiên bản</p>
-                  <p className="mt-1 text-xs leading-5 text-emerald-700">
-                    Phiên bản đang chọn có giá {formatCurrency(currentPrice)}.
-                  </p>
-                </div>
-              </div>
             </aside>
           </div>
         </section>

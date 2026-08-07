@@ -183,6 +183,108 @@ public sealed class ChatNamedModelMatchingTests
             new Dictionary<string, string>());
 }
 
+public sealed class ChatReferentialComparisonTests
+{
+    [Fact]
+    public async Task Two_Previously_Recommended_Products_Are_Compared_When_User_Refers_To_Them()
+    {
+        var retrieval = new RecordingProductConsultationService(Product(1, "REDMAGIC 11 Pro"), Product(2, "OnePlus 15"));
+        var provider = CreateProvider(retrieval);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "so sánh 2 sản phẩm vừa được gợi ý",
+            [new AiConversationMessage("assistant", "Đề xuất", ChatResponseTypes.Recommendation, [1, 2]) ]));
+
+        Assert.Equal(ChatResponseTypes.Comparison, response.ResponseType);
+        Assert.Equal(new[] { 1, 2 }, retrieval.LastProductIds);
+        Assert.Contains("REDMAGIC 11 Pro", response.Text, StringComparison.Ordinal);
+        Assert.Contains("OnePlus 15", response.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Two_Of_Three_Previously_Recommended_Products_Requires_Product_Names()
+    {
+        var retrieval = new RecordingProductConsultationService(
+            Product(1, "REDMAGIC 11 Pro"),
+            Product(2, "OnePlus 15"),
+            Product(3, "Google Pixel 10 Pro"));
+        var provider = CreateProvider(retrieval);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "so sánh 2 sản phẩm đó",
+            [new AiConversationMessage("assistant", "Đề xuất", ChatResponseTypes.Recommendation, [1, 2, 3]) ]));
+
+        Assert.Equal(ChatResponseTypes.Clarification, response.ResponseType);
+        Assert.Contains("trong 3 sản phẩm vừa được gợi ý", response.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(new[] { 1, 2, 3 }, retrieval.LastProductIds);
+    }
+
+    [Fact]
+    public async Task Explicit_Model_Names_Are_Searched_Without_Using_Previous_Recommendation_Scope()
+    {
+        var retrieval = new RecordingProductConsultationService(Product(1, "REDMAGIC 11 Pro"), Product(2, "OnePlus 15"));
+        var provider = CreateProvider(retrieval);
+
+        var response = await provider.GetResponseAsync(new AiConversationRequest(
+            1,
+            "so sánh REDMAGIC 11 Pro và OnePlus 15",
+            [new AiConversationMessage("assistant", "Đề xuất cũ", ChatResponseTypes.Recommendation, [99]) ]));
+
+        Assert.Equal(ChatResponseTypes.Comparison, response.ResponseType);
+        Assert.Empty(retrieval.LastProductIds ?? []);
+        Assert.Contains("REDMAGIC 11 Pro", response.Text, StringComparison.Ordinal);
+        Assert.Contains("OnePlus 15", response.Text, StringComparison.Ordinal);
+    }
+
+    private static GroundedAiProvider CreateProvider(RecordingProductConsultationService retrieval) =>
+        new(
+            retrieval,
+            new FailingHttpClientFactory(),
+            Options.Create(new AiAssistantOptions()),
+            NullLogger<GroundedAiProvider>.Instance);
+
+    private static ProductConsultationResult Product(int id, string name) =>
+        new(
+            id,
+            id,
+            name,
+            name.StartsWith("OnePlus", StringComparison.OrdinalIgnoreCase) ? "OnePlus" : "REDMAGIC",
+            "Điện thoại",
+            "New Seal",
+            $"SKU-{id}",
+            20_000_000m,
+            20_000_000m,
+            2,
+            string.Empty,
+            new Dictionary<string, string>());
+
+    private sealed class RecordingProductConsultationService(params ProductConsultationResult[] results)
+        : IProductConsultationService
+    {
+        public IReadOnlyCollection<int>? LastProductIds { get; private set; }
+
+        public Task<IReadOnlyList<ProductConsultationResult>> SearchAsync(
+            string userMessage,
+            IReadOnlyCollection<int>? productIds = null,
+            CancellationToken cancellationToken = default)
+        {
+            LastProductIds = productIds;
+            var scopedResults = productIds is { Count: > 0 }
+                ? results.Where(result => productIds.Contains(result.ProductId)).ToList()
+                : results.ToList();
+            return Task.FromResult<IReadOnlyList<ProductConsultationResult>>(scopedResults);
+        }
+    }
+
+    private sealed class FailingHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) =>
+            throw new InvalidOperationException("The language model must not run for deterministic comparison tests.");
+    }
+}
+
 public sealed class ChatCatalogRetrievalScopeTests : IClassFixture<IntegrationTestFactory>
 {
     private readonly IntegrationTestFactory _factory;

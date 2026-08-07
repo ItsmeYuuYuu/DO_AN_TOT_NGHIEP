@@ -96,15 +96,11 @@ public sealed class GroundedAiProvider : IAiProvider
         var comparisonRequested = IsComparisonRequest(request.UserMessage);
         var referentialComparison = comparisonRequested &&
             IsReferentialComparison(request.UserMessage);
-        if (comparisonRequested && !referentialComparison && IsGenericComparisonRequest(request.UserMessage))
-        {
-            return BuildGenericComparisonClarification();
-        }
 
         var scopedProductIds = GetScopedProductIds(request);
         var useConversationContext =
             scopedProductIds.Count == 0 &&
-            (referentialComparison || ShouldUseConversationContext(request));
+            ShouldUseConversationContext(request);
         var retrievalQuery = useConversationContext
             ? string.Join(
                 " ",
@@ -127,7 +123,18 @@ public sealed class GroundedAiProvider : IAiProvider
             products = RankScopedProducts(request.UserMessage, products);
         }
         products = RestrictToComparedProducts(request, products);
-        if (comparisonRequested && !referentialComparison)
+        if (comparisonRequested && referentialComparison)
+        {
+            var referencedProductCount = products
+                .Select(product => product.ProductId)
+                .Distinct()
+                .Count();
+            if (referencedProductCount > 2 && RequestsExactlyTwoProducts(request.UserMessage))
+            {
+                return BuildReferencedComparisonClarification(products);
+            }
+        }
+        else if (comparisonRequested)
         {
             var explicitlyNamedProducts = GetExplicitlyNamedComparedProducts(
                 request.UserMessage,
@@ -136,12 +143,13 @@ public sealed class GroundedAiProvider : IAiProvider
             {
                 products = explicitlyNamedProducts;
             }
-            else if (ShouldAskComparisonClarification(
+            else if (IsGenericComparisonRequest(request.UserMessage) ||
+                     ShouldAskComparisonClarification(
                          request.UserMessage,
                          products,
                          explicitlyNamedProducts.Count))
             {
-                return BuildComparisonClarification(products);
+                return BuildGenericComparisonClarification();
             }
         }
 
@@ -345,30 +353,29 @@ public sealed class GroundedAiProvider : IAiProvider
         return tokens.Any(normalizedMessage.Contains);
     }
 
-    private static AiAssistantResponse BuildComparisonClarification(
+    private static AiAssistantResponse BuildReferencedComparisonClarification(
         IReadOnlyList<ProductConsultationResult> products)
     {
-        var examples = products
+        var names = products
             .GroupBy(product => product.ProductId)
             .Select(group => group.First().ProductName)
             .Distinct()
-            .Take(4)
+            .Take(3)
             .ToList();
-        var exampleText = examples.Count > 0
-            ? $" Ví dụ: {string.Join(" / ", examples)}."
+        var choices = names.Count > 0
+            ? $" Hiện em đang có: {string.Join(" / ", names)}."
             : string.Empty;
 
         return new AiAssistantResponse(
-            "Anh/chị đang muốn so sánh dòng hoặc model cụ thể nào? Mỗi hãng/dòng có nhiều phiên bản nên em cần tên máy rõ hơn để so sánh chính xác." +
-            exampleText,
+            "Anh/chị muốn so sánh 2 sản phẩm nào trong 3 sản phẩm vừa được gợi ý, hay muốn so sánh sản phẩm nào khác? Vui lòng cho em biết tên 2 máy cần so sánh." + choices,
             Array.Empty<ProductConsultationResult>(),
             ChatResponseTypes.Clarification,
-            examples);
+            names);
     }
 
     private static AiAssistantResponse BuildGenericComparisonClarification() =>
         new(
-            "Anh/chị muốn so sánh những mẫu máy nào ạ? Anh/chị gửi giúp em tên 2-3 sản phẩm cụ thể, ví dụ: Xiaomi 14T Pro với RedMagic 10 Pro, hoặc iPhone 16 với Google Pixel 10 Pro.",
+            "Anh/chị đang muốn so sánh dòng hoặc model cụ thể nào? Mỗi hãng/dòng có nhiều phiên bản nên em cần tên máy rõ hơn để so sánh chính xác. Ví dụ: REDMAGIC 11 Pro / OnePlus 15.",
             Array.Empty<ProductConsultationResult>(),
             ChatResponseTypes.Clarification,
             Array.Empty<string>());
@@ -530,7 +537,7 @@ public sealed class GroundedAiProvider : IAiProvider
             ? $"Em chưa tìm thấy sản phẩm khớp chính xác với model anh/chị yêu cầu trong dữ liệu cửa hàng. Tuy nhiên, cửa hàng đang có sản phẩm cùng dòng {CultureInfo.GetCultureInfo("vi-VN").TextInfo.ToTitleCase(fallbackFamily)} gần nhất để anh/chị tham khảo:"
             : comparison
             ? $"Em đã lọc ra {productCount} sản phẩm với {variantCount} phiên bản để anh/chị so sánh trước. Em sẽ đặt các điểm quan trọng cạnh nhau để mình dễ chọn hơn:"
-            : $"Em đã lọc theo nhu cầu của anh/chị và thấy {productCount} sản phẩm với {variantCount} phiên bản khá phù hợp. Em chọn mỗi máy một phiên bản đại diện, ưu tiên giá và tồn kho rõ ràng để mình dễ cân nhắc:";
+            : $"Em đã lọc theo nhu cầu của anh/chị và thấy {productCount} sản phẩm với {variantCount} phiên bản khá phù hợp:";
         var lines = productGroups.Select((group, index) =>
         {
             var product = group.First();
@@ -767,7 +774,28 @@ public sealed class GroundedAiProvider : IAiProvider
             "cac may do",
             "nhung may nay",
             "nhung may do",
-            "san pham tren");
+            "san pham tren",
+            "san pham do",
+            "san pham nay",
+            "san pham vua goi y",
+            "san pham vua duoc goi y",
+            "may vua goi y",
+            "may vua duoc goi y",
+            "hai san pham do",
+            "hai san pham nay",
+            "hai san pham vua goi y",
+            "hai san pham vua duoc goi y",
+            "2 san pham do",
+            "2 san pham nay",
+            "2 san pham vua goi y",
+            "2 san pham vua duoc goi y");
+    }
+
+    private static bool RequestsExactlyTwoProducts(string message)
+    {
+        var normalized = ProductConsultationService.Normalize(message);
+        return Regex.IsMatch(normalized, @"\b(2|hai)\s+(san pham|may)\b") ||
+               ContainsAny(normalized, "so sanh 2", "so sanh hai");
     }
 
     private static bool ShouldUseConversationContext(AiConversationRequest request)
@@ -806,29 +834,12 @@ public sealed class GroundedAiProvider : IAiProvider
     {
         var normalized = ProductConsultationService.Normalize(request.UserMessage);
         var wordCount = Regex.Matches(normalized, @"[\p{L}\p{N}]+").Count;
-        var explicitReference = ContainsAny(
+        var explicitReference = IsReferentialComparison(normalized) || ContainsAny(
             normalized,
-            "may do",
-            "may nay",
-            "may tren",
-            "cac may do",
-            "cac may nay",
-            "cac may tren",
-            "nhung may do",
-            "nhung may nay",
-            "nhung may tren",
             "trong 2 may",
             "trong 3 may",
-            "2 may do",
-            "2 may nay",
-            "2 may tren",
-            "3 may do",
-            "3 may nay",
-            "3 may tren",
             "trong cac may",
-            "trong nhung may",
-            "san pham do",
-            "san pham tren");
+            "trong nhung may");
         var shortPreference = wordCount <= 6 && ContainsAny(
             normalized,
             "chup anh",
@@ -840,7 +851,8 @@ public sealed class GroundedAiProvider : IAiProvider
             "hieu nang",
             "gia tot");
         var shortComparison = wordCount <= 12 &&
-            IsComparisonRequest(normalized);
+            IsComparisonRequest(normalized) &&
+            IsReferentialComparison(normalized);
         if (!explicitReference && !shortPreference && !shortComparison)
             return Array.Empty<int>();
 

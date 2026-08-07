@@ -85,6 +85,7 @@ public sealed class ProductConsultationService : IProductConsultationService
         IReadOnlyCollection<int>? productIds = null,
         CancellationToken cancellationToken = default)
     {
+        var hasScopedProducts = productIds is { Count: > 0 };
         var normalizedQuery = Normalize(userMessage);
         var priceRange = ExtractPriceRange(normalizedQuery);
         var requiresStock = ContainsAny(normalizedQuery, "con hang", "san hang", "ton kho", "mua ngay");
@@ -163,7 +164,7 @@ public sealed class ProductConsultationService : IProductConsultationService
             .Distinct()
             .ToList();
 
-        if (!IsCatalogIntent(normalizedQuery, catalogTerms))
+        if (!hasScopedProducts && !IsCatalogIntent(normalizedQuery, catalogTerms))
         {
             return Array.Empty<ProductConsultationResult>();
         }
@@ -238,7 +239,7 @@ public sealed class ProductConsultationService : IProductConsultationService
                     score += 1;
                 score += ScoreUsageProfile(searchableText, specifications, usageProfile);
 
-                if (queryTokens.Length > 0 && score == 0 &&
+                if (!hasScopedProducts && queryTokens.Length > 0 && score == 0 &&
                     !priceRange.Min.HasValue && !priceRange.Max.HasValue)
                     continue;
 
@@ -269,7 +270,10 @@ public sealed class ProductConsultationService : IProductConsultationService
             .Select(candidate => candidate.Result)
             .ToList();
 
-        return RestrictToNamedModelMatches(normalizedQuery, rankedCandidates)
+        var selectedCandidates = hasScopedProducts
+            ? rankedCandidates
+            : RestrictToNamedModelMatches(normalizedQuery, rankedCandidates);
+        return selectedCandidates
             .Take(Math.Clamp(_options.MaxRetrievedVariants, 1, 10))
             .ToList();
     }

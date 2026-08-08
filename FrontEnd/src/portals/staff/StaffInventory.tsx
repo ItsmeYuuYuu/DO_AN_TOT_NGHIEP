@@ -142,7 +142,7 @@ const StaffInventory: React.FC = () => {
     setEditingItem(item);
     setFormData({ variantid: item.variantid ?? '', status: item.status ?? 'InStock' });
     setImeiBatch(item.imei);
-    setVariantSearch(`${item.productName ?? ''} ${item.variantSku ?? ''}`.trim());
+    setVariantSearch('');
     setIsModalOpen(true);
   };
 
@@ -175,11 +175,14 @@ const StaffInventory: React.FC = () => {
     setSaving(true);
     try {
       if (editingItem) {
-        await apiClient.put(`/Inventory/${editingItem.imei}`, {
-          variantid: Number(formData.variantid),
-          status: formData.status,
-        });
-        notifySuccess(`Đã cập nhật thiết bị ${editingItem.imei}.`);
+        const correctedImei = imeiBatch.trim();
+        if (!/^\d{15}$/.test(correctedImei)) {
+          notifyError('IMEI phải gồm đúng 15 chữ số.');
+          return;
+        }
+
+        await apiClient.put(`/Inventory/${encodeURIComponent(editingItem.imei)}/correct-imei`, { imei: correctedImei });
+        notifySuccess(`Đã hiệu chỉnh IMEI ${editingItem.imei} thành ${correctedImei}.`);
       } else {
         const response = await apiClient.post<{ importedCount: number }>('/Inventory/import-batch', {
           variantid: Number(formData.variantid),
@@ -191,7 +194,7 @@ const StaffInventory: React.FC = () => {
       closeModal();
       await fetchItems();
     } catch (error) {
-      notifyError(getApiErrorMessage(error, editingItem ? 'Không thể cập nhật thiết bị.' : 'Không thể nhập kho.'));
+      notifyError(getApiErrorMessage(error, editingItem ? 'Không thể hiệu chỉnh IMEI.' : 'Không thể nhập kho.'));
     } finally {
       setSaving(false);
     }
@@ -336,7 +339,14 @@ const StaffInventory: React.FC = () => {
                 <td className="p-4 text-right">
                   <button onClick={() => void openHistory(item)} className="rounded-2xl p-2 text-slate-500 hover:bg-slate-100" title="Lịch sử kho"><History size={16} /></button>
                   {canManageInventory && (
-                    <button onClick={() => openEditModal(item)} className="rounded-2xl p-2 text-[#e30613] hover:bg-red-50" title="Cập nhật trạng thái"><Edit2 size={16} /></button>
+                    <button
+                      onClick={() => openEditModal(item)}
+                      disabled={item.status !== 'InStock'}
+                      className="rounded-2xl p-2 text-[#e30613] hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
+                      title={item.status === 'InStock' ? 'Hiệu chỉnh IMEI nhập nhầm' : 'Chỉ hiệu chỉnh IMEI khi máy còn trong kho'}
+                    >
+                      <Edit2 size={16} />
+                    </button>
                   )}
                 </td>
               </tr>
@@ -350,14 +360,15 @@ const StaffInventory: React.FC = () => {
           <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
               <div>
-                <h2 className="text-lg font-black text-slate-800">{editingItem ? 'Cập nhật thiết bị' : 'Nhập kho thiết bị'}</h2>
+                <h2 className="text-lg font-black text-slate-800">{editingItem ? 'Hiệu chỉnh IMEI' : 'Nhập kho thiết bị'}</h2>
                 <p className="mt-1 text-xs text-slate-500">
-                  {editingItem ? 'Chỉ cập nhật SKU hoặc trạng thái của máy đã tồn tại.' : 'Chọn SKU rồi quét hoặc dán danh sách IMEI thực tế.'}
+                  {editingItem ? 'Chỉ sửa IMEI nhập nhầm cho máy còn trong kho; SKU và trạng thái được giữ nguyên.' : 'Chọn SKU rồi quét hoặc dán danh sách IMEI thực tế.'}
                 </p>
               </div>
               <button onClick={closeModal} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
             </div>
             <form onSubmit={handleSave} className="space-y-4 p-6">
+              {!editingItem && (
               <div>
                 <label className="mb-1 block text-xs font-bold uppercase text-slate-600">Sản phẩm / SKU *</label>
                 <div className="relative">
@@ -418,26 +429,29 @@ const StaffInventory: React.FC = () => {
                   </p>
                 )}
               </div>
+              )}
 
               {editingItem ? (
                 <>
                   <div>
-                    <label className="mb-1 block text-xs font-bold uppercase text-slate-600">IMEI</label>
-                    <input value={editingItem.imei} disabled className="w-full rounded-xl border-2 border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold" />
+                    <label className="mb-1 block text-xs font-bold uppercase text-slate-600">Sản phẩm / SKU</label>
+                    <div className="rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-sm font-black text-slate-800">{editingItem.productName || `Variant #${editingItem.variantid}`}</p>
+                      <p className="mt-1 text-xs font-medium text-slate-500">{editingItem.variantSku || 'Không có SKU'}</p>
+                    </div>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-bold uppercase text-slate-600">Trạng thái</label>
-                    <select
-                      value={formData.status}
-                      onChange={event => setFormData({ ...formData, status: event.target.value })}
-                      className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium"
-                    >
-                      <option value="InStock">Trong kho</option>
-                      <option value="Reserved">Đã giữ cho đơn hàng</option>
-                      <option value="Shipping">Đang giao</option>
-                      <option value="Sold">Đã bán</option>
-                      <option value="Defective">Lỗi</option>
-                    </select>
+                    <label className="mb-1 block text-xs font-bold uppercase text-slate-600">IMEI thực tế *</label>
+                    <input
+                      required
+                      autoFocus
+                      value={imeiBatch}
+                      onChange={event => setImeiBatch(event.target.value.replace(/\D/g, '').slice(0, 15))}
+                      inputMode="numeric"
+                      maxLength={15}
+                      className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-bold outline-none focus:border-[#e30613]"
+                    />
+                    <p className="mt-2 text-xs text-slate-500">Chỉ hiệu chỉnh khi nhập nhầm và máy còn trong kho. Không thể sửa IMEI đã giữ đơn, giao, bán, bảo hành hoặc đổi trả.</p>
                   </div>
                 </>
               ) : (
@@ -462,10 +476,10 @@ const StaffInventory: React.FC = () => {
                 <button type="button" onClick={closeModal} className="flex-1 rounded-xl bg-slate-100 py-2.5 font-bold text-slate-600 hover:bg-slate-200">Hủy</button>
                 <button
                   type="submit"
-                  disabled={saving || formData.variantid === '' || (!editingItem && parsedImeis.length === 0)}
+                  disabled={saving || (editingItem ? !/^\d{15}$/.test(imeiBatch.trim()) : formData.variantid === '' || parsedImeis.length === 0)}
                   className="flex-1 rounded-xl bg-[#e30613] py-2.5 font-bold text-white hover:bg-[#c4000b] disabled:opacity-60"
                 >
-                  {saving ? 'Đang lưu...' : editingItem ? 'Lưu thay đổi' : `Nhập kho ${parsedImeis.length} máy`}
+                  {saving ? 'Đang lưu...' : editingItem ? 'Lưu IMEI đã hiệu chỉnh' : `Nhập kho ${parsedImeis.length} máy`}
                 </button>
               </div>
             </form>

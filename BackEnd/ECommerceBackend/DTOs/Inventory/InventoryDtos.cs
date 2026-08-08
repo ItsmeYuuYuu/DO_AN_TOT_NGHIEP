@@ -48,6 +48,12 @@ namespace ECommerceBackend.DTOs.Inventory
         string? Warrantystatus = null
     );
 
+    public record CorrectInventoryImeiRequestDto(
+        [Required(ErrorMessage = "IMEI is required")]
+        [StringLength(15, MinimumLength = 15, ErrorMessage = "IMEI must contain exactly 15 digits")]
+        string Imei
+    );
+
     public record LowStockVariantDto(
         int Variantid,
         string? VariantSku,

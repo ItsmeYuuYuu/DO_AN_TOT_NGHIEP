@@ -1,62 +1,1770 @@
--- 1. Nhóm Người dùng
-CREATE TABLE Roles (RoleId SERIAL PRIMARY KEY, RoleName VARCHAR(50) NOT NULL);
-CREATE TABLE Users (UserId SERIAL PRIMARY KEY, RoleId INT, Username VARCHAR(50) NOT NULL UNIQUE, PasswordHash VARCHAR(255) NOT NULL, FullName VARCHAR(100) NOT NULL, Email VARCHAR(100), Phone VARCHAR(20), CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, IsActive BOOLEAN DEFAULT TRUE);
-CREATE TABLE Customers (CustomerId SERIAL PRIMARY KEY, FullName VARCHAR(100) NOT NULL, Phone VARCHAR(20) NOT NULL UNIQUE, Email VARCHAR(100), Address VARCHAR(255), CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+--
+-- PostgreSQL database dump
+--
 
--- 2. Nhóm Danh mục & Thương hiệu
-CREATE TABLE Categories (CategoryId SERIAL PRIMARY KEY, CategoryName VARCHAR(100) NOT NULL, Description TEXT);
-CREATE TABLE Brands (BrandId SERIAL PRIMARY KEY, BrandName VARCHAR(100) NOT NULL);
+\restrict hhIPtANlUdwGCIyHQ4FbYDPVrKxAeKtJ2mpaP22GnjaJqPVeXBL0rwla8VtplHZ
 
--- 3. Nhóm Sản phẩm & Biến thể
-CREATE TABLE Products (ProductId SERIAL PRIMARY KEY, CategoryId INT, BrandId INT, ProductName VARCHAR(200) NOT NULL, Description TEXT, CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE ProductVariants (VariantId SERIAL PRIMARY KEY, ProductId INT, SKU VARCHAR(50) UNIQUE, BasePrice DECIMAL(18,2) NOT NULL, SalePrice DECIMAL(18,2), Condition VARCHAR(50) NOT NULL, Specifications TEXT);
-CREATE TABLE ProductImages (ImageId SERIAL PRIMARY KEY, VariantId INT, ImageUrl VARCHAR(500) NOT NULL, IsMain BOOLEAN DEFAULT FALSE);
+-- Dumped from database version 18.3
+-- Dumped by pg_dump version 18.3
 
--- 4. Nhóm Kho & IMEI
-CREATE TABLE InventoryItems (IMEI VARCHAR(50) PRIMARY KEY, VariantId INT, Status VARCHAR(50) DEFAULT 'InStock', ImportedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, WarrantyStartDate TIMESTAMP, WarrantyEndDate TIMESTAMP, WarrantyStatus VARCHAR(50));
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
 
--- 5. Nhóm Bán hàng
-CREATE TABLE WarrantyPackages (PackageId SERIAL PRIMARY KEY, PackageName VARCHAR(100) NOT NULL, DurationMonths INT NOT NULL, Price DECIMAL(18,2) NOT NULL);
-CREATE TABLE Vouchers (VoucherCode VARCHAR(50) PRIMARY KEY, DiscountAmount DECIMAL(18,2), DiscountPercentage FLOAT, ValidFrom TIMESTAMP, ValidTo TIMESTAMP, IsActive BOOLEAN DEFAULT TRUE);
-CREATE TABLE Orders (OrderId SERIAL PRIMARY KEY, CustomerId INT, UserId INT, VoucherCode VARCHAR(50), OrderDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP, TotalAmount DECIMAL(18,2) NOT NULL, DiscountAmount DECIMAL(18,2) DEFAULT 0, FinalAmount DECIMAL(18,2) NOT NULL, PaymentMethod VARCHAR(50), OrderStatus VARCHAR(50));
-CREATE TABLE OrderItems (OrderItemId SERIAL PRIMARY KEY, OrderId INT, IMEI VARCHAR(50), PackageId INT, SellingPrice DECIMAL(18,2) NOT NULL, WarrantyPrice DECIMAL(18,2) DEFAULT 0);
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
 
--- 6. Nhóm Hậu mãi & Hệ thống
-CREATE TABLE Reviews (ReviewId SERIAL PRIMARY KEY, VariantId INT, CustomerId INT, Rating INT CHECK (Rating >= 1 AND Rating <= 5), Comment TEXT, CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE AuditLogs (LogId SERIAL PRIMARY KEY, UserId INT, Action VARCHAR(100) NOT NULL, TableName VARCHAR(50), RecordId VARCHAR(50), CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+-- *not* creating schema, since initdb creates it
 
--- 7. Quản lý Nội dung
-CREATE TABLE PromotionalContents (ContentId SERIAL PRIMARY KEY, ContentType VARCHAR(50) NOT NULL, Title VARCHAR(200), ImageUrl VARCHAR(500) NOT NULL, LinkUrl VARCHAR(500), DisplayOrder INT DEFAULT 0, IsActive BOOLEAN DEFAULT TRUE, CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE News (PostId SERIAL PRIMARY KEY, UserId INT, Title VARCHAR(255) NOT NULL, Summary VARCHAR(500), Content TEXT, Thumbnail VARCHAR(500), CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, IsActive BOOLEAN DEFAULT TRUE);
 
--- 8. Nhóm Chatbot
-CREATE TABLE ChatSessions (SessionId SERIAL PRIMARY KEY, CustomerId INT, GuestSessionToken VARCHAR(255), StartTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP, EndTime TIMESTAMP, Status VARCHAR(50) DEFAULT 'Active');
-CREATE TABLE ChatMessages (MessageId SERIAL PRIMARY KEY, SessionId INT, SenderType VARCHAR(50) NOT NULL, MessageContent TEXT NOT NULL, SentAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+--
 
--- 9. Nhóm Giỏ hàng
-CREATE TABLE Carts (CartId SERIAL PRIMARY KEY, UserId INT NOT NULL UNIQUE, CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE CartItems (CartItemId SERIAL PRIMARY KEY, CartId INT NOT NULL, VariantId INT NOT NULL, Quantity INT NOT NULL, CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+COMMENT ON SCHEMA public IS '';
 
--- NỐI KHÓA NGOẠI
-ALTER TABLE Users ADD CONSTRAINT FK_Users_Roles FOREIGN KEY (RoleId) REFERENCES Roles(RoleId);
-ALTER TABLE Products ADD CONSTRAINT FK_Products_Categories FOREIGN KEY (CategoryId) REFERENCES Categories(CategoryId);
-ALTER TABLE Products ADD CONSTRAINT FK_Products_Brands FOREIGN KEY (BrandId) REFERENCES Brands(BrandId);
-ALTER TABLE ProductVariants ADD CONSTRAINT FK_Variants_Products FOREIGN KEY (ProductId) REFERENCES Products(ProductId);
-ALTER TABLE ProductImages ADD CONSTRAINT FK_Images_Variants FOREIGN KEY (VariantId) REFERENCES ProductVariants(VariantId);
-ALTER TABLE InventoryItems ADD CONSTRAINT FK_Inventory_Variants FOREIGN KEY (VariantId) REFERENCES ProductVariants(VariantId);
-ALTER TABLE Orders ADD CONSTRAINT FK_Orders_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(CustomerId);
-ALTER TABLE Orders ADD CONSTRAINT FK_Orders_Users FOREIGN KEY (UserId) REFERENCES Users(UserId);
-ALTER TABLE Orders ADD CONSTRAINT FK_Orders_Vouchers FOREIGN KEY (VoucherCode) REFERENCES Vouchers(VoucherCode);
-ALTER TABLE OrderItems ADD CONSTRAINT FK_OrderItems_Orders FOREIGN KEY (OrderId) REFERENCES Orders(OrderId);
-ALTER TABLE OrderItems ADD CONSTRAINT FK_OrderItems_Inventory FOREIGN KEY (IMEI) REFERENCES InventoryItems(IMEI);
-ALTER TABLE OrderItems ADD CONSTRAINT FK_OrderItems_Packages FOREIGN KEY (PackageId) REFERENCES WarrantyPackages(PackageId);
-ALTER TABLE Reviews ADD CONSTRAINT FK_Reviews_Variants FOREIGN KEY (VariantId) REFERENCES ProductVariants(VariantId);
-ALTER TABLE Reviews ADD CONSTRAINT FK_Reviews_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(CustomerId);
-ALTER TABLE AuditLogs ADD CONSTRAINT FK_AuditLogs_Users FOREIGN KEY (UserId) REFERENCES Users(UserId);
-ALTER TABLE News ADD CONSTRAINT FK_News_Users FOREIGN KEY (UserId) REFERENCES Users(UserId);
-ALTER TABLE ChatSessions ADD CONSTRAINT FK_ChatSessions_Customers FOREIGN KEY (CustomerId) REFERENCES Customers(CustomerId);
-ALTER TABLE ChatMessages ADD CONSTRAINT FK_ChatMessages_ChatSessions FOREIGN KEY (SessionId) REFERENCES ChatSessions(SessionId);
-ALTER TABLE Carts ADD CONSTRAINT FK_Carts_Users FOREIGN KEY (UserId) REFERENCES Users(UserId) ON DELETE CASCADE;
-ALTER TABLE CartItems ADD CONSTRAINT FK_CartItems_Carts FOREIGN KEY (CartId) REFERENCES Carts(CartId) ON DELETE CASCADE;
-ALTER TABLE CartItems ADD CONSTRAINT FK_CartItems_ProductVariants FOREIGN KEY (VariantId) REFERENCES ProductVariants(VariantId) ON DELETE CASCADE;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: __EFMigrationsHistory; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."__EFMigrationsHistory" (
+    "MigrationId" character varying(150) NOT NULL,
+    "ProductVersion" character varying(32) NOT NULL
+);
+
+
+--
+-- Name: auditlogs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.auditlogs (
+    logid integer NOT NULL,
+    userid integer,
+    action character varying(100) NOT NULL,
+    tablename character varying(50),
+    recordid character varying(50),
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: auditlogs_logid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.auditlogs_logid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: auditlogs_logid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.auditlogs_logid_seq OWNED BY public.auditlogs.logid;
+
+
+--
+-- Name: brands; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.brands (
+    brandid integer NOT NULL,
+    brandname character varying(100) NOT NULL
+);
+
+
+--
+-- Name: brands_brandid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.brands_brandid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: brands_brandid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.brands_brandid_seq OWNED BY public.brands.brandid;
+
+
+--
+-- Name: carts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.carts (
+    cartid integer NOT NULL,
+    userid integer NOT NULL,
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updatedat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    "Cartcontent" jsonb
+);
+
+
+--
+-- Name: carts_cartid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.carts ALTER COLUMN cartid ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.carts_cartid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: categories; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.categories (
+    categoryid integer NOT NULL,
+    categoryname character varying(100) NOT NULL,
+    description text
+);
+
+
+--
+-- Name: categories_categoryid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.categories_categoryid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: categories_categoryid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.categories_categoryid_seq OWNED BY public.categories.categoryid;
+
+
+--
+-- Name: chatmessages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.chatmessages (
+    messageid integer NOT NULL,
+    sessionid integer,
+    sendertype character varying(50) NOT NULL,
+    messagecontent text NOT NULL,
+    sentat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    quickreplies jsonb,
+    responsetype character varying(30),
+    recommendations jsonb
+);
+
+
+--
+-- Name: chatmessages_messageid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.chatmessages_messageid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: chatmessages_messageid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.chatmessages_messageid_seq OWNED BY public.chatmessages.messageid;
+
+
+--
+-- Name: chatsessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.chatsessions (
+    sessionid integer NOT NULL,
+    customerid integer,
+    guestsessiontoken character varying(255),
+    starttime timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    endtime timestamp without time zone,
+    status character varying(50) DEFAULT 'Active'::character varying,
+    assigneduserid integer,
+    handoffstatus character varying(30),
+    handoffrequestedat timestamp without time zone
+);
+
+
+--
+-- Name: chatsessions_sessionid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.chatsessions_sessionid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: chatsessions_sessionid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.chatsessions_sessionid_seq OWNED BY public.chatsessions.sessionid;
+
+
+--
+-- Name: contents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.contents (
+    contentid integer NOT NULL,
+    contenttype character varying(30) NOT NULL,
+    title character varying(255) NOT NULL,
+    slug character varying(220),
+    summary character varying(500),
+    htmlcontent text,
+    thumbnailurl character varying(500),
+    linkurl character varying(500),
+    contentdata jsonb,
+    displayorder integer,
+    isactive boolean DEFAULT true,
+    createdbyuserid integer,
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: contents_contentid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.contents ALTER COLUMN contentid ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.contents_contentid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: customers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.customers (
+    customerid integer NOT NULL,
+    fullname character varying(100) NOT NULL,
+    phone character varying(20) NOT NULL,
+    email character varying(100),
+    address character varying(255),
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: customers_customerid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.customers_customerid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: customers_customerid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.customers_customerid_seq OWNED BY public.customers.customerid;
+
+
+--
+-- Name: inventoryitems; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.inventoryitems (
+    imei character varying(50) NOT NULL,
+    variantid integer,
+    status character varying(50) DEFAULT 'InStock'::character varying,
+    importedat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    warrantystartdate timestamp without time zone,
+    warrantyenddate timestamp without time zone,
+    warrantystatus character varying(50)
+);
+
+
+--
+-- Name: inventorytransactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.inventorytransactions (
+    transactionid integer NOT NULL,
+    imei character varying(50) NOT NULL,
+    orderid integer,
+    userid integer,
+    transactiontype character varying(30) NOT NULL,
+    fromstatus character varying(50),
+    tostatus character varying(50) NOT NULL,
+    note character varying(500),
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: inventorytransactions_transactionid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.inventorytransactions ALTER COLUMN transactionid ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.inventorytransactions_transactionid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: orderitems; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.orderitems (
+    orderitemid integer NOT NULL,
+    orderid integer,
+    imei character varying(50),
+    packageid integer,
+    sellingprice numeric(18,2) NOT NULL,
+    warrantyprice numeric(18,2) DEFAULT 0
+);
+
+
+--
+-- Name: orderitems_orderitemid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.orderitems_orderitemid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: orderitems_orderitemid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.orderitems_orderitemid_seq OWNED BY public.orderitems.orderitemid;
+
+
+--
+-- Name: orderpayments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.orderpayments (
+    paymentid integer NOT NULL,
+    orderid integer NOT NULL,
+    provider character varying(50) NOT NULL,
+    paymenttype character varying(30) NOT NULL,
+    amount numeric(18,2) NOT NULL,
+    status character varying(30) NOT NULL,
+    transactionref character varying(100),
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    paidat timestamp without time zone,
+    "Returnrequestid" integer,
+    "Transactiontype" text
+);
+
+
+--
+-- Name: orderpayments_paymentid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.orderpayments ALTER COLUMN paymentid ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.orderpayments_paymentid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: orders; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.orders (
+    orderid integer NOT NULL,
+    customerid integer,
+    userid integer,
+    vouchercode character varying(50),
+    orderdate timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    totalamount numeric(18,2) NOT NULL,
+    discountamount numeric(18,2) DEFAULT 0,
+    finalamount numeric(18,2) NOT NULL,
+    paymentmethod character varying(50),
+    orderstatus character varying(50),
+    checkouttype character varying(20) DEFAULT 'Registered'::character varying,
+    paymentstatus character varying(50) DEFAULT 'Unpaid'::character varying,
+    requiredpayment numeric(18,2) DEFAULT 0,
+    paidamount numeric(18,2) DEFAULT 0,
+    depositpercentage numeric(5,2),
+    shippingname character varying(100),
+    shippingphone character varying(20),
+    shippingemail character varying(100),
+    shippingaddress character varying(500),
+    customernote character varying(500),
+    cancellationreason character varying(500),
+    guesttoken character varying(100),
+    paymenttoken character varying(100),
+    reservationexpiresat timestamp without time zone,
+    "Salesconfirmedat" timestamp without time zone,
+    "Salesuserid" integer,
+    "Warehousecompletedat" timestamp without time zone,
+    "Warehouseuserid" integer,
+    shippingfee numeric(18,2) DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: orders_orderid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.orders_orderid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: orders_orderid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.orders_orderid_seq OWNED BY public.orders.orderid;
+
+
+--
+-- Name: products; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.products (
+    productid integer NOT NULL,
+    categoryid integer,
+    brandid integer,
+    productname character varying(200) NOT NULL,
+    description text,
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    slug character varying(220),
+    seriesname character varying(100),
+    isactive boolean DEFAULT true NOT NULL
+);
+
+
+--
+-- Name: products_productid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.products_productid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: products_productid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.products_productid_seq OWNED BY public.products.productid;
+
+
+--
+-- Name: productvariants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.productvariants (
+    variantid integer NOT NULL,
+    productid integer,
+    sku character varying(50),
+    baseprice numeric(18,2) NOT NULL,
+    saleprice numeric(18,2),
+    condition character varying(50) NOT NULL,
+    specifications text,
+    "Imageurls" jsonb
+);
+
+
+--
+-- Name: productvariants_variantid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.productvariants_variantid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: productvariants_variantid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.productvariants_variantid_seq OWNED BY public.productvariants.variantid;
+
+
+--
+-- Name: returnitems; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.returnitems (
+    returnitemid integer NOT NULL,
+    returnrequestid integer NOT NULL,
+    orderitemid integer NOT NULL,
+    imei character varying(50) NOT NULL,
+    condition character varying(1000),
+    disposition character varying(30),
+    replacementimei character varying(50),
+    refundamount numeric(18,2) NOT NULL,
+    deductionamount numeric(18,2) DEFAULT 0.0 NOT NULL,
+    faultresponsibility character varying(20),
+    inspectiongrade character varying(20),
+    originalpaidamount numeric(18,2) DEFAULT 0.0 NOT NULL,
+    resalevariantid integer
+);
+
+
+--
+-- Name: returnitems_returnitemid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.returnitems ALTER COLUMN returnitemid ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.returnitems_returnitemid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: returnrequests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.returnrequests (
+    returnrequestid integer NOT NULL,
+    orderid integer NOT NULL,
+    customerid integer,
+    requestedbyuserid integer,
+    assigneduserid integer,
+    requesttype character varying(20) NOT NULL,
+    reason character varying(200) NOT NULL,
+    description character varying(2000),
+    status character varying(30) NOT NULL,
+    imageurls jsonb,
+    reviewnote character varying(1000),
+    resolution character varying(2000),
+    requestedrefundamount numeric(18,2) NOT NULL,
+    refundamount numeric(18,2),
+    refundstatus character varying(30) NOT NULL,
+    requestedat timestamp without time zone,
+    reviewedat timestamp without time zone,
+    receivedat timestamp without time zone,
+    completedat timestamp without time zone,
+    updatedat timestamp without time zone,
+    refundinfo jsonb,
+    approvedrefundamount numeric(18,2),
+    policyversion character varying(20) DEFAULT 'Legacy'::character varying NOT NULL,
+    reasoncategory character varying(30) DEFAULT 'Other'::character varying NOT NULL,
+    refundcalculation jsonb
+);
+
+
+--
+-- Name: returnrequests_returnrequestid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.returnrequests ALTER COLUMN returnrequestid ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.returnrequests_returnrequestid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: reviews; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.reviews (
+    reviewid integer NOT NULL,
+    variantid integer,
+    customerid integer,
+    rating integer,
+    comment text,
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT reviews_rating_check CHECK (((rating >= 1) AND (rating <= 5)))
+);
+
+
+--
+-- Name: reviews_reviewid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.reviews_reviewid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: reviews_reviewid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.reviews_reviewid_seq OWNED BY public.reviews.reviewid;
+
+
+--
+-- Name: roles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.roles (
+    roleid integer NOT NULL,
+    rolename character varying(50) NOT NULL
+);
+
+
+--
+-- Name: roles_roleid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.roles_roleid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: roles_roleid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.roles_roleid_seq OWNED BY public.roles.roleid;
+
+
+--
+-- Name: shipments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.shipments (
+    shipmentid integer NOT NULL,
+    orderid integer NOT NULL,
+    carrier character varying(30) NOT NULL,
+    trackingcode character varying(100) NOT NULL,
+    shippingfee numeric(18,2) NOT NULL,
+    status character varying(30) NOT NULL,
+    estimateddeliveryat timestamp without time zone,
+    deliveryattempts integer DEFAULT 0 NOT NULL,
+    createdbyuserid integer,
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updatedat timestamp without time zone,
+    pickedupat timestamp without time zone,
+    deliveredat timestamp without time zone,
+    returnedat timestamp without time zone
+);
+
+
+--
+-- Name: shipments_shipmentid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.shipments ALTER COLUMN shipmentid ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.shipments_shipmentid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: statuslogs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.statuslogs (
+    logid integer NOT NULL,
+    entitytype character varying(50) NOT NULL,
+    entityid integer NOT NULL,
+    fromstatus character varying(50) NOT NULL,
+    tostatus character varying(50) NOT NULL,
+    note character varying(1000),
+    userid integer,
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    "Shipmentid" integer,
+    actiontype character varying(50) DEFAULT 'StatusChanged'::character varying NOT NULL,
+    metadata jsonb
+);
+
+
+--
+-- Name: statuslogs_logid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.statuslogs ALTER COLUMN logid ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.statuslogs_logid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    userid integer NOT NULL,
+    roleid integer,
+    username character varying(50) NOT NULL,
+    passwordhash character varying(255) NOT NULL,
+    fullname character varying(100) NOT NULL,
+    email character varying(100),
+    phone character varying(20),
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    isactive boolean DEFAULT true
+);
+
+
+--
+-- Name: users_userid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.users_userid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: users_userid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.users_userid_seq OWNED BY public.users.userid;
+
+
+--
+-- Name: vouchers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.vouchers (
+    vouchercode character varying(50) NOT NULL,
+    discountamount numeric(18,2),
+    discountpercentage double precision,
+    validfrom timestamp without time zone,
+    validto timestamp without time zone,
+    isactive boolean DEFAULT true
+);
+
+
+--
+-- Name: warrantyclaims; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.warrantyclaims (
+    claimid integer NOT NULL,
+    imei character varying(50) NOT NULL,
+    customerid integer NOT NULL,
+    assigneduserid integer,
+    faultdescription character varying(2000) NOT NULL,
+    status character varying(30) DEFAULT 'Received'::character varying NOT NULL,
+    coverage character varying(30) NOT NULL,
+    imageurls jsonb,
+    estimatedcost numeric(18,2),
+    finalcost numeric(18,2),
+    conclusion character varying(2000),
+    receivedat timestamp without time zone NOT NULL,
+    completedat timestamp without time zone,
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updatedat timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: warrantyclaims_claimid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.warrantyclaims ALTER COLUMN claimid ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.warrantyclaims_claimid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: warrantypackages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.warrantypackages (
+    packageid integer NOT NULL,
+    packagename character varying(100) NOT NULL,
+    durationmonths integer NOT NULL,
+    price numeric(18,2) NOT NULL
+);
+
+
+--
+-- Name: warrantypackages_packageid_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.warrantypackages_packageid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: warrantypackages_packageid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.warrantypackages_packageid_seq OWNED BY public.warrantypackages.packageid;
+
+
+--
+-- Name: auditlogs logid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.auditlogs ALTER COLUMN logid SET DEFAULT nextval('public.auditlogs_logid_seq'::regclass);
+
+
+--
+-- Name: brands brandid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.brands ALTER COLUMN brandid SET DEFAULT nextval('public.brands_brandid_seq'::regclass);
+
+
+--
+-- Name: categories categoryid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.categories ALTER COLUMN categoryid SET DEFAULT nextval('public.categories_categoryid_seq'::regclass);
+
+
+--
+-- Name: chatmessages messageid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chatmessages ALTER COLUMN messageid SET DEFAULT nextval('public.chatmessages_messageid_seq'::regclass);
+
+
+--
+-- Name: chatsessions sessionid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chatsessions ALTER COLUMN sessionid SET DEFAULT nextval('public.chatsessions_sessionid_seq'::regclass);
+
+
+--
+-- Name: customers customerid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customers ALTER COLUMN customerid SET DEFAULT nextval('public.customers_customerid_seq'::regclass);
+
+
+--
+-- Name: orderitems orderitemid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orderitems ALTER COLUMN orderitemid SET DEFAULT nextval('public.orderitems_orderitemid_seq'::regclass);
+
+
+--
+-- Name: orders orderid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orders ALTER COLUMN orderid SET DEFAULT nextval('public.orders_orderid_seq'::regclass);
+
+
+--
+-- Name: products productid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products ALTER COLUMN productid SET DEFAULT nextval('public.products_productid_seq'::regclass);
+
+
+--
+-- Name: productvariants variantid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.productvariants ALTER COLUMN variantid SET DEFAULT nextval('public.productvariants_variantid_seq'::regclass);
+
+
+--
+-- Name: reviews reviewid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reviews ALTER COLUMN reviewid SET DEFAULT nextval('public.reviews_reviewid_seq'::regclass);
+
+
+--
+-- Name: roles roleid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.roles ALTER COLUMN roleid SET DEFAULT nextval('public.roles_roleid_seq'::regclass);
+
+
+--
+-- Name: users userid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users ALTER COLUMN userid SET DEFAULT nextval('public.users_userid_seq'::regclass);
+
+
+--
+-- Name: warrantypackages packageid; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warrantypackages ALTER COLUMN packageid SET DEFAULT nextval('public.warrantypackages_packageid_seq'::regclass);
+
+
+--
+-- Name: __EFMigrationsHistory PK___EFMigrationsHistory; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."__EFMigrationsHistory"
+    ADD CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId");
+
+
+--
+-- Name: auditlogs auditlogs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.auditlogs
+    ADD CONSTRAINT auditlogs_pkey PRIMARY KEY (logid);
+
+
+--
+-- Name: brands brands_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.brands
+    ADD CONSTRAINT brands_pkey PRIMARY KEY (brandid);
+
+
+--
+-- Name: carts carts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carts
+    ADD CONSTRAINT carts_pkey PRIMARY KEY (cartid);
+
+
+--
+-- Name: categories categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT categories_pkey PRIMARY KEY (categoryid);
+
+
+--
+-- Name: chatmessages chatmessages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chatmessages
+    ADD CONSTRAINT chatmessages_pkey PRIMARY KEY (messageid);
+
+
+--
+-- Name: chatsessions chatsessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chatsessions
+    ADD CONSTRAINT chatsessions_pkey PRIMARY KEY (sessionid);
+
+
+--
+-- Name: contents contents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contents
+    ADD CONSTRAINT contents_pkey PRIMARY KEY (contentid);
+
+
+--
+-- Name: customers customers_phone_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customers
+    ADD CONSTRAINT customers_phone_key UNIQUE (phone);
+
+
+--
+-- Name: customers customers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customers
+    ADD CONSTRAINT customers_pkey PRIMARY KEY (customerid);
+
+
+--
+-- Name: inventoryitems inventoryitems_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventoryitems
+    ADD CONSTRAINT inventoryitems_pkey PRIMARY KEY (imei);
+
+
+--
+-- Name: inventorytransactions inventorytransactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventorytransactions
+    ADD CONSTRAINT inventorytransactions_pkey PRIMARY KEY (transactionid);
+
+
+--
+-- Name: orderitems orderitems_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orderitems
+    ADD CONSTRAINT orderitems_pkey PRIMARY KEY (orderitemid);
+
+
+--
+-- Name: orderpayments orderpayments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orderpayments
+    ADD CONSTRAINT orderpayments_pkey PRIMARY KEY (paymentid);
+
+
+--
+-- Name: orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_pkey PRIMARY KEY (orderid);
+
+
+--
+-- Name: products products_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_pkey PRIMARY KEY (productid);
+
+
+--
+-- Name: productvariants productvariants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.productvariants
+    ADD CONSTRAINT productvariants_pkey PRIMARY KEY (variantid);
+
+
+--
+-- Name: productvariants productvariants_sku_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.productvariants
+    ADD CONSTRAINT productvariants_sku_key UNIQUE (sku);
+
+
+--
+-- Name: returnitems returnitems_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnitems
+    ADD CONSTRAINT returnitems_pkey PRIMARY KEY (returnitemid);
+
+
+--
+-- Name: returnrequests returnrequests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnrequests
+    ADD CONSTRAINT returnrequests_pkey PRIMARY KEY (returnrequestid);
+
+
+--
+-- Name: reviews reviews_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reviews
+    ADD CONSTRAINT reviews_pkey PRIMARY KEY (reviewid);
+
+
+--
+-- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.roles
+    ADD CONSTRAINT roles_pkey PRIMARY KEY (roleid);
+
+
+--
+-- Name: shipments shipments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shipments
+    ADD CONSTRAINT shipments_pkey PRIMARY KEY (shipmentid);
+
+
+--
+-- Name: statuslogs statuslogs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.statuslogs
+    ADD CONSTRAINT statuslogs_pkey PRIMARY KEY (logid);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (userid);
+
+
+--
+-- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_username_key UNIQUE (username);
+
+
+--
+-- Name: vouchers vouchers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.vouchers
+    ADD CONSTRAINT vouchers_pkey PRIMARY KEY (vouchercode);
+
+
+--
+-- Name: warrantyclaims warrantyclaims_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warrantyclaims
+    ADD CONSTRAINT warrantyclaims_pkey PRIMARY KEY (claimid);
+
+
+--
+-- Name: warrantypackages warrantypackages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warrantypackages
+    ADD CONSTRAINT warrantypackages_pkey PRIMARY KEY (packageid);
+
+
+--
+-- Name: IX_contents_createdbyuserid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "IX_contents_createdbyuserid" ON public.contents USING btree (createdbyuserid);
+
+
+--
+-- Name: IX_orderpayments_orderid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "IX_orderpayments_orderid" ON public.orderpayments USING btree (orderid);
+
+
+--
+-- Name: IX_returnitems_orderitemid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "IX_returnitems_orderitemid" ON public.returnitems USING btree (orderitemid);
+
+
+--
+-- Name: IX_returnrequests_requestedbyuserid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "IX_returnrequests_requestedbyuserid" ON public.returnrequests USING btree (requestedbyuserid);
+
+
+--
+-- Name: IX_shipments_createdbyuserid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "IX_shipments_createdbyuserid" ON public.shipments USING btree (createdbyuserid);
+
+
+--
+-- Name: IX_statuslogs_Shipmentid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "IX_statuslogs_Shipmentid" ON public.statuslogs USING btree ("Shipmentid");
+
+
+--
+-- Name: IX_statuslogs_userid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "IX_statuslogs_userid" ON public.statuslogs USING btree (userid);
+
+
+--
+-- Name: carts_userid_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX carts_userid_key ON public.carts USING btree (userid);
+
+
+--
+-- Name: ix_chatsessions_handoffstatus; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_chatsessions_handoffstatus ON public.chatsessions USING btree (handoffstatus);
+
+
+--
+-- Name: ix_contents_listing; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_contents_listing ON public.contents USING btree (contenttype, isactive, displayorder);
+
+
+--
+-- Name: ix_inventorytransactions_createdat; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_inventorytransactions_createdat ON public.inventorytransactions USING btree (createdat);
+
+
+--
+-- Name: ix_inventorytransactions_imei; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_inventorytransactions_imei ON public.inventorytransactions USING btree (imei);
+
+
+--
+-- Name: ix_inventorytransactions_orderid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_inventorytransactions_orderid ON public.inventorytransactions USING btree (orderid);
+
+
+--
+-- Name: ix_inventorytransactions_userid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_inventorytransactions_userid ON public.inventorytransactions USING btree (userid);
+
+
+--
+-- Name: ix_returnitems_imei; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_returnitems_imei ON public.returnitems USING btree (imei);
+
+
+--
+-- Name: ix_returnitems_replacementimei; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_returnitems_replacementimei ON public.returnitems USING btree (replacementimei);
+
+
+--
+-- Name: ix_returnitems_resalevariantid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_returnitems_resalevariantid ON public.returnitems USING btree (resalevariantid);
+
+
+--
+-- Name: ix_returnrequests_assigneduserid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_returnrequests_assigneduserid ON public.returnrequests USING btree (assigneduserid);
+
+
+--
+-- Name: ix_returnrequests_customerid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_returnrequests_customerid ON public.returnrequests USING btree (customerid);
+
+
+--
+-- Name: ix_returnrequests_orderid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_returnrequests_orderid ON public.returnrequests USING btree (orderid);
+
+
+--
+-- Name: ix_returnrequests_status_updatedat; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_returnrequests_status_updatedat ON public.returnrequests USING btree (status, updatedat);
+
+
+--
+-- Name: ix_shipments_status_updatedat; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_shipments_status_updatedat ON public.shipments USING btree (status, updatedat);
+
+
+--
+-- Name: ix_statuslogs_entity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_statuslogs_entity ON public.statuslogs USING btree (entitytype, entityid);
+
+
+--
+-- Name: ix_warrantyclaims_assigneduserid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_warrantyclaims_assigneduserid ON public.warrantyclaims USING btree (assigneduserid);
+
+
+--
+-- Name: ix_warrantyclaims_customerid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_warrantyclaims_customerid ON public.warrantyclaims USING btree (customerid);
+
+
+--
+-- Name: ix_warrantyclaims_imei; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_warrantyclaims_imei ON public.warrantyclaims USING btree (imei);
+
+
+--
+-- Name: ix_warrantyclaims_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_warrantyclaims_status ON public.warrantyclaims USING btree (status);
+
+
+--
+-- Name: products_slug_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX products_slug_key ON public.products USING btree (slug) WHERE (slug IS NOT NULL);
+
+
+--
+-- Name: ux_contents_slug; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_contents_slug ON public.contents USING btree (slug);
+
+
+--
+-- Name: ux_orderpayments_active_refund_reference; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_orderpayments_active_refund_reference ON public.orderpayments USING btree ("Transactiontype", transactionref) WHERE (("Transactiontype" = 'Refund'::text) AND ((status)::text <> 'Failed'::text) AND (transactionref IS NOT NULL));
+
+
+--
+-- Name: ux_orderpayments_sepay_transaction_reference; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_orderpayments_sepay_transaction_reference ON public.orderpayments USING btree (provider, transactionref) WHERE (((provider)::text = 'SEPAY'::text) AND ((status)::text = 'Success'::text) AND (transactionref IS NOT NULL));
+
+
+--
+-- Name: ux_returnitems_request_orderitem; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_returnitems_request_orderitem ON public.returnitems USING btree (returnrequestid, orderitemid);
+
+
+--
+-- Name: ux_shipments_orderid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_shipments_orderid ON public.shipments USING btree (orderid);
+
+
+--
+-- Name: ux_shipments_trackingcode; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_shipments_trackingcode ON public.shipments USING btree (trackingcode);
+
+
+--
+-- Name: statuslogs FK_statuslogs_shipments_Shipmentid; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.statuslogs
+    ADD CONSTRAINT "FK_statuslogs_shipments_Shipmentid" FOREIGN KEY ("Shipmentid") REFERENCES public.shipments(shipmentid);
+
+
+--
+-- Name: auditlogs fk_auditlogs_users; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.auditlogs
+    ADD CONSTRAINT fk_auditlogs_users FOREIGN KEY (userid) REFERENCES public.users(userid);
+
+
+--
+-- Name: carts fk_carts_users; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carts
+    ADD CONSTRAINT fk_carts_users FOREIGN KEY (userid) REFERENCES public.users(userid) ON DELETE CASCADE;
+
+
+--
+-- Name: chatmessages fk_chatmessages_chatsessions; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chatmessages
+    ADD CONSTRAINT fk_chatmessages_chatsessions FOREIGN KEY (sessionid) REFERENCES public.chatsessions(sessionid);
+
+
+--
+-- Name: chatsessions fk_chatsessions_customers; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.chatsessions
+    ADD CONSTRAINT fk_chatsessions_customers FOREIGN KEY (customerid) REFERENCES public.customers(customerid);
+
+
+--
+-- Name: inventoryitems fk_inventory_variants; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventoryitems
+    ADD CONSTRAINT fk_inventory_variants FOREIGN KEY (variantid) REFERENCES public.productvariants(variantid);
+
+
+--
+-- Name: inventorytransactions fk_inventorytransactions_inventory; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventorytransactions
+    ADD CONSTRAINT fk_inventorytransactions_inventory FOREIGN KEY (imei) REFERENCES public.inventoryitems(imei) ON DELETE RESTRICT;
+
+
+--
+-- Name: inventorytransactions fk_inventorytransactions_orders; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventorytransactions
+    ADD CONSTRAINT fk_inventorytransactions_orders FOREIGN KEY (orderid) REFERENCES public.orders(orderid) ON DELETE SET NULL;
+
+
+--
+-- Name: inventorytransactions fk_inventorytransactions_users; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventorytransactions
+    ADD CONSTRAINT fk_inventorytransactions_users FOREIGN KEY (userid) REFERENCES public.users(userid) ON DELETE SET NULL;
+
+
+--
+-- Name: contents fk_news_users; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contents
+    ADD CONSTRAINT fk_news_users FOREIGN KEY (createdbyuserid) REFERENCES public.users(userid);
+
+
+--
+-- Name: orderitems fk_orderitems_inventory; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orderitems
+    ADD CONSTRAINT fk_orderitems_inventory FOREIGN KEY (imei) REFERENCES public.inventoryitems(imei);
+
+
+--
+-- Name: orderitems fk_orderitems_orders; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orderitems
+    ADD CONSTRAINT fk_orderitems_orders FOREIGN KEY (orderid) REFERENCES public.orders(orderid);
+
+
+--
+-- Name: orderitems fk_orderitems_packages; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orderitems
+    ADD CONSTRAINT fk_orderitems_packages FOREIGN KEY (packageid) REFERENCES public.warrantypackages(packageid);
+
+
+--
+-- Name: orderpayments fk_orderpayments_orders; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orderpayments
+    ADD CONSTRAINT fk_orderpayments_orders FOREIGN KEY (orderid) REFERENCES public.orders(orderid) ON DELETE CASCADE;
+
+
+--
+-- Name: orders fk_orders_customers; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT fk_orders_customers FOREIGN KEY (customerid) REFERENCES public.customers(customerid);
+
+
+--
+-- Name: orders fk_orders_users; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT fk_orders_users FOREIGN KEY (userid) REFERENCES public.users(userid);
+
+
+--
+-- Name: orders fk_orders_vouchers; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT fk_orders_vouchers FOREIGN KEY (vouchercode) REFERENCES public.vouchers(vouchercode);
+
+
+--
+-- Name: products fk_products_brands; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT fk_products_brands FOREIGN KEY (brandid) REFERENCES public.brands(brandid);
+
+
+--
+-- Name: products fk_products_categories; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT fk_products_categories FOREIGN KEY (categoryid) REFERENCES public.categories(categoryid);
+
+
+--
+-- Name: returnitems fk_returnitems_inventory; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnitems
+    ADD CONSTRAINT fk_returnitems_inventory FOREIGN KEY (imei) REFERENCES public.inventoryitems(imei) ON DELETE RESTRICT;
+
+
+--
+-- Name: returnitems fk_returnitems_orderitems; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnitems
+    ADD CONSTRAINT fk_returnitems_orderitems FOREIGN KEY (orderitemid) REFERENCES public.orderitems(orderitemid) ON DELETE RESTRICT;
+
+
+--
+-- Name: returnitems fk_returnitems_replacement_inventory; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnitems
+    ADD CONSTRAINT fk_returnitems_replacement_inventory FOREIGN KEY (replacementimei) REFERENCES public.inventoryitems(imei) ON DELETE SET NULL;
+
+
+--
+-- Name: returnitems fk_returnitems_requests; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnitems
+    ADD CONSTRAINT fk_returnitems_requests FOREIGN KEY (returnrequestid) REFERENCES public.returnrequests(returnrequestid) ON DELETE CASCADE;
+
+
+--
+-- Name: returnitems fk_returnitems_resale_variants; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnitems
+    ADD CONSTRAINT fk_returnitems_resale_variants FOREIGN KEY (resalevariantid) REFERENCES public.productvariants(variantid) ON DELETE SET NULL;
+
+
+--
+-- Name: returnrequests fk_returnrequests_assigned_users; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnrequests
+    ADD CONSTRAINT fk_returnrequests_assigned_users FOREIGN KEY (assigneduserid) REFERENCES public.users(userid) ON DELETE SET NULL;
+
+
+--
+-- Name: returnrequests fk_returnrequests_customers; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnrequests
+    ADD CONSTRAINT fk_returnrequests_customers FOREIGN KEY (customerid) REFERENCES public.customers(customerid) ON DELETE SET NULL;
+
+
+--
+-- Name: returnrequests fk_returnrequests_orders; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnrequests
+    ADD CONSTRAINT fk_returnrequests_orders FOREIGN KEY (orderid) REFERENCES public.orders(orderid) ON DELETE RESTRICT;
+
+
+--
+-- Name: returnrequests fk_returnrequests_requested_users; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.returnrequests
+    ADD CONSTRAINT fk_returnrequests_requested_users FOREIGN KEY (requestedbyuserid) REFERENCES public.users(userid) ON DELETE SET NULL;
+
+
+--
+-- Name: reviews fk_reviews_customers; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reviews
+    ADD CONSTRAINT fk_reviews_customers FOREIGN KEY (customerid) REFERENCES public.customers(customerid);
+
+
+--
+-- Name: reviews fk_reviews_variants; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reviews
+    ADD CONSTRAINT fk_reviews_variants FOREIGN KEY (variantid) REFERENCES public.productvariants(variantid);
+
+
+--
+-- Name: shipments fk_shipments_orders; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shipments
+    ADD CONSTRAINT fk_shipments_orders FOREIGN KEY (orderid) REFERENCES public.orders(orderid) ON DELETE CASCADE;
+
+
+--
+-- Name: shipments fk_shipments_users; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shipments
+    ADD CONSTRAINT fk_shipments_users FOREIGN KEY (createdbyuserid) REFERENCES public.users(userid) ON DELETE SET NULL;
+
+
+--
+-- Name: statuslogs fk_statuslogs_users; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.statuslogs
+    ADD CONSTRAINT fk_statuslogs_users FOREIGN KEY (userid) REFERENCES public.users(userid) ON DELETE SET NULL;
+
+
+--
+-- Name: users fk_users_roles; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT fk_users_roles FOREIGN KEY (roleid) REFERENCES public.roles(roleid);
+
+
+--
+-- Name: productvariants fk_variants_products; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.productvariants
+    ADD CONSTRAINT fk_variants_products FOREIGN KEY (productid) REFERENCES public.products(productid);
+
+
+--
+-- Name: warrantyclaims fk_warrantyclaims_customers; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warrantyclaims
+    ADD CONSTRAINT fk_warrantyclaims_customers FOREIGN KEY (customerid) REFERENCES public.customers(customerid) ON DELETE RESTRICT;
+
+
+--
+-- Name: warrantyclaims fk_warrantyclaims_inventoryitems; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warrantyclaims
+    ADD CONSTRAINT fk_warrantyclaims_inventoryitems FOREIGN KEY (imei) REFERENCES public.inventoryitems(imei) ON DELETE RESTRICT;
+
+
+--
+-- Name: warrantyclaims fk_warrantyclaims_users; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warrantyclaims
+    ADD CONSTRAINT fk_warrantyclaims_users FOREIGN KEY (assigneduserid) REFERENCES public.users(userid) ON DELETE SET NULL;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict hhIPtANlUdwGCIyHQ4FbYDPVrKxAeKtJ2mpaP22GnjaJqPVeXBL0rwla8VtplHZ
 

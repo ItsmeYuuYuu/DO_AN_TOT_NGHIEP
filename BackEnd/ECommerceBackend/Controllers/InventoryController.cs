@@ -322,6 +322,115 @@ namespace ECommerceBackend.Controllers
             return Ok(MapToDto(updatedItem!));
         }
 
+        // An IMEI is the physical identity of a device. It may only be corrected while
+        // the device is still untouched in stock; once it participates in an order,
+        // warranty or return flow it must remain immutable for traceability.
+        [HttpPut("{imei}/correct-imei")]
+        [Authorize(Roles = "Admin,Warehouse")]
+        public async Task<ActionResult<InventoryItemDto>> CorrectInventoryImei(
+            string imei,
+            [FromBody] CorrectInventoryImeiRequestDto dto)
+        {
+            var correctedImei = dto.Imei?.Trim() ?? string.Empty;
+            if (correctedImei.Length != 15 || correctedImei.Any(character => !char.IsDigit(character)))
+            {
+                return BadRequest(new { message = "IMEI must contain exactly 15 digits." });
+            }
+
+            var item = await _context.Inventoryitems
+                .Include(inventoryItem => inventoryItem.Variant)
+                .ThenInclude(variant => variant!.Product)
+                .Include(inventoryItem => inventoryItem.Inventorytransactions)
+                .FirstOrDefaultAsync(inventoryItem => inventoryItem.Imei == imei);
+            if (item == null) return NotFound();
+
+            if (string.Equals(item.Imei, correctedImei, StringComparison.Ordinal))
+            {
+                return Ok(MapToDto(item));
+            }
+
+            if (!string.Equals(item.Status, "InStock", StringComparison.OrdinalIgnoreCase))
+            {
+                return Conflict(new { message = "Only an InStock device can have its IMEI corrected." });
+            }
+
+            if (await _context.Inventoryitems.AnyAsync(inventoryItem => inventoryItem.Imei == correctedImei))
+            {
+                return Conflict(new { message = "The corrected IMEI already exists in inventory." });
+            }
+
+            var hasBusinessReferences =
+                await _context.Orderitems.AnyAsync(orderItem => orderItem.Imei == imei) ||
+                await _context.Warrantyclaims.AnyAsync(claim => claim.Imei == imei) ||
+                await _context.Returnitems.AnyAsync(returnItem => returnItem.Imei == imei || returnItem.Replacementimei == imei);
+            if (hasBusinessReferences)
+            {
+                return Conflict(new { message = "This IMEI is already used by an order, warranty or return record and cannot be changed." });
+            }
+
+            var previousTransactions = item.Inventorytransactions
+                .Select(transaction => new Inventorytransaction
+                {
+                    Transactionid = transaction.Transactionid,
+                    Orderid = transaction.Orderid,
+                    Userid = transaction.Userid,
+                    Transactiontype = transaction.Transactiontype,
+                    Fromstatus = transaction.Fromstatus,
+                    Tostatus = transaction.Tostatus,
+                    Note = transaction.Note,
+                    Createdat = transaction.Createdat
+                })
+                .ToList();
+
+            await using var databaseTransaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                _context.Inventorytransactions.RemoveRange(item.Inventorytransactions);
+                _context.Inventoryitems.Remove(item);
+                await _context.SaveChangesAsync();
+
+                var correctedItem = new Inventoryitem
+                {
+                    Imei = correctedImei,
+                    Variantid = item.Variantid,
+                    Status = item.Status,
+                    Importedat = item.Importedat,
+                    Warrantystartdate = item.Warrantystartdate,
+                    Warrantyenddate = item.Warrantyenddate,
+                    Warrantystatus = item.Warrantystatus,
+                    Variant = item.Variant
+                };
+
+                foreach (var transaction in previousTransactions)
+                {
+                    transaction.Transactionid = 0;
+                    transaction.Imei = correctedImei;
+                    correctedItem.Inventorytransactions.Add(transaction);
+                }
+
+                correctedItem.Inventorytransactions.Add(new Inventorytransaction
+                {
+                    Imei = correctedImei,
+                    Userid = GetClaimUserId(),
+                    Transactiontype = "ImeiCorrection",
+                    Fromstatus = "InStock",
+                    Tostatus = "InStock",
+                    Note = $"IMEI corrected from {imei} to {correctedImei}.",
+                    Createdat = DateTime.UtcNow
+                });
+
+                _context.Inventoryitems.Add(correctedItem);
+                await _context.SaveChangesAsync();
+                await databaseTransaction.CommitAsync();
+                return Ok(MapToDto(correctedItem));
+            }
+            catch (DbUpdateException)
+            {
+                await databaseTransaction.RollbackAsync();
+                return Conflict(new { message = "The IMEI could not be corrected because inventory data changed." });
+            }
+        }
+
         [HttpDelete("{imei}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteInventoryItem(string imei)

@@ -10,14 +10,6 @@ interface ProductCardProps {
   compact?: boolean;
 }
 
-const imageTones = [
-  'bg-[#e8f1ef]',
-  'bg-[#f4e4da]',
-  'bg-[#e9e5f3]',
-  'bg-[#e2ebf5]',
-  'bg-[#f0ead5]',
-];
-
 const getVariantSummary = (product: Product) => {
   const variants = product.productvariants ?? [];
   const hasStockData = variants.some(variant => variant.stockquantity != null);
@@ -39,7 +31,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const mainImage = displayVariant?.productimages?.find(image => image.ismain)?.imageurl
     ?? displayVariant?.productimages?.[0]?.imageurl;
   const discount = getDiscountPercent(displayVariant?.baseprice, displayVariant?.saleprice);
-  const imageTone = imageTones[product.productid % imageTones.length];
   const price = displayVariant ? displayVariant.saleprice ?? displayVariant.baseprice : undefined;
   const isActive = product.isactive !== false;
   const isAvailable = isActive && (!hasStockData || stock > 0);
@@ -49,7 +40,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     <article className="product-card group flex h-full flex-col">
       <Link
         to={productPath}
-        className={`card-img-container relative m-2 mb-0 block aspect-[4/4.25] overflow-hidden rounded-xl sm:m-3 sm:mb-0 ${imageTone}`}
+        className="card-img-container relative m-2 mb-0 block aspect-[4/4.25] overflow-hidden rounded-xl bg-white sm:m-3 sm:mb-0"
       >
         <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-1 p-2 sm:p-3">
           <span className="max-w-[76%] truncate rounded-full border border-[#1f2937]/10 bg-white/90 px-2 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-[#1f2937] backdrop-blur sm:px-2.5 sm:text-[9px]">

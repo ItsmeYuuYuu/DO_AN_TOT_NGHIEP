@@ -67,8 +67,8 @@ export const dashboardApi = {
   getOrderStatusDistribution: (period: string = '7d') => 
     apiClient.get<OrderStatusDistribution[]>(`/dashboard/order-status-distribution?period=${period}`),
 
-  getTodayResults: () => 
-    apiClient.get<TodaySalesResults>('/dashboard/today-results'),
+  getTodayResults: (period: string = '30d') =>
+    apiClient.get<TodaySalesResults>(`/dashboard/today-results?period=${period}`),
 
   getRevenueBreakdown: (period: string = 'this_month', groupBy: string = 'day') => 
     apiClient.get<RevenueBreakdownItem[]>(`/dashboard/revenue-breakdown?period=${period}&groupBy=${groupBy}`),

@@ -13,6 +13,8 @@ export interface ChatSession {
   handoffstatus?: 'Waiting' | 'InProgress' | 'Closed' | null;
   handoffrequestedat?: string | null;
   customername?: string | null;
+  resolutioncode?: 'Resolved' | 'CustomerNoResponse' | 'CustomerEnded' | null;
+  resolvedat?: string | null;
 }
 
 export interface ChatMessage {
@@ -167,8 +169,8 @@ export const chatSessionsApi = {
     return response.data;
   },
 
-  closeHandoff: async (id: number): Promise<ChatSession> => {
-    const response = await apiClient.post(`/chatsessions/${id}/close-handoff`);
+  closeHandoff: async (id: number, resolutioncode: string): Promise<ChatSession> => {
+    const response = await apiClient.post(`/chatsessions/${id}/close-handoff`, { resolutioncode });
     return response.data;
   },
 

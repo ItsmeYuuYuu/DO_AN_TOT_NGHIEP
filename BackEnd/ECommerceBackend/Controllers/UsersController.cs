@@ -76,7 +76,7 @@ public class UsersController : ControllerBase
 
             return new UserListItemDto(user.Userid, user.Username, user.Fullname, user.Email, user.Phone,
                 user.Roleid, user.Role?.Rolename, user.Isactive, user.Createdat,
-                effectiveRoleIds, roleNames, permissions);
+                effectiveRoleIds, roleNames, permissions, user.Createdbyuserid, user.Createdbyuser?.Fullname);
         }).ToList();
     }
 
@@ -113,7 +113,7 @@ public class UsersController : ControllerBase
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 5, 100);
 
-        var staffQuery = _context.Users.AsNoTracking().Include(item => item.Role)
+        var staffQuery = _context.Users.AsNoTracking().Include(item => item.Role).Include(item => item.Createdbyuser)
             .Where(item => item.Role == null || item.Role.Rolename != "Customer")
             .Where(item => !item.Userroles.Any(role => role.Role.Rolename == "Customer"))
             .AsQueryable();
@@ -186,6 +186,7 @@ public class UsersController : ControllerBase
             Roleid = roles[0].Roleid,
             Isactive = dto.Isactive ?? true,
             Createdat = DateTime.UtcNow
+            ,Createdbyuserid = CurrentUserId
         };
         _context.Users.Add(user);
         await _context.SaveChangesAsync();

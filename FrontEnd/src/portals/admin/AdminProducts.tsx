@@ -174,8 +174,8 @@ const AdminProducts: React.FC = () => {
   const columns = [
     {
       key: 'productid',
-      header: '#',
-      render: (product: Product) => <span className="text-xs font-black text-slate-400">#{product.productid}</span>,
+      header: 'STT',
+      render: (_product: Product, rowIndex: number) => <span className="text-xs font-black text-slate-400">{(page - 1) * PAGE_SIZE + rowIndex + 1}</span>,
       className: 'w-16',
     },
     {

@@ -13,6 +13,8 @@ export interface UserItem {
   permissions?: string[];
   isactive?: boolean;
   createdat?: string;
+  createdbyuserid?: number | null;
+  createdbyname?: string | null;
 }
 
 export interface RoleItem {

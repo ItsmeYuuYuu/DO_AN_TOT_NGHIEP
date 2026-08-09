@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import axios from 'axios';
 import { Bot, CheckCircle2, Headphones, History, MessageSquare, Send, User } from 'lucide-react';
 import { chatSessionsApi } from '@/features/chat/api/chatSessionsApi';
 import type { ChatMessage, ChatSession } from '@/features/chat/api/chatSessionsApi';
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 import { ChatLinkifiedText } from '@/features/chat/components/ChatLinkifiedText';
+import { notifyError } from '@/utils/notifications';
 
 const statusLabel: Record<string, string> = {
   Waiting: 'Đang chờ',
   InProgress: 'Đang xử lý',
   Closed: 'Đã đóng',
+};
+
+const resolutionLabels: Record<string, string> = {
+  Resolved: 'Đã giải quyết xong',
+  CustomerNoResponse: 'Khách hàng không phản hồi',
+  CustomerEnded: 'Khách hàng chủ động kết thúc',
 };
 
 const ConsultantChats = () => {
@@ -19,6 +27,7 @@ const ConsultantChats = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [resolutionCode, setResolutionCode] = useState('');
   const [customerTyping, setCustomerTyping] = useState(false);
   const messagesPaneRef = useRef<HTMLDivElement>(null);
   const lastTypingSentRef = useRef(0);
@@ -99,6 +108,7 @@ const ConsultantChats = () => {
 
   const selectSession = async (session: ChatSession) => {
     setActiveSession(session);
+    setResolutionCode('');
     if (viewMode === 'history' || session.handoffstatus === 'InProgress') {
       await loadMessages(session.sessionid, true);
     } else {
@@ -142,13 +152,17 @@ const ConsultantChats = () => {
   };
 
   const close = async () => {
-    if (!activeSession) return;
+    if (!activeSession || !resolutionCode) return;
     setBusy(true);
     try {
-      await chatSessionsApi.closeHandoff(activeSession.sessionid);
+      await chatSessionsApi.closeHandoff(activeSession.sessionid, resolutionCode);
       setActiveSession(null);
       setMessages([]);
       await loadQueue();
+    } catch (error) {
+      notifyError(axios.isAxiosError(error)
+        ? error.response?.data?.message ?? 'Không thể kết thúc phiên tư vấn.'
+        : 'Không thể kết thúc phiên tư vấn.');
     } finally {
       setBusy(false);
     }
@@ -256,9 +270,7 @@ const ConsultantChats = () => {
                   </p>
                 </div>
                 {viewMode === 'history' ? (
-                  <span className="text-xs font-bold text-slate-500">
-                    Phụ trách: {activeSession.assignedname ?? 'Chưa phân công'}
-                  </span>
+                  <div className="text-right text-xs font-bold text-slate-500"><p>Phụ trách: {activeSession.assignedname ?? 'Chưa phân công'}</p>{activeSession.resolutioncode && <p className="mt-1 text-emerald-700">{resolutionLabels[activeSession.resolutioncode] ?? activeSession.resolutioncode}</p>}</div>
                 ) : activeSession.handoffstatus === 'Waiting' ? (
                   <button
                     type="button"
@@ -269,14 +281,17 @@ const ConsultantChats = () => {
                     <Headphones size={17} /> Tiếp nhận
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={close}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
-                  >
-                    <CheckCircle2 size={17} /> Hoàn tất
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <select value={resolutionCode} onChange={event => setResolutionCode(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-400">
+                      <option value="">Chọn kết quả xử lý</option>
+                      <option value="Resolved">Đã giải quyết xong</option>
+                      <option value="CustomerNoResponse">Khách không phản hồi (sau 5 phút)</option>
+                      <option value="CustomerEnded">Khách chủ động kết thúc</option>
+                    </select>
+                    <button type="button" disabled={busy || !resolutionCode} onClick={close} className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">
+                      <CheckCircle2 size={17} /> Xác nhận
+                    </button>
+                  </div>
                 )}
               </header>
 

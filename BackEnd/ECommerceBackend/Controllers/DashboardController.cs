@@ -59,16 +59,16 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("today-results")]
-        public async Task<ActionResult<TodaySalesResultsDto>> GetTodayResults()
+        public async Task<ActionResult<TodaySalesResultsDto>> GetTodayResults([FromQuery] string period = "30d")
         {
-            var todayLocal = VietnamTime.Today;
-            var (today, tomorrow) = VietnamTime.GetUtcDayRange(todayLocal);
-            var yesterday = today.AddDays(-1);
-            var sameDayLastMonth = VietnamTime.ToUtc(todayLocal.AddMonths(-1));
-            var sameDayLastMonthNext = sameDayLastMonth.AddDays(1);
+            var (today, tomorrow) = GetPeriodRanges(period);
+            var periodLength = tomorrow - today;
+            var yesterday = today - periodLength;
+            var sameDayLastMonth = yesterday;
+            var sameDayLastMonthNext = today;
 
             var orders = await _context.Orders
-                .Where(o => o.Orderdate != null && o.Orderdate >= sameDayLastMonth && o.Orderdate < tomorrow)
+                .Where(o => o.Orderdate != null && o.Orderdate >= yesterday && o.Orderdate < tomorrow)
                 .Select(o => new { o.Orderdate, o.Orderstatus, o.Finalamount, o.Paidamount, o.Paymentstatus })
                 .ToListAsync();
 
@@ -76,12 +76,12 @@ namespace ECommerceBackend.Controllers
             var yesterdayOrders = orders.Where(o => o.Orderdate >= yesterday && o.Orderdate < today).ToList();
             var lastMonthOrders = orders.Where(o => o.Orderdate >= sameDayLastMonth && o.Orderdate < sameDayLastMonthNext).ToList();
 
-            decimal revenueToday = todayOrders.Sum(o => o.Paidamount ?? 0);
-            decimal revenueYesterday = yesterdayOrders.Sum(o => o.Paidamount ?? 0);
-            decimal revenueLastMonth = lastMonthOrders.Sum(o => o.Paidamount ?? 0);
+            decimal revenueToday = todayOrders.Where(o => o.Orderstatus == "Completed").Sum(o => o.Paidamount ?? o.Finalamount);
+            decimal revenueYesterday = yesterdayOrders.Where(o => o.Orderstatus == "Completed").Sum(o => o.Paidamount ?? o.Finalamount);
+            decimal revenueLastMonth = lastMonthOrders.Where(o => o.Orderstatus == "Completed").Sum(o => o.Paidamount ?? o.Finalamount);
 
-            int invoicesToday = todayOrders.Count(o => o.Orderstatus == "Completed" || o.Paymentstatus == "Paid" || o.Paymentstatus == "DepositPaid");
-            int returnsToday = todayOrders.Count(o => o.Orderstatus == "Cancelled");
+            int invoicesToday = todayOrders.Count(o => o.Orderstatus == "Completed");
+            int returnsToday = todayOrders.Count(o => o.Orderstatus is "Cancelled" or "Returned");
 
             decimal changeVsYesterday = 0;
             if (revenueYesterday > 0)

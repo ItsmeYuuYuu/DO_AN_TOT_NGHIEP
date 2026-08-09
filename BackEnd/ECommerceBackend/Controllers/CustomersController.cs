@@ -25,7 +25,7 @@ namespace ECommerceBackend.Controllers
             string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
 
         private static CustomerDto MapToDto(Customer c, User? account = null) => new CustomerDto(
-            c.Customerid,
+            c.Publicid,
             c.Fullname,
             c.Phone,
             c.Email,
@@ -140,9 +140,9 @@ namespace ECommerceBackend.Controllers
         // GET: api/Customers/5
         [HttpGet("{id}")]
         [Authorize]
-        public async Task<ActionResult<CustomerDto>> GetCustomer(int id)
+        public async Task<ActionResult<CustomerDto>> GetCustomer(Guid id)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            var customer = await _context.Customers.FirstOrDefaultAsync(item => item.Publicid == id);
             if (customer == null) return NotFound();
 
             var isPrivilegedEmployee =
@@ -175,9 +175,9 @@ namespace ECommerceBackend.Controllers
         // PUT: api/Customers/5
         [HttpPut("{id}")]
         [Authorize]
-        public async Task<IActionResult> PutCustomer(int id, [FromBody] UpdateCustomerRequestDto dto)
+        public async Task<IActionResult> PutCustomer(Guid id, [FromBody] UpdateCustomerRequestDto dto)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            var customer = await _context.Customers.FirstOrDefaultAsync(item => item.Publicid == id);
             if (customer == null) return NotFound();
 
             var isPrivilegedEmployee =
@@ -209,7 +209,7 @@ namespace ECommerceBackend.Controllers
             try { await _context.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.Customers.Any(e => e.Customerid == id)) return NotFound();
+                if (!_context.Customers.Any(e => e.Publicid == id)) return NotFound();
                 throw;
             }
 
@@ -220,9 +220,9 @@ namespace ECommerceBackend.Controllers
         // PATCH: api/Customers/5/account-status
         [HttpPatch("{id}/account-status")]
         [HasPermission(AppPermissions.CustomersManageAccount)]
-        public async Task<IActionResult> UpdateCustomerAccountStatus(int id, [FromBody] UpdateCustomerAccountStatusDto dto)
+        public async Task<IActionResult> UpdateCustomerAccountStatus(Guid id, [FromBody] UpdateCustomerAccountStatusDto dto)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            var customer = await _context.Customers.FirstOrDefaultAsync(item => item.Publicid == id);
             if (customer == null) return NotFound();
 
             var account = await FindLinkedCustomerAccountAsync(customer, track: true);
@@ -242,9 +242,9 @@ namespace ECommerceBackend.Controllers
         // DELETE: api/Customers/5
         [HttpDelete("{id}")]
         [HasPermission(AppPermissions.CustomersManageAccount)]
-        public async Task<IActionResult> DeleteCustomer(int id)
+        public async Task<IActionResult> DeleteCustomer(Guid id)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            var customer = await _context.Customers.FirstOrDefaultAsync(item => item.Publicid == id);
             if (customer == null) return NotFound();
 
             _context.Customers.Remove(customer);

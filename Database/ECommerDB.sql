@@ -218,7 +218,10 @@ CREATE TABLE public.chatsessions (
     status character varying(50) DEFAULT 'Active'::character varying,
     assigneduserid integer,
     handoffstatus character varying(30),
-    handoffrequestedat timestamp without time zone
+    handoffrequestedat timestamp without time zone,
+    resolutioncode character varying(40),
+    resolvedat timestamp without time zone,
+    resolvedbyuserid integer
 );
 
 
@@ -259,7 +262,8 @@ CREATE TABLE public.contents (
     displayorder integer,
     isactive boolean DEFAULT true,
     createdbyuserid integer,
-    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    publicid uuid DEFAULT gen_random_uuid() NOT NULL
 );
 
 
@@ -783,7 +787,8 @@ CREATE TABLE public.users (
     email character varying(100),
     phone character varying(20),
     createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    isactive boolean DEFAULT true
+    isactive boolean DEFAULT true,
+    createdbyuserid integer
 );
 
 
@@ -1841,8 +1846,33 @@ WHERE r.rolename = 'Admin'
    OR (r.rolename = 'Content' AND p.code IN ('products.manage', 'catalog.manage', 'content.manage'))
    OR (r.rolename = 'Consultant' AND p.code IN ('customers.view', 'orders.view', 'inventory.view', 'warranties.view', 'consultations.manage'));
 
+ALTER TABLE ONLY public.customers
+    ADD CONSTRAINT customers_publicid_key UNIQUE (publicid);
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT fk_users_createdby FOREIGN KEY (createdbyuserid) REFERENCES public.users(userid) ON DELETE SET NULL;
+
+CREATE TABLE public.refreshtokens (
+    refreshtokenid uuid NOT NULL,
+    userid integer NOT NULL,
+    tokenhash character varying(64) NOT NULL,
+    sessionid character varying(32) NOT NULL,
+    createdat timestamp without time zone NOT NULL,
+    expiresat timestamp without time zone NOT NULL,
+    revokedat timestamp without time zone,
+    CONSTRAINT refreshtokens_pkey PRIMARY KEY (refreshtokenid),
+    CONSTRAINT refreshtokens_tokenhash_key UNIQUE (tokenhash),
+    CONSTRAINT fk_refreshtokens_users FOREIGN KEY (userid) REFERENCES public.users(userid) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_refreshtokens_user_session ON public.refreshtokens(userid, sessionid);
+
 INSERT INTO public."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20260809113836_AddRolePermissionsAndUserRoles', '8.0.4')
+ON CONFLICT ("MigrationId") DO NOTHING;
+
+INSERT INTO public."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20260809142406_AddPublicIdentifiersRefreshTokensAndResolution', '8.0.4')
 ON CONFLICT ("MigrationId") DO NOTHING;
 
 --

@@ -3,7 +3,7 @@ import React from 'react';
 interface Column<T> {
   key: string;
   header: React.ReactNode;
-  render?: (row: T) => React.ReactNode;
+  render?: (row: T, rowIndex: number) => React.ReactNode;
   className?: string;
 }
 
@@ -77,11 +77,11 @@ export function DataTable<T>({
               </td>
             </tr>
           ) : (
-            data.map(row => (
+            data.map((row, rowIndex) => (
               <tr key={String(row[keyField])} className="transition-colors hover:bg-red-50/40">
                 {columns.map(col => (
                   <td key={col.key} className={`px-4 py-3 text-slate-700 ${col.className ?? ''}`}>
-                    {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '—')}
+                    {col.render ? col.render(row, rowIndex) : String((row as Record<string, unknown>)[col.key] ?? '—')}
                   </td>
                 ))}
               </tr>

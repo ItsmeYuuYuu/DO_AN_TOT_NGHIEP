@@ -102,7 +102,7 @@ export interface PaymentActionResult {
 export const ordersApi = {
   getAll: () => apiClient.get<Order[]>('/Orders'),
   getById: (id: number) => apiClient.get<Order>(`/Orders/${id}`),
-  getByCustomer: (customerId: number) => apiClient.get<Order[]>(`/Orders/customer/${customerId}`),
+  getByCustomer: (customerId: string) => apiClient.get<Order[]>(`/Orders/customer/${customerId}`),
   getByUser: (userId: number) => apiClient.get<Order[]>(`/Orders/user/${userId}`),
   create: (data: Partial<Order>) => apiClient.post<Order>('/Orders', data),
   update: (id: number, data: Partial<Order>) => apiClient.put(`/Orders/${id}`, data),

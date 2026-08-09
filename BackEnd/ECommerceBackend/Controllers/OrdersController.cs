@@ -552,8 +552,14 @@ namespace ECommerceBackend.Controllers
 
         [HttpGet("customer/{customerId}")]
         [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersView)]
-        public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrdersByCustomer(int customerId)
+        public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrdersByCustomer(Guid customerId)
         {
+            var internalCustomerId = await _context.Customers
+                .Where(customer => customer.Publicid == customerId)
+                .Select(customer => (int?)customer.Customerid)
+                .SingleOrDefaultAsync();
+            if (!internalCustomerId.HasValue) return NotFound();
+
             var orders = await _context.Orders
                 .Include(o => o.Customer)
                 .Include(o => o.Orderitems)
@@ -565,7 +571,7 @@ namespace ECommerceBackend.Controllers
                 .Include(o => o.Orderpayments)
                 .Include(o => o.Shipment)
                     .ThenInclude(s => s!.Histories)
-                .Where(o => o.Customerid == customerId)
+                .Where(o => o.Customerid == internalCustomerId.Value)
                 .OrderByDescending(o => o.Orderdate)
                 .ToListAsync();
 

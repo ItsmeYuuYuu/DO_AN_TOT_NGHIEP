@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   Activity,
-  BarChart3,
   Boxes,
   ChevronDown,
   FileText,
@@ -95,7 +94,6 @@ const adminNav: NavGroup[] = [
     ],
   },
   { label: 'Nhật ký', to: '/admin/auditlogs', icon: <Activity size={17} /> },
-  { label: 'Phân tích', to: '/admin#phan-tich', icon: <BarChart3 size={17} /> },
 ];
 
 const isPathActive = (pathname: string, hash: string, item: NavGroup) => {

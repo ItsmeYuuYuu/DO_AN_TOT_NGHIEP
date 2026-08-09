@@ -330,7 +330,7 @@ export default function AdminAuditLogs() {
 
       <DataTable
         columns={[
-          { key: 'logid', header: 'ID', render: (log: AuditLog) => <span className="text-xs text-slate-500">#{log.logid}</span> },
+          { key: 'logid', header: 'STT', render: (_log: AuditLog, rowIndex: number) => <span className="text-xs text-slate-500">{(page - 1) * pageSize + rowIndex + 1}</span> },
           {
             key: 'user',
             header: 'Người dùng',

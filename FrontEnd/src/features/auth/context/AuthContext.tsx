@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
   clearSession,
   getCurrentUser,
   isAuthenticated,
+  saveSession,
   type AuthUser,
 } from '../utils/authUtils';
 import { authApi } from '../api/authApi';
@@ -13,6 +15,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoggedIn: boolean;
   rolename: string | null;
+  isInitializing: boolean;
   logout: () => void;
   refreshAuth: () => void; // call after login to sync state
 }
@@ -22,6 +25,7 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   isLoggedIn: false,
   rolename: null,
+  isInitializing: true,
   logout: () => {},
   refreshAuth: () => {},
 });
@@ -29,6 +33,7 @@ const AuthContext = createContext<AuthContextValue>({
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   const navigate = useNavigate();
 
   // Sync state from localStorage (called on mount + after login)
@@ -42,7 +47,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Run once on app start
   useEffect(() => {
-    refreshAuth();
+    let active = true;
+    if (isAuthenticated()) {
+      refreshAuth();
+      setIsInitializing(false);
+      return () => { active = false; };
+    }
+    void authApi.refresh().then(response => {
+      if (!active) return;
+      const next = response.data;
+      saveSession(next.accessToken, next.expiresIn, {
+        userid: String(next.userid), username: next.username, fullname: next.fullname,
+        email: next.email ?? next.username, phone: next.phone, rolename: next.rolename,
+        roleids: next.roleids ?? (next.roleid ? [next.roleid] : []),
+        rolenames: next.rolenames ?? [next.rolename], permissions: next.permissions ?? [],
+      });
+      refreshAuth();
+    }).catch(error => {
+      if (!active) return;
+      setUser(null);
+      if (axios.isAxiosError(error) && error.response?.data?.code === 'STAFF_SESSION_REPLACED') {
+        sessionStorage.setItem('ec_auth_notice', error.response.data.message);
+      }
+    })
+      .finally(() => { if (active) setIsInitializing(false); });
+    return () => { active = false; };
   }, [refreshAuth]);
 
   const logout = useCallback(async () => {
@@ -68,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isLoggedIn: user !== null,
         rolename: user?.rolename ?? null,
+        isInitializing,
         logout,
         refreshAuth,
       }}

@@ -15,7 +15,9 @@ public record UserListItemDto(
     DateTime? Createdat,
     IReadOnlyList<int>? Roleids = null,
     IReadOnlyList<string>? Rolenames = null,
-    IReadOnlyList<string>? Permissions = null);
+    IReadOnlyList<string>? Permissions = null,
+    int? Createdbyuserid = null,
+    string? Createdbyname = null);
 
 public record CreateUserRequestDto(
     [Required(ErrorMessage = "Tên đăng nhập là bắt buộc")]

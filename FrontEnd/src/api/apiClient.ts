@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAccessToken, clearSession } from '@/features/auth/utils/authUtils';
+import { getAccessToken, clearSession, saveSession } from '@/features/auth/utils/authUtils';
 import { resolveMediaUrlsDeep } from '@/utils/mediaUrl';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -16,7 +16,34 @@ const isAuthenticationRequest = (url?: string) => {
     '/auth/registration-code',
     '/auth/forgot-password',
     '/auth/reset-password',
+    '/auth/refresh',
   ].some(endpoint => url.includes(endpoint));
+};
+
+interface RefreshResponse {
+  userid: number; username: string; fullname: string; email?: string; phone?: string;
+  roleid?: number; rolename: string; roleids?: number[]; rolenames?: string[];
+  permissions?: string[]; accessToken: string; expiresIn: number;
+}
+
+let refreshRequest: Promise<RefreshResponse> | null = null;
+
+const renewAccessToken = () => {
+  if (!refreshRequest) {
+    refreshRequest = axios.post<RefreshResponse>(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true })
+      .then(response => {
+        const user = response.data;
+        saveSession(user.accessToken, user.expiresIn, {
+          userid: String(user.userid), username: user.username, fullname: user.fullname,
+          email: user.email ?? user.username, phone: user.phone, rolename: user.rolename,
+          roleids: user.roleids ?? (user.roleid ? [user.roleid] : []),
+          rolenames: user.rolenames ?? [user.rolename], permissions: user.permissions ?? [],
+        });
+        return user;
+      })
+      .finally(() => { refreshRequest = null; });
+  }
+  return refreshRequest;
 };
 
 function getGuestCheckoutToken(): string {
@@ -32,6 +59,7 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15_000,
+  withCredentials: true,
 });
 
 // ── Request interceptor — attach JWT Bearer token ─────────────────────────────
@@ -53,18 +81,31 @@ apiClient.interceptors.response.use(
     response.data = resolveMediaUrlsDeep(response.data);
     return response;
   },
-  (error) => {
-    if (error.response?.status === 401 && !isAuthenticationRequest(error.config?.url)) {
+  async (error) => {
+    const original = error.config as (typeof error.config & { _retry?: boolean });
+    if (error.response?.status === 401 && !isAuthenticationRequest(original?.url) && !original?._retry) {
       if (error.response?.data?.code === 'STAFF_SESSION_REPLACED') {
         sessionStorage.setItem(
           'ec_auth_notice',
           error.response.data.message ||
             'Phiên đăng nhập đã được mở trên thiết bị khác. Vui lòng đăng nhập lại.',
         );
+        clearSession();
+        window.location.href = '/auth/login';
+        return Promise.reject(error);
       }
-      // Token expired or invalid — clear session and redirect to login
-      clearSession();
-      window.location.href = '/auth/login';
+      original._retry = true;
+      try {
+        const refreshed = await renewAccessToken();
+        original.headers.Authorization = `Bearer ${refreshed.accessToken}`;
+        return apiClient(original);
+      } catch (refreshError) {
+        if (axios.isAxiosError(refreshError) && refreshError.response?.data?.code === 'STAFF_SESSION_REPLACED') {
+          sessionStorage.setItem('ec_auth_notice', refreshError.response.data.message);
+        }
+        clearSession();
+        window.location.href = '/auth/login';
+      }
     }
     return Promise.reject(error);
   },

@@ -7,8 +7,8 @@ import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { Pagination } from '@/components/Pagination';
 import { rolesApi, usersApi } from '@/features/users/api/usersApi';
-import type { RoleItem, UserItem } from '@/features/users/api/usersApi';
-import { roleLabels } from '@/features/users/utils/authorizationLabels';
+import type { PermissionItem, RoleItem, UserItem } from '@/features/users/api/usersApi';
+import { createPermissionLabelMap, getPermissionLabel, getRoleBadgeClass, roleLabels } from '@/features/users/utils/authorizationLabels';
 import { formatDate } from '@/utils/formatters';
 import { confirmAction, notifyError } from '@/utils/notifications';
 
@@ -20,6 +20,7 @@ type UserDraft = Partial<UserItem> & { passwordhash?: string };
 const AdminUsers = () => {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [roles, setRoles] = useState<RoleItem[]>([]);
+  const [permissions, setPermissions] = useState<PermissionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -33,9 +34,12 @@ const AdminUsers = () => {
 
   useEffect(() => {
     let active = true;
-    void rolesApi.getAll()
-      .then(response => {
-        if (active) setRoles(response.data.filter(role => role.rolename !== 'Customer'));
+    void Promise.all([rolesApi.getAll(), rolesApi.getPermissions()])
+      .then(([rolesResponse, permissionsResponse]) => {
+        if (active) {
+          setRoles(rolesResponse.data.filter(role => role.rolename !== 'Customer'));
+          setPermissions(permissionsResponse.data);
+        }
       })
       .catch(() => {
         if (active) notifyError('Không thể tải danh sách vai trò.');
@@ -76,6 +80,7 @@ const AdminUsers = () => {
   }, [page, refreshKey, roleFilter, search, statusFilter]);
 
   const refreshUsers = () => setRefreshKey(current => current + 1);
+  const permissionLabels = createPermissionLabelMap(permissions);
 
   const toggleDraftRole = (roleid: number) => {
     setEditing(current => {
@@ -132,12 +137,14 @@ const AdminUsers = () => {
   };
 
   const columns = [
-    { key: 'userid', header: '#', render: (user: UserItem) => <span className="text-xs text-slate-400">#{user.userid}</span> },
+    { key: 'userid', header: 'STT', render: (_user: UserItem, rowIndex: number) => <span className="text-xs text-slate-400">{(page - 1) * PAGE_SIZE + rowIndex + 1}</span> },
     { key: 'fullname', header: 'Nhân viên', render: (user: UserItem) => <div><p className="font-bold text-slate-800">{user.fullname}</p>{!user.username.includes('@') && <p className="text-xs text-slate-400">@{user.username}</p>}</div> },
     { key: 'contact', header: 'Liên hệ', render: (user: UserItem) => <div><p className="text-sm text-slate-600">{user.email ?? (user.username.includes('@') ? user.username : '—')}</p><p className="text-xs text-slate-400">{user.phone ?? ''}</p></div> },
-    { key: 'roles', header: 'Vai trò', render: (user: UserItem) => <div className="flex max-w-md flex-wrap gap-1.5">{(user.rolenames?.length ? user.rolenames : [user.rolename ?? 'Chưa gán']).map(role => <span key={role} className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-[#c4000b]">{roleLabels[role] ?? role}</span>)}</div> },
+    { key: 'roles', header: 'Vai trò', render: (user: UserItem) => <div className="flex max-w-md flex-wrap gap-1.5">{(user.rolenames?.length ? user.rolenames : [user.rolename ?? 'Chưa gán']).map(role => <span key={role} className={`rounded-full border px-2.5 py-1 text-xs font-bold ${getRoleBadgeClass(role)}`}>{roleLabels[role] ?? role}</span>)}</div> },
+    { key: 'permissions', header: 'Quyền hiệu lực', render: (user: UserItem) => user.permissions?.includes('*') ? <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700">Toàn quyền</span> : <div className="flex max-w-sm flex-wrap gap-1" title={(user.permissions ?? []).map(code => getPermissionLabel(code, permissionLabels)).join(', ')}>{(user.permissions ?? []).slice(0, 2).map(code => <span key={code} className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">{getPermissionLabel(code, permissionLabels)}</span>)}{(user.permissions?.length ?? 0) > 2 && <span className="px-1 py-1 text-xs font-bold text-slate-400">+{user.permissions!.length - 2}</span>}</div> },
     { key: 'isactive', header: 'Trạng thái', render: (user: UserItem) => <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${user.isactive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{user.isactive ? 'Hoạt động' : 'Đã khóa'}</span> },
     { key: 'createdat', header: 'Ngày tạo', render: (user: UserItem) => <span className="text-xs text-slate-500">{user.createdat ? formatDate(user.createdat) : '—'}</span> },
+    { key: 'createdbyname', header: 'Người tạo', render: (user: UserItem) => <span className="text-xs font-semibold text-slate-600">{user.createdbyname ?? 'Dữ liệu hệ thống'}</span> },
     { key: 'actions', header: 'Thao tác', render: (user: UserItem) => <div className="flex flex-wrap gap-2"><button type="button" onClick={() => setEditing({ ...user, roleids: user.roleids ?? (user.roleid ? [user.roleid] : []) })} className="rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-[#c4000b]">Sửa</button><button type="button" onClick={() => void toggleUserStatus(user)} className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold ${user.isactive ? 'bg-slate-100 text-slate-700' : 'bg-emerald-50 text-emerald-700'}`}>{user.isactive ? <LockKeyhole size={14} /> : <LockOpen size={14} />}{user.isactive ? 'Khóa' : 'Mở khóa'}</button></div> },
   ];
 

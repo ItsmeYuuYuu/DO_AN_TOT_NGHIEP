@@ -126,7 +126,9 @@ namespace ECommerceBackend.Controllers
             null,
             s.Handoffstatus,
             s.Handoffrequestedat,
-            null
+            null,
+            s.Resolutioncode,
+            s.Resolvedat
         );
 
         private async Task<ChatSessionDto> MapToDetailedDtoAsync(Chatsession session)
@@ -711,21 +713,57 @@ namespace ECommerceBackend.Controllers
 
         [HttpPost("{id}/close-handoff")]
         [HasPermission(AppPermissions.ConsultationsManage)]
-        public async Task<ActionResult<ChatSessionDto>> CloseHandoff(int id)
+        public async Task<ActionResult<ChatSessionDto>> CloseHandoff(int id, [FromBody] CloseChatHandoffRequestDto dto)
         {
             var session = await _context.Chatsessions.FindAsync(id);
             if (session == null)
                 return NotFound(new ApiErrorDto("Session không tồn tại.", null));
             if (!CanManageHandoff(session))
                 return StatusCode(403, new ApiErrorDto("Bạn không phụ trách cuộc trò chuyện này.", null));
+            if (session.Handoffstatus != "InProgress")
+                return Conflict(new ApiErrorDto("Chỉ phiên đang được xử lý mới có thể kết thúc.", null));
+
+            var allowedResolutionCodes = new[] { "Resolved", "CustomerNoResponse", "CustomerEnded" };
+            if (!allowedResolutionCodes.Contains(dto.Resolutioncode, StringComparer.Ordinal))
+                return BadRequest(new ApiErrorDto("Kết quả xử lý phiên tư vấn không hợp lệ.", null));
+
+            var latestConsultantMessage = await _context.Chatmessages
+                .Where(message => message.Sessionid == id && message.Sendertype == "consultant")
+                .OrderByDescending(message => message.Sentat)
+                .Select(message => message.Sentat)
+                .FirstOrDefaultAsync();
+            if (!latestConsultantMessage.HasValue)
+                return BadRequest(new ApiErrorDto("Nhân viên cần phản hồi khách hàng trước khi kết thúc phiên.", null));
+
+            if (dto.Resolutioncode == "CustomerNoResponse")
+            {
+                var latestCustomerMessage = await _context.Chatmessages
+                    .Where(message => message.Sessionid == id && message.Sendertype == "user")
+                    .OrderByDescending(message => message.Sentat)
+                    .Select(message => message.Sentat)
+                    .FirstOrDefaultAsync();
+                if ((latestCustomerMessage.HasValue && latestCustomerMessage > latestConsultantMessage) ||
+                    DateTime.UtcNow - latestConsultantMessage.Value < TimeSpan.FromMinutes(5))
+                    return BadRequest(new ApiErrorDto("Chỉ được chọn khách hàng không phản hồi sau ít nhất 5 phút kể từ tin nhắn cuối của tư vấn viên.", null));
+            }
 
             session.Handoffstatus = "Closed";
             session.Endtime = DateTime.UtcNow;
+            session.Resolutioncode = dto.Resolutioncode;
+            session.Resolvedat = DateTime.UtcNow;
+            session.Resolvedbyuserid = GetCurrentUserId();
+            var resolutionLabel = dto.Resolutioncode switch
+            {
+                "Resolved" => "Đã giải quyết xong",
+                "CustomerNoResponse" => "Khách hàng không phản hồi",
+                "CustomerEnded" => "Khách hàng chủ động kết thúc",
+                _ => "Đã kết thúc"
+            };
             _context.Chatmessages.Add(new Chatmessage
             {
                 Sessionid = session.Sessionid,
                 Sendertype = "system",
-                Messagecontent = "Phiên tư vấn trực tiếp đã kết thúc.",
+                Messagecontent = $"Phiên tư vấn trực tiếp đã kết thúc: {resolutionLabel}.",
                 Sentat = DateTime.UtcNow
             });
             await _context.SaveChangesAsync();

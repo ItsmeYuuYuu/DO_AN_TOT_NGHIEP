@@ -23,6 +23,12 @@ public partial class Chatsession
 
     public DateTime? Handoffrequestedat { get; set; }
 
+    public string? Resolutioncode { get; set; }
+
+    public DateTime? Resolvedat { get; set; }
+
+    public int? Resolvedbyuserid { get; set; }
+
     public virtual ICollection<Chatmessage> Chatmessages { get; set; } = new List<Chatmessage>();
 
     public virtual Customer? Customer { get; set; }

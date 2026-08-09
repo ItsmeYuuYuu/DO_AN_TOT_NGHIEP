@@ -1,0 +1,2070 @@
+
+===== PDF PAGE 13 =====
+Chương 1. GIỚI THIỆU 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 2 
+ 
+Mục tiêu tổng quát của luận văn là xây d ựng một hệ thống thương m ại điện tử 
+bán điện thoại có quy trình nghiệp vụ tương đối hoàn chỉnh, có khả năng chạy ổn định 
+trong môi trường trình diễn local và đáp ứng các yêu cầu cơ bản về kiến trúc phần mềm, 
+bảo mật, phân quyền, tính nhất quán dữ liệu và trải nghiệm người dùng. 
+Các mục tiêu cụ thể của luận văn bao gồm: 
+Phân tích bài toán kinh doanh đi ện thoại trực tuyến và xác đ ịnh các tác nhân, 
+chức năng, quy trình nghiệp vụ của hệ thống. 
+Thiết kế kiến trúc Client–Server, tách biệt giữa giao diện người dùng và hệ thống 
+API. 
+Thiết kế cơ sở dữ liệu PostgreSQL theo hướng tinh gọn, hạn chế các bảng trung 
+gian không cần thiết nhưng vẫn bảo đảm khả năng quản lý đầy đủ nghiệp vụ. 
+Xây dựng chức năng qu ản lý s ản phẩm theo thương hi ệu, dòng máy, bi ến thể, 
+cấu hình, hình ảnh, giá bán và tồn kho theo mã IMEI. 
+Xây dựng quy trình đ ặt hàng và thanh toán phù h ợp cho c ả khách hàng có tài 
+khoản và khách vãng lai. 
+Tích hợp VietQR và webhook SePay để hỗ trợ đối soát thanh toán chuyển khoản 
+theo thời gian thực trong môi trường demo. 
+Xây dựng quy trình tiếp nhận đơn hàng, bàn giao kho, đóng gói, xu ất giao, giao 
+nhận và hoàn tồn kho. 
+Xây dựng quy trình đổi trả, hoàn tiền mặt, hoàn tiền qua ngân hàng và xử lý khiếu 
+nại chưa nhận được tiền. 
+Xây dựng quy trình tiếp nhận và xử lý bảo hành theo mã IMEI. 
+Tích hợp trợ lý AI hỗ trợ tư vấn, lọc và so sánh s ản phẩm dựa trên dữ liệu của 
+cửa hàng. 
+Xây dựng hệ thống phân quyền theo vai trò và ghi nhận nhật ký thao tác tự động. 
+Kiểm thử các luồng nghiệp vụ quan trọng bằng integration test và kiểm thử End-
+to-End. 
+ 
+
+===== PDF PAGE 16 =====
+Chương 1. GIỚI THIỆU 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 5 
+ 
+dữ liệu thực tế trong PostgreSQL. Khi c ần hỗ trợ trực tiếp, khách hàng có th ể chuyển 
+phiên trò chuyện cho nhân viên Consultant tiếp nhận. 
+Các chức năng qu ản trị bao gồm dashboard th ống kê, qu ản lý tài kho ản, phân 
+quyền theo vai trò, quản lý nội dung, giám sát đơn hàng và theo dõi Audit Log. Hệ thống 
+ghi nhận các thao tác quan tr ọng của nhân viên và qu ản trị viên nhằm hỗ trợ kiểm tra, 
+truy vết và bảo đảm an toàn trong quá trình vận hành. 
+Sau khi hoàn thành các chức năng, hệ thống được kiểm tra bằng xUnit integration 
+test với cơ s ở dữ liệu PostgreSQL t ạm thời và Playwright End -to-End cho các lu ồng 
+giao diện quan trọng. Cơ sở dữ liệu, dữ liệu thử nghiệm và thư mục lưu trữ tạm được tự 
+động tạo khi bắt đầu kiểm thử và dọn dẹp sau khi quá trình kiểm thử kết thúc. 
+1.3.2 Phạm vi thực hiện đề tài 
+1.3.2.1 Các chức năng chính phía người dùng (Khách hàng): 
+Nhóm chức năng Phạm vi thực hiện 
+Quản lý tài khoản 
+Khách hàng có thể đăng ký tài khoản, đăng nhập bằng tên đăng nhập hoặc 
+email, đăng xu ất, cập nhật thông tin cá nhân và thay đ ổi mật khẩu. Hệ 
+thống sử dụng JWT để xác thực và BCrypt để băm mật khẩu trước khi lưu 
+trữ. 
+Khôi phục mật 
+khẩu 
+Khi quên mật khẩu, khách hàng có th ể yêu cầu mã xác nh ận gồm 6 chữ 
+số qua email. Mã có hiệu lực trong 10 phút, chỉ được sử dụng một lần và 
+bị khóa sau 5 l ần nhập sai. Khi chưa c ấu hình SMTP trong môi trư ờng 
+local, mã được ghi tại console backend để phục vụ trình diễn. 
+Duyệt sản phẩm Khách hàng có thể xem danh sách điện thoại đang kinh doanh, sản phẩm 
+mới, sản phẩm khuyến mãi và các nội dung nổi bật trên trang chủ. 
+Tìm kiếm và lọc 
+Hệ thống hỗ trợ tìm kiếm sản phẩm theo tên và lọc theo danh mục, thương 
+hiệu, dòng máy, khoảng giá cùng các điều kiện liên quan. Dòng máy được 
+tổng hợp từ trường seriesname của sản phẩm. 
+Xem chi tiết sản 
+phẩm 
+Trang chi tiết hiển thị tên sản phẩm, thương hiệu, dòng máy, giá gốc, giá 
+khuyến mãi, thư viện ảnh, mô tả định dạng bằng CKEditor, biến thể, màu 
+sắc, RAM, ROM, tình trạng, xuất xứ, tồn kho, thông số kỹ thuật và đánh 
+giá. 
+Lựa chọn biến thể Khách hàng có thể lựa chọn cấu hình cụ thể trước khi thêm vào giỏ hàng. 
+Biến thể hết hàng được làm mờ và không thể tiếp tục mua. 
+
+===== PDF PAGE 20 =====
+Chương 1. GIỚI THIỆU 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 9 
+ 
+Quản lý sản phẩm 
+Admin và Manager xem danh sách, tìm kiếm, phân trang, thêm mới, chỉnh 
+sửa hoặc xóa sản phẩm. Quy trình tạo sản phẩm gồm thông tin cơ bản, mô 
+tả CKEditor, biến thể, hình ảnh, thông số kỹ thuật và bước xác nhận. 
+Quản lý dòng 
+máy 
+Dòng máy được lưu trực tiếp trong trường products.seriesname, không sử 
+dụng bảng dòng máy riêng. Khi thêm hoặc sửa sản phẩm, hệ thống gợi ý 
+các series đã t ồn tại theo thương hi ệu nhưng v ẫn cho phép nh ập series 
+mới. 
+Quản lý biến thể Hệ thống cho phép qu ản lý SKU, tình tr ạng, xuất xứ, màu s ắc, RAM, 
+ROM, giá gốc, giá khuyến mãi, số lượng và hình ảnh của từng biến thể. 
+Quản lý hình ảnh 
+Admin và Manager có th ể tải ảnh sản phẩm từ máy, chọn ảnh chính và 
+quản lý ảnh mô tả. Chức năng dọn ảnh chỉ xóa các tệp cũ không còn được 
+tham chiếu trong cơ sở dữ liệu. 
+Quản lý thông số 
+kỹ thuật 
+Thông số được lưu theo cấu trúc tên và giá tr ị. Giá trị hỗ trợ nhiều dòng 
+để trình bày các nội dung dài như camera, quay video, kết nối hoặc công 
+nghệ màn hình. 
+Quản lý danh 
+mục và thương 
+hiệu 
+Admin và Manager có thể thêm, sửa, xóa danh mục và thương hiệu, đồng 
+thời theo dõi số lượng sản phẩm thuộc từng nhóm. 
+Quản lý tồn kho 
+Admin và Manager theo dõi tồn kho theo biến thể và IMEI, lịch sử nhập, 
+giữ hàng, xu ất giao, bán, hoàn kho và đi ều ch ỉnh. H ệ thống c ảnh báo 
+những biến thể có số lượng thấp. 
+Quản lý đơn hàng 
+Admin và Manager được xem toàn bộ đơn hàng, chi tiết người nhận, sản 
+phẩm, IMEI, voucher, thanh toán và v ận chuyển. Hai vai trò này có th ể 
+giám sát hoặc phân công đơn cho nhân viên thuộc bộ phận phù hợp. 
+Quản lý thanh 
+toán 
+Hệ thống cho phép theo dõi phương th ức thanh toán, số tiền phải trả, số 
+tiền đã thanh toán, số tiền còn lại, nội dung chuyển khoản và lịch sử giao 
+dịch. 
+Quản lý vận 
+chuyển 
+Admin và Manager theo dõi danh sách v ận đơn, đơn v ị vận chuyển, mã 
+vận đơn, phí giao hàng, ngày giao d ự kiến và toàn b ộ lịch sử trạng thái 
+giao nhận. 
+Quản lý đổi trả 
+Admin và Manager theo dõi toàn bộ yêu cầu đổi trả, phân công Sales hoặc 
+Warehouse xử lý, xem sản phẩm, IMEI, hình ảnh, lý do và kết quả kiểm 
+tra thiết bị. 
+
+===== PDF PAGE 21 =====
+Chương 1. GIỚI THIỆU 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 10 
+ 
+Quản lý hoàn tiền 
+Hệ thống tự động hiển thị toàn bộ số tiền còn phải hoàn và không hỗ trợ 
+hoàn từng phần. Hoàn tiền qua ngân hàng yêu cầu mã giao dịch duy nhất; 
+hoàn tiền mặt được ghi nhận tại cửa hàng. 
+Đối soát hoàn tiền 
+Khi khách hàng báo chưa nhận được tiền, Admin hoặc Manager kiểm tra 
+tài khoản nhận, số tiền, mã giao dịch, người thực hiện và lịch sử trạng thái 
+để xác nhận lại hoặc xử lý khiếu nại. 
+Quản lý bảo hành 
+Admin và Manager theo dõi yêu c ầu bảo hành, IMEI, khách hàng, th ời 
+hạn, tình trạng, nhân viên phụ trách, chi phí dự kiến, chi phí thực tế và kết 
+quả xử lý. 
+Quản lý gói bảo 
+hành 
+Admin và Manager quản lý các gói bảo hành mở rộng, thời hạn, giá bán, 
+mô tả và trạng thái áp dụng. 
+Quản lý nội dung 
+Admin và Manager có quy ền qu ản lý tin t ức, banner, slider, n ội dung 
+khuyến mãi và các khu v ực sản phẩm trên trang ch ủ. Dữ liệu nội dung 
+được hợp nhất trong bảng contents. 
+Quản lý voucher 
+Admin và Manager có thể tạo, chỉnh sửa, kích hoạt hoặc ngừng áp dụng 
+voucher; thiết lập hình thức giảm theo phần trăm hoặc số tiền cố định và 
+khoảng thời gian hiệu lực. 
+Quản lý người 
+dùng 
+Admin có thể xem và chỉnh sửa tài khoản, kích hoạt, tạm khóa hoặc gán 
+vai trò. Hệ thống bảo vệ Admin cuối cùng và không cho Admin tự vô hiệu 
+hóa hoặc tự hạ quyền tài khoản của mình. 
+Quản lý vai trò 
+Admin quản lý việc phân quyền cho các vai trò Admin, Manager, Sales, 
+Warehouse, Warranty, Content, Consultant và Customer. Backend ti ếp 
+tục kiểm tra quyền tại API, không chỉ giới hạn trên giao diện. 
+Giám sát Audit 
+Log 
+Admin theo dõi nhật ký thao tác do hệ thống ghi tự động, bao gồm hành 
+động, bảng hoặc đối tượng liên quan, tài khoản thực hiện và thời gian phát 
+sinh. 
+Quản lý trợ lý AI Admin và Manager theo dõi ho ạt động tư vấn, các phiên chat, s ản phẩm 
+được đề xuất và quá trình chuyển tiếp từ chatbot sang Consultant. 
+Giám sát hệ thống 
+Admin và Manager theo dõi tình tr ạng hoạt động của hệ thống, các l ỗi 
+nghiệp vụ và kết quả xử lý của từng bộ phận trong ph ạm vi quy ền hạn 
+được cấp. 
+
+===== PDF PAGE 24 =====
+Chương 1. GIỚI THIỆU 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 13 
+ 
+12 
+Biên tập nội 
+dung bằng 
+CKEditor 
+Chức năng 
+Người quản lý có thể định dạng mô tả sản phẩm và bài viết 
+bằng tiêu đề, đoạn văn, danh sách, liên k ết, bảng và hình 
+ảnh. Nội dung HTML được làm sạch trước khi hiển thị. 
+13 Quản lý hình 
+ảnh Chức năng 
+Hệ thống cho phép tải ảnh từ máy, lựa chọn ảnh chính và 
+lưu URL trong dữ liệu sản phẩm. Chức năng dọn ảnh chỉ 
+xóa tệp cũ không còn được cơ sở dữ liệu tham chiếu. 
+14 Quản lý giỏ 
+hàng Chức năng 
+Khách hàng có tài khoản và khách vãng lai có thể thêm sản 
+phẩm, cập nhật số lượng, xóa sản phẩm và xem tổng tiền. 
+Biến thể hết hàng không thể thêm vào giỏ. 
+15 Áp dụng 
+voucher Chức năng 
+Hệ thống kiểm tra đúng mã voucher, tr ạng thái kích hoạt, 
+thời gian hiệu lực và giá tr ị giảm trước khi cập nhật tổng 
+tiền của đơn hàng. 
+16 
+Checkout 
+khách vãng 
+lai 
+Chức năng 
+Khách vãng lai đư ợc đ ặt hàng b ằng COD ho ặc chuy ển 
+khoản khi giao n ội thành Thành ph ố Hồ Chí Minh. H ệ 
+thống từ chối yêu c ầu giao ngo ại tỉnh hoặc sử dụng vận 
+chuyển thứ ba. 
+17 
+Checkout 
+khách có tài 
+khoản 
+Chức năng 
+Khách hàng đã đăng nh ập có th ể tạo đơn, ch ọn phương 
+thức thanh toán, đ ịa chỉ nhận hàng và đơn v ị vận chuyển 
+phù hợp. Đơn hàng được lưu vào lịch sử cá nhân. 
+18 Thanh toán 
+VietQR Chức năng Mã VietQR chứa đúng ngân hàng, số tài khoản, số tiền và 
+nội dung CDT{mã đơn} THANH TOAN DON HANG. 
+19 
+Đối soát 
+giao dịch 
+SePay 
+Chức năng 
+Webhook SePay tiếp nhận giao dịch, đối chiếu nội dung và 
+số tiền, cập nhật trạng thái thanh toán theo th ời gian thực 
+và ngăn ghi nhận trùng giao dịch. 
+20 
+Quản lý thời 
+gian giữ 
+hàng 
+Chức năng 
+Đơn chờ thanh toán trực tuyến giữ thiết bị trong thời gian 
+quy định. Khi hết hạn mà chưa thanh toán, hệ thống tự hủy 
+đơn và hoàn IMEI về kho. 
+21 Tra cứu đơn 
+hàng Chức năng 
+Khách vãng lai tra cứu được đơn bằng mã đơn và s ố điện 
+thoại. Khách đăng nh ập chỉ xem được lịch sử và chi ti ết 
+đơn hàng thuộc tài khoản của mình. 
+22 Sales xử lý 
+đơn hàng Chức năng 
+Sales có thể nhận đơn, kiểm tra thanh toán, xác nh ận đơn 
+và bàn giao cho Warehouse. Hệ thống ngăn hai nhân viên 
+nhận cùng một công việc trong một công đoạn. 
+
+===== PDF PAGE 27 =====
+Chương 1. GIỚI THIỆU 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 16 
+ 
+47 An toàn nội 
+dung HTML Bảo mật 
+Nội dung t ạo b ằng CKEditor đư ợc làm s ạch b ằng 
+DOMPurify trư ớc khi hi ển th ị nhằm h ạn ch ế script và 
+thuộc tính HTML không an toàn. 
+48 Audit Log Bảo mật 
+Hệ thống tự động ghi nh ận các thao tác quan tr ọng của 
+quản trị viên và nhân viên, bao gồm hành động, đối tượng, 
+người thực hiện và thời gian. 
+49 Cơ sở dữ 
+liệu tinh gọn Kỹ thuật 
+Hệ thống vận hành với 25 bảng nghiệp vụ. Dữ liệu phù hợp 
+được lưu b ằng JSONB ho ặc tích h ợp vào b ảng chính mà 
+không làm mất các quy trình chức năng. 
+50 Tính nhất 
+quán dữ liệu Kỹ thuật 
+Các thao tác tạo đơn, thanh toán, giữ hàng, xuất giao, hủy 
+đơn, đổi trả và hoàn tiền cập nhật dữ liệu theo đúng trình 
+tự, hạn chế phát sinh trạng thái không đồng nhất. 
+51 Kiểm thử 
+backend Kiểm thử 
+Integration test sử dụng PostgreSQL tạm để kiểm tra phân 
+quyền, đơn hàng, hoàn ti ền, chống giao d ịch trùng, gom 
+dòng máy, dọn ảnh và khôi phục mật khẩu. 
+52 Kiểm thử 
+frontend Kiểm thử Playwright End-to-End kiểm tra các lu ồng checkout, đ ổi 
+trả, CKEditor, dòng máy và khôi phục mật khẩu. 
+53 Khả năng 
+build 
+Phi chức 
+năng 
+Backend và frontend biên dịch thành công; TypeScript và 
+ESLint không có lỗi chặn build. 
+54 Khả năng 
+truy vết 
+Phi chức 
+năng 
+Các thay đ ổi trạng thái quan tr ọng lưu đư ợc người thực 
+hiện, thời gian, ghi chú và đối tượng nghiệp vụ liên quan. 
+55 Khả năng 
+bảo trì 
+Phi chức 
+năng 
+Frontend và backend đư ợc tách bi ệt, API s ử dụng DTO, 
+cấu trúc mã nguồn phân chia theo ch ức năng và cơ s ở dữ 
+liệu được quản lý bằng EF Core Migration. 
+56 
+Khả năng 
+vận hành 
+local 
+Phi chức 
+năng 
+Hệ thống khởi động và trình di ễn được trên môi trư ờng 
+local với PostgreSQL, ASP.NET Core và React; các d ịch 
+vụ email và AI có thể bật hoặc thay đổi bằng cấu hình. 
+
+===== PDF PAGE 38 =====
+Chương 2. PHƯƠNG PHÁP THỰC HIỆN 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 27 
+ 
+2.3.2.2 Quy trình đăng nhập 
+ 
+Hình 2-4: Quy trình đăng nhập 
+Mô tả: Người dùng nh ập tên đăng nh ập hoặc email cùng v ới mật khẩu tại giao 
+diện đăng nh ập. Frontend ki ểm tra các trư ờng b ắt bu ộc r ồi g ửi thông tin đ ến 
+AuthController. Backend tìm tài khoản tương ứng trong cơ sở dữ liệu và kiểm tra trạng 
+thái hoạt động của tài khoản. 
+Mật khẩu được so sánh với giá trị đã mã hóa trong cơ s ở dữ liệu. Nếu thông tin 
+không chính xác ho ặc tài khoản đã bị khóa, hệ thống trả về thông báo đăng nh ập thất 
+bại. Khi xác th ực thành công, backend t ạo JWT ch ứa mã ngư ời dùng và vai trò đư ợc 
+phân quyền. Frontend lưu thông tin phiên đăng nhập và điều hướng người dùng đến giao 
+diện Customer, Staff, Manager hoặc Admin tương ứng. 
+
+
+===== PDF PAGE 40 =====
+Chương 2. PHƯƠNG PHÁP THỰC HIỆN 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 29 
+ 
+và thông tin cơ bản. Nếu không có kết quả, hệ thống thông báo để khách hàng điều chỉnh 
+từ khóa hoặc bộ lọc. 
+2.3.2.5 Quy trình quản lý giỏ hàng và voucher 
+ 
+Hình 2-7: Quy trình quản lý giỏ hàng và voucher 
+Mô tả: Khách hàng lựa chọn biến thể sản phẩm, số lượng và gói bảo hành trước 
+khi thêm vào giỏ hàng. Hệ thống kiểm tra biến thể có tồn tại, đang hoạt động và còn đủ 
+số lượng khả dụng hay không. N ội dung giỏ hàng được lưu trong c ột cartcontent dưới 
+dạng JSONB để giảm bảng trung gian. 
+Khách hàng có thể cập nhật số lượng, thay đổi gói bảo hành hoặc xóa sản phẩm 
+khỏi giỏ hàng. Khi nhập voucher, hệ thống kiểm tra thời hạn, giá trị đơn tối thiểu, giới 
+hạn sử dụng và lịch sử sử dụng của tài khoản hoặc số điện thoại. Voucher hợp lệ được 
+áp dụng để tính số tiền giảm và tổng tiền tạm tính. Voucher không h ợp lệ sẽ bị từ chối 
+kèm theo lý do cụ thể mà không làm mất nội dung giỏ hàng hiện tại. 
+
+
+===== PDF PAGE 52 =====
+Chương 2. PHƯƠNG PHÁP THỰC HIỆN 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 41 
+ 
+2.3.2.23 Quy trình quản lý khách hàng, nhân viên và phân quyền 
+ 
+Hình 2-25: Quy trình quản lý khách hàng, nhân viên và phân quyền 
+Mô tả: Admin truy c ập chức năng qu ản lý ngư ời dùng đ ể xem danh sách tài 
+khoản khách hàng và nhân viên trong hệ thống. Đối với khách hàng, Admin có thể xem 
+thông tin cơ bản, kiểm tra trạng thái hoạt động và khóa hoặc mở khóa tài khoản khi cần 
+thiết. Đối với nhân viên, Admin có thể tạo tài khoản mới, cập nhật thông tin và gán vai 
+trò nghiệp vụ phù hợp. 
+Các vai trò c ủa h ệ thống g ồm Customer, Sales, Warehouse, Warranty, 
+Consultant, Content, Manager và Admin. Trư ớc khi lưu, h ệ thống kiểm tra quyền của 
+người thao tác, tính duy nhất của tên đăng nhập và email, đồng thời kiểm tra vai trò được 
+lựa chọn có h ợp lệ hay không. Khi tài kho ản bị khóa, người dùng không th ể tiếp tục 
+đăng nhập hoặc sử dụng các API yêu cầu xác thực. Mọi thay đổi liên quan đến tài khoản, 
+trạng thái và quyền truy cập đều được ghi vào Audit Log để phục vụ kiểm tra. 
+
+
+===== PDF PAGE 59 =====
+Chương 2. PHƯƠNG PHÁP THỰC HIỆN 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 48 
+ 
+chung cho các vai trò Sales, Warehouse, Warranty, Consultant và Content. M ỗi nhân 
+viên chỉ được truy cập các chức năng phù hợp với vai trò đã được Admin phân công. 
+Nhân viên Sales tiếp nhận đơn hàng từ hàng đợi, nhận hoặc được phân công xử 
+lý, kiểm tra thông tin khách hàng và tr ạng thái thanh toán, xác nh ận đơn r ồi bàn giao 
+sang Warehouse. Sales cũng tiếp nhận yêu cầu đổi trả, kiểm tra điều kiện, hình ảnh minh 
+chứng, thực hiện duyệt hoặc từ chối và theo dõi quá trình hoàn tiền cho khách hàng. 
+Nhân viên Warehouse quản lý thiết bị theo biến thể và IMEI, thực hiện nhập kho, 
+theo dõi trạng thái InStock, Reserved, Sold hoặc Defective, nhận đơn từ Sales, đối chiếu 
+IMEI, đóng gói và xuất giao. Khi tiếp nhận hàng đổi trả, Warehouse kiểm tra thiết bị và 
+quyết định nhập lại kho, chuyển sang bảo hành hoặc đánh dấu hư hỏng. Nhân viên kho 
+đồng thời quản lý vận đơn, cập nhật hành trình giao hàng và xử lý các trường hợp giao 
+thất bại, hoàn kho, hư hỏng hoặc thất lạc. 
+Nhân viên Warranty tra cứu thiết bị theo IMEI, kiểm tra thời hạn và gói bảo hành, 
+tiếp nhận hồ sơ bảo hành kèm hình ảnh, thực hiện kiểm tra, s ửa chữa, chờ linh kiện, 
+hoàn tất và trả thiết bị cho khách hàng. Các thay đổi trạng thái trong quá trình xử lý được 
+lưu vào lịch sử hệ thống. 
+Nhân viên Consultant nhận các phiên chat được chuyển tiếp từ trợ lý AI, trao đổi 
+trực tiếp với khách hàng, h ỗ trợ giải đáp và g ửi nội dung ho ặc liên k ết sản phẩm phù 
+hợp. Giao diện hiện không hiển thị các thẻ sản phẩm lớn trong khung chat. 
+Nhân viên Content quản lý tin tức, banner, nội dung khuyến mãi và các khu vực 
+sản phẩm trên trang ch ủ. Nội dung chi ti ết và mô t ả sản phẩm có th ể được định dạng 
+bằng CKEditor; hình ảnh được lưu tập trung trên máy ch ủ và cơ sở dữ liệu giữ đường 
+dẫn URL. 
+2.3.4.3 Actor Quản trị viên 
+Mô tả Actor: Quản trị viên là người có quyền quản lý cao nh ất trong hệ thống. 
+Actor này chịu trách nhiệm quản lý tài khoản, phân quyền nhân sự, giám sát dữ liệu và 
+theo dõi toàn bộ hoạt động vận hành. Manager có thể sử dụng phần lớn chức năng quản 
+lý và Dashboard, nhưng không có toàn bộ quyền đặc biệt của Admin, đặc biệt là quyền 
+phân quyền và truy cập đầy đủ Audit Log. 
+Admin có thể tạo và quản lý tài khoản nhân viên, khóa hoặc mở khóa tài khoản 
+và gán các vai trò Sales, Warehouse, Warranty, Consultant, Content hoặc Manager. Việc 
+phân quyền được kiểm soát ở cả giao diện frontend và API backend nh ằm ngăn người 
+dùng truy cập chức năng ngoài phạm vi trách nhiệm. 
+
+===== PDF PAGE 63 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 52 
+ 
+Các đ ối tư ợng khai thác h ệ thống g ồm khách hàng, nhân viên, Manager và 
+Admin. Khách hàng bao g ồm cả thành viên và khách vãng lai; nhân viên đư ợc phân 
+thành Sales, Warehouse, Warranty, Consultant và Content. Manager giám sát hoạt động 
+vận hành và Dashboard, trong khi Admin có quyền quản lý cao nhất, bao gồm tài khoản, 
+phân quyền và Audit Log. 
+3.1.1 Module Quản lý tài khoản, xác thực và phân quyền 
+Module chịu trách nhi ệm quản lý vòng đ ời tài kho ản của khách hàng và nhân 
+viên, gồm đăng ký bằng OTP email, đăng nhập, đăng xuất, cập nhật hồ sơ, đổi mật khẩu 
+và đặt lại mật khẩu khi quên. M ật khẩu được mã hóa trư ớc khi lưu, còn OTP có th ời 
+hạn, chỉ được sử dụng một lần và bị giới hạn số lần nhập sai. Sau khi đăng nh ập thành 
+công, backend cấp JWT chứa thông tin định danh và vai trò để kiểm soát quyền truy cập 
+API. 
+Dữ liệu đầu vào gồm tên đăng nh ập, họ tên, email, số điện thoại, mật khẩu, mã 
+OTP và vai trò. Dữ liệu đầu ra gồm JWT, thông tin phiên đăng nh ập, hồ sơ cá nhân và 
+kết quả xác thực. Dữ liệu được quản lý trong các bảng users, customers và roles. Module 
+được sử dụng bởi khách hàng, nhân viên, Manager và Admin. 
+3.1.2 Module Quản lý danh mục, thương hiệu và dòng máy 
+Module quản lý cấu trúc phân loại hàng hóa theo danh mục, thương hiệu và dòng 
+máy. Danh mục dùng để phân nhóm loại sản phẩm, thương hiệu xác định hãng sản xuất, 
+còn dòng máy được lưu bằng trường seriesname thuộc sản phẩm. Cách lưu này giúp duy 
+trì chức năng lọc dòng máy nhưng không cần tạo thêm bảng productseries. 
+Dữ liệu đầu vào g ồm tên danh m ục, tên thương hi ệu, tên dòng máy, mô t ả và 
+thông tin hiển thị. Dữ liệu đầu ra là cấu trúc phân loại phục vụ menu, bộ lọc sản phẩm 
+và form quản trị hàng hóa. Dữ liệu được lưu trong các bảng categories, brands và trường 
+seriesname của bảng products. Module chủ yếu được sử dụng bởi Admin, Manager và 
+nhân viên được phân quyền quản lý sản phẩm. 
+3.1.3 Module Quản lý sản phẩm, biến thể và hình ảnh 
+Module quản lý thông tin chung c ủa điện thoại và các phiên b ản cấu hình được 
+kinh doanh. M ột sản phẩm có th ể gồm nhiều biến thể khác nhau v ề màu sắc, RAM, 
+ROM, tình tr ạng, giá bán và thông s ố kỹ thuật. Mô t ả sản phẩm được biên t ập bằng 
+CKEditor, hỗ trợ định dạng HTML; thông s ố kỹ thuật hỗ trợ nhập và hi ển thị nhiều 
+dòng. 
+
+===== PDF PAGE 66 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 55 
+ 
+Dữ liệu đầu vào gồm đơn hàng, đơn v ị vận chuyển, mã vận đơn, phí giao hàng, 
+trạng thái, ngày giao d ự kiến và ghi chú. D ữ liệu đầu ra g ồm vận đơn, timeline hành 
+trình và thời điểm giao thành công. Dữ liệu được lưu trong bảng shipments, còn lịch sử 
+trạng thái đư ợc lưu trong statuslogs. Trư ờng deliveredat là m ốc để hệ thống tính th ời 
+hạn đổi trả và các nghiệp vụ hậu mãi. 
+3.1.10 Module Quản lý đổi trả, khấu hao và hoàn tiền 
+Module tiếp nhận yêu cầu đổi hoặc trả sản phẩm trong vòng 30 ngày k ể từ thời 
+điểm giao thành công. Khách hàng lựa chọn sản phẩm thuộc đơn của mình, nhập nhóm 
+nguyên nhân, mô tả và tải ảnh minh chứng. Hệ thống kiểm tra điều kiện, lấy giá trị thực 
+tế khách đã thanh toán sau voucher và tính số tiền hoàn dự kiến. 
+Sau khi Sales phê duyệt, Warehouse tiếp nhận thiết bị, đối chiếu IMEI, kiểm tra 
+ngoại hình, h ộp, phụ kiện và trách nhi ệm gây l ỗi. Hệ thống tính kh ấu hao cu ối cùng, 
+giới hạn tổng khấu hao tối đa 30% và gửi kết quả cho khách xác nhận. Nếu khách không 
+đồng ý, Manager có thể yêu cầu kiểm định lại hoặc điều chỉnh số tiền với lý do bắt buộc. 
+Thiết bị được phân loại thành New, Like New 99% hoặc Like New 98% trước khi nhập 
+lại kho. 
+Dữ liệu đầu vào gồm đơn hàng, IMEI, nguyên nhân, hình ảnh, kết quả kiểm định, 
+thông tin tài kho ản nhận tiền và mã giao d ịch hoàn. D ữ liệu đầu ra g ồm tiền hoàn d ự 
+kiến, tiền hoàn được duyệt, mức khấu hao, trạng thái khiếu nại và kết quả hoàn tiền. Dữ 
+liệu đư ợc lưu trong returnrequests, returnitems, orderpayments, inventoryitems và 
+statuslogs; hệ thống không còn bảng refundtransactions. 
+3.1.11 Module Quản lý bảo hành 
+Module quản lý gói bảo hành, thời hạn bảo hành theo IMEI và quá trình tiếp nhận 
+sửa chữa. Nhân viên Warranty tra c ứu IMEI để xác định thiết bị có thuộc đơn hàng đã 
+hoàn thành hay không, đồng thời kiểm tra ngày bắt đầu, ngày kết thúc và trạng thái bảo 
+hành. Thiết bị còn thời hạn được xác định là InWarranty, còn thiết bị hết hạn được tiếp 
+nhận dưới dạng OutOfWarranty và có thể phát sinh chi phí. 
+Dữ liệu đầu vào g ồm IMEI, mô t ả lỗi, hình ảnh, gói b ảo hành, nhân viên ph ụ 
+trách, chi phí dự kiến và kết luận kỹ thuật. Dữ liệu đầu ra gồm trạng thái tiếp nhận, kiểm 
+tra, chờ linh kiện, sửa chữa, hoàn thành ho ặc trả thiết bị. Dữ liệu được lưu trong các 
+bảng warrantyclaims, warrantypackages, inventoryitems và statuslogs. Hệ thống không 
+còn bảng lịch sử bảo hành riêng. 
+
+===== PDF PAGE 67 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 56 
+ 
+3.1.12 Module Quản lý đánh giá sản phẩm 
+Module cho phép khách hàng gửi số sao và nhận xét đối với sản phẩm đã thực sự 
+mua. Trước khi cho phép đánh giá, backend ki ểm tra sản phẩm có thuộc đơn hàng của 
+khách và đơn đã đư ợc giao thành công hay không. Cơ ch ế này ngăn ngư ời chưa mua 
+sản phẩm tạo đánh giá không xác thực. 
+Dữ liệu đầu vào g ồm mã bi ến thể, số sao từ 1 đến 5 và n ội dung nh ận xét. Dữ 
+liệu đầu ra gồm danh sách đánh giá, đánh giá của người dùng hiện tại và mức sao trung 
+bình của sản phẩm. Khách hàng có thể tạo, cập nhật hoặc xóa đánh giá của chính mình. 
+Dữ liệu được quản lý trong b ảng reviews và liên k ết với customers, productvariants, 
+orders và orderitems để xác minh quyền đánh giá. 
+3.1.13 Module Trợ lý AI và hỗ trợ Consultant 
+Module cung cấp trợ lý AI cho khách có tài kho ản và khách vãng lai. Backend 
+kiểm tra câu hỏi có thuộc phạm vi điện thoại hay không, sau đó truy xuất sản phẩm thực 
+tế, giá và thông số kỹ thuật để tạo ngữ cảnh cho mô hình Qwen chạy qua Ollama. Những 
+câu hỏi về đồng hồ, tủ lạnh, loa hoặc sản phẩm ngoài catalog sẽ bị từ chối lịch sự nhằm 
+tránh AI gợi ý sai. 
+Dữ liệu đầu vào gồm nội dung tin nhắn, mã phiên, Guest session token và dữ liệu 
+sản phẩm liên quan. D ữ liệu đầu ra là câu tr ả lời tư v ấn, bảng so sánh và liên k ết sản 
+phẩm; giao di ện không hi ển thị product card l ớn để tránh chiếm diện tích. Khi khách 
+yêu cầu hỗ trợ trực tiếp, phiên chat được đưa vào hàng đợi Consultant. Dữ liệu phiên và 
+tin nhắn được lưu trong chatsessions và chatmessages; thông tin g ợi ý đư ợc lưu dư ới 
+dạng JSON trong tin nhắn thay vì bảng riêng. 
+3.1.14 Module Quản lý nội dung và truyền thông 
+Module quản lý tin tức công nghệ, banner, nội dung khuyến mãi và các khu vực 
+hiển thị trên trang chủ. Nội dung chi tiết được biên tập bằng CKEditor để hỗ trợ tiêu đề, 
+đoạn văn, danh sách, bảng, liên kết và hình ảnh. HTML được làm sạch bằng DOMPurify 
+trước khi hiển thị nhằm hạn chế nội dung không an toàn. 
+Dữ liệu đầu vào gồm loại nội dung, tiêu đề, slug, tóm tắt, nội dung HTML, ảnh 
+đại diện, liên kết, dữ liệu cấu hình và thứ tự hiển thị. File ảnh được lưu tập trung trong 
+thư mục upload, còn cơ sở dữ liệu chỉ lưu URL. Dữ liệu đầu ra là tin tức, banner, chương 
+trình khuyến mãi và c ấu hình trang ch ủ đã xuất bản. Toàn b ộ dữ liệu được hợp nhất 
+trong bảng contents, sử dụng contenttype và contentdata để phân loại thay vì nhiều bảng 
+nội dung riêng. 
+
+===== PDF PAGE 68 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 57 
+ 
+3.1.15 Module Thống kê và Dashboard 
+Module tổng hợp dữ liệu phục vụ theo dõi hoạt động kinh doanh và vận hành cửa 
+hàng. Hệ thống thống kê doanh thu th ực tế, số lượng đơn hàng, tr ạng thái thanh toán, 
+khách hàng, sản phẩm bán ra và tồn kho. Người dùng có thể lựa chọn khoảng thời gian 
+để giới hạn dữ liệu thống kê. 
+Dữ liệu đầu vào gồm thời gian bắt đầu, thời gian kết thúc và các đi ều kiện lọc. 
+Dữ liệu đầu ra gồm KPI tổng quan, biểu đồ doanh thu, cơ cấu trạng thái đơn, sản phẩm 
+bán ch ạy và c ảnh báo t ồn kho. Module ch ủ yếu truy v ấn d ữ liệu t ừ orders, 
+orderpayments, orderitems, products, productvariants, inventoryitems và customers. 
+Chức năng này được sử dụng bởi Manager và Admin. 
+3.1.16 Module Audit Log và giám sát hệ thống 
+Module tự động ghi nh ận các yêu c ầu làm thay đ ổi dữ liệu, gồm phương th ức 
+POST, PUT, PATCH và DELETE. AuditActionFilter thu th ập thông tin ngư ời th ực 
+hiện, hành động, controller, tài nguyên và thời điểm. Dữ liệu được đưa vào hàng đợi để 
+AuditLogService ghi b ất đồng bộ, giúp h ạn chế ảnh hưởng đến tốc độ xử lý yêu c ầu 
+chính. 
+Dữ liệu đầu vào g ồm mã ngư ời dùng, hành đ ộng, bảng hoặc tài nguyên b ị tác 
+động, mã bản ghi và thời gian thực hiện. Dữ liệu đầu ra là danh sách nhật ký có thể tìm 
+kiếm, lọc, thống kê và xu ất báo cáo. D ữ liệu được lưu trong b ảng auditlogs, trong khi 
+thay đổi trạng thái nghiệp vụ chi tiết được lưu trong statuslogs. Ch ỉ Admin được phép 
+xem và quản lý Audit Log. 
+3.2 MÔ HÌNH DỮ LIỆU 
+3.2.1 Mô hình thực thể mối quan hệ (ERD) 
+ 
+
+===== PDF PAGE 69 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 58 
+ 
+ 
+Hình 3-2: Sơ đồ Mô hình thực thể mối quan hệ ERD 
+
+
+===== PDF PAGE 70 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 59 
+ 
+3.2.2 Mô hình logic dữ liệu (sơ đồ lớp) 
+ 
+Hình 3-3: Sơ đồ Mô hình logic dữ liệu 
+auditlogs
+logid
+userid
+action
+tablename
+recordid
+createdat
+brands
+brandid
+brandname
+carts
+cartid
+userid
+createdat
+updatedat
+Cartcontent
+categories
+categoryid
+categoryname
+description
+contents
+contentid
+contenttype
+title
+slug
+summary
+htmlcontent
+thumbnailurl
+linkurl
+contentdata
+displayorder
+isactive
+createdbyuserid
+createdat
+customers
+customerid
+fullname
+phone
+email
+address
+createdat
+chatmessages
+messageid
+sessionid
+sendertype
+messagecontent
+sentat
+quickreplies
+responsetype
+recommendations
+chatsessions
+sessionid
+customerid
+guestsessiontoken
+starttime
+endtime
+status
+assigneduserid
+handoffstatus
+handoffrequestedat
+inventoryitems
+imei
+variantid
+status
+importedat
+warrantystartdate
+warrantyenddate
+warrantystatus
+inventorytransactions
+transactionid
+imei
+orderid
+userid
+transactiontype
+fromstatus
+tostatus
+note
+createdat
+orderitems
+orderitemid
+orderid
+imei
+packageid
+sellingprice
+warrantyprice
+orderpayments
+paymentid
+orderid
+provider
+paymenttype
+amount
+status
+transactionref
+createdat
+paidat
+Returnrequestid
+Transactiontype
+orders
+orderid
+customerid
+userid
+vouchercode
+orderdate
+totalamount
+discountamount
+finalamount
+paymentmethod
+orderstatus
+checkouttype
+paymentstatus
+requiredpayment
+paidamount
+depositpercentage
+shippingname
+shippingphone
+shippingemail
+shippingaddress
+customernote
+cancellationreason
+guesttoken
+paymenttoken
+reservationexpiresat
+Salesconfirmedat
+Salesuserid
+Warehousecompletedat
+Warehouseuserid
+products
+productid
+categoryid
+brandid
+productname
+description
+createdat
+slug
+seriesname
+productvariants
+variantid
+productid
+sku
+baseprice
+saleprice
+condition
+specifications
+Imageurls
+returnitems
+returnitemid
+returnrequestid
+orderitemid
+imei
+condition
+disposition
+replacementimei
+refundamount
+deductionamount
+faultresponsibility
+inspectiongrade
+originalpaidamount
+resalevariantid
+returnrequests
+returnrequestid
+orderid
+customerid
+requestedbyuserid
+assigneduserid
+requesttype
+reason
+description
+status
+imageurls
+reviewnote
+resolution
+requestedrefundamount
+refundamount
+refundstatus
+requestedat
+reviewedat
+receivedat
+completedat
+updatedat
+refundinfo
+approvedrefundamount
+policyversion
+reasoncategory
+refundcalculation
+reviews
+reviewid
+variantid
+customerid
+rating
+comment
+createdat
+roles
+roleid
+rolename
+shipments
+shipmentid
+orderid
+carrier
+trackingcode
+shippingfee
+status
+estimateddeliveryat
+deliveryattempts
+createdbyuserid
+createdat
+updatedat
+pickedupat
+deliveredat
+returnedat
+statuslogs
+logid
+entitytype
+entityid
+fromstatus
+tostatus
+note
+userid
+createdat
+Shipmentid
+actiontype
+metadata
+users
+userid
+roleid
+username
+passwordhash
+fullname
+email
+phone
+createdat
+isactive
+vouchers
+vouchercode
+discountamount
+discountpercentage
+validfrom
+validto
+isactive
+warrantyclaims
+claimid
+imei
+customerid
+assigneduserid
+faultdescription
+status
+coverage
+imageurls
+estimatedcost
+finalcost
+conclusion
+receivedat
+completedat
+createdat
+updatedat
+warrantypackages
+packageid
+packagename
+durationmonths
+price
+
+===== PDF PAGE 71 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 60 
+ 
+3.2.3 Mô tả thực thể 
+Quy ước ký hi ệu: Trong các b ảng mô t ả thực thể, K (Key) cho bi ết thuộc tính 
+tham gia khóa chính hoặc khóa ngoại; U (Unique) cho biết giá trị của thuộc tính không 
+được trùng lặp; M (Mandatory) cho bi ết thuộc tính bắt buộc phải có giá trị, tương ứng 
+với ràng buộc NOT NULL. Ký hi ệu X tại một cột cho biết thuộc tính có áp d ụng ràng 
+buộc tương ứng; ô trống thể hiện ràng buộc không được áp dụng. Loại khóa chính hoặc 
+khóa ngoại cụ thể được trình bày trong cột Diễn giải. 
+3.2.3.1 Thực thể roles 
+Mô tả thực thể roles: Thực thể roles lưu các vai trò đư ợc sử dụng trong cơ chế phân quyền 
+của hệ thống. 
+Thuộc tính Kiểu K U M Diễn giải 
+roleid Int X X X Mã vai trò, khóa chính tự tăng 
+rolename Varchar(50)   X 
+Tên vai trò như Customer, Sales, Warehouse, 
+Warranty, Consultant, Content, Manager 
+hoặc Admin 
+3.2.3.2 Thực thể users 
+Mô tả thực thể users: Thực thể users lưu tài khoản đăng nhập, mật khẩu đã mã hóa, thông tin 
+cá nhân, trạng thái hoạt động và vai trò phân quyền. 
+Thuộc tính Kiểu K U M Diễn giải 
+userid Int X X X Mã người dùng, khóa chính tự tăng 
+roleid Int X   Mã vai trò, khóa ngoại đến roles.roleid 
+username Varchar(50)  X X Tên đăng nhập, không được trùng 
+passwordhash Varchar(255)   X Mật khẩu đã được băm 
+fullname Varchar(100)   X Họ và tên người dùng 
+email Varchar(100)    Địa chỉ email 
+phone Varchar(20)    Số điện thoại 
+createdat DateTime    Thời điểm tạo tài khoản 
+isactive Boolean    Trạng thái hoạt động, mặc định true 
+
+===== PDF PAGE 72 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 61 
+ 
+3.2.3.3 Thực thể auditlogs 
+Mô tả thực thể auditlogs: Thực thể auditlogs lưu vết các thao tác làm thay đ ổi dữ liệu, 
+phục vụ giám sát và truy vết hoạt động trong hệ thống. 
+Thuộc tính Kiểu K U M Diễn giải 
+logid Int X X X Mã nhật ký, khóa chính tự tăng 
+userid Int X   Mã ngư ời th ực hi ện, khóa ngo ại đ ến 
+users.userid 
+action Varchar(100)   X Tên hành động được ghi nhận 
+tablename Varchar(50)    Tên bảng hoặc tài nguyên bị tác động 
+recordid Varchar(50)    Mã bản ghi bị tác động 
+createdat DateTime    Thời điểm ghi nhật ký 
+3.2.3.4 Thực thể customers 
+Mô tả thực thể customers: Thực thể customers lưu hồ sơ người mua, được sử dụng trong các 
+nghiệp vụ đặt hàng, đánh giá, đổi trả, bảo hành và tư vấn. 
+Thuộc tính Kiểu K U M Diễn giải 
+customerid Int X X X Mã khách hàng, khóa chính tự tăng 
+fullname Varchar(100)   X Họ và tên khách hàng 
+phone Varchar(20)  X X Số điện thoại duy nhất của khách hàng 
+email Varchar(100)    Địa chỉ email 
+address Varchar(255)    Địa chỉ nhận hàng mặc định 
+createdat DateTime    Thời điểm tạo hồ sơ 
+3.2.3.5 Thực thể categories 
+Mô tả thực thể categories: Thực thể categories lưu các nhóm phân lo ại sản phẩm của cửa 
+hàng, phục vụ tổ chức danh mục và lọc sản phẩm. 
+Thuộc tính Kiểu K U M Diễn giải 
+categoryid Int X X X Mã danh mục, khóa chính tự tăng 
+categoryname Varchar(100)  X X Tên danh mục, không được trùng 
+description Text    Nội dung mô tả danh mục 
+
+===== PDF PAGE 73 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 62 
+ 
+3.2.3.6 Thực thể brands 
+Mô tả thực thể brands: Thực thể brands lưu thông tin thương hi ệu hoặc hãng sản xuất của 
+sản phẩm được kinh doanh trên hệ thống. 
+Thuộc tính Kiểu K U M Diễn giải 
+brandid Int X X X Mã thương hiệu, khóa chính tự tăng 
+brandname Varchar(100)  X X Tên thương hiệu, không được trùng 
+3.2.3.7 Thực thể products 
+Mô tả thực thể products: Thực thể products lưu thông tin chung của mẫu điện thoại. Các cấu 
+hình và mức giá cụ thể được quản lý trong productvariants. 
+Thuộc tính Kiểu K U M Diễn giải 
+productid Int X X X Mã sản phẩm, khóa chính tự tăng 
+categoryid Int X   Mã danh m ục, khóa ngo ại đ ến 
+categories.categoryid 
+brandid Int X   Mã thương hi ệu, khóa ngo ại đ ến 
+brands.brandid 
+productname Varchar(200)   X Tên sản phẩm 
+slug Varchar(220)  X  Chuỗi định danh dùng trong URL 
+seriesname Varchar(100)    Tên dòng máy hoặc series 
+description Text    Nội dung mô tả HTML của sản phẩm 
+createdat DateTime    Thời điểm tạo sản phẩm 
+3.2.3.8 Thực thể productvariants 
+Mô tả thực thể productvariants: Thực thể productvariants lưu t ừng phiên b ản kinh doanh 
+của sản phẩm, bao gồm SKU, giá bán, tình trạng, thông số kỹ thuật và hình ảnh. 
+Thuộc tính Kiểu K U M Diễn giải 
+variantid Int X X X Mã biến thể, khóa chính tự tăng 
+productid Int X   Mã s ản ph ẩm, khóa ngo ại đ ến 
+products.productid 
+sku Varchar(50)  X  Mã SKU duy nhất của biến thể 
+baseprice Decimal(18,2)   X Giá gốc của biến thể 
+
+===== PDF PAGE 87 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 76 
+ 
+3.3.1.2 Use case Đăng nhập và cấp JWT 
+ 
+Hình 3-5: Use case Đăng nhập và cấp JWT 
+Thành phần Nội dung 
+Tên Use case Đăng nhập và cấp JWT 
+Actor Người dùng 
+Mô tả Người dùng đăng nhập bằng username hoặc email để truy cập các chức 
+năng theo vai trò. 
+Pre-conditions Người dùng đã có tài khoản trong hệ thống. Backend và cơ sở dữ liệu 
+đang hoạt động. 
+Post-conditions JWT được cấp và phiên đăng nh ập được thiết lập. Người dùng đư ợc 
+điều hướng đến giao diện phù hợp. 
+Luồng sự kiện chính 
+1. Người dùng mở trang đăng nhập. 
+2. Nhập username/email và mật khẩu. 
+3. Frontend gửi yêu cầu đăng nhập. 
+4. Hệ thống tìm tài khoản tương ứng. 
+5. Hệ thống kiểm tra mật khẩu và trạng thái tài khoản. 
+6. Backend tạo JWT chứa định danh và vai trò. 
+7. Frontend lưu phiên đăng nhập. 
+8. Người dùng được chuyển đến portal tương ứng. 
+Luồng sự kiện phụ Sai thông tin thì h ệ thống báo đăng nh ập thất bại. Tài kho ản bị khóa 
+hoặc ngừng hoạt động thì không được cấp JWT. 
+
+
+===== PDF PAGE 88 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 77 
+ 
+«Include Use case» 
+Kiểm tra thông tin đăng nhập 
+1. Chuẩn hóa username hoặc email. 
+2. Truy vấn tài khoản. 
+3. So sánh mật khẩu với password hash. 
+«Include Use case» 
+Kiểm tra trạng thái tài khoản 
+1. Đọc trạng thái isactive. 
+2. Từ chối tài khoản đã khóa. 
+3. Cho phép tài khoản đang hoạt động. 
+«Include Use case» 
+Tạo JWT 
+1. Tạo Claims định danh. 
+2. Thêm thông tin vai trò. 
+3. Ký và trả token cho frontend. 
+«Extend Use case» 
+Điều hướng theo vai trò 
+1. Frontend đọc vai trò từ phiên đăng nhập. 
+2. Customer được chuyển đến portal khách hàng. 
+3. Staff, Manager và Admin đư ợc chuyển đến khu v ực quản trị 
+phù hợp. 
+3.3.1.3 Use case Quên và đặt lại mật khẩu 
+ 
+Hình 3-6: Use case Quên và đặt lại mật khẩu 
+
+
+===== PDF PAGE 92 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 81 
+ 
+3.3.1.5 Use case Quản lý giỏ hàng và voucher 
+ 
+Hình 3-8: Use case Quản lý giỏ hàng và voucher 
+Thành phần Nội dung 
+Tên Use case Quản lý giỏ hàng và voucher 
+Actor Khách hàng 
+Mô tả Khách hàng quản lý sản phẩm, số lượng, gói bảo hành và voucher trước 
+khi thanh toán. 
+Pre-conditions Sản phẩm và biến thể đang hoạt động. Giỏ hàng đã được khởi tạo. 
+Post-conditions Nội dung giỏ hàng và tổng tiền tạm tính được cập nhật. 
+Luồng sự kiện chính 
+1. Khách chọn biến thể sản phẩm. 
+2. Chọn số lượng và gói bảo hành. 
+3. Hệ thống kiểm tra tồn kho. 
+4. Sản phẩm được thêm vào giỏ hàng. 
+5. Khách có thể cập nhật hoặc xóa sản phẩm. 
+6. Khách nhập voucher nếu có. 
+7. Hệ thống tính lại tổng tiền. 
+Luồng sự kiện phụ Sản phẩm hết hàng thì không được thêm. Voucher hết hạn hoặc không 
+đủ điều kiện thì bị từ chối nhưng giỏ hàng vẫn được giữ nguyên. 
+«Extend Use case» 
+Thêm sản phẩm 
+1. Khách chọn biến thể. 
+2. Hệ thống kiểm tra tồn. 
+
+
+===== PDF PAGE 123 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 112 
+ 
+3.3.1.23 Use case Quản lý khách hàng, nhân viên và phân quyền 
+ 
+Hình 3-26: Use case Quản lý khách hàng, nhân viên và phân quyền 
+Nội dung Chi tiết 
+Tên Use case Quản lý khách hàng, nhân viên và phân quyền 
+Actor Admin 
+Mô tả Admin xem tài khoản khách hàng, tạo tài khoản nhân viên, gán vai trò 
+và thay đổi trạng thái hoạt động của tài khoản. 
+Pre-conditions Admin đã đăng nhập bằng tài khoản đang hoạt động và có quyền quản 
+trị người dùng. 
+Post-conditions Thông tin tài khoản, vai trò ho ặc trạng thái được cập nhật và ghi vào 
+Audit Log. 
+Luồng sự kiện chính 
+1. Admin mở chức năng quản lý người dùng. 
+2. Hệ thống hiển thị khách hàng, nhân viên và vai trò. 
+3. Admin tìm kiếm hoặc chọn một tài khoản. 
+4. Admin chọn thao tác cần thực hiện. 
+5. Hệ thống hiển thị biểu mẫu hoặc hộp thoại xác nhận. 
+6. Admin nhập thông tin và xác nhận. 
+7. Hệ thống kiểm tra quyền cùng tính hợp lệ của dữ liệu. 
+8. Hệ thống lưu thay đổi. 
+9. Hệ thống ghi Audit Log và thông báo kết quả. 
+
+
+===== PDF PAGE 124 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 113 
+ 
+Luồng sự kiện phụ Nếu Admin không còn quy ền, email ho ặc username b ị trùng, vai trò 
+không hợp lệ hoặc tài khoản không tồn tại, hệ thống từ chối thao tác. 
+«Extend Use case» 
+Xem tài khoản khách hàng 
+1. Admin chọn nhóm Customer. 
+2. Tìm kiếm theo tên, email hoặc số điện thoại. 
+3. Hệ thống hiển thị thông tin và trạng thái. 
+4. Admin có thể mở chi tiết tài khoản. 
+«Extend Use case» 
+Tạo tài khoản nhân viên 
+1. Admin chọn thêm nhân viên. 
+2. Nhập tên, username, email và số điện thoại. 
+3. Chọn vai trò nghiệp vụ. 
+4. Hệ thống kiểm tra dữ liệu duy nhất. 
+5. Hệ thống tạo tài khoản nhân viên. 
+«Extend Use case» 
+Gán vai trò 
+1. Admin chọn tài khoản nhân viên. 
+2. Chọn vai trò mới. 
+3. Hệ thống kiểm tra vai trò tồn tại. 
+4. Admin xác nhận thay đổi. 
+5. Hệ thống cập nhật quyền truy cập. 
+«Extend Use case» 
+Khóa hoặc mở khóa tài khoản 
+1. Admin chọn tài khoản. 
+2. Chọn khóa hoặc mở khóa. 
+3. Hệ thống yêu cầu xác nhận. 
+4. Admin xác nhận thao tác. 
+5. Hệ thống cập nhật isactive. 
+«Include Use case» 
+Kiểm tra quyền Admin 
+1. Backend đọc JWT và vai trò. 
+2. Kiểm tra tài khoản đang hoạt động. 
+3. Cho phép nếu có quyền Admin. 
+4. Trả lỗi 403 nếu không đủ quyền. 
+«Include Use case» Kiểm tra dữ liệu tài khoản 
+
+===== PDF PAGE 139 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 128 
+ 
+3.3.2.21 Sơ đồ tuần tự quản lý danh mục, thương hiệu và sản phẩm 
+ 
+Hình 3-50: Sơ đồ tuần tự quản lý danh mục, thương hiệu và sản phẩm 
+3.3.2.22 Sơ đồ tuần tự quản lý kho và thiết bị 
+ 
+Hình 3-51: Sơ đồ tuần tự quản lý kho và thiết bị 
+
+
+===== PDF PAGE 140 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 129 
+ 
+3.3.2.23 Sơ đồ tuần tự quản lý khách hàng, nhân viên và phân quyền 
+ 
+Hình 3-52: Sơ đồ tuần tự quản lý khách hàng, nhân viên và phân quyền 
+3.3.2.24 Sơ đồ tuần tự quản lý voucher và gói bảo hành 
+ 
+Hình 3-53: Sơ đồ tuần tự quản lý voucher và gói bảo hành 
+
+
+===== PDF PAGE 141 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 130 
+ 
+3.3.2.25 Sơ đồ tuần tự quản lý nội dung 
+ 
+Hình 3-54: Sơ đồ tuần tự quản lý nội dung 
+3.3.2.26 Sơ đồ tuần tự Dashboard và Audit Log 
+ 
+Hình 3-55: Sơ đồ tuần tự Dashboard và Audit Log 
+3.3.3 Sơ đồ hoạt động 
+Sơ đồ hoạt động mô tả trình tự thực hiện, trách nhiệm của từng đối tượng và các 
+điều kiện rẽ nhánh trong những nghiệp vụ chính của hệ thống. Trong sơ đồ, chấm tròn 
+đen biểu thị điểm bắt đầu, vòng tròn kép bi ểu thị điểm kết thúc, hình ch ữ nhật bo góc 
+biểu thị hoạt động và hình thoi biểu thị điều kiện quyết định. 
+
+
+===== PDF PAGE 142 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 131 
+ 
+3.3.3.1 Sơ đồ hoạt động đăng ký và xác thực OTP 
+ 
+Hình 3-56: Sơ đồ hoạt động đăng ký và xác thực OTP 
+3.3.3.2 Sơ đồ hoạt động đăng nhập và cấp JWT 
+ 
+Hình 3-57: Sơ đồ hoạt động đăng nhập và cấp JWT 
+
+
+===== PDF PAGE 143 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 132 
+ 
+3.3.3.3 Sơ đồ hoạt động quên và đặt lại mật khẩu 
+ 
+Hình 3-58: Sơ đồ hoạt động quên và đặt lại mật khẩu 
+3.3.3.4 Sơ đồ hoạt động tìm kiếm và lọc sản phẩm 
+ 
+Hình 3-59: Sơ đồ hoạt động tìm kiếm và lọc sản phẩm 
+
+
+===== PDF PAGE 144 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 133 
+ 
+3.3.3.5 Sơ đồ hoạt động quản lý giỏ hàng và voucher 
+ 
+Hình 3-60 Sơ đồ hoạt động quản lý giỏ hàng và voucher 
+
+
+===== PDF PAGE 154 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 143 
+ 
+3.3.3.21 Sơ đồ hoạt động quản lý danh mục, thương hiệu và sản phẩm 
+ 
+Hình 3-76: Sơ đồ hoạt động quản lý danh mục, thương hiệu và sản phẩm 
+3.3.3.22 Sơ đồ hoạt động quản lý kho và thiết bị 
+ 
+Hình 3-77: Sơ đồ hoạt động quản lý kho thiết bị 
+
+
+===== PDF PAGE 155 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 144 
+ 
+3.3.3.23 Sơ đồ hoạt động quản lý khách hàng, nhân viên và phân quyền 
+ 
+Hình 3-78: Sơ đồ hoạt động quản lý khách hàng, nhân viên và phân quyền 
+3.3.3.24 Sơ đồ hoạt động quản lý voucher và gói bảo hành 
+ 
+Hình 3-79: Sơ đồ hoạt động quản lý voucher và gói bảo hành 
+
+
+===== PDF PAGE 156 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 145 
+ 
+3.3.3.25 Sơ đồ hoạt động quản lý nội dung 
+ 
+Hình 3-80: Sơ đồ hoạt động quản lý nội dung 
+3.3.3.26 Sơ đồ hoạt động Dashboard và Audit Log 
+ 
+Hình 3-81: Sơ đồ hoạt động Dashboard và Audit Log 
+
+
+===== PDF PAGE 157 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 146 
+ 
+3.4 THIẾT KẾ GIAO DIỆN 
+3.4.1 Thiết kế giao diện phía khách hàng 
+3.4.1.1 Giao diện trang chủ  
+ 
+Hình 3-82: Phác thảo Giao diện trang chủ 
+
+
+===== PDF PAGE 158 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 147 
+ 
+3.4.1.2 Giao diện đăng nhập và quên mật khẩu 
+ 
+Hình 3-83: Phác thảo Giao diện đăng nhập và quên mật khẩu 
+3.4.1.3 Giao diện tìm kiếm và lọc sản phẩm  
+ 
+Hình 3-84: Phác thảo Giao diện tìm kiếm và lọc sản phẩm 
+
+
+===== PDF PAGE 159 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 148 
+ 
+3.4.1.4 Giao diện chi tiết sản phẩm  
+ 
+Hình 3-85: Phác thảo Giao diện chi tiết sản phẩm 
+3.4.1.5 Giao diện giỏ hàng  
+ 
+
+
+===== PDF PAGE 160 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 149 
+ 
+Hình 3-86: Phác thảo Giao diện giỏ hàng 
+3.4.1.6 Giao diện đặt hàng và thanh toán 
+ 
+Hình 3-87: Phác thảo Giao diện đặt hàng và thanh toán 
+
+
+===== PDF PAGE 168 =====
+Chương 3. THIẾT KẾ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 157 
+ 
+3.4.2.5 Giao diện quản lý bảo hành 
+ 
+Hình 3-96: Phác thảo Giao diện quản lý bảo hành
+
+
+===== PDF PAGE 169 =====
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 158 
+ 
+Chương 4. THỬ NGHIỆM 
+4.1 MÔI TRƯỜNG VÀ PHƯƠNG PHÁP THỬ NGHIỆM 
+4.1.1 Môi trường thử nghiệm 
+Hệ thống được triển khai và ki ểm thử trong môi trường local trên h ệ điều hành 
+Windows. Backend được xây dựng bằng ASP.NET Core Web API trên n ền tảng .NET 
+8; frontend đư ợc phát tri ển b ằng React, TypeScript và Vite; cơ s ở dữ liệu s ử dụng 
+PostgreSQL. Các kịch bản End-to-End được thực hiện trên trình duyệt Chromium thông 
+qua Playwright. 
+Đối với chức năng tư vấn AI, hệ thống có thể sử dụng Ollama local với mô hình 
+Qwen2.5:3b hoặc API tương thích OpenAI tùy theo c ấu hình môi trư ờng. Khi không 
+cấu hình mô hình ngôn ngữ, hệ thống vẫn có thể hoạt động ở chế độ tư vấn dựa trên dữ 
+liệu catalog. 
+Thành phần Công nghệ/Môi trường 
+Hệ điều hành Windows 
+Backend ASP.NET Core Web API, .NET 8 
+Frontend React 19, TypeScript, Vite 
+Cơ sở dữ liệu PostgreSQL 
+Kiểm thử backend xUnit, Microsoft.AspNetCore.Mvc.Testing 
+Kiểm thử giao diện Playwright 
+Trình duyệt E2E Chromium 
+AI tư vấn Ollama/Qwen2.5:3b hoặc API tương thích OpenAI 
+Triển khai thử nghiệm Môi trường local 
+4.1.2 Phương pháp kiểm thử 
+Việc kiểm thử được thực hiện theo ba nhóm nhằm đánh giá cả tính đúng đắn của 
+nghiệp vụ, API và giao diện người dùng. 
+Thứ nhất, kiểm thử chức năng theo kịch bản nghiệp vụ được thực hiện với 88 test 
+case. Các test case bao quát những luồng chính gồm tài khoản và phân quyền, sản phẩm, 
+
+===== PDF PAGE 170 =====
+Chương 4. THỬ NGHIỆM 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 159 
+ 
+giỏ hàng, voucher, checkout, thanh toán VietQR/SePay, điều phối đơn hàng, kho IMEI, 
+vận chuyển, đổi trả, hoàn tiền, bảo hành, chatbot AI, nội dung, dashboard và audit log. 
+Thứ hai, backend được kiểm thử bằng integration test xUnit. Các test t ập trung 
+vào các quy t ắc nghiệp vụ và bảo mật quan tr ọng như ch ống truy c ập đơn hàng trái 
+quyền, giới hạn đổi trả, chính sách hoàn tiền, trạng thái thanh toán, webhook SePay, bảo 
+mật phiên đăng nhập nhân viên, điều kiện đánh giá sản phẩm và phạm vi truy xuất của 
+chatbot. 
+Thứ ba, giao diện được kiểm thử End-to-End bằng Playwright trên Chromium. 
+Các luồng được kiểm tra bao gồm đăng ký và khôi phục mật khẩu, giỏ hàng, checkout, 
+thanh toán, xử lý đơn hàng, đổi trả và nội dung có định dạng. 
+4.2 KỊCH BẢN KIỂM THỬ CHI TIẾT 
+4.2.1 Tài khoản, xác thực và phân quyền 
+TC ID Kịch bản Dữ liệu/Thao tác Kết quả 
+mong đợi Kết quả thực tế Đánh 
+giá 
+AUTH-01 Đăng ký tài 
+khoản mới 
+Nhập username, 
+email, s ố điện 
+thoại và m ật khẩu 
+hợp l ệ; xác nh ận 
+OTP 
+Tạo tài 
+khoản 
+Customer 
+Tài kho ản và h ồ sơ 
+khách hàng được lưu 
+sau khi OTP hợp lệ 
+Đạt 
+AUTH-02 
+Đăng ký 
+trùng thông 
+tin 
+Dùng username 
+hoặc email đã t ồn 
+tại 
+Không tạo 
+tài khoản 
+trùng 
+Hệ thống báo thông 
+tin đã đư ợc s ử dụng 
+và không ghi thêm dữ 
+liệu 
+Đạt 
+AUTH-03 
+Kiểm tra dữ 
+liệu đăng 
+ký 
+Nhập email, s ố 
+điện tho ại ho ặc 
+mật kh ẩu sai đ ịnh 
+dạng 
+Chặn gửi 
+form 
+Giao diện hiển thị lỗi 
+tại trường tương ứng; 
+backend t ừ chối d ữ 
+liệu không hợp lệ 
+Đạt 
+AUTH-04 Đăng nhập 
+thành công 
+Nhập 
+email/username và 
+mật khẩu đúng 
+Cấp JWT 
+và điều 
+hướng 
+theo vai 
+trò 
+JWT đư ợc tr ả về, 
+AuthContext c ập 
+nhật và ngư ời dùng 
+vào đúng portal 
+Đạt 
+
+===== PDF PAGE 171 =====
+Chương 4. THỬ NGHIỆM 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 160 
+ 
+AUTH-05 Đăng nhập 
+thất bại 
+Sai mật khẩu hoặc 
+tài kho ản có 
+isactive = false 
+Không cấp 
+JWT 
+Backend từ chối đăng 
+nhập và frontend 
+hiển thị thông báo lỗi 
+Đạt 
+AUTH-06 
+Quên và đặt 
+lại mật 
+khẩu 
+Nhập email, OTP 
+và mật khẩu mới 
+Cập nhật 
+mật khẩu; 
+OTP chỉ 
+dùng một 
+lần 
+Mật kh ẩu m ới đăng 
+nhập được; lần dùng 
+lại OTP bị từ chối 
+Đạt 
+AUTH-07 Phân quyền 
+theo vai trò 
+Dùng JWT Sales 
+gọi API ch ỉ dành 
+cho Admin 
+Trả 403 
+Forbidden 
+Backend từ chối truy 
+cập và frontend 
+không hi ển th ị chức 
+năng ngoài quyền 
+Đạt 
+AUTH-08 
+Cô lập dữ 
+liệu khách 
+hàng 
+Customer truy cập 
+đơn và yêu cầu đổi 
+trả của khách khác 
+Không trả 
+dữ liệu 
+Backend trả 403 hoặc 
+404; chủ sở hữu vẫn 
+xem được dữ liệu của 
+mình 
+Đạt 
+4.2.2 Danh mục, thương hiệu, sản phẩm và hình ảnh 
+TC ID Kịch bản Dữ liệu/Thao tác Kết quả 
+mong đợi Kết quả thực tế Đánh 
+giá 
+CAT-01 
+Quản lý 
+danh mục và 
+thương hiệu 
+Thêm, s ửa và xóa 
+dữ liệu không b ị 
+ràng buộc 
+Dữ liệu 
+được cập 
+nhật chính 
+xác 
+Danh sách đư ợc t ải 
+lại và hiển thị dữ liệu 
+mới sau thao tác 
+Đạt 
+CAT-02 
+Thêm sản 
+phẩm và 
+biến thể 
+Nhập tên, thương 
+hiệu, series, giá, 
+SKU, c ấu hình và 
+tồn ban đầu 
+Tạo sản 
+phẩm cùng 
+biến thể 
+Dữ liệu được lưu vào 
+products, 
+productvariants và 
+tồn kho tương ứng 
+Đạt 
+CAT-03 
+Định dạng 
+mô tả bằng 
+CKEditor 
+Nhập tiêu đ ề, danh 
+sách, b ảng, liên k ết 
+và ảnh 
+Lưu và 
+hiển thị 
+đúng 
+HTML 
+CKEditor t ải thành 
+công; đ ịnh d ạng 
+được lưu và hi ển thị 
+qua DOMPurify 
+Đạt 
+
+===== PDF PAGE 172 =====
+Chương 4. THỬ NGHIỆM 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 161 
+ 
+CAT-04 Sửa thông tin 
+sản phẩm 
+Thay đổi giá, mô tả, 
+thông số và hình ảnh 
+Cập nhật 
+đúng dữ 
+liệu 
+Trang chi ti ết hi ển 
+thị dữ liệu m ới sau 
+khi lưu 
+Đạt 
+CAT-05 
+Lọc dòng 
+máy theo 
+thương hiệu 
+Chọn m ột thương 
+hiệu trong form s ản 
+phẩm 
+Chỉ hiển 
+thị series 
+phù hợp 
+API nhóm sản phẩm 
+theo nhãn series và 
+dropdown l ọc đúng 
+thương hiệu 
+Đạt 
+CAT-06 Lưu nhiều 
+ảnh biến thể 
+Upload nhi ều ảnh 
+và chọn ảnh chính 
+Lưu danh 
+sách URL 
+theo đúng 
+thứ tự 
+imageurls lưu d ạng 
+JSONB; ảnh chính 
+được đưa lên đầu 
+Đạt 
+CAT-07 
+Dọn ảnh 
+không còn sử 
+dụng 
+Chuẩn b ị một ảnh 
+đang đư ợc tham 
+chiếu và m ột ảnh 
+thừa 
+Chỉ xóa 
+ảnh thừa 
+Ảnh đang đư ợc 
+database s ử dụng 
+được gi ữ lại; ảnh 
+thừa bị xóa 
+Đạt 
+4.2.3 Tìm kiếm, xem sản phẩm và đánh giá 
+TC ID Kịch bản Dữ liệu/Thao tác Kết quả 
+mong đợi Kết quả thực tế Đánh 
+giá 
+SEARCH-01 Tìm kiếm 
+theo tên 
+Nhập t ừ khóa có 
+trong tên sản phẩm 
+Trả các sản 
+phẩm phù 
+hợp 
+Danh sách ch ứa 
+đúng sản phẩm và 
+liên kết slug 
+Đạt 
+SEARCH-02 Lọc kết 
+hợp 
+Chọn thương hi ệu, 
+series, kho ảng giá 
+và đánh giá 
+Kết hợp tất 
+cả điều kiện 
+Danh sách chỉ còn 
+các sản phẩm thỏa 
+điều kiện đã chọn 
+Đạt 
+SEARCH-03 Không có 
+kết quả 
+Nhập t ừ khóa 
+không tồn tại 
+Hiển thị 
+trạng thái 
+danh sách 
+trống 
+Giao di ện thông 
+báo không tìm 
+thấy s ản ph ẩm, 
+không phát sinh 
+lỗi API 
+Đạt 
+
+===== PDF PAGE 180 =====
+Chương 4. THỬ NGHIỆM 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 169 
+ 
+ngày h ết h ạn và 
+trạng thái thiết bị 
+WARRANTY-02 Tạo phiếu 
+bảo hành 
+IMEI h ợp l ệ và 
+mô tả lỗi 
+Tạo 
+warranty-
+claims 
+Phiếu đư ợc lưu 
+cùng khách 
+hàng, IMEI và 
+hình ảnh 
+Đạt 
+WARRANTY-03 IMEI chưa 
+bán 
+Dùng IMEI còn 
+InStock 
+Không 
+kích hoạt 
+bảo hành 
+Hệ thống từ chối 
+vì thi ết b ị chưa 
+được bán 
+Đạt 
+WARRANTY-04 
+Cập nhật 
+quá trình 
+sửa chữa 
+Chuyển qua các 
+trạng thái kiểm tra 
+và sửa chữa 
+Lưu đầy 
+đủ tiến 
+trình 
+Trạng thái, 
+người phụ trách, 
+chi phí và k ết 
+luận đư ợc c ập 
+nhật 
+Đạt 
+WARRANTY-05 Hoàn tất 
+bảo hành 
+Phiếu đang x ử lý 
+và thi ết b ị đã s ửa 
+xong 
+Chuyển 
+Completed 
+Hệ thống lưu 
+thời đi ểm hoàn 
+tất và k ết lu ận 
+cuối cùng 
+Đạt 
+4.2.11 Chat AI và Consultant 
+TC ID Kịch bản Dữ liệu/Thao tác Kết quả 
+mong đợi Kết quả thực tế Đánh 
+giá 
+AI-01 
+Tư vấn 
+đúng phạm 
+vi 
+“Điện tho ại ch ụp 
+ảnh đ ẹp dư ới 15 
+triệu” 
+Truy xuất 
+điện thoại 
+phù hợp 
+Hệ thống trả sản phẩm 
+điện thoại theo nhu cầu 
+và ngân sách 
+Đạt 
+AI-02 So sánh 
+điện thoại 
+Yêu c ầu so sánh 
+hai ho ặc nhi ều 
+mẫu máy 
+Trả bảng so 
+sánh và liên 
+kết 
+Giao di ện hi ển th ị nội 
+dung so sánh, không 
+hiển thị card lớn 
+Đạt 
+AI-03 
+Hỏi sản 
+phẩm ngoài 
+danh mục 
+Hỏi đ ồng h ồ, loa 
+hoặc tủ lạnh 
+Không gợi ý 
+điện thoại sai 
+ngữ cảnh 
+Bộ lọc phạm vi trả danh 
+sách đ ề xuất r ỗng và 
+hướng dẫn hỏi lại 
+Đạt 
+
+===== PDF PAGE 181 =====
+Chương 4. THỬ NGHIỆM 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 170 
+ 
+AI-04 Câu hỏi 
+đánh lừa 
+“Tủ lạnh pin trâu”, 
+“loa chơi game 
+mượt” 
+Không bị từ 
+khóa thuộc 
+tính đánh lừa 
+Hệ thống nhận diện sai 
+đối tư ợng và không 
+truy xuất điện thoại 
+Đạt 
+AI-05 Chuyển 
+Consultant 
+Khách ch ọn g ặp 
+tư vấn viên 
+Đưa phiên 
+vào hàng đợi 
+handoffstatus được cập 
+nhật và Consultant nhìn 
+thấy phiên 
+Đạt 
+AI-06 Xem lịch sử 
+chat 
+Mở lại phiên đã tư 
+vấn 
+Hiển thị toàn 
+bộ tin nhắn 
+Tin nhắn của khách, AI 
+và Consultant đư ợc tải 
+đúng thứ tự 
+Đạt 
+4.2.12 Nội dung, Dashboard, Audit Log và email 
+TC ID Kịch bản Dữ liệu/Thao tác 
+Kết quả 
+mong 
+đợi 
+Kết quả thực tế Đánh 
+giá 
+CONTENT-01 
+Tạo tin tức 
+bằng 
+CKEditor 
+Nhập tiêu đ ề, n ội 
+dung và ảnh 
+Lưu nội 
+dung 
+HTML 
+Tin t ức đư ợc lưu 
+trong contents và 
+hiển th ị đúng đ ịnh 
+dạng 
+Đạt 
+CONTENT-02 
+Quản lý 
+banner và 
+khuyến mãi 
+Thêm ảnh, liên kết, 
+thứ tự và trạng thái 
+Hiển thị 
+đúng 
+trên 
+website 
+Nội dung được lưu 
+theo contenttype và 
+tải đúng vị trí 
+Đạt 
+CONTENT-03 Phân quyền 
+nội dung 
+Sales ho ặc 
+Warehouse g ọi 
+API Content 
+Từ chối 
+truy cập 
+Backend tr ả 403 
+Forbidden; menu 
+nội dung không 
+hiển thị 
+Đạt 
+DASH-01 Tải 
+Dashboard 
+Admin ho ặc 
+Manager ch ọn 
+khoảng thời gian 
+Trả số 
+liệu 
+doanh 
+thu và 
+đơn hàng 
+Dashboard hiển thị 
+tổng tiền, trạng thái 
+đơn và tồn kho 
+Đạt 
+
+===== PDF PAGE 182 =====
+Chương 4. THỬ NGHIỆM 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 171 
+ 
+AUDIT-01 Ghi nhật ký 
+tự động 
+Thực hi ện POST, 
+PUT, PATCH hoặc 
+DELETE 
+Tạo bản 
+ghi audit 
+AuditActionFilter 
+đưa d ữ liệu vào 
+hàng đ ợi và lưu 
+auditlogs 
+Đạt 
+AUDIT-02 Xem và lọc 
+Audit Log 
+Chọn ngư ời dùng, 
+hành đ ộng và th ời 
+gian 
+Trả đúng 
+nhật ký 
+Danh sách đư ợc 
+lọc theo đi ều ki ện 
+và phân trang 
+Đạt 
+AUDIT-03 Xuất Audit 
+Log 
+Admin ch ọn xu ất 
+Excel 
+Tải tệp 
+.xlsx 
+Hệ thống sinh và 
+tải file nhật ký theo 
+bộ lọc 
+Đạt 
+4.3 KẾT QUẢ THỬ NGHIỆM CÁC KỊCH BẢN 
+Nhóm kiểm tra Số test case trong bảng Kết quả 
+Tài khoản, xác thực và phân quyền 8 Đạt 
+Danh mục, sản phẩm và hình ảnh 7 Đạt 
+Tìm kiếm và đánh giá 5 Đạt 
+Giỏ hàng và voucher 6 Đạt 
+Checkout và thanh toán 10 Đạt 
+Sales và xử lý đơn 7 Đạt 
+Warehouse, IMEI và vận chuyển 6 Đạt 
+Đổi trả và khấu hao 13 Đạt 
+Hoàn tiền và đối soát 8 Đạt 
+Bảo hành 5 Đạt 
+Chat AI và Consultant 6 Đạt 
+Nội dung, Dashboard và Audit Log 7 Đạt 
+Tổng cộng 88 Đạt 
+
+===== PDF PAGE 183 =====
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 172 
+ 
+Chương 5. KẾT LUẬN 
+5.1 KẾT QUẢ ĐỐI CHIẾU VỚI MỤC TIÊU 
+Sau quá trình nghiên cứu, thiết kế, cài đặt và thử nghiệm hệ thống website quản 
+lý bán điện thoại di động tích hợp trợ lý ảo AI và quản lý IMEI, kết quả đối chiếu giữa 
+mục tiêu đề tài ban đầu và sản phẩm hoàn thiện được tổng hợp trong bảng dưới đây: 
+Kết quả cần đạt Tiêu chí đánh giá Kết quả 
+Quản lý tài khoản 
+& Phân quyền 
+Người dùng có th ể đăng ký, đăng nh ập dễ dàng; cập nhật 
+thông tin cá nhân và thay đổi mật khẩu. Đạt 
+Hệ thống hỗ trợ lấy lại mật khẩu an toàn qua email xác thực 
+mã OTP. Phân quy ền ch ặt ch ẽ các vai trò Admin, Sales, 
+Warehouse, Consultant. 
+Đạt 
+Tìm kiếm & Lọc 
+sản phẩm 
+Khách hàng tìm kiếm sản phẩm nhanh chóng theo t ừ khóa, 
+lọc chính xác theo các thông số cấu hình biên (RAM, bộ nhớ 
+ROM, màu sắc, tình trạng máy). 
+Đạt 
+Giao diện catalog thân thi ện, sắp xếp sản phẩm trực quan, 
+dễ thao tác. Đạt 
+Đặt hàng & Giữ 
+kho 
+Khách hàng th ực hiện đặt hàng thành công, ch ọn gói b ảo 
+hành mở rộng và áp dụng mã giảm giá Voucher. Đạt 
+Tích h ợp tính năng gi ữ máy t ạm th ời trong 15 phút 
+(Reserved IMEI) đ ối v ới các đơn hàng ch ọn thanh toán 
+chuyển khoản VietQR để tránh tranh chấp tồn kho. 
+Đạt 
+Tự động hóa thanh 
+toán 
+Tích hợp thành công mã QR đ ộng ngân hàng (VietQR) và 
+cơ chế tự động khớp lệnh thanh toán qua Webhook Sepay 
+để tự động duyệt đơn hàng. 
+Đạt 
+Tư vấn tự động 
+bằng AI 
+Xây dựng trợ lý AI tư v ấn cấu hình điện thoại dựa trên dữ 
+liệu catalog và tồn kho được backend truy xuất; hệ thống có 
+thể hoạt động với Ollama local, API tương thích OpenAI 
+hoặc chế độ tư vấn theo catalog. 
+Đạt 
+Vận hành & Phối 
+hợp đơn hàng 
+Hệ thống hỗ trợ quy trình hậu mãi gồm kích hoạt bảo hành 
+điện tử theo IMEI, tạo yêu cầu đổi trả trong vòng 30 ngày kể Đạt 
+
+===== PDF PAGE 184 =====
+Chương 5. KẾT LUẬN 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 173 
+ 
+từ thời điểm giao hàng thành công và quản lý hoàn tiền theo 
+chính sách đã thiết lập. 
+Hỗ trợ quy trình hậu mãi toàn diện: Kích hoạt bảo hành điện 
+tử theo IMEI, gửi yêu cầu đổi trả hàng lỗi trong 7 ngày và 
+quản lý hoàn tiền tự động. 
+Đạt 
+Bình luận, đánh giá 
+Khách hàng có thể viết bình luận, đánh giá số sao trực tiếp 
+gắn với từng biến thể sản phẩm cụ thể thuộc đơn hàng đã 
+hoàn tất mua. 
+Đạt 
+Quản trị hệ thống 
+Admin quản trị cấu hình động banner trang ch ủ, thêm m ới 
+sản phẩm, quản lý mã Voucher, xem nh ật ký giám sát ho ạt 
+động hệ thống (Audit Logs). 
+Đạt 
+Hiệu năng chịu tải 
+Hệ thống hoạt động trơn tru khi chạy đồng thời nhiều tác vụ 
+mua hàng, thanh toán và xử lý đơn. Tuy nhiên, tốc độ phản 
+hồi của AI Chatbot có dấu hiệu trễ khi có quá nhiều lượt truy 
+vấn cùng lúc trên thiết bị phần cứng thông thường. 
+Chưa 
+hoàn 
+thiện 
+5.2 CÁC VẤN ĐỀ CÒN TỒN ĐỌNG 
+Mặc dù hệ thống đã hoàn thành hầu hết các mục tiêu nghiệp vụ quan trọng đề ra, 
+vẫn còn một số vấn đề hạn chế kỹ thuật cần được khắc phục: 
+Thời gian phản hồi của trợ lý AI chạy local phụ thuộc vào mô hình được sử dụng, 
+cấu hình phần cứng của máy chủ và số lượng yêu cầu đồng thời. Đề tài hiện tập trung 
+kiểm thử tính đúng đắn của luồng tư vấn và chưa thực hiện benchmark chịu tải chuyên 
+sâu cho chatbot trong môi trường production. 
+Hình ảnh sản phẩm, bảo hành và đổi trả hiện được lưu tại thư mục uploads của 
+backend; cơ s ở dữ liệu chỉ lưu URL ho ặc đường dẫn tham chi ếu. Hệ thống chưa tích 
+hợp object storage hoặc CDN, vì vậy tốc độ tải ảnh vẫn có thể phụ thuộc vào băng thông 
+và cấu hình máy chủ khi triển khai thực tế. 
+5.3 HƯỚNG PHÁT TRIỂN VÀ MỞ RỘNG 
+Để nâng cao hiệu năng và mở rộng dịch vụ thương mại cho hệ thống website, các 
+hướng phát triển tiếp theo của đề tài bao gồm: 
+Tối ưu h ạ tầng AI: tri ển khai mô hình AI trên máy ch ủ có tài nguyên phù h ợp 
+hoặc tích hợp API mô hình ngôn ngữ bên ngoài để cải thiện thời gian phản hồi, khả năng 
+mở rộng và tính ổn định khi lượng yêu cầu tăng lên. 
+
+===== PDF PAGE 185 =====
+Chương 5. KẾT LUẬN 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 174 
+ 
+Xây dựng ứng dụng di động (Mobile App): Phát triển ứng dụng trên điện thoại 
+di đ ộng ch ạy iOS và Android (s ử dụng Flutter ho ặc React Native) đ ể nâng cao tr ải 
+nghiệm mua sắm, đồng bộ giỏ hàng và gửi thông báo nhắc nhở thời hạn bảo hành điện 
+tử (Push Notifications) trực tiếp cho khách hàng. 
+Tích hợp thêm cổng thanh toán: Mở rộng tích hợp thêm các cổng thanh toán trực 
+tuyến ph ổ biến t ại Vi ệt Nam như Ví đi ện t ử MoMo, ZaloPay, ShopeePay và c ổng 
+VNPAY. 
+Tích hợp đăng ký, đăng nh ập bằng tài kho ản Google đ ể tối ưu s ự tiện lợi cho 
+khách hàng. Kèm theo đó là tích h ợp bản đồ vào trang web đ ể khách hàng có th ể tìm 
+kiếm vị trí cửa hàng dễ dàng hơn. 
+ 
+ 
+ 
+  
+
+===== PDF PAGE 186 =====
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 175 
+ 
+HƯỚNG DẪN SỬ DỤNG HỆ THỐNG 
+A.1 Hướng dẫn đặt hàng và thanh toán bằng VietQR 
+A.1.1 Điều kiện thực hiện 
+Người dùng truy cập được website và sản phẩm cần mua còn thiết bị trong kho. 
+Khách hàng có th ể đăng nhập tài khoản hoặc tiếp tục mua với tư cách khách vãng lai. 
+Đối với khách vãng lai, địa chỉ nhận hàng phải thuộc nội thành Thành phố Hồ Chí Minh 
+và đơn hàng được cửa hàng trực tiếp giao. 
+A.1.2 Các bước thực hiện 
+Bước 1: Tìm kiếm và lựa chọn sản phẩm 
+Người dùng nhập tên điện thoại vào thanh tìm kiếm hoặc lựa chọn sản phẩm theo 
+thương hiệu và dòng máy. Sau khi m ở trang chi tiết, người dùng xem hình ảnh, mô tả, 
+thông số kỹ thuật, giá bán và đánh giá của sản phẩm. 
+
+===== PDF PAGE 187 =====
+ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 176 
+ 
+ 
+Hình PL-1: Giao diện tìm kiếm và xem chi tiết sản phẩm 
+Bước 2: Lựa chọn biến thể 
+Người dùng lựa chọn màu sắc, RAM, bộ nhớ, tình trạng máy và các thu ộc tính 
+cấu hình cần thiết. Hệ thống chỉ cho phép chọn những biến thể còn thiết bị trong kho. 
+Sau khi hoàn tất, người dùng nhấn nút Thêm vào giỏ hàng. 
+
+
+===== PDF PAGE 194 =====
+ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 183 
+ 
+A.2.2 Khách vãng lai 
+Khách vãng lai mở trang Tra cứu đơn hàng, nhập mã đơn và số điện thoại đã sử 
+dụng khi checkout. Nếu thông tin khớp, hệ thống hiển thị chi tiết và tiến trình giao nhận. 
+Khách vãng lai không thể sử dụng mã đơn để xem đơn hàng có số điện thoại khác. 
+A.2.3 Kết quả 
+Người dùng theo dõi đư ợc trạng thái hiện tại và timeline vận chuyển mà không 
+phải liên hệ trực tiếp với cửa hàng. Những thông tin nội bộ hoặc dữ liệu của khách hàng 
+khác không được hiển thị. 
+
+===== PDF PAGE 195 =====
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 184 
+ 
+TÀI LIỆU THAM KHẢO 
+[1] Microsoft. (2023).  ASP.NET Core Web API documentation and architecture . 
+Microsoft Learn. https://learn.microsoft.com/vi-vn/aspnet/core/web-api/ 
+[2] React Core Team. (2024).  React Documentation - Getting Started with React 19 . 
+React.dev. https://react.dev/ 
+[3] PostgreSQL Global Development Group. (2023). PostgreSQL 16.0 Database System 
+Documentation. PostgreSQL. https://www.postgresql.org/docs/16/index.html 
+[4] Redis. (n.d.). Redis Caching and Developer Guide. Redis.io. https://redis.io/docs/ 
+[5] Ollama Team. (2024).  Ollama API Integration and Modelfile Customization . 
+GitHub. https://github.com/ollama/ollama/tree/main/docs 
+[6] Lewis, P., et al. (2020).  Retrieval-Augmented Generation for Knowledge -Intensive 
+NLP Tasks. ArXiv. https://arxiv.org/abs/2005.11401 
+[7] Sepay. (2024).  Tài liệu tích h ợp API và C ổng thanh toán ngân hàng t ự động qua 
+Webhook. Sepay. https://docs.sepay.vn/ 
+[8] NAPAS. (n.d.).  Hướng d ẫn tiêu chu ẩn hóa mã thanh toán VietQR đ ộng. 
+VietQR. https://vietqr.net/ 
+[9] Microsoft. (2023).  Entity Framework Core - ORM for Modern .NET Applications . 
+Microsoft Learn. https://learn.microsoft.com/vi-vn/ef/core/ 
+[10] Hướng nội. (2024, September 12).  ReactJS là gì? Thư vi ện Javascript tối ưu cho 
+giao diện Web. 200Lab Blog. https://200lab.io/blog/reactjs-la-gi 
+[11] Vite Team. (2024).  Vite - Next Generation Frontend Tooling . 
+Vite.dev. https://vite.dev/ 
+[12] Alibaba Group. (2024).  Qwen2.5: A Powerful Open -source LLM Framework . 
+GitHub. https://github.com/QwenLM/Qwen2.5 
+[13] SonPixel. (n.d.). Điện thoại Google Pixel chính hãng. https://sonpixel.vn/ 
+[14] MobileCity. (n.d.). Cửa hàng điện thoại uy tín. https://mobilecity.vn/ 
+[15] Jones, M., Bradley, J., & Sakimura, N. (2015). JSON Web Token (JWT). RFC 
+7519. https://www.rfc-editor.org/rfc/rfc7519 
+
+===== PDF PAGE 196 =====
+ 
+ Đề tài: PHÁT TRIỂN HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ THÔNG MINH 
+CHO KINH DOANH ĐIỆN THOẠI 185 
+ 
+[16] OWASP Foundation. (n.d.). Password Storage Cheat Sheet. 
+https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html 
+[17] Axios. (n.d.). Axios Documentation. https://axios-http.com/docs/intro 
+[18] Tailwind Labs. (n.d.). Tailwind CSS Documentation. https://tailwindcss.com/docs 
+[19] CKSource. (n.d.). CKEditor 5 Documentation. 
+https://ckeditor.com/docs/ckeditor5/latest/ 
+[20] Cure53. (n.d.). DOMPurify: HTML Sanitizer. 
+https://github.com/cure53/DOMPurify 
+[21] Microsoft. (n.d.). Playwright Documentation. https://playwright.dev/docs/intro 

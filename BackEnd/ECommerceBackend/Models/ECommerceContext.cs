@@ -45,6 +45,8 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Review> Reviews { get; set; }
 
+    public virtual DbSet<Refreshtoken> Refreshtokens { get; set; }
+
     public virtual DbSet<Returnrequest> Returnrequests { get; set; }
 
     public virtual DbSet<Returnitem> Returnitems { get; set; }
@@ -189,6 +191,13 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Handoffrequestedat)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("handoffrequestedat");
+            entity.Property(e => e.Resolutioncode)
+                .HasMaxLength(40)
+                .HasColumnName("resolutioncode");
+            entity.Property(e => e.Resolvedat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("resolvedat");
+            entity.Property(e => e.Resolvedbyuserid).HasColumnName("resolvedbyuserid");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.Chatsessions)
                 .HasForeignKey(d => d.Customerid)
@@ -203,7 +212,12 @@ public partial class ECommerceContext : DbContext
 
             entity.HasIndex(e => e.Phone, "customers_phone_key").IsUnique();
 
+            entity.HasIndex(e => e.Publicid, "customers_publicid_key").IsUnique();
+
             entity.Property(e => e.Customerid).HasColumnName("customerid");
+            entity.Property(e => e.Publicid)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasColumnName("publicid");
             entity.Property(e => e.Address)
                 .HasMaxLength(255)
                 .HasColumnName("address");
@@ -907,6 +921,7 @@ public partial class ECommerceContext : DbContext
                 .HasMaxLength(20)
                 .HasColumnName("phone");
             entity.Property(e => e.Roleid).HasColumnName("roleid");
+            entity.Property(e => e.Createdbyuserid).HasColumnName("createdbyuserid");
             entity.Property(e => e.Username)
                 .HasMaxLength(50)
                 .HasColumnName("username");
@@ -914,6 +929,29 @@ public partial class ECommerceContext : DbContext
             entity.HasOne(d => d.Role).WithMany(p => p.Users)
                 .HasForeignKey(d => d.Roleid)
                 .HasConstraintName("fk_users_roles");
+
+            entity.HasOne(d => d.Createdbyuser).WithMany(p => p.Createdusers)
+                .HasForeignKey(d => d.Createdbyuserid)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_users_createdby");
+        });
+
+        modelBuilder.Entity<Refreshtoken>(entity =>
+        {
+            entity.HasKey(e => e.Refreshtokenid).HasName("refreshtokens_pkey");
+            entity.ToTable("refreshtokens");
+            entity.HasIndex(e => e.Tokenhash, "refreshtokens_tokenhash_key").IsUnique();
+            entity.HasIndex(e => new { e.Userid, e.Sessionid }, "ix_refreshtokens_user_session");
+            entity.Property(e => e.Refreshtokenid).HasColumnName("refreshtokenid");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+            entity.Property(e => e.Tokenhash).HasMaxLength(64).HasColumnName("tokenhash");
+            entity.Property(e => e.Sessionid).HasMaxLength(32).HasColumnName("sessionid");
+            entity.Property(e => e.Createdat).HasColumnType("timestamp without time zone").HasColumnName("createdat");
+            entity.Property(e => e.Expiresat).HasColumnType("timestamp without time zone").HasColumnName("expiresat");
+            entity.Property(e => e.Revokedat).HasColumnType("timestamp without time zone").HasColumnName("revokedat");
+            entity.HasOne(e => e.User).WithMany(e => e.Refreshtokens)
+                .HasForeignKey(e => e.Userid).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_refreshtokens_users");
         });
 
         modelBuilder.Entity<Voucher>(entity =>

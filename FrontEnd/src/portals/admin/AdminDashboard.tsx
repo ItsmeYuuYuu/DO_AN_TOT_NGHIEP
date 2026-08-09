@@ -246,10 +246,10 @@ const AdminDashboard: React.FC = () => {
     setTodayLoading(true);
     setTodayError(null);
     try {
-      const response = await dashboardApi.getTodayResults();
+      const response = await dashboardApi.getTodayResults('30d');
       setTodayResults(response.data);
     } catch {
-      setTodayError('Không tải được kết quả bán hàng hôm nay.');
+      setTodayError('Không tải được kết quả vận hành trong 30 ngày.');
     } finally {
       setTodayLoading(false);
     }
@@ -387,16 +387,16 @@ const AdminDashboard: React.FC = () => {
 
       <div className="admin-intro-stats grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Doanh thu hôm nay"
+          title="Doanh thu 30 ngày"
           value={todayResults ? formatCurrency(todayResults.netRevenueToday) : '0đ'}
-          hint="so với hôm qua"
+          hint="so với 30 ngày liền trước"
           trend={todayResults?.changeVsYesterdayPercentage}
           icon={<DollarSign size={24} />}
           tone="bg-red-50 text-[#e30613]"
           loading={todayLoading}
         />
         <StatCard
-          title="Đơn hoàn tất"
+          title="Đơn hoàn tất (30 ngày)"
           value={todayResults ? `${todayResults.invoicesToday} đơn` : '0 đơn'}
           hint={todayResults && todayResults.invoicesToday > 0 ? `AOV ${formatCurrency(todayResults.netRevenueToday / todayResults.invoicesToday)}` : 'Chưa có đơn hoàn tất'}
           icon={<FileText size={24} />}
@@ -404,7 +404,7 @@ const AdminDashboard: React.FC = () => {
           loading={todayLoading}
         />
         <StatCard
-          title="Hủy / trả hôm nay"
+          title="Hủy / trả (30 ngày)"
           value={todayResults ? `${todayResults.returnsToday} đơn` : '0 đơn'}
           hint="cần theo dõi nguyên nhân"
           icon={<XOctagon size={24} />}
@@ -421,7 +421,7 @@ const AdminDashboard: React.FC = () => {
         />
       </div>
 
-      <div id="phan-tich" className="admin-intro-analytics grid scroll-mt-32 gap-6 lg:grid-cols-4">
+      <div className="admin-intro-analytics grid gap-6 lg:grid-cols-4">
         <section className="ops-card flex h-[460px] flex-col p-6 lg:col-span-2">
           <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-start">
             <div>

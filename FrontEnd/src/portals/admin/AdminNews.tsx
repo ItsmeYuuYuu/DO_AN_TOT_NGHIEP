@@ -155,7 +155,7 @@ const AdminNews: React.FC = () => {
 
       <DataTable
         columns={[
-          { key: 'postid', header: 'ID', render: (n: News) => <span>{n.postid}</span> },
+          { key: 'postid', header: 'STT', render: (_n: News, rowIndex: number) => <span>{rowIndex + 1}</span> },
           { 
             key: 'thumbnail',
             header: 'Thumbnail', 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '@/api/apiClient';
-import { Plus, Edit2, Trash2, Tag, Percent, DollarSign, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Tag, X } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { confirmAction, notifyError } from '@/utils/notifications';
@@ -130,9 +130,9 @@ const AdminVouchers: React.FC = () => {
                 </td>
                 <td className="p-4 text-sm font-medium text-slate-600">
                   {v.discountpercentage ? (
-                    <span className="flex items-center gap-1 text-green-600"><Percent size={14}/> {v.discountpercentage}%</span>
+                    <span className="text-green-600">{v.discountpercentage}%</span>
                   ) : (
-                    <span className="flex items-center gap-1 text-[#e30613]"><DollarSign size={14}/> {v.discountamount?.toLocaleString('vi-VN')}đ</span>
+                    <span className="text-[#e30613]">{v.discountamount?.toLocaleString('vi-VN')}đ</span>
                   )}
                 </td>
                 <td className="p-4 text-sm text-slate-500">{fmtDate(v.validfrom)}</td>

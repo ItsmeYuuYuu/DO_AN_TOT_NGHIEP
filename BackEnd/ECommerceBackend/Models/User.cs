@@ -23,6 +23,12 @@ public partial class User
 
     public bool? Isactive { get; set; }
 
+    public int? Createdbyuserid { get; set; }
+
+    public virtual User? Createdbyuser { get; set; }
+
+    public virtual ICollection<User> Createdusers { get; set; } = new List<User>();
+
     public virtual ICollection<Auditlog> Auditlogs { get; set; } = new List<Auditlog>();
 
     public virtual ICollection<Content> Contents { get; set; } = new List<Content>();
@@ -44,6 +50,8 @@ public partial class User
     public virtual Role? Role { get; set; }
 
     public virtual ICollection<Userrole> Userroles { get; set; } = new List<Userrole>();
+
+    public virtual ICollection<Refreshtoken> Refreshtokens { get; set; } = new List<Refreshtoken>();
 
     public virtual Cart? Cart { get; set; }
 }

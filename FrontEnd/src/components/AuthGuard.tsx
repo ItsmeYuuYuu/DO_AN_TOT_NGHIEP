@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { isAuthenticated, hasPermission, hasRole } from '@/features/auth/utils/authUtils';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 interface AuthGuardProps {
   /** Role(s) that are allowed to access this route */
@@ -33,6 +34,11 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   redirectTo = '/auth/login',
 }) => {
   const location = useLocation();
+  const { isInitializing } = useAuth();
+
+  if (isInitializing) {
+    return <div className="min-h-screen bg-slate-50" aria-label="Đang khôi phục phiên đăng nhập" />;
+  }
 
   // 1. Not authenticated at all
   if (!isAuthenticated()) {

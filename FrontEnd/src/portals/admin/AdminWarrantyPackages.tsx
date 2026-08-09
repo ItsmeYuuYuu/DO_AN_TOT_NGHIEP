@@ -92,9 +92,9 @@ const AdminWarrantyPackages: React.FC = () => {
   const columns = [
     {
       key: 'packageid',
-      header: 'ID',
+      header: 'STT',
       className: 'w-16',
-      render: (p: WarrantyPackage) => <span className="text-xs text-slate-500">#{p.packageid}</span>,
+      render: (_p: WarrantyPackage, rowIndex: number) => <span className="text-xs text-slate-500">{rowIndex + 1}</span>,
     },
     {
       key: 'packagename',

@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,7 @@ namespace ECommerceBackend.Controllers
         private readonly IEmailService _emailService;
         private readonly IStaffSessionService _staffSessionService;
         private readonly ILogger<AuthController> _logger;
+        private const string RefreshCookieName = "ec_refresh_token";
 
         public AuthController(
             ECommerceContext context,
@@ -74,6 +76,73 @@ namespace ECommerceBackend.Controllers
             return (roleids, rolenames, permissions);
         }
 
+        private static string HashRefreshToken(string token) =>
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))).ToLowerInvariant();
+
+        private void StoreRefreshToken(User user, string sessionId)
+        {
+            var rawToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+            var lifetimeDays = int.Parse(_config["JwtSettings:RefreshTokenDays"] ?? "14");
+            _context.Refreshtokens.Add(new Refreshtoken
+            {
+                Refreshtokenid = Guid.NewGuid(), Userid = user.Userid,
+                Tokenhash = HashRefreshToken(rawToken), Sessionid = sessionId,
+                Createdat = DateTime.UtcNow, Expiresat = DateTime.UtcNow.AddDays(lifetimeDays)
+            });
+            Response.Cookies.Append(RefreshCookieName, rawToken, RefreshCookieOptions(DateTimeOffset.UtcNow.AddDays(lifetimeDays)));
+        }
+
+        private CookieOptions RefreshCookieOptions(DateTimeOffset? expires = null) => new()
+        {
+            HttpOnly = true,
+            Secure = !HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment(),
+            SameSite = SameSiteMode.Lax,
+            Expires = expires,
+            Path = "/api/auth"
+        };
+
+        private async Task<LoginResponseDto> IssueAccessTokenAsync(User user, string sessionId)
+        {
+            var jwt = _config.GetSection("JwtSettings");
+            var expiryMins = int.Parse(jwt["ExpiryMinutes"] ?? "15");
+            var roleName = user.Role?.Rolename ?? "Customer";
+            var access = await GetAccessAsync(user);
+            if (access.Rolenames.Count == 0)
+            {
+                access.Rolenames.Add(roleName);
+                if (user.Roleid.HasValue) access.Roleids.Add(user.Roleid.Value);
+            }
+            var isStaff = access.Rolenames.Any(name => !string.Equals(name, "Customer", StringComparison.OrdinalIgnoreCase));
+            var claims = new List<Claim>
+            {
+                new(JwtRegisteredClaimNames.Sub, user.Userid.ToString()),
+                new(JwtRegisteredClaimNames.Email, user.Email ?? user.Username),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
+                new("userid", user.Userid.ToString()), new("username", user.Username),
+                new("fullname", user.Fullname), new("sessionid", sessionId),
+            };
+            claims.AddRange(access.Rolenames.Select(name => new Claim(ClaimTypes.Role, name)));
+            claims.AddRange(access.Permissions.Select(permission => new Claim(AppPermissions.ClaimType, permission)));
+            if (isStaff) claims.Add(new Claim("staff", "true"));
+            var credentials = new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["SecretKey"]!)), SecurityAlgorithms.HmacSha256);
+            var token = new JwtSecurityToken(jwt["Issuer"], jwt["Audience"], claims,
+                expires: DateTime.UtcNow.AddMinutes(expiryMins), signingCredentials: credentials);
+            if (isStaff)
+            {
+                var refreshDays = int.Parse(jwt["RefreshTokenDays"] ?? "14");
+                await _staffSessionService.ActivateAsync(user.Userid, sessionId,
+                    TimeSpan.FromDays(refreshDays), HttpContext.RequestAborted);
+            }
+            return new LoginResponseDto(user.Userid, user.Username, user.Fullname, user.Email,
+                user.Roleid, roleName, new JwtSecurityTokenHandler().WriteToken(token), expiryMins * 60,
+                access.Roleids, access.Rolenames, access.Permissions);
+        }
+
+        private Task RevokeAllRefreshTokensAsync(int userId) => _context.Refreshtokens
+            .Where(token => token.Userid == userId && token.Revokedat == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.Revokedat, DateTime.UtcNow));
+
         // ── POST /api/auth/login ──────────────────────────────────────────────
         /// <summary>
         /// Xác thực người dùng và trả về JWT Access Token.
@@ -104,76 +173,56 @@ namespace ECommerceBackend.Controllers
             if (!passwordValid)
                 return Unauthorized(new ApiErrorDto("Mật khẩu không chính xác."));
 
-            // ── Build JWT ─────────────────────────────────────────────────────
-            var jwt          = _config.GetSection("JwtSettings");
-            var secretKey    = jwt["SecretKey"]!;
-            var issuer       = jwt["Issuer"]!;
-            var audience     = jwt["Audience"]!;
-            var expiryMins   = int.Parse(jwt["ExpiryMinutes"] ?? "480");
-
-            var roleName = user.Role?.Rolename ?? "Customer";
-            var access = await GetAccessAsync(user);
-            if (access.Rolenames.Count == 0)
-            {
-                access.Rolenames.Add(roleName);
-                if (user.Roleid.HasValue) access.Roleids.Add(user.Roleid.Value);
-            }
-            var isStaff = access.Rolenames.Any(name => !string.Equals(name, "Customer", StringComparison.OrdinalIgnoreCase));
             var sessionId = Guid.NewGuid().ToString("N");
+            var response = await IssueAccessTokenAsync(user, sessionId);
+            StoreRefreshToken(user, sessionId);
+            await _context.SaveChangesAsync(HttpContext.RequestAborted);
+            return Ok(response);
+        }
 
-            var claims = new List<Claim>
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh()
+        {
+            if (!Request.Cookies.TryGetValue(RefreshCookieName, out var rawToken) || string.IsNullOrWhiteSpace(rawToken))
+                return Unauthorized(new ApiErrorDto("Phiên đăng nhập đã hết hạn."));
+
+            var tokenHash = HashRefreshToken(rawToken);
+            var storedToken = await _context.Refreshtokens
+                .Include(token => token.User).ThenInclude(user => user.Role)
+                .SingleOrDefaultAsync(token => token.Tokenhash == tokenHash);
+            if (storedToken == null || storedToken.Revokedat != null ||
+                storedToken.Expiresat <= DateTime.UtcNow || storedToken.User.Isactive != true)
             {
-                new Claim(JwtRegisteredClaimNames.Sub,   user.Userid.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? user.Username),
-                new Claim(JwtRegisteredClaimNames.Jti,   sessionId),
-                new Claim("userid",   user.Userid.ToString()),
-                new Claim("username", user.Username),
-                new Claim("fullname", user.Fullname),
-                new Claim("sessionid", sessionId),
-            };
-            claims.AddRange(access.Rolenames.Select(name => new Claim(ClaimTypes.Role, name)));
-            claims.AddRange(access.Permissions.Select(permission => new Claim(AppPermissions.ClaimType, permission)));
-            if (isStaff)
-            {
-                claims.Add(new Claim("staff", "true"));
+                Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions());
+                return Unauthorized(new ApiErrorDto("Phiên đăng nhập đã hết hạn."));
             }
 
-            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-            var creds      = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
-            var expiry     = DateTime.UtcNow.AddMinutes(expiryMins);
-
-            var token = new JwtSecurityToken(
-                issuer:             issuer,
-                audience:           audience,
-                claims:             claims,
-                expires:            expiry,
-                signingCredentials: creds
-            );
-
-            var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-            if (isStaff)
+            var currentAccess = await GetAccessAsync(storedToken.User);
+            var isStaff = currentAccess.Rolenames.Any(name =>
+                !string.Equals(name, "Customer", StringComparison.OrdinalIgnoreCase));
+            if (isStaff && !await _staffSessionService.IsActiveAsync(
+                    storedToken.Userid, storedToken.Sessionid, HttpContext.RequestAborted))
             {
-                await _staffSessionService.ActivateAsync(
-                    user.Userid,
-                    sessionId,
-                    TimeSpan.FromMinutes(expiryMins),
-                    HttpContext.RequestAborted);
+                await _context.Refreshtokens
+                    .Where(token => token.Refreshtokenid == storedToken.Refreshtokenid && token.Revokedat == null)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.Revokedat, DateTime.UtcNow));
+                Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions());
+                return Unauthorized(new
+                {
+                    message = "Phiên đăng nhập đã được mở trên thiết bị khác. Vui lòng đăng nhập lại.",
+                    code = "STAFF_SESSION_REPLACED"
+                });
             }
 
-            return Ok(new LoginResponseDto(
-                Userid:      user.Userid,
-                Username:    user.Username,
-                Fullname:    user.Fullname,
-                Email:       user.Email,
-                Roleid:      user.Roleid,
-                Rolename:    roleName,
-                AccessToken: tokenString,
-                ExpiresIn:   expiryMins * 60,
-                Roleids: access.Roleids,
-                Rolenames: access.Rolenames,
-                Permissions: access.Permissions
-            ));
+            var rotated = await _context.Refreshtokens
+                .Where(token => token.Refreshtokenid == storedToken.Refreshtokenid && token.Revokedat == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.Revokedat, DateTime.UtcNow));
+            if (rotated != 1)
+                return Unauthorized(new ApiErrorDto("Phiên đăng nhập đã được làm mới ở yêu cầu khác."));
+            var response = await IssueAccessTokenAsync(storedToken.User, storedToken.Sessionid);
+            StoreRefreshToken(storedToken.User, storedToken.Sessionid);
+            await _context.SaveChangesAsync(HttpContext.RequestAborted);
+            return Ok(response);
         }
 
         // ── POST /api/auth/logout ─────────────────────────────────────────────
@@ -181,7 +230,7 @@ namespace ECommerceBackend.Controllers
         /// Dummy endpoint cho thao tác đăng xuất, hiện tại chỉ trả về 200 OK.
         /// </summary>
         [HttpPost("logout")]
-        [Microsoft.AspNetCore.Authorization.Authorize]
+        [AllowAnonymous]
         public async Task<IActionResult> Logout()
         {
             var userIdValue = User.FindFirst("userid")?.Value;
@@ -197,6 +246,22 @@ namespace ECommerceBackend.Controllers
                     sessionId,
                     HttpContext.RequestAborted);
             }
+
+            if (Request.Cookies.TryGetValue(RefreshCookieName, out var rawToken) && !string.IsNullOrWhiteSpace(rawToken))
+            {
+                var hash = HashRefreshToken(rawToken);
+                var refreshToken = await _context.Refreshtokens.SingleOrDefaultAsync(token => token.Tokenhash == hash);
+                if (refreshToken != null && refreshToken.Revokedat == null)
+                {
+                    refreshToken.Revokedat = DateTime.UtcNow;
+                    await _staffSessionService.RevokeAsync(
+                        refreshToken.Userid,
+                        refreshToken.Sessionid,
+                        HttpContext.RequestAborted);
+                    await _context.SaveChangesAsync(HttpContext.RequestAborted);
+                }
+            }
+            Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions());
 
             return Ok(new ApiMessageDto("Đăng xuất thành công."));
         }
@@ -248,6 +313,7 @@ namespace ECommerceBackend.Controllers
                 return BadRequest(new ApiErrorDto("Mật khẩu cũ không đúng."));
 
             user.Passwordhash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+            await RevokeAllRefreshTokensAsync(user.Userid);
             await _context.SaveChangesAsync();
             return Ok(new ApiMessageDto("Đổi mật khẩu thành công."));
         }
@@ -441,6 +507,7 @@ namespace ECommerceBackend.Controllers
                 return BadRequest(new ApiErrorDto("Mã khôi phục không đúng, đã hết hạn hoặc đã vượt quá số lần thử.", null));
 
             user.Passwordhash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+            await RevokeAllRefreshTokensAsync(user.Userid);
             await _context.SaveChangesAsync(HttpContext.RequestAborted);
 
             return Ok(new ApiMessageDto("Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới."));

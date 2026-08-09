@@ -26,7 +26,7 @@ import { confirmAction, notifyError, notifySuccess } from '@/utils/notifications
 const PAGE_SIZE = 10;
 
 interface Customer {
-  customerid: number;
+  customerid: string;
   fullname: string;
   email?: string;
   phone?: string;
@@ -72,7 +72,7 @@ const AdminCustomers: React.FC = () => {
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
-  const [accountUpdatingId, setAccountUpdatingId] = useState<number | null>(null);
+  const [accountUpdatingId, setAccountUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -164,8 +164,8 @@ const AdminCustomers: React.FC = () => {
   const columns = [
     {
       key: 'customerid',
-      header: '#',
-      render: (c: Customer) => <span className="text-xs text-slate-400">#{c.customerid}</span>,
+      header: 'STT',
+      render: (_c: Customer, rowIndex: number) => <span className="text-xs text-slate-400">{(page - 1) * PAGE_SIZE + rowIndex + 1}</span>,
       className: 'w-12',
     },
     {
@@ -304,7 +304,7 @@ const AdminCustomers: React.FC = () => {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h3 className="font-bold text-slate-800">{selectedCustomer.fullname}</h3>
-                      <p className="text-xs text-slate-400">Mã khách hàng #{selectedCustomer.customerid}</p>
+                      <p className="text-xs text-slate-400">Mã khách hàng {selectedCustomer.customerid.slice(0, 8).toUpperCase()}</p>
                     </div>
                     <p className="text-xs text-slate-500">
                       Tham gia {selectedCustomer.createdat ? formatDate(selectedCustomer.createdat) : '—'}

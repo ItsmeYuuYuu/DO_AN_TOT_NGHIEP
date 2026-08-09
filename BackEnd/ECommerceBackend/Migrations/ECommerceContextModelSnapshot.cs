@@ -244,6 +244,19 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("handoffstatus");
 
+                    b.Property<string>("Resolutioncode")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("resolutioncode");
+
+                    b.Property<DateTime?>("Resolvedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("resolvedat");
+
+                    b.Property<int?>("Resolvedbyuserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("resolvedbyuserid");
+
                     b.Property<DateTime?>("Starttime")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
@@ -384,6 +397,12 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("phone");
 
+                    b.Property<Guid>("Publicid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("publicid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
                     b.HasKey("Customerid")
                         .HasName("customers_pkey");
 
@@ -396,6 +415,9 @@ namespace ECommerceBackend.Migrations
                         .HasFilter("phone IS NOT NULL");
 
                     b.HasIndex(new[] { "Phone" }, "customers_phone_key")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "Publicid" }, "customers_publicid_key")
                         .IsUnique();
 
                     b.ToTable("customers", (string)null);
@@ -980,6 +1002,52 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("productvariants", (string)null);
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Refreshtoken", b =>
+                {
+                    b.Property<Guid>("Refreshtokenid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("refreshtokenid");
+
+                    b.Property<DateTime>("Createdat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("createdat");
+
+                    b.Property<DateTime>("Expiresat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("expiresat");
+
+                    b.Property<DateTime?>("Revokedat")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("revokedat");
+
+                    b.Property<string>("Sessionid")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("sessionid");
+
+                    b.Property<string>("Tokenhash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("tokenhash");
+
+                    b.Property<int>("Userid")
+                        .HasColumnType("integer")
+                        .HasColumnName("userid");
+
+                    b.HasKey("Refreshtokenid")
+                        .HasName("refreshtokens_pkey");
+
+                    b.HasIndex(new[] { "Userid", "Sessionid" }, "ix_refreshtokens_user_session");
+
+                    b.HasIndex(new[] { "Tokenhash" }, "refreshtokens_tokenhash_key")
+                        .IsUnique();
+
+                    b.ToTable("refreshtokens", (string)null);
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Returnitem", b =>
                 {
                     b.Property<int>("Returnitemid")
@@ -1461,6 +1529,10 @@ namespace ECommerceBackend.Migrations
                         .HasColumnName("createdat")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<int?>("Createdbyuserid")
+                        .HasColumnType("integer")
+                        .HasColumnName("createdbyuserid");
+
                     b.Property<string>("Email")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -1501,6 +1573,8 @@ namespace ECommerceBackend.Migrations
 
                     b.HasKey("Userid")
                         .HasName("users_pkey");
+
+                    b.HasIndex("Createdbyuserid");
 
                     b.HasIndex("Email")
                         .IsUnique()
@@ -1880,6 +1954,18 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Refreshtoken", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.User", "User")
+                        .WithMany("Refreshtokens")
+                        .HasForeignKey("Userid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_refreshtokens_users");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Returnitem", b =>
                 {
                     b.HasOne("ECommerceBackend.Models.Inventoryitem", "Inventoryitem")
@@ -2037,10 +2123,18 @@ namespace ECommerceBackend.Migrations
 
             modelBuilder.Entity("ECommerceBackend.Models.User", b =>
                 {
+                    b.HasOne("ECommerceBackend.Models.User", "Createdbyuser")
+                        .WithMany("Createdusers")
+                        .HasForeignKey("Createdbyuserid")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_users_createdby");
+
                     b.HasOne("ECommerceBackend.Models.Role", "Role")
                         .WithMany("Users")
                         .HasForeignKey("Roleid")
                         .HasConstraintName("fk_users_roles");
+
+                    b.Navigation("Createdbyuser");
 
                     b.Navigation("Role");
                 });
@@ -2204,9 +2298,13 @@ namespace ECommerceBackend.Migrations
 
                     b.Navigation("CreatedShipments");
 
+                    b.Navigation("Createdusers");
+
                     b.Navigation("Inventorytransactions");
 
                     b.Navigation("Orders");
+
+                    b.Navigation("Refreshtokens");
 
                     b.Navigation("RequestedReturnrequests");
 

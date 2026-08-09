@@ -370,7 +370,8 @@ builder.Services.AddCors(options =>
 
         policy.WithOrigins(allowedOrigins)
             .AllowAnyMethod()
-            .AllowAnyHeader();
+            .AllowAnyHeader()
+            .AllowCredentials();
     }));
 
 // ── Swagger (with JWT Bearer support) ────────────────────────────────────────

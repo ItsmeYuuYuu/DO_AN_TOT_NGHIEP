@@ -15,7 +15,9 @@ namespace ECommerceBackend.DTOs.Chats
         string? Assignedname = null,
         string? Handoffstatus = null,
         DateTime? Handoffrequestedat = null,
-        string? Customername = null
+        string? Customername = null,
+        string? Resolutioncode = null,
+        DateTime? Resolvedat = null
     );
 
     public record ChatMessageDto(
@@ -88,4 +90,8 @@ namespace ECommerceBackend.DTOs.Chats
         [StringLength(500, ErrorMessage = "Nội dung tin nhắn không được vượt quá 500 ký tự.")]
         public string Messagecontent { get; set; } = string.Empty;
     }
+
+    public record CloseChatHandoffRequestDto(
+        [Required(ErrorMessage = "Vui lòng chọn kết quả xử lý phiên tư vấn.")]
+        string Resolutioncode);
 }

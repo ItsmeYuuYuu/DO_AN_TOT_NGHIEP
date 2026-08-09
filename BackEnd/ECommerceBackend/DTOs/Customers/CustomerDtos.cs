@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace ECommerceBackend.DTOs.Customers
 {
     public record CustomerDto(
-        int Customerid,
+        Guid Customerid,
         string Fullname,
         string Phone,
         string? Email,

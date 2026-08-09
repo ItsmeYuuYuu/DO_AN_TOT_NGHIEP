@@ -22,7 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { roleLabels } from '@/features/users/api/usersApi';
+import { roleLabels } from '@/features/users/utils/authorizationLabels';
 import Logo from '@/assets/Logo.webp';
 import { Seo } from '@/components/Seo';
 
@@ -31,6 +31,7 @@ interface StaffNavItem {
   to: string;
   icon: React.ReactNode;
   end?: boolean;
+  permission: string;
 }
 
 interface StaffNavGroup {
@@ -38,72 +39,40 @@ interface StaffNavGroup {
   icon: React.ReactNode;
   to?: string;
   end?: boolean;
+  permission?: string;
   items?: StaffNavItem[];
 }
 
-const navigationByRole: Record<string, StaffNavGroup[]> = {
-  Manager: [
-    { label: 'Tổng quan', to: '/staff/manager', end: true, icon: <BarChart3 size={17} /> },
-    {
-      label: 'Đơn hàng',
-      icon: <ClipboardList size={17} />,
-      items: [
-        { label: 'Danh sách đơn hàng', to: '/staff/orders', icon: <ClipboardList size={16} /> },
-        { label: 'Hàng đợi Sales', to: '/staff/sales-orders', icon: <UserCheck size={16} /> },
-        { label: 'Hàng đợi kho', to: '/staff/warehouse-orders', icon: <Truck size={16} /> },
-        { label: 'Vận chuyển', to: '/staff/shipments', icon: <Truck size={16} /> },
-        { label: 'Đổi trả & hoàn tiền', to: '/staff/returns', icon: <RotateCcw size={16} /> },
-      ],
-    },
-    {
-      label: 'Hàng hóa',
-      icon: <Package size={17} />,
-      items: [
-        { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={16} /> },
-        { label: 'Kho & IMEI', to: '/staff/inventory', icon: <Box size={16} /> },
-      ],
-    },
-    { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={17} /> },
-    { label: 'Voucher', to: '/staff/vouchers', icon: <Gift size={17} /> },
-    { label: 'Trang chủ', to: '/staff/homepage-sections', icon: <LayoutGrid size={17} /> },
-    { label: 'Tư vấn', to: '/staff/consultations', icon: <Headphones size={17} /> },
-  ],
-  Sales: [
-    { label: 'Hàng đợi Sales', to: '/staff/sales-orders', icon: <ClipboardList size={17} /> },
-    { label: 'Vận chuyển', to: '/staff/shipments', icon: <Truck size={17} /> },
-    { label: 'Đổi trả', to: '/staff/returns', icon: <RotateCcw size={17} /> },
-    { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={17} /> },
-    { label: 'Voucher', to: '/staff/vouchers', icon: <Gift size={17} /> },
-  ],
-  Warehouse: [
-    { label: 'Hàng đợi kho', to: '/staff/warehouse-orders', icon: <Truck size={17} /> },
-    { label: 'Kho & IMEI', to: '/staff/inventory', icon: <Box size={17} /> },
-    { label: 'Vận chuyển', to: '/staff/shipments', icon: <Truck size={17} /> },
-    { label: 'Hàng hoàn', to: '/staff/returns', icon: <RotateCcw size={17} /> },
-    { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={17} /> },
-  ],
-  Warranty: [
-    { label: 'Bảo hành', to: '/staff/warranties', icon: <ShieldCheck size={17} /> },
-    { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={17} /> },
-  ],
-  Content: [
-    { label: 'Tổng quan', to: '/staff/content', end: true, icon: <BarChart3 size={17} /> },
-    { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={17} /> },
-    {
-      label: 'Nội dung',
-      icon: <Newspaper size={17} />,
-      items: [
-        { label: 'Tin tức', to: '/staff/news', icon: <Newspaper size={16} /> },
-        { label: 'Banner & slider', to: '/staff/promotional-contents', icon: <Image size={16} /> },
-        { label: 'Sản phẩm trang chủ', to: '/staff/homepage-sections', icon: <LayoutGrid size={16} /> },
-      ],
-    },
-  ],
-  Consultant: [
-    { label: 'Tư vấn trực tiếp', to: '/staff/consultations', icon: <Headphones size={17} /> },
-    { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={17} /> },
-  ],
-};
+const staffNavigation: StaffNavGroup[] = [
+  { label: 'Tổng quan', to: '/staff/manager', end: true, icon: <BarChart3 size={17} />, permission: 'dashboard.view' },
+  {
+    label: 'Đơn hàng', icon: <ClipboardList size={17} />, items: [
+      { label: 'Danh sách đơn hàng', to: '/staff/orders', icon: <ClipboardList size={16} />, permission: 'orders.view' },
+      { label: 'Hàng đợi Sales', to: '/staff/sales-orders', icon: <UserCheck size={16} />, permission: 'orders.manage' },
+      { label: 'Hàng đợi kho', to: '/staff/warehouse-orders', icon: <Truck size={16} />, permission: 'inventory.manage' },
+      { label: 'Vận chuyển', to: '/staff/shipments', icon: <Truck size={16} />, permission: 'shipments.view' },
+      { label: 'Đổi trả & hoàn tiền', to: '/staff/returns', icon: <RotateCcw size={16} />, permission: 'returns.view' },
+    ],
+  },
+  {
+    label: 'Hàng hóa', icon: <Package size={17} />, items: [
+      { label: 'Sản phẩm', to: '/staff/products', icon: <Package size={16} />, permission: 'products.manage' },
+      { label: 'Kho & IMEI', to: '/staff/inventory', icon: <Box size={16} />, permission: 'inventory.view' },
+    ],
+  },
+  { label: 'Bảo hành', to: '/staff/warranties', icon: <ShieldCheck size={17} />, permission: 'warranties.view' },
+  { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={17} />, permission: 'customers.view' },
+  { label: 'Voucher', to: '/staff/vouchers', icon: <Gift size={17} />, permission: 'vouchers.manage' },
+  {
+    label: 'Nội dung', icon: <Newspaper size={17} />, items: [
+      { label: 'Không gian nội dung', to: '/staff/content', icon: <BarChart3 size={16} />, permission: 'content.manage' },
+      { label: 'Tin tức', to: '/staff/news', icon: <Newspaper size={16} />, permission: 'content.manage' },
+      { label: 'Banner & slider', to: '/staff/promotional-contents', icon: <Image size={16} />, permission: 'content.manage' },
+      { label: 'Sản phẩm trang chủ', to: '/staff/homepage-sections', icon: <LayoutGrid size={16} />, permission: 'content.manage' },
+    ],
+  },
+  { label: 'Tư vấn trực tiếp', to: '/staff/consultations', icon: <Headphones size={17} />, permission: 'consultations.manage' },
+];
 
 const isPathActive = (pathname: string, item: StaffNavGroup) => {
   if (item.end) return pathname === item.to;
@@ -116,8 +85,13 @@ export const StaffLayout: React.FC = () => {
   const location = useLocation();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const staffNav = navigationByRole[user?.rolename ?? ''] ?? [];
-  const roleName = roleLabels[user?.rolename ?? ''] ?? user?.rolename ?? 'Nhân viên';
+  const permissionSet = new Set(user?.permissions ?? []);
+  const can = (permission: string) => permissionSet.has('*') || permissionSet.has(permission);
+  const staffNav = staffNavigation
+    .map(item => item.items ? ({ ...item, items: item.items.filter(child => can(child.permission)) }) : item)
+    .filter(item => item.items ? item.items.length > 0 : !!item.permission && can(item.permission));
+  const roleName = (user?.rolenames?.length ? user.rolenames : [user?.rolename ?? ''])
+    .filter(Boolean).map(role => roleLabels[role] ?? role).join(' · ') || 'Nhân viên';
 
   useEffect(() => {
     setOpenGroup(null);

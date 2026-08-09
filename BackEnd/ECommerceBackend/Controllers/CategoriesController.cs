@@ -45,7 +45,7 @@ namespace ECommerceBackend.Controllers
 
         // POST: api/Categories
         [HttpPost]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.CatalogManage)]
         public async Task<ActionResult<CategoryDto>> PostCategory([FromBody] CreateCategoryRequestDto dto)
         {
             var category = new Category
@@ -62,7 +62,7 @@ namespace ECommerceBackend.Controllers
 
         // PUT: api/Categories/5
         [HttpPut("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.CatalogManage)]
         public async Task<IActionResult> PutCategory(int id, [FromBody] UpdateCategoryRequestDto dto)
         {
             var category = await _context.Categories.FindAsync(id);
@@ -89,7 +89,7 @@ namespace ECommerceBackend.Controllers
 
         // DELETE: api/Categories/5
         [HttpDelete("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.CatalogDelete)]
         public async Task<IActionResult> DeleteCategory(int id)
         {
             var category = await _context.Categories.FindAsync(id);

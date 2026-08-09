@@ -29,6 +29,13 @@ namespace ECommerceBackend.DTOs.Chats
         IReadOnlyList<string>? Quickreplies = null
     );
 
+    public record ChatUpdatesDto(
+        ChatSessionDto Session,
+        IReadOnlyList<ChatMessageDto> Messages,
+        bool UserTyping,
+        bool ConsultantTyping
+    );
+
     public record ChatRecommendationDto(
         int Recommendationid,
         int Productid,

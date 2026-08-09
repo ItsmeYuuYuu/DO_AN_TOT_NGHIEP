@@ -88,9 +88,11 @@ const StaffReturns: React.FC = () => {
   const [reconcileNote, setReconcileNote] = useState('');
   const [overrideAmount, setOverrideAmount] = useState('');
 
-  const canAssign = user?.rolename === 'Admin' || user?.rolename === 'Manager';
-  const canReview = canAssign || user?.rolename === 'Sales';
-  const canReceive = canAssign || user?.rolename === 'Warehouse';
+  const hasPermission = (permission: string) => user?.permissions?.includes('*') || user?.permissions?.includes(permission);
+  const hasRole = (role: string) => user?.rolename === role || user?.rolenames?.includes(role);
+  const canAssign = hasPermission('returns.manage');
+  const canReview = hasPermission('returns.review') || canAssign;
+  const canReceive = hasPermission('returns.receive') || canAssign;
   const currentUserId = Number(user?.userid);
 
   const loadRequests = useCallback(async () => {
@@ -409,7 +411,7 @@ const StaffReturns: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {!selected.assigneduserid && user?.rolename === 'Sales' && (
+              {!selected.assigneduserid && hasRole('Sales') && (
                 <Button fullWidth isLoading={working} onClick={() => runAction(() => returnRequestsApi.claim(selected.returnrequestid))}>
                   <UserCheck size={16} className="mr-2" /> Nhận xử lý
                 </Button>
@@ -435,7 +437,7 @@ const StaffReturns: React.FC = () => {
               )}
 
               {selected.status === 'PendingReview' && canReview &&
-               (user?.rolename !== 'Sales' || selected.assigneduserid === currentUserId) && (
+               (!hasRole('Sales') || selected.assigneduserid === currentUserId) && (
                 <div className="space-y-3 rounded-xl border border-slate-200 p-4">
                   <h3 className="font-black text-slate-800">Duyệt yêu cầu</h3>
                   <textarea
@@ -632,7 +634,7 @@ const StaffReturns: React.FC = () => {
               )}
 
               {selected.status === 'RefundPending' && canReview &&
-               (user?.rolename !== 'Sales' || selected.assigneduserid === currentUserId) && (
+               (!hasRole('Sales') || selected.assigneduserid === currentUserId) && (
                 <form onSubmit={handleRefund} className="space-y-3 rounded-xl border border-red-100 bg-red-50/40 p-4">
                   <h3 className="font-black text-[#7f1d1d]">Ghi nhận đã thực hiện hoàn tiền</h3>
                   {selected.refunddestination?.method === 'BANK' && (
@@ -693,7 +695,7 @@ const StaffReturns: React.FC = () => {
               )}
 
               {selected.status === 'RefundDisputed' && canReview &&
-               (user?.rolename !== 'Sales' || selected.assigneduserid === currentUserId) && (
+               (!hasRole('Sales') || selected.assigneduserid === currentUserId) && (
                 <div className="space-y-3 rounded-xl border border-red-200 bg-red-50/50 p-4">
                   <h3 className="font-black text-red-900">Đối soát khiếu nại hoàn tiền</h3>
                   <p className="text-xs leading-5 text-red-700">

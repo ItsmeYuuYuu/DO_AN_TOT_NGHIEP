@@ -148,7 +148,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPatch("{id}/business-status")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ProductsManage)]
         public async Task<IActionResult> UpdateBusinessStatus(int id, [FromBody] UpdateProductBusinessStatusDto dto)
         {
             var product = await _context.Products.FindAsync(id);
@@ -325,7 +325,7 @@ namespace ECommerceBackend.Controllers
 
         // POST: api/Products
         [HttpPost]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ProductsManage)]
         public async Task<ActionResult<ProductDetailDto>> PostProduct([FromBody] CreateProductRequestDto dto)
         {
             
@@ -358,7 +358,7 @@ namespace ECommerceBackend.Controllers
 
         // POST: api/Products/full
         [HttpPost("full")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ProductsManage)]
         public async Task<ActionResult<ProductDetailDto>> PostFullProduct([FromBody] CreateFullProductDto dto, [FromServices] ILogger<ProductsController> logger)
         {
             if (dto.Categoryid.HasValue && !await _context.Categories.AnyAsync(c => c.Categoryid == dto.Categoryid.Value))
@@ -479,7 +479,7 @@ namespace ECommerceBackend.Controllers
 
         // PUT: api/Products/5/full
         [HttpPut("{id}/full")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ProductsManage)]
         public async Task<IActionResult> PutFullProduct(
             int id,
             [FromBody] UpdateFullProductDto dto,
@@ -701,7 +701,7 @@ namespace ECommerceBackend.Controllers
 
         // PUT: api/Products/5
         [HttpPut("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ProductsManage)]
         public async Task<IActionResult> PutProduct(int id, [FromBody] UpdateProductRequestDto dto)
         {
             var product = await _context.Products.FindAsync(id);
@@ -747,7 +747,7 @@ namespace ECommerceBackend.Controllers
 
         // DELETE: api/Products/5
         [HttpDelete("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ProductsDelete)]
         public async Task<IActionResult> DeleteProduct(int id, [FromServices] ILogger<ProductsController> logger)
         {
             var product = await _context.Products

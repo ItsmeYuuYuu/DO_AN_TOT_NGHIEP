@@ -57,7 +57,7 @@ const normalizeSearch = (value?: string | number) =>
 
 const StaffInventory: React.FC = () => {
   const { user } = useAuth();
-  const canManageInventory = user?.rolename === 'Admin' || user?.rolename === 'Warehouse';
+  const canManageInventory = user?.permissions?.includes('*') || user?.permissions?.includes('inventory.manage');
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [variantOptions, setVariantOptions] = useState<VariantOption[]>([]);
   const [lowStockVariants, setLowStockVariants] = useState<LowStockVariant[]>([]);

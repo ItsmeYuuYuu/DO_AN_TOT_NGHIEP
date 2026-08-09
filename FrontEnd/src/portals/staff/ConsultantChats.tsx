@@ -22,6 +22,9 @@ const ConsultantChats = () => {
   const [customerTyping, setCustomerTyping] = useState(false);
   const messagesPaneRef = useRef<HTMLDivElement>(null);
   const lastTypingSentRef = useRef(0);
+  const lastMessageIdRef = useRef(0);
+  const queuePollingRef = useRef(false);
+  const chatPollingRef = useRef(false);
 
   const loadQueue = useCallback(async () => {
     const data = viewMode === 'history'
@@ -42,7 +45,9 @@ const ConsultantChats = () => {
     const shouldScroll = forceScroll || !pane || distanceFromBottom < 96;
 
     try {
-      setMessages(await chatSessionsApi.getMessages(sessionId));
+      const latestMessages = await chatSessionsApi.getMessages(sessionId);
+      setMessages(latestMessages);
+      lastMessageIdRef.current = latestMessages.reduce((max, message) => Math.max(max, message.messageid), 0);
       if (shouldScroll) {
         window.setTimeout(() => {
           const currentPane = messagesPaneRef.current;
@@ -59,17 +64,38 @@ const ConsultantChats = () => {
 
   useEffect(() => {
     loadQueue().catch(() => setSessions([]));
-    const timer = window.setInterval(() => {
-      loadQueue().catch(() => undefined);
-      if (activeSession?.handoffstatus === 'InProgress') {
-        loadMessages(activeSession.sessionid).catch(() => undefined);
-        chatSessionsApi.getTypingStatus(activeSession.sessionid)
-          .then(status => setCustomerTyping(status.userTyping))
-          .catch(() => undefined);
-      }
-    }, 3000);
+    const timer = window.setInterval(async () => {
+      if (document.hidden || queuePollingRef.current) return;
+      queuePollingRef.current = true;
+      try { await loadQueue(); } catch { /* giữ dữ liệu hiện tại khi mạng chập chờn */ }
+      finally { queuePollingRef.current = false; }
+    }, 8000);
     return () => window.clearInterval(timer);
-  }, [activeSession?.handoffstatus, activeSession?.sessionid, loadMessages, loadQueue]);
+  }, [loadQueue]);
+
+  useEffect(() => {
+    if (viewMode !== 'queue' || activeSession?.handoffstatus !== 'InProgress') return;
+    const sessionId = activeSession.sessionid;
+    const timer = window.setInterval(async () => {
+      if (document.hidden || chatPollingRef.current) return;
+      chatPollingRef.current = true;
+      try {
+        const updates = await chatSessionsApi.getUpdates(sessionId, lastMessageIdRef.current);
+        setActiveSession(updates.session);
+        setSessions(current => current.map(item => item.sessionid === sessionId ? updates.session : item));
+        setCustomerTyping(updates.userTyping);
+        if (updates.messages.length > 0) {
+          lastMessageIdRef.current = Math.max(lastMessageIdRef.current, ...updates.messages.map(message => message.messageid));
+          setMessages(current => {
+            const existing = new Set(current.map(message => message.messageid));
+            return [...current, ...updates.messages.filter(message => !existing.has(message.messageid))];
+          });
+        }
+      } catch { /* bỏ qua một nhịp polling lỗi */ }
+      finally { chatPollingRef.current = false; }
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [activeSession?.handoffstatus, activeSession?.sessionid, viewMode]);
 
   const selectSession = async (session: ChatSession) => {
     setActiveSession(session);

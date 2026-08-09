@@ -127,7 +127,8 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
   onSaved,
 }) => {
   const { user } = useAuth();
-  const contentOnly = user?.rolename === 'Content';
+  const assignedRoles = user?.rolenames?.length ? user.rolenames : [user?.rolename ?? ''];
+  const contentOnly = assignedRoles.length === 1 && assignedRoles[0] === 'Content';
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

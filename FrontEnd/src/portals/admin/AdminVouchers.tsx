@@ -18,7 +18,7 @@ interface Voucher {
 
 const AdminVouchers: React.FC = () => {
   const { user } = useAuth();
-  const canManage = user?.rolename === 'Admin' || user?.rolename === 'Manager';
+  const canManage = user?.permissions?.includes('*') || user?.permissions?.includes('vouchers.manage');
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);

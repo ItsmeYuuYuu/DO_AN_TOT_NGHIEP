@@ -8,7 +8,7 @@ namespace ECommerceBackend.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Admin,Manager,Warehouse")]
+[ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryView)]
 public class InventoryTransactionsController : ControllerBase
 {
     private readonly ECommerceContext _context;

@@ -73,7 +73,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
   const [shippingFee, setShippingFee] = useState(0);
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
 
-  const canAssign = user?.rolename === 'Admin' || user?.rolename === 'Manager';
+  const canAssign = user?.permissions?.includes('*') || user?.permissions?.includes('orders.assign');
   const currentUserId = Number(user?.userid);
   const copy = departmentCopy[department];
 

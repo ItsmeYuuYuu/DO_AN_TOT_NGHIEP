@@ -53,6 +53,12 @@ public partial class ECommerceContext : DbContext
 
     public virtual DbSet<Role> Roles { get; set; }
 
+    public virtual DbSet<Permission> Permissions { get; set; }
+
+    public virtual DbSet<Rolepermission> Rolepermissions { get; set; }
+
+    public virtual DbSet<Userrole> Userroles { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
@@ -828,6 +834,46 @@ public partial class ECommerceContext : DbContext
             entity.Property(e => e.Rolename)
                 .HasMaxLength(50)
                 .HasColumnName("rolename");
+        });
+
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.HasKey(e => e.Permissionid).HasName("permissions_pkey");
+            entity.ToTable("permissions");
+            entity.HasIndex(e => e.Code, "permissions_code_key").IsUnique();
+            entity.Property(e => e.Permissionid).HasColumnName("permissionid");
+            entity.Property(e => e.Code).HasMaxLength(100).HasColumnName("code");
+            entity.Property(e => e.Name).HasMaxLength(150).HasColumnName("name");
+            entity.Property(e => e.Groupname).HasMaxLength(100).HasColumnName("groupname");
+            entity.Property(e => e.Description).HasMaxLength(500).HasColumnName("description");
+        });
+
+        modelBuilder.Entity<Rolepermission>(entity =>
+        {
+            entity.HasKey(e => new { e.Roleid, e.Permissionid }).HasName("rolepermissions_pkey");
+            entity.ToTable("rolepermissions");
+            entity.Property(e => e.Roleid).HasColumnName("roleid");
+            entity.Property(e => e.Permissionid).HasColumnName("permissionid");
+            entity.HasOne(e => e.Role).WithMany(e => e.Rolepermissions)
+                .HasForeignKey(e => e.Roleid).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_rolepermissions_roles");
+            entity.HasOne(e => e.Permission).WithMany(e => e.Rolepermissions)
+                .HasForeignKey(e => e.Permissionid).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_rolepermissions_permissions");
+        });
+
+        modelBuilder.Entity<Userrole>(entity =>
+        {
+            entity.HasKey(e => new { e.Userid, e.Roleid }).HasName("userroles_pkey");
+            entity.ToTable("userroles");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+            entity.Property(e => e.Roleid).HasColumnName("roleid");
+            entity.HasOne(e => e.User).WithMany(e => e.Userroles)
+                .HasForeignKey(e => e.Userid).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_userroles_users");
+            entity.HasOne(e => e.Role).WithMany(e => e.Userroles)
+                .HasForeignKey(e => e.Roleid).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_userroles_roles");
         });
 
 

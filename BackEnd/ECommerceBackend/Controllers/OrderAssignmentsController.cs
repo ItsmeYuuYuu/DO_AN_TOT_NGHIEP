@@ -151,7 +151,7 @@ public class OrderAssignmentsController : ControllerBase
     }
 
     [HttpGet("employees/{department}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersAssign)]
     public async Task<ActionResult<IEnumerable<AssignmentEmployeeDto>>> GetEmployees(string department)
     {
         department = NormalizeDepartment(department);
@@ -186,7 +186,7 @@ public class OrderAssignmentsController : ControllerBase
     }
 
     [HttpPost("{orderId:int}/assign")]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersAssign)]
     public async Task<ActionResult<OrderAssignmentDto>> Assign(int orderId, AssignOrderRequestDto dto)
     {
         var department = NormalizeDepartment(dto.Department);
@@ -203,7 +203,7 @@ public class OrderAssignmentsController : ControllerBase
     }
 
     [HttpPost("{orderId:int}/handoff-to-warehouse")]
-    [Authorize(Roles = "Admin,Manager,Sales")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersManage)]
     public async Task<ActionResult<OrderWorkflowItemDto>> HandoffToWarehouse(int orderId, HandoffOrderRequestDto dto)
     {
         var order = await _context.Orders.Include(item => item.Orderitems)
@@ -226,7 +226,7 @@ public class OrderAssignmentsController : ControllerBase
     }
 
     [HttpPost("{orderId:int}/mark-shipped")]
-    [Authorize(Roles = "Admin,Manager,Warehouse")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryManage)]
     public async Task<ActionResult<OrderWorkflowItemDto>> MarkShipped(int orderId, MarkOrderShippedRequestDto dto)
     {
         var order = await _context.Orders.Include(item => item.Orderitems)

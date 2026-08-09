@@ -41,7 +41,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager,Warranty")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.WarrantiesManage)]
         public async Task<ActionResult<WarrantyPackageDto>> PostWarrantyPackage([FromBody] CreateWarrantyPackageRequestDto dto)
         {
             var exists = await _context.Warrantypackages.AnyAsync(p => p.Packagename == dto.Packagename);
@@ -62,7 +62,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Manager,Warranty")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.WarrantiesManage)]
         public async Task<IActionResult> PutWarrantyPackage(int id, [FromBody] UpdateWarrantyPackageRequestDto dto)
         {
             var package = await _context.Warrantypackages.FindAsync(id);
@@ -90,7 +90,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.WarrantiesManage)]
         public async Task<IActionResult> DeleteWarrantyPackage(int id)
         {
             var package = await _context.Warrantypackages.FindAsync(id);

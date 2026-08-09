@@ -45,6 +45,7 @@ const AdminDashboard     = lazy(() => import('@/portals/admin/AdminDashboard'));
 const AdminProducts      = lazy(() => import('@/portals/admin/AdminProducts'));
 const AdminOrders        = lazy(() => import('@/portals/admin/AdminOrders'));
 const AdminUsers         = lazy(() => import('@/portals/admin/AdminUsers'));
+const AdminRoles         = lazy(() => import('@/portals/admin/AdminRoles'));
 const AdminCategoryBrand = lazy(() => import('@/portals/admin/AdminCategoryBrand'));
 const AdminCustomers     = lazy(() => import('@/portals/admin/AdminCustomers'));
 const AdminVouchers      = lazy(() => import('@/portals/admin/AdminVouchers'));
@@ -71,16 +72,18 @@ const UnauthorizedPage = lazy(() => import('@/portals/UnauthorizedPage'));
 
 const StaffHomeRedirect = () => {
   const { user } = useAuth();
-  const destinations: Record<string, string> = {
-    Admin: '/admin',
-    Manager: '/staff/manager',
-    Sales: '/staff/sales-orders',
-    Warehouse: '/staff/warehouse-orders',
-    Warranty: '/staff/warranties',
-    Content: '/staff/content',
-    Consultant: '/staff/consultations',
-  };
-  return <Navigate to={destinations[user?.rolename ?? ''] ?? '/unauthorized'} replace />;
+  const permissions = user?.permissions ?? [];
+  if (permissions.includes('*')) return <Navigate to="/admin" replace />;
+  const destinations: Array<[string, string]> = [
+    ['dashboard.view', '/staff/manager'],
+    ['orders.manage', '/staff/sales-orders'],
+    ['inventory.manage', '/staff/warehouse-orders'],
+    ['warranties.view', '/staff/warranties'],
+    ['content.manage', '/staff/content'],
+    ['consultations.manage', '/staff/consultations'],
+    ['customers.view', '/staff/customers'],
+  ];
+  return <Navigate to={destinations.find(([permission]) => permissions.includes(permission))?.[1] ?? '/unauthorized'} replace />;
 };
 
 const ScrollToTop = () => {
@@ -139,6 +142,7 @@ const App: React.FC = () => {
             <Route path="returns"         element={<StaffReturns />} />
             <Route path="shipments"       element={<StaffShipments />} />
             <Route path="users"           element={<AdminUsers />} />
+            <Route path="roles"           element={<AdminRoles />} />
             <Route path="customers"       element={<AdminCustomers />} />
             <Route path="categories"      element={<AdminCategoryBrand />} />
             <Route path="brands"          element={<Navigate to="/admin/categories" replace />} />
@@ -153,53 +157,53 @@ const App: React.FC = () => {
         </Route>
 
         {/* ═══ PROTECTED — Employee portal ═════════════════════════════════ */}
-        <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Warehouse', 'Warranty', 'Content', 'Consultant']} />}>
+        <Route element={<AuthGuard allowedPermissions={['dashboard.view', 'orders.view', 'inventory.view', 'warranties.view', 'content.manage', 'consultations.manage', 'customers.view']} />}>
           <Route path="/staff" element={<StaffLayout />}>
             <Route index element={<StaffHomeRedirect />} />
 
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager']} />}>
+            <Route element={<AuthGuard allowedPermissions={['dashboard.view']} />}>
               <Route path="manager" element={<ManagerWorkspace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Content']} />}>
+            <Route element={<AuthGuard allowedPermissions={['content.manage']} />}>
               <Route path="content" element={<ContentWorkspace />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warehouse', 'Content']} />}>
+            <Route element={<AuthGuard allowedPermissions={['products.manage']} />}>
               <Route path="products" element={<AdminProducts />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales']} />}>
+            <Route element={<AuthGuard allowedPermissions={['orders.view']} />}>
               <Route path="orders" element={<StaffOrders />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales']} />}>
+            <Route element={<AuthGuard allowedPermissions={['orders.manage']} />}>
               <Route path="sales-orders" element={<SalesOrders />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warehouse']} />}>
+            <Route element={<AuthGuard allowedPermissions={['inventory.manage']} />}>
               <Route path="warehouse-orders" element={<WarehouseOrders />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warehouse']} />}>
+            <Route element={<AuthGuard allowedPermissions={['inventory.view']} />}>
               <Route path="inventory" element={<StaffInventory />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Warehouse']} />}>
+            <Route element={<AuthGuard allowedPermissions={['returns.view', 'shipments.view']} />}>
               <Route path="returns" element={<StaffReturns />} />
               <Route path="shipments" element={<StaffShipments />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Warranty']} />}>
+            <Route element={<AuthGuard allowedPermissions={['warranties.view']} />}>
               <Route path="warranties" element={<StaffWarranties />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales', 'Warranty', 'Consultant']} />}>
+            <Route element={<AuthGuard allowedPermissions={['customers.view']} />}>
               <Route path="customers" element={<AdminCustomers />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Sales']} />}>
+            <Route element={<AuthGuard allowedPermissions={['vouchers.manage']} />}>
               <Route path="vouchers" element={<AdminVouchers />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Content']} />}>
+            <Route element={<AuthGuard allowedPermissions={['content.manage']} />}>
               <Route path="news" element={<AdminNews />} />
               <Route path="promotional-contents" element={<AdminPromotionalContents />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Content']} />}>
+            <Route element={<AuthGuard allowedPermissions={['content.manage']} />}>
               <Route path="homepage-sections" element={<AdminHomepageSections />} />
             </Route>
-            <Route element={<AuthGuard allowedRoles={['Admin', 'Manager', 'Consultant']} />}>
+            <Route element={<AuthGuard allowedPermissions={['consultations.manage']} />}>
               <Route path="consultations" element={<ConsultantChats />} />
             </Route>
           </Route>

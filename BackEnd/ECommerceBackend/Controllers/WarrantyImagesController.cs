@@ -11,7 +11,7 @@ public record WarrantyImageUploadResponseDto(string FileName, string Url, long S
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Admin,Manager,Warranty")]
+[ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.WarrantiesManage)]
 public class WarrantyImagesController : ControllerBase
 {
     private readonly ECommerceContext _context;

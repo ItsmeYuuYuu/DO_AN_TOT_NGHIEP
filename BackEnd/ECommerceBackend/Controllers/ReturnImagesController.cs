@@ -11,7 +11,7 @@ public record ReturnImageUploadResponseDto(string FileName, string Url, long Siz
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Admin,Manager,Sales,Warehouse,Customer")]
+[Authorize(Policy = "returns.access")]
 public class ReturnImagesController : ControllerBase
 {
     private readonly ECommerceContext _context;

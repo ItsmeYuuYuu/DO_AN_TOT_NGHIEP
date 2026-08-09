@@ -14,7 +14,7 @@ namespace ECommerceBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.DashboardView)]
     public class DashboardController : ControllerBase
     {
         private readonly ECommerceContext _context;

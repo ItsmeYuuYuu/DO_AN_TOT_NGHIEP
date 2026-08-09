@@ -43,5 +43,7 @@ public partial class User
 
     public virtual Role? Role { get; set; }
 
+    public virtual ICollection<Userrole> Userroles { get; set; } = new List<Userrole>();
+
     public virtual Cart? Cart { get; set; }
 }

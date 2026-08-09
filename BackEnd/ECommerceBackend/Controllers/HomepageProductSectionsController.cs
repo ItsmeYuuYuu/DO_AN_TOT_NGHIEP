@@ -192,7 +192,7 @@ public class HomepageProductSectionsController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Manager,Content")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ContentManage)]
     public async Task<ActionResult<IEnumerable<HomepageProductSectionDto>>> GetSections()
     {
         var sections = await _context.Contents
@@ -212,7 +212,7 @@ public class HomepageProductSectionsController : ControllerBase
     }
 
     [HttpGet("product-metrics")]
-    [Authorize(Roles = "Admin,Manager,Content")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ContentManage)]
     public async Task<ActionResult<IEnumerable<HomepageProductMetricDto>>> GetProductMetrics()
     {
         var soldQuantities = await _context.Orderitems
@@ -233,7 +233,7 @@ public class HomepageProductSectionsController : ControllerBase
     }
 
     [HttpPut("{sectionId:int}")]
-    [Authorize(Roles = "Admin,Manager,Content")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ContentManage)]
     public async Task<IActionResult> UpdateSection(
         int sectionId,
         [FromBody] UpdateHomepageProductSectionRequestDto dto)

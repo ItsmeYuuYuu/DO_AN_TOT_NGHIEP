@@ -67,6 +67,11 @@ export interface ChatTypingStatus {
   consultantTyping: boolean;
 }
 
+export interface ChatUpdates extends ChatTypingStatus {
+  session: ChatSession;
+  messages: ChatMessage[];
+}
+
 const GUEST_TOKEN_KEY = 'ec_guest_checkout_token';
 const LEGACY_GUEST_TOKEN_KEY = 'guest_chat_token';
 
@@ -122,6 +127,14 @@ export const chatSessionsApi = {
 
   getTypingStatus: async (id: number): Promise<ChatTypingStatus> => {
     const response = await apiClient.get(`/chatsessions/${id}/typing-status`, { headers: getHeaders() });
+    return response.data;
+  },
+
+  getUpdates: async (id: number, afterMessageId = 0): Promise<ChatUpdates> => {
+    const response = await apiClient.get(`/chatsessions/${id}/updates`, {
+      params: { afterMessageId },
+      headers: getHeaders(),
+    });
     return response.data;
   },
 

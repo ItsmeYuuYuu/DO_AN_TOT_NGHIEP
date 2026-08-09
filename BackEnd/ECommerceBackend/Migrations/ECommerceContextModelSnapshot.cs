@@ -804,6 +804,47 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("orderpayments", (string)null);
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Permission", b =>
+                {
+                    b.Property<int>("Permissionid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("permissionid");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Permissionid"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Groupname")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("groupname");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Permissionid")
+                        .HasName("permissions_pkey");
+
+                    b.HasIndex(new[] { "Code" }, "permissions_code_key")
+                        .IsUnique();
+
+                    b.ToTable("permissions", (string)null);
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Product", b =>
                 {
                     b.Property<int>("Productid")
@@ -1226,6 +1267,24 @@ namespace ECommerceBackend.Migrations
                     b.ToTable("roles", (string)null);
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Rolepermission", b =>
+                {
+                    b.Property<int>("Roleid")
+                        .HasColumnType("integer")
+                        .HasColumnName("roleid");
+
+                    b.Property<int>("Permissionid")
+                        .HasColumnType("integer")
+                        .HasColumnName("permissionid");
+
+                    b.HasKey("Roleid", "Permissionid")
+                        .HasName("rolepermissions_pkey");
+
+                    b.HasIndex("Permissionid");
+
+                    b.ToTable("rolepermissions", (string)null);
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Shipment", b =>
                 {
                     b.Property<int>("Shipmentid")
@@ -1462,6 +1521,24 @@ namespace ECommerceBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Userrole", b =>
+                {
+                    b.Property<int>("Userid")
+                        .HasColumnType("integer")
+                        .HasColumnName("userid");
+
+                    b.Property<int>("Roleid")
+                        .HasColumnType("integer")
+                        .HasColumnName("roleid");
+
+                    b.HasKey("Userid", "Roleid")
+                        .HasName("userroles_pkey");
+
+                    b.HasIndex("Roleid");
+
+                    b.ToTable("userroles", (string)null);
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Voucher", b =>
@@ -1902,6 +1979,27 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Variant");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Rolepermission", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Permission", "Permission")
+                        .WithMany("Rolepermissions")
+                        .HasForeignKey("Permissionid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_rolepermissions_permissions");
+
+                    b.HasOne("ECommerceBackend.Models.Role", "Role")
+                        .WithMany("Rolepermissions")
+                        .HasForeignKey("Roleid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_rolepermissions_roles");
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Shipment", b =>
                 {
                     b.HasOne("ECommerceBackend.Models.User", "Createdbyuser")
@@ -1945,6 +2043,27 @@ namespace ECommerceBackend.Migrations
                         .HasConstraintName("fk_users_roles");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("ECommerceBackend.Models.Userrole", b =>
+                {
+                    b.HasOne("ECommerceBackend.Models.Role", "Role")
+                        .WithMany("Userroles")
+                        .HasForeignKey("Roleid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_userroles_roles");
+
+                    b.HasOne("ECommerceBackend.Models.User", "User")
+                        .WithMany("Userroles")
+                        .HasForeignKey("Userid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_userroles_users");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Warrantyclaim", b =>
@@ -2035,6 +2154,11 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("Returnitems");
                 });
 
+            modelBuilder.Entity("ECommerceBackend.Models.Permission", b =>
+                {
+                    b.Navigation("Rolepermissions");
+                });
+
             modelBuilder.Entity("ECommerceBackend.Models.Product", b =>
                 {
                     b.Navigation("Productvariants");
@@ -2054,6 +2178,10 @@ namespace ECommerceBackend.Migrations
 
             modelBuilder.Entity("ECommerceBackend.Models.Role", b =>
                 {
+                    b.Navigation("Rolepermissions");
+
+                    b.Navigation("Userroles");
+
                     b.Navigation("Users");
                 });
 
@@ -2083,6 +2211,8 @@ namespace ECommerceBackend.Migrations
                     b.Navigation("RequestedReturnrequests");
 
                     b.Navigation("Statuslogs");
+
+                    b.Navigation("Userroles");
                 });
 
             modelBuilder.Entity("ECommerceBackend.Models.Voucher", b =>

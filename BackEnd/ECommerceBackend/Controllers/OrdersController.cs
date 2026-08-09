@@ -504,7 +504,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersView)]
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrders()
         {
             var orders = await _context.Orders
@@ -551,7 +551,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("customer/{customerId}")]
-        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersView)]
         public async Task<ActionResult<IEnumerable<OrderListItemDto>>> GetOrdersByCustomer(int customerId)
         {
             var orders = await _context.Orders
@@ -1151,7 +1151,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost("{id}/confirm-payment")]
-        [Authorize(Roles = "Admin,Manager,Sales")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersManage)]
         public async Task<ActionResult<PaymentActionResultDto>> ConfirmPayment(
             int id,
             [FromBody] ConfirmPaymentRequestDto dto)
@@ -1242,7 +1242,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Manager,Sales")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersManage)]
         public async Task<IActionResult> PutOrder(int id, [FromBody] UpdateOrderRequestDto dto)
         {
             var order = await _context.Orders.FindAsync(id);
@@ -1267,7 +1267,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPatch("{id}/status")]
-        [Authorize(Roles = "Admin,Manager,Sales")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersManage)]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusRequestDto dto)
         {
             var validTransitions = ValidTransitions();
@@ -1349,7 +1349,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost("bulk-status")]
-        [Authorize(Roles = "Admin,Manager,Sales")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersManage)]
         public async Task<IActionResult> BulkUpdateStatus(
             [FromBody] BulkUpdateStatusRequestDto dto,
             [FromServices] ILogger<OrdersController> logger)
@@ -1447,7 +1447,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.OrdersDelete)]
         public async Task<IActionResult> DeleteOrder(int id)
         {
             var order = await _context.Orders

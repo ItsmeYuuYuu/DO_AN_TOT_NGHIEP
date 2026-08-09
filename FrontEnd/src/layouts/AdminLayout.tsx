@@ -76,6 +76,7 @@ const adminNav: NavGroup[] = [
     ],
   },
   { label: 'Nhân viên', to: '/admin/users', icon: <Users size={17} /> },
+  { label: 'Vai trò & quyền', to: '/admin/roles', icon: <ShieldCheck size={17} /> },
   {
     label: 'Khuyến mãi',
     icon: <Gift size={17} />,

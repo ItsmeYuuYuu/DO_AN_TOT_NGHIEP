@@ -226,7 +226,7 @@ const CustomerHome: React.FC = () => {
                   );
                 })}
 
-                {false && sliders.length > 1 && (
+                {sliders.length > 1 && (
                   <>
                     <button
                       type="button"

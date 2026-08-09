@@ -12,6 +12,7 @@ using ECommerceBackend.DTOs.Auth;
 using ECommerceBackend.DTOs.Common;
 using ECommerceBackend.Services.Auth;
 using ECommerceBackend.Services.Email;
+using ECommerceBackend.Authorization;
 
 namespace ECommerceBackend.Controllers
 {
@@ -43,6 +44,34 @@ namespace ECommerceBackend.Controllers
             _emailService = emailService;
             _staffSessionService = staffSessionService;
             _logger = logger;
+        }
+
+        private async Task<(List<int> Roleids, List<string> Rolenames, List<string> Permissions)> GetAccessAsync(User user)
+        {
+            var assignedRoles = await _context.Userroles
+                .AsNoTracking()
+                .Where(item => item.Userid == user.Userid)
+                .Select(item => new { item.Roleid, item.Role.Rolename })
+                .ToListAsync();
+
+            if (user.Roleid.HasValue && user.Role != null && assignedRoles.All(item => item.Roleid != user.Roleid.Value))
+            {
+                assignedRoles.Add(new { Roleid = user.Roleid.Value, user.Role.Rolename });
+            }
+
+            var roleids = assignedRoles.Select(item => item.Roleid).Distinct().ToList();
+            var rolenames = assignedRoles.Select(item => item.Rolename).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var permissions = rolenames.Contains("Admin", StringComparer.OrdinalIgnoreCase)
+                ? new List<string> { AppPermissions.Wildcard }
+                : await _context.Rolepermissions
+                    .AsNoTracking()
+                    .Where(item => roleids.Contains(item.Roleid))
+                    .Select(item => item.Permission.Code)
+                    .Distinct()
+                    .OrderBy(code => code)
+                    .ToListAsync();
+
+            return (roleids, rolenames, permissions);
         }
 
         // ── POST /api/auth/login ──────────────────────────────────────────────
@@ -83,9 +112,16 @@ namespace ECommerceBackend.Controllers
             var expiryMins   = int.Parse(jwt["ExpiryMinutes"] ?? "480");
 
             var roleName = user.Role?.Rolename ?? "Customer";
+            var access = await GetAccessAsync(user);
+            if (access.Rolenames.Count == 0)
+            {
+                access.Rolenames.Add(roleName);
+                if (user.Roleid.HasValue) access.Roleids.Add(user.Roleid.Value);
+            }
+            var isStaff = access.Rolenames.Any(name => !string.Equals(name, "Customer", StringComparison.OrdinalIgnoreCase));
             var sessionId = Guid.NewGuid().ToString("N");
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub,   user.Userid.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? user.Username),
@@ -94,8 +130,13 @@ namespace ECommerceBackend.Controllers
                 new Claim("username", user.Username),
                 new Claim("fullname", user.Fullname),
                 new Claim("sessionid", sessionId),
-                new Claim(ClaimTypes.Role, roleName),
             };
+            claims.AddRange(access.Rolenames.Select(name => new Claim(ClaimTypes.Role, name)));
+            claims.AddRange(access.Permissions.Select(permission => new Claim(AppPermissions.ClaimType, permission)));
+            if (isStaff)
+            {
+                claims.Add(new Claim("staff", "true"));
+            }
 
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var creds      = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
@@ -111,7 +152,7 @@ namespace ECommerceBackend.Controllers
 
             var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
-            if (StaffSessionPolicy.RequiresSingleSession(roleName))
+            if (isStaff)
             {
                 await _staffSessionService.ActivateAsync(
                     user.Userid,
@@ -128,7 +169,10 @@ namespace ECommerceBackend.Controllers
                 Roleid:      user.Roleid,
                 Rolename:    roleName,
                 AccessToken: tokenString,
-                ExpiresIn:   expiryMins * 60
+                ExpiresIn:   expiryMins * 60,
+                Roleids: access.Roleids,
+                Rolenames: access.Rolenames,
+                Permissions: access.Permissions
             ));
         }
 
@@ -140,11 +184,11 @@ namespace ECommerceBackend.Controllers
         [Microsoft.AspNetCore.Authorization.Authorize]
         public async Task<IActionResult> Logout()
         {
-            var roleName = User.FindFirst(ClaimTypes.Role)?.Value;
             var userIdValue = User.FindFirst("userid")?.Value;
             var sessionId = User.FindFirst("sessionid")?.Value;
+            var isStaff = string.Equals(User.FindFirst("staff")?.Value, "true", StringComparison.OrdinalIgnoreCase);
 
-            if (StaffSessionPolicy.RequiresSingleSession(roleName) &&
+            if (isStaff &&
                 int.TryParse(userIdValue, out var userId) &&
                 !string.IsNullOrWhiteSpace(sessionId))
             {
@@ -175,13 +219,17 @@ namespace ECommerceBackend.Controllers
 
             if (user == null) return NotFound();
 
+            var access = await GetAccessAsync(user);
             return Ok(new MeResponseDto(
                 Userid: user.Userid,
                 Username: user.Username,
                 Fullname: user.Fullname,
                 Email: user.Email,
                 Roleid: user.Roleid,
-                Rolename: user.Role?.Rolename ?? "Customer"
+                Rolename: user.Role?.Rolename ?? "Customer",
+                Roleids: access.Roleids,
+                Rolenames: access.Rolenames,
+                Permissions: access.Permissions
             ));
         }
 
@@ -239,7 +287,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost("email-test")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission(AppPermissions.EmailTest)]
         public async Task<IActionResult> SendTestEmail([FromBody] TestEmailRequestDto req)
         {
             if (!_emailService.IsConfigured)
@@ -308,6 +356,7 @@ namespace ECommerceBackend.Controllers
             try
             {
                 _context.Users.Add(user);
+                _context.Userroles.Add(new Userrole { User = user, Roleid = customerRole.Roleid });
 
                 var customer = await _context.Customers.FirstOrDefaultAsync(item =>
                     item.Email == email || item.Phone == phone);

@@ -4,6 +4,7 @@ using System.Text.Json;
 using ECommerceBackend.DTOs.Auth;
 using ECommerceBackend.Models;
 using ECommerceBackend.Services.Email;
+using ECommerceBackend.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -163,12 +164,26 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
         var customerRole = new Role { Rolename = "Customer" };
         db.Roles.AddRange(adminRole, customerRole);
 
+        var permissions = AppPermissions.All.Select(definition => new Permission
+        {
+            Code = definition.Code,
+            Name = definition.Name,
+            Groupname = definition.Group
+        }).ToList();
+        db.Permissions.AddRange(permissions);
+        foreach (var permission in permissions)
+            adminRole.Rolepermissions.Add(new Rolepermission { Permission = permission });
+
         var admin = NewUser("it_admin", "Integration Admin", "it.admin@example.test", adminRole);
         var customerAUser = NewUser("it_customer_a", "Integration Customer A", "it.a@example.test", customerRole);
         var customerBUser = NewUser("it_customer_b", "Integration Customer B", "it.b@example.test", customerRole);
         var passwordResetUser = NewUser("it_reset", "Integration Reset User", "it.reset@example.test", customerRole);
         passwordResetUser.Phone = "0900000003";
         db.Users.AddRange(admin, customerAUser, customerBUser, passwordResetUser);
+        admin.Userroles.Add(new Userrole { Role = adminRole });
+        customerAUser.Userroles.Add(new Userrole { Role = customerRole });
+        customerBUser.Userroles.Add(new Userrole { Role = customerRole });
+        passwordResetUser.Userroles.Add(new Userrole { Role = customerRole });
 
         var customerA = new Customer
         {

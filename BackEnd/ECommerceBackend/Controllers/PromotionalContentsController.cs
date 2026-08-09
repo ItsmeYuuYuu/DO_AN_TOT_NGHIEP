@@ -42,7 +42,7 @@ public class PromotionalContentsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager,Content")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ContentManage)]
     public async Task<ActionResult<PromotionalContentDto>> Create([FromBody] CreatePromotionalContentRequestDto dto)
     {
         var content = new Content { Contenttype = dto.Contenttype.Trim(), Title = dto.Title?.Trim() ?? "", Thumbnailurl = dto.Imageurl.Trim(), Linkurl = dto.Linkurl?.Trim(), Displayorder = dto.Displayorder ?? 0, Isactive = dto.Isactive ?? true, Createdat = DateTime.UtcNow, Createdbyuserid = CurrentUserId() };
@@ -52,7 +52,7 @@ public class PromotionalContentsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin,Manager,Content")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ContentManage)]
     public async Task<ActionResult<PromotionalContentDto>> Update(int id, [FromBody] UpdatePromotionalContentRequestDto dto)
     {
         var content = await _context.Contents.FirstOrDefaultAsync(item => item.Contentid == id && item.Contenttype != "News" && item.Contenttype != "HomepageProductSection");
@@ -62,7 +62,7 @@ public class PromotionalContentsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin,Manager,Content")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ContentManage)]
     public async Task<IActionResult> Delete(int id)
     {
         var content = await _context.Contents.FirstOrDefaultAsync(item => item.Contentid == id && item.Contenttype != "News" && item.Contenttype != "HomepageProductSection");

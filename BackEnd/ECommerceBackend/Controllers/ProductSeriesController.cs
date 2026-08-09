@@ -76,17 +76,17 @@ public class ProductSeriesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.CatalogManage)]
     public ActionResult CreateProductSeries([FromBody] CreateProductSeriesRequestDto dto) =>
         Conflict(new ApiErrorDto("DÃ²ng mÃ¡y Ä‘Æ°á»£c nháº­p trá»±c tiáº¿p khi táº¡o/sá»­a sáº£n pháº©m.", null));
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.CatalogManage)]
     public ActionResult UpdateProductSeries(int id, [FromBody] UpdateProductSeriesRequestDto dto) =>
         Conflict(new ApiErrorDto("DÃ²ng mÃ¡y Ä‘Æ°á»£c nháº­p trá»±c tiáº¿p khi táº¡o/sá»­a sáº£n pháº©m.", null));
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.CatalogDelete)]
     public ActionResult DeleteProductSeries(int id) =>
         Conflict(new ApiErrorDto("DÃ²ng mÃ¡y Ä‘Æ°á»£c nháº­p trá»±c tiáº¿p khi táº¡o/sá»­a sáº£n pháº©m.", null));
 }

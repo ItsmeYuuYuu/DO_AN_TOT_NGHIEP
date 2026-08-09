@@ -11,7 +11,7 @@ namespace ECommerceBackend.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Admin,Manager,Sales,Warehouse,Customer")]
+[Authorize(Policy = "returns.access")]
 public class ReturnRequestsController : ControllerBase
 {
     private static readonly HashSet<string> RequestTypes =
@@ -246,7 +246,7 @@ public class ReturnRequestsController : ControllerBase
         item.Sellingprice + (item.Warrantyprice ?? 0m);
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Manager,Sales,Warehouse")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ReturnsView)]
     public async Task<ActionResult<IEnumerable<ReturnRequestDto>>> GetRequests(
         [FromQuery] string? status,
         [FromQuery] bool assignedToMe = false)
@@ -303,7 +303,7 @@ public class ReturnRequestsController : ControllerBase
     }
 
     [HttpGet("employees")]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ReturnsManage)]
     public async Task<ActionResult<IEnumerable<object>>> GetSalesEmployees()
     {
         var employees = await _context.Users
@@ -502,7 +502,7 @@ public class ReturnRequestsController : ControllerBase
     }
 
     [HttpPost("{id:int}/claim")]
-    [Authorize(Roles = "Sales")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ReturnsReview)]
     public async Task<ActionResult<ReturnRequestDto>> Claim(int id)
     {
         var userId = CurrentUserId();
@@ -524,7 +524,7 @@ public class ReturnRequestsController : ControllerBase
     }
 
     [HttpPatch("{id:int}/assign")]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ReturnsManage)]
     public async Task<ActionResult<ReturnRequestDto>> Assign(int id, AssignReturnRequestDto dto)
     {
         var request = await _context.Returnrequests.FirstOrDefaultAsync(item => item.Returnrequestid == id);
@@ -551,7 +551,7 @@ public class ReturnRequestsController : ControllerBase
     }
 
     [HttpPatch("{id:int}/review")]
-    [Authorize(Roles = "Admin,Manager,Sales")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ReturnsReview)]
     public async Task<ActionResult<ReturnRequestDto>> Review(int id, ReviewReturnRequestDto dto)
     {
         var request = await _context.Returnrequests.FirstOrDefaultAsync(item => item.Returnrequestid == id);
@@ -580,7 +580,7 @@ public class ReturnRequestsController : ControllerBase
     }
 
     [HttpPatch("{id:int}/receive")]
-    [Authorize(Roles = "Admin,Manager,Warehouse")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ReturnsReceive)]
     public async Task<ActionResult<ReturnRequestDto>> Receive(int id, ReceiveReturnRequestDto dto)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -811,7 +811,7 @@ public class ReturnRequestsController : ControllerBase
     }
 
     [HttpPost("{id:int}/reinspect")]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ReturnsManage)]
     public async Task<ActionResult<ReturnRequestDto>> Reinspect(
         int id,
         ReinspectRefundAssessmentDto dto)
@@ -851,7 +851,7 @@ public class ReturnRequestsController : ControllerBase
     }
 
     [HttpPost("{id:int}/override-assessment")]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ReturnsManage)]
     public async Task<ActionResult<ReturnRequestDto>> OverrideAssessment(
         int id,
         OverrideRefundAssessmentDto dto)
@@ -938,7 +938,7 @@ public class ReturnRequestsController : ControllerBase
     }
 
     [HttpPost("{id:int}/refund")]
-    [Authorize(Roles = "Admin,Manager,Sales")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ReturnsManage)]
     public async Task<ActionResult<ReturnRequestDto>> Refund(int id, ProcessRefundDto dto)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -1122,7 +1122,7 @@ public class ReturnRequestsController : ControllerBase
     }
 
     [HttpPost("{id:int}/resolve-refund-dispute")]
-    [Authorize(Roles = "Admin,Manager,Sales")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ReturnsManage)]
     public async Task<ActionResult<ReturnRequestDto>> ResolveRefundDispute(
         int id,
         ResolveRefundDisputeDto dto)

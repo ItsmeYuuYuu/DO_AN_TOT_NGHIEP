@@ -116,7 +116,6 @@ test('product form loads CKEditor and applies formatting', async ({ page }) => {
   await expect(dialog.locator('datalist option')).toHaveCount(2);
   await seriesInput.fill('E2E Pro');
   await dialog.getByPlaceholder('0').nth(0).fill('10000000');
-  await dialog.getByPlaceholder('0').nth(2).fill('1');
   await dialog.getByRole('button', { name: 'Tiếp theo' }).click();
 
   const editor = dialog.locator('.ck-content[contenteditable="true"]');

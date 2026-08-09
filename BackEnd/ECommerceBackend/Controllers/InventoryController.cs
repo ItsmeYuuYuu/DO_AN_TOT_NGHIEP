@@ -37,7 +37,7 @@ namespace ECommerceBackend.Controllers
         );
 
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryView)]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetInventoryItems()
         {
             var items = await _context.Inventoryitems
@@ -48,7 +48,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("{imei}")]
-        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryView)]
         public async Task<ActionResult<InventoryItemDto>> GetInventoryItem(string imei)
         {
             var item = await _context.Inventoryitems
@@ -60,7 +60,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("variant/{variantId}")]
-        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryView)]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetByVariant(int variantId)
         {
             var items = await _context.Inventoryitems
@@ -72,7 +72,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("status/{status}")]
-        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryView)]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetByStatus(string status)
         {
             var items = await _context.Inventoryitems
@@ -84,7 +84,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("low-stock")]
-        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryView)]
         public async Task<ActionResult<IEnumerable<LowStockVariantDto>>> GetLowStock(
             [FromQuery] int threshold = 2)
         {
@@ -112,7 +112,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("variant-options")]
-        [Authorize(Roles = "Admin,Manager,Warehouse,Warranty,Consultant")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryView)]
         public async Task<ActionResult<IEnumerable<InventoryVariantOptionDto>>> GetVariantOptions()
         {
             var variants = await _context.Productvariants
@@ -132,7 +132,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost("import-batch")]
-        [Authorize(Roles = "Admin,Warehouse")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryManage)]
         public async Task<ActionResult<BatchImportInventoryResultDto>> ImportBatch(
             [FromBody] BatchImportInventoryRequestDto dto)
         {
@@ -232,7 +232,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Warehouse")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryManage)]
         public async Task<ActionResult<InventoryItemDto>> PostInventoryItem([FromBody] CreateInventoryItemRequestDto dto)
         {
             var imei = dto.Imei.Trim();
@@ -276,7 +276,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPut("{imei}")]
-        [Authorize(Roles = "Admin,Warehouse")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryManage)]
         public async Task<IActionResult> PutInventoryItem(string imei, [FromBody] UpdateInventoryItemRequestDto dto)
         {
             var item = await _context.Inventoryitems.FindAsync(imei);
@@ -326,7 +326,7 @@ namespace ECommerceBackend.Controllers
         // the device is still untouched in stock; once it participates in an order,
         // warranty or return flow it must remain immutable for traceability.
         [HttpPut("{imei}/correct-imei")]
-        [Authorize(Roles = "Admin,Warehouse")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryManage)]
         public async Task<ActionResult<InventoryItemDto>> CorrectInventoryImei(
             string imei,
             [FromBody] CorrectInventoryImeiRequestDto dto)
@@ -432,7 +432,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpDelete("{imei}")]
-        [Authorize(Roles = "Admin")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.InventoryDelete)]
         public async Task<IActionResult> DeleteInventoryItem(string imei)
         {
             var item = await _context.Inventoryitems.FindAsync(imei);

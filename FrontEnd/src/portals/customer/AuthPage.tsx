@@ -20,6 +20,10 @@ const isStrongPassword = (password: string) =>
 const digitsOnly = (value: string, maxLength: number) =>
   value.replace(/\D/g, '').slice(0, maxLength);
 
+const validLoginIdentifier = (value: string) => /^[A-Za-z0-9._@+-]{1,100}$/.test(value);
+const validUsername = (value: string) => /^[A-Za-z0-9._-]{3,50}$/.test(value);
+const containsUnsafeMarkup = (value: string) => /[<>]|javascript:|data:text\/html/i.test(value);
+
 const getResponseMessage = (error: unknown, fallback: string) => {
   const data = (error as {
     response?: { data?: { message?: string; errors?: Record<string, string[]> } };
@@ -118,6 +122,10 @@ export default function AuthPage() {
       setLoginError('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.');
       return;
     }
+    if (!validLoginIdentifier(loginId.trim())) {
+      setLoginError('Tên đăng nhập hoặc email chứa ký tự không hợp lệ.');
+      return;
+    }
 
     setLoginLoading(true);
     try {
@@ -133,12 +141,16 @@ export default function AuthPage() {
           email: user.email ?? user.username,
           phone: user.phone,
           rolename: user.rolename,
+          roleids: user.roleids ?? (user.roleid ? [user.roleid] : []),
+          rolenames: user.rolenames ?? [user.rolename],
+          permissions: user.permissions ?? [],
         },
       );
       refreshAuth();
 
-      if (user.rolename === 'Admin') navigate('/admin');
-      else if (['Manager', 'Sales', 'Warehouse', 'Warranty', 'Content', 'Consultant'].includes(user.rolename)) {
+      const roleNames: string[] = user.rolenames ?? [user.rolename];
+      if (roleNames.includes('Admin')) navigate('/admin');
+      else if (roleNames.some(role => ['Manager', 'Sales', 'Warehouse', 'Warranty', 'Content', 'Consultant'].includes(role))) {
         navigate('/staff');
       } else {
         navigate('/');
@@ -186,6 +198,14 @@ export default function AuthPage() {
 
     if (!isStrongPassword(registerData.password)) {
       setRegisterError('Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.');
+      return;
+    }
+    if (!validUsername(registerData.username.trim())) {
+      setRegisterError('Tên đăng nhập chỉ được gồm chữ, số, dấu chấm, gạch dưới và gạch ngang.');
+      return;
+    }
+    if (containsUnsafeMarkup(registerData.fullname)) {
+      setRegisterError('Họ tên chứa nội dung không hợp lệ.');
       return;
     }
     if (registerData.password !== registerData.confirmPassword) {
@@ -390,6 +410,7 @@ export default function AuthPage() {
                   autoComplete="username"
                   placeholder="Ví dụ: nguyenvana hoặc email@gmail.com"
                   value={loginId}
+                  maxLength={100}
                   onChange={event => setLoginId(event.target.value)}
                 />
                 <label className="block">

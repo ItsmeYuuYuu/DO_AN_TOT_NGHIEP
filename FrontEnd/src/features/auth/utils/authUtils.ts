@@ -10,6 +10,9 @@ export interface AuthUser {
   email: string;
   phone?: string;
   rolename: string;
+  roleids?: number[];
+  rolenames?: string[];
+  permissions?: string[];
   exp: number;       // expiry timestamp (seconds)
 }
 
@@ -21,12 +24,31 @@ export interface StoredSession {
 
 const SESSION_KEY = 'ec_session';
 
+const legacyPermissionsByRole: Record<string, string[]> = {
+  Admin: ['*'],
+  Manager: ['dashboard.view', 'customers.view', 'customers.manage-account', 'orders.view', 'orders.manage', 'orders.assign', 'inventory.view', 'inventory.manage', 'shipments.view', 'shipments.manage', 'returns.view', 'returns.review', 'returns.receive', 'returns.manage', 'warranties.view', 'warranties.manage', 'products.manage', 'catalog.manage', 'content.manage', 'vouchers.manage', 'consultations.manage', 'reviews.manage', 'email.test'],
+  Sales: ['customers.view', 'orders.view', 'orders.manage', 'orders.assign', 'shipments.view', 'returns.view', 'returns.review', 'returns.manage'],
+  Warehouse: ['inventory.view', 'inventory.manage', 'products.manage', 'orders.view', 'orders.assign', 'shipments.view', 'shipments.manage', 'returns.view', 'returns.receive'],
+  Warranty: ['customers.view', 'orders.view', 'inventory.view', 'warranties.view', 'warranties.manage'],
+  Content: ['products.manage', 'catalog.manage', 'content.manage'],
+  Consultant: ['customers.view', 'orders.view', 'inventory.view', 'warranties.view', 'consultations.manage'],
+  Customer: [],
+};
+
+const normalizeUserAccess = <T extends Omit<AuthUser, 'exp'> | AuthUser>(user: T): T => {
+  const rolenames = user.rolenames?.length ? user.rolenames : [user.rolename];
+  const permissions = user.permissions?.length
+    ? user.permissions
+    : [...new Set(rolenames.flatMap(role => legacyPermissionsByRole[role] ?? []))];
+  return { ...user, rolenames, permissions };
+};
+
 // ─── Save ─────────────────────────────────────────────────────────────────────
 export function saveSession(token: string, expiresIn: number, userInfo: Omit<AuthUser, 'exp'>): void {
   const expiresAt = Date.now() + expiresIn * 1000;
   const session: StoredSession = {
     accessToken: token,
-    user: { ...userInfo, exp: Math.floor(expiresAt / 1000) },
+    user: { ...normalizeUserAccess(userInfo), exp: Math.floor(expiresAt / 1000) },
     expiresAt,
   };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -58,6 +80,7 @@ export function getSession(): StoredSession | null {
       clearSession();
       return null;
     }
+    session.user = normalizeUserAccess(session.user);
     return session;
   } catch {
     clearSession();
@@ -87,7 +110,13 @@ export function isAuthenticated(): boolean {
 }
 
 export function hasRole(role: string): boolean {
-  return getCurrentUser()?.rolename === role;
+  const user = getCurrentUser();
+  return user?.rolename === role || user?.rolenames?.includes(role) === true;
+}
+
+export function hasPermission(permission: string): boolean {
+  const permissions = getCurrentUser()?.permissions ?? [];
+  return permissions.includes('*') || permissions.includes(permission);
 }
 
 export function isAdmin(): boolean   { return hasRole('Admin'); }

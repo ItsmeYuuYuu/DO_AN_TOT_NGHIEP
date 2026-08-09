@@ -104,7 +104,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.VouchersManage)]
         public async Task<ActionResult<VoucherDto>> PostVoucher([FromBody] CreateVoucherRequestDto dto)
         {
             var voucher = new Voucher
@@ -124,7 +124,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPut("{code}")]
-        [Authorize(Roles = "Admin,Manager")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.VouchersManage)]
         public async Task<IActionResult> PutVoucher(string code, [FromBody] UpdateVoucherRequestDto dto)
         {
             var voucher = await _context.Vouchers.FindAsync(code);
@@ -153,7 +153,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpDelete("{code}")]
-        [Authorize(Roles = "Admin,Manager")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.VouchersManage)]
         public async Task<IActionResult> DeleteVoucher(string code)
         {
             var voucher = await _context.Vouchers.FindAsync(code);

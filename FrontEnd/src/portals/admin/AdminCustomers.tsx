@@ -36,6 +36,14 @@ interface Customer {
   accountisactive?: boolean | null;
 }
 
+interface CustomerPage {
+  items: Customer[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 const statusLabels: Record<string, { label: string; className: string }> = {
   Pending: { label: 'Chờ xác nhận', className: 'bg-amber-50 text-amber-700 border-amber-200' },
   Processing: { label: 'Đang xử lý', className: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -58,31 +66,39 @@ const AdminCustomers: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [accountUpdatingId, setAccountUpdatingId] = useState<number | null>(null);
 
-  const loadCustomers = () => {
-    setLoading(true);
-    apiClient.get<Customer[]>('/Customers')
-      .then(res => setCustomers(res.data))
-      .catch(() => setError('Không thể tải danh sách khách hàng.'))
-      .finally(() => setLoading(false));
-  };
-
   useEffect(() => {
-    loadCustomers();
-  }, []);
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await apiClient.get<CustomerPage>('/Customers', {
+          params: { query: search.trim() || undefined, page, pageSize: PAGE_SIZE },
+          signal: controller.signal,
+        });
+        setCustomers(response.data.items);
+        setTotalCount(response.data.totalCount);
+        setTotalPages(Math.max(1, response.data.totalPages));
+      } catch {
+        if (!controller.signal.aborted) setError('Không thể tải danh sách khách hàng.');
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 350);
 
-  const filtered = customers.filter(c =>
-    c.fullname.toLowerCase().includes(search.toLowerCase()) ||
-    (c.phone ?? '').includes(search) ||
-    (c.email ?? '').toLowerCase().includes(search.toLowerCase())
-  );
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [page, search]);
 
   const orderSummary = useMemo(() => {
     const completedOrders = customerOrders.filter(order => order.orderstatus === 'Completed');
@@ -251,7 +267,7 @@ const AdminCustomers: React.FC = () => {
       <div className="ops-hero flex items-center justify-between gap-4 p-6">
         <h2 className="ops-hero-title">Quản lý khách hàng</h2>
         <span className="rounded-full border border-red-100 bg-white px-4 py-2 text-sm font-black text-[#c4000b] shadow-sm">
-          {filtered.length} khách hàng
+          {totalCount} khách hàng
         </span>
       </div>
 
@@ -268,8 +284,8 @@ const AdminCustomers: React.FC = () => {
         </div>
       </div>
 
-      <DataTable columns={columns} data={paged} keyField="customerid" loading={loading} />
-      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} itemCount={filtered.length} pageSize={PAGE_SIZE} />
+      <DataTable columns={columns} data={customers} keyField="customerid" loading={loading} />
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} itemCount={totalCount} pageSize={PAGE_SIZE} />
 
       <Modal
         isOpen={selectedCustomer !== null}

@@ -58,6 +58,7 @@ const transitions: Record<string, string[]> = {
 
 const StaffShipments: React.FC = () => {
   const { user } = useAuth();
+  const hasRole = (role: string) => user?.rolename === role || user?.rolenames?.includes(role);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [selected, setSelected] = useState<Shipment | null>(null);
   const [filter, setFilter] = useState('');
@@ -96,7 +97,7 @@ const StaffShipments: React.FC = () => {
 
   const nextStatuses = selected
     ? (transitions[selected.status] ?? []).filter(status =>
-        user?.rolename !== 'Warehouse' || status === 'PickedUp' || status === 'ReturnedToWarehouse')
+        !hasRole('Warehouse') || status === 'PickedUp' || status === 'ReturnedToWarehouse')
     : [];
 
   const statCards: Array<{ label: string; value: number; icon: LucideIcon }> = [

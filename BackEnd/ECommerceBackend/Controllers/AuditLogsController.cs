@@ -16,7 +16,7 @@ namespace ECommerceBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.AuditView)]
     public class AuditLogsController : ControllerBase
     {
         private readonly ECommerceContext _context;

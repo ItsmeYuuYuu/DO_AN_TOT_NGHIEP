@@ -24,7 +24,7 @@ public class NewsController : ControllerBase
     [HttpGet("{id:int}")] public async Task<ActionResult<NewsDto>> GetNewsItem(int id) { var item = await NewsQuery().FirstOrDefaultAsync(value => value.Contentid == id); return item == null ? NotFound(new ApiErrorDto("Tin tức không tồn tại.", null)) : Ok(Map(item)); }
     [HttpGet("by-slug/{slug}")] public async Task<ActionResult<NewsDto>> GetNewsItemBySlug(string slug) { var item = await NewsQuery().FirstOrDefaultAsync(value => value.Slug == slug.Trim().ToLowerInvariant() && value.Isactive == true); return item == null ? NotFound(new ApiErrorDto("Tin tức không tồn tại.", null)) : Ok(Map(item)); }
 
-    [HttpPost, Authorize(Roles = "Admin,Content")]
+    [HttpPost, ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ContentManage)]
     public async Task<ActionResult<NewsDto>> PostNews(CreateNewsRequestDto dto)
     {
         if (!int.TryParse(User.FindFirst("userid")?.Value, out var userId)) return BadRequest(new ApiErrorDto("Không xác định được người tạo.", null));
@@ -33,7 +33,7 @@ public class NewsController : ControllerBase
         return CreatedAtAction(nameof(GetNewsItem), new { id = item.Contentid }, Map(item));
     }
 
-    [HttpPut("{id:int}"), Authorize(Roles = "Admin,Content")]
+    [HttpPut("{id:int}"), ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ContentManage)]
     public async Task<ActionResult<NewsDto>> PutNews(int id, UpdateNewsRequestDto dto)
     {
         var item = await _context.Contents.FirstOrDefaultAsync(value => value.Contentid == id && value.Contenttype == "News");
@@ -43,6 +43,6 @@ public class NewsController : ControllerBase
         await _context.SaveChangesAsync(); if (oldThumbnail != item.Thumbnailurl) _imageStorage.DeleteByUrl(oldThumbnail); return Ok(Map(item));
     }
 
-    [HttpDelete("{id:int}"), Authorize(Roles = "Admin,Content")]
+    [HttpDelete("{id:int}"), ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ContentManage)]
     public async Task<IActionResult> DeleteNews(int id) { var item = await _context.Contents.FirstOrDefaultAsync(value => value.Contentid == id && value.Contenttype == "News"); if (item == null) return NotFound(new ApiErrorDto("Tin tức không tồn tại.", null)); _context.Contents.Remove(item); await _context.SaveChangesAsync(); _imageStorage.DeleteByUrl(item.Thumbnailurl); return NoContent(); }
 }

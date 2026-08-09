@@ -12,6 +12,8 @@ using ECommerceBackend.Models;
 using ECommerceBackend.Middlewares;
 using ECommerceBackend.DTOs.Common;
 using ECommerceBackend.Serialization;
+using ECommerceBackend.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
@@ -85,8 +87,8 @@ builder.Services
         {
             OnTokenValidated = async context =>
             {
-                var roleName = context.Principal?.FindFirst(ClaimTypes.Role)?.Value;
-                if (!ECommerceBackend.Services.Auth.StaffSessionPolicy.RequiresSingleSession(roleName))
+                var isStaff = string.Equals(context.Principal?.FindFirst("staff")?.Value, "true", StringComparison.OrdinalIgnoreCase);
+                if (!isStaff)
                 {
                     return;
                 }
@@ -131,7 +133,21 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in AppPermissions.All)
+    {
+        options.AddPolicy(permission.Code, policy =>
+            policy.RequireAuthenticatedUser()
+                .AddRequirements(new PermissionRequirement(permission.Code)));
+    }
+    options.AddPolicy("returns.access", policy =>
+        policy.RequireAuthenticatedUser().RequireAssertion(context =>
+            context.User.IsInRole("Customer") ||
+            context.User.HasClaim(AppPermissions.ClaimType, AppPermissions.Wildcard) ||
+            context.User.HasClaim(AppPermissions.ClaimType, AppPermissions.ReturnsView)));
+});
 
 // ── Chat abuse protection ────────────────────────────────────────────────────
 builder.Services.AddRateLimiter(options =>

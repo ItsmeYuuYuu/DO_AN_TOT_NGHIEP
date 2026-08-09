@@ -37,7 +37,7 @@ namespace ECommerceBackend.Controllers
 
         // POST: api/Brands
         [HttpPost]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.CatalogManage)]
         public async Task<ActionResult<BrandDto>> PostBrand([FromBody] CreateBrandRequestDto dto)
         {
             var brand = new Brand
@@ -53,7 +53,7 @@ namespace ECommerceBackend.Controllers
 
         // PUT: api/Brands/5
         [HttpPut("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Manager,Warehouse,Content")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.CatalogManage)]
         public async Task<IActionResult> PutBrand(int id, [FromBody] UpdateBrandRequestDto dto)
         {
             var brand = await _context.Brands.FindAsync(id);
@@ -75,7 +75,7 @@ namespace ECommerceBackend.Controllers
 
         // DELETE: api/Brands/5
         [HttpDelete("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.CatalogDelete)]
         public async Task<IActionResult> DeleteBrand(int id)
         {
             var brand = await _context.Brands.FindAsync(id);

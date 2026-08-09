@@ -73,7 +73,7 @@ public class ShipmentsController : ControllerBase
         new List<ShipmentHistoryDto>());
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Manager,Sales,Warehouse")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ShipmentsView)]
     public async Task<ActionResult<IEnumerable<ShipmentDto>>> GetShipments([FromQuery] string? status)
     {
         var query = ShipmentQuery().AsNoTracking();
@@ -112,7 +112,7 @@ public class ShipmentsController : ControllerBase
     }
 
     [HttpPatch("{id:int}/status")]
-    [Authorize(Roles = "Admin,Manager,Sales,Warehouse")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ShipmentsManage)]
     public async Task<ActionResult<ShipmentDto>> UpdateStatus(int id, UpdateShipmentStatusDto dto)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync();

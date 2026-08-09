@@ -31,6 +31,8 @@ export default function CustomerChat() {
   const messagesPaneRef = useRef<HTMLDivElement>(null);
   const initialPromptSentRef = useRef(false);
   const lastTypingSentRef = useRef(0);
+  const lastMessageIdRef = useRef(0);
+  const pollingRef = useRef(false);
 
   const scrollToBottom = () => {
     window.setTimeout(() => {
@@ -47,6 +49,7 @@ export default function CustomerChat() {
     try {
       const msgs = await chatSessionsApi.getMessages(session.sessionid);
       setMessages(msgs);
+      lastMessageIdRef.current = msgs.reduce((max, message) => Math.max(max, message.messageid), 0);
       scrollToBottom();
     } catch (err) {
       console.error(err);
@@ -76,21 +79,30 @@ export default function CustomerChat() {
   useEffect(() => {
     if (!activeSession?.handoffstatus || activeSession.handoffstatus === 'Closed') return;
 
-    const timer = window.setInterval(async () => {
+    const poll = async () => {
+      if (document.hidden || pollingRef.current) return;
+      pollingRef.current = true;
       try {
-        const [session, latestMessages] = await Promise.all([
-          chatSessionsApi.getSession(activeSession.sessionid),
-          chatSessionsApi.getMessages(activeSession.sessionid),
-        ]);
-        setActiveSession(session);
-        setSessions(prev => prev.map(item => item.sessionid === session.sessionid ? session : item));
-        setMessages(latestMessages);
-        const typing = await chatSessionsApi.getTypingStatus(activeSession.sessionid);
-        setConsultantTyping(typing.consultantTyping);
+        const updates = await chatSessionsApi.getUpdates(activeSession.sessionid, lastMessageIdRef.current);
+        setActiveSession(updates.session);
+        setSessions(prev => prev.map(item => item.sessionid === updates.session.sessionid ? updates.session : item));
+        if (updates.messages.length > 0) {
+          lastMessageIdRef.current = Math.max(lastMessageIdRef.current, ...updates.messages.map(message => message.messageid));
+          setMessages(current => {
+            const existing = new Set(current.map(message => message.messageid));
+            return [...current, ...updates.messages.filter(message => !existing.has(message.messageid))];
+          });
+          scrollToBottom();
+        }
+        setConsultantTyping(updates.consultantTyping);
       } catch {
         // Ignore transient polling errors and keep the conversation visible.
+      } finally {
+        pollingRef.current = false;
       }
-    }, 3000);
+    };
+
+    const timer = window.setInterval(() => { void poll(); }, 5000);
 
     return () => window.clearInterval(timer);
   }, [activeSession?.sessionid, activeSession?.handoffstatus]);

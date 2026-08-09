@@ -10,7 +10,7 @@ namespace ECommerceBackend.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Admin,Manager,Warranty,Consultant")]
+[ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.WarrantiesView)]
 public class WarrantyClaimsController : ControllerBase
 {
     private static readonly HashSet<string> TerminalStatuses =
@@ -162,7 +162,7 @@ public class WarrantyClaimsController : ControllerBase
     }
 
     [HttpGet("employees")]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.WarrantiesManage)]
     public async Task<ActionResult<IEnumerable<object>>> GetWarrantyEmployees()
     {
         var employees = await _context.Users
@@ -184,7 +184,7 @@ public class WarrantyClaimsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Warranty")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.WarrantiesManage)]
     public async Task<ActionResult<WarrantyClaimDto>> CreateClaim(
         [FromBody] CreateWarrantyClaimRequestDto dto)
     {
@@ -270,7 +270,7 @@ public class WarrantyClaimsController : ControllerBase
     }
 
     [HttpPost("{id:int}/claim")]
-    [Authorize(Roles = "Warranty")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.WarrantiesManage)]
     public async Task<ActionResult<WarrantyClaimDto>> ClaimForCurrentEmployee(int id)
     {
         var userId = GetCurrentUserId();
@@ -305,7 +305,7 @@ public class WarrantyClaimsController : ControllerBase
     }
 
     [HttpPatch("{id:int}/assign")]
-    [Authorize(Roles = "Admin,Manager")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.WarrantiesManage)]
     public async Task<ActionResult<WarrantyClaimDto>> Assign(
         int id,
         [FromBody] AssignWarrantyClaimRequestDto dto)
@@ -345,7 +345,7 @@ public class WarrantyClaimsController : ControllerBase
     }
 
     [HttpPatch("{id:int}/status")]
-    [Authorize(Roles = "Admin,Manager,Warranty")]
+    [ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.WarrantiesManage)]
     public async Task<ActionResult<WarrantyClaimDto>> UpdateStatus(
         int id,
         [FromBody] UpdateWarrantyClaimStatusRequestDto dto)

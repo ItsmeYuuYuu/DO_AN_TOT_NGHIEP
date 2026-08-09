@@ -12,6 +12,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ECommerceBackend.Authorization;
 
 namespace ECommerceBackend.Controllers
 {
@@ -101,17 +102,15 @@ namespace ECommerceBackend.Controllers
         }
 
         private bool IsConsultationStaff() =>
-            User.IsInRole("Admin") ||
-            User.IsInRole("Manager") ||
-            User.IsInRole("Consultant");
+            User.HasClaim(AppPermissions.ClaimType, AppPermissions.Wildcard) ||
+            User.HasClaim(AppPermissions.ClaimType, AppPermissions.ConsultationsManage);
 
         private bool CanManageHandoff(Chatsession session)
         {
             if (!IsConsultationStaff() || string.IsNullOrEmpty(session.Handoffstatus))
                 return false;
 
-            return User.IsInRole("Admin") ||
-                User.IsInRole("Manager") ||
+            return User.HasClaim(AppPermissions.ClaimType, AppPermissions.Wildcard) ||
                 session.Assigneduserid == GetCurrentUserId();
         }
 
@@ -414,6 +413,31 @@ namespace ECommerceBackend.Controllers
             return Ok(await _chatTypingService.GetStatusAsync(id, HttpContext.RequestAborted));
         }
 
+        [HttpGet("{id}/updates")]
+        public async Task<ActionResult<ChatUpdatesDto>> GetUpdates(int id, [FromQuery] int afterMessageId = 0)
+        {
+            var session = await _context.Chatsessions.AsNoTracking().FirstOrDefaultAsync(item => item.Sessionid == id);
+            if (session == null) return NotFound(new ApiErrorDto("Session không tồn tại.", null));
+            if (!IsConsultationStaff() && !await IsOwnerAsync(session))
+                return StatusCode(403, new ApiErrorDto("Bạn không có quyền xem session này.", null));
+
+            var messages = await _context.Chatmessages.AsNoTracking()
+                .Where(message => message.Sessionid == id && message.Messageid > Math.Max(0, afterMessageId))
+                .OrderBy(message => message.Sentat)
+                .ThenBy(message => message.Messageid)
+                .Take(100)
+                .ToListAsync();
+            var mappedMessages = new List<ChatMessageDto>();
+            foreach (var message in messages) mappedMessages.Add(await MapMessageToDtoAsync(message));
+            var typing = await _chatTypingService.GetStatusAsync(id, HttpContext.RequestAborted);
+
+            return Ok(new ChatUpdatesDto(
+                await MapToDetailedDtoAsync(session),
+                mappedMessages,
+                typing.UserTyping,
+                typing.ConsultantTyping));
+        }
+
         [HttpPost("{id}/messages")]
         [EnableRateLimiting("ChatRequests")]
         public async Task<ActionResult<ChatMessageDto>> PostChatMessage(int id, [FromBody] CreateChatMessageRequestDto dto)
@@ -481,7 +505,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("recommendation-metrics")]
-        [Authorize(Roles = "Admin,Manager,Consultant")]
+        [HasPermission(AppPermissions.ConsultationsManage)]
         public async Task<ActionResult<ChatRecommendationMetricsDto>> GetRecommendationMetrics(
             [FromQuery] int days = 30)
         {
@@ -556,7 +580,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("consultation-history")]
-        [Authorize(Roles = "Admin,Manager,Consultant")]
+        [HasPermission(AppPermissions.ConsultationsManage)]
         public async Task<ActionResult<IEnumerable<ChatSessionDto>>> GetConsultationHistory(
             [FromQuery] int limit = 100)
         {
@@ -585,7 +609,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpGet("handoffs")]
-        [Authorize(Roles = "Admin,Manager,Consultant")]
+        [HasPermission(AppPermissions.ConsultationsManage)]
         public async Task<ActionResult<IEnumerable<ChatSessionDto>>> GetHandoffs()
         {
             var currentUserId = GetCurrentUserId();
@@ -614,7 +638,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost("{id}/accept")]
-        [Authorize(Roles = "Admin,Manager,Consultant")]
+        [HasPermission(AppPermissions.ConsultationsManage)]
         public async Task<ActionResult<ChatSessionDto>> AcceptHandoff(int id)
         {
             var currentUserId = GetCurrentUserId();
@@ -661,7 +685,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost("{id}/consultant-messages")]
-        [Authorize(Roles = "Admin,Manager,Consultant")]
+        [HasPermission(AppPermissions.ConsultationsManage)]
         public async Task<ActionResult<ChatMessageDto>> PostConsultantMessage(
             int id,
             [FromBody] CreateChatMessageRequestDto dto)
@@ -686,7 +710,7 @@ namespace ECommerceBackend.Controllers
         }
 
         [HttpPost("{id}/close-handoff")]
-        [Authorize(Roles = "Admin,Manager,Consultant")]
+        [HasPermission(AppPermissions.ConsultationsManage)]
         public async Task<ActionResult<ChatSessionDto>> CloseHandoff(int id)
         {
             var session = await _context.Chatsessions.FindAsync(id);

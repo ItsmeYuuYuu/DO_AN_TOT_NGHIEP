@@ -69,8 +69,10 @@ const StaffWarranties: React.FC = () => {
   const [conclusion, setConclusion] = useState('');
   const [note, setNote] = useState('');
 
-  const canAssign = user?.rolename === 'Admin' || user?.rolename === 'Manager';
-  const canCreate = user?.rolename === 'Admin' || user?.rolename === 'Warranty';
+  const canManage = user?.permissions?.includes('*') || user?.permissions?.includes('warranties.manage');
+  const hasRole = (role: string) => user?.rolename === role || user?.rolenames?.includes(role);
+  const canAssign = canManage;
+  const canCreate = canManage;
   const currentUserId = Number(user?.userid);
 
   const loadClaims = useCallback(async () => {
@@ -413,7 +415,7 @@ const StaffWarranties: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {!selected.assigneduserid && user?.rolename === 'Warranty' && (
+              {!selected.assigneduserid && hasRole('Warranty') && (
                 <Button
                   fullWidth
                   isLoading={working}

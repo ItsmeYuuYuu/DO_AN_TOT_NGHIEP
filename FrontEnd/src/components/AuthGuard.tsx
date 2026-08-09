@@ -1,10 +1,11 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { isAuthenticated, hasRole } from '@/features/auth/utils/authUtils';
+import { isAuthenticated, hasPermission, hasRole } from '@/features/auth/utils/authUtils';
 
 interface AuthGuardProps {
   /** Role(s) that are allowed to access this route */
-  allowedRoles: string[];
+  allowedRoles?: string[];
+  allowedPermissions?: string[];
   /** Where to redirect unauthorized users. Defaults to /auth/login */
   redirectTo?: string;
 }
@@ -28,6 +29,7 @@ interface AuthGuardProps {
  */
 const AuthGuard: React.FC<AuthGuardProps> = ({
   allowedRoles,
+  allowedPermissions,
   redirectTo = '/auth/login',
 }) => {
   const location = useLocation();
@@ -44,8 +46,9 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   }
 
   // 2. Authenticated but role not permitted
-  const roleAllowed = allowedRoles.some(role => hasRole(role));
-  if (!roleAllowed) {
+  const roleAllowed = !allowedRoles?.length || allowedRoles.some(role => hasRole(role));
+  const permissionAllowed = !allowedPermissions?.length || allowedPermissions.some(permission => hasPermission(permission));
+  if (!roleAllowed || !permissionAllowed) {
     return <Navigate to="/unauthorized" replace />;
   }
 

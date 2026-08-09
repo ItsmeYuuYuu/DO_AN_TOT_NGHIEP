@@ -17,7 +17,7 @@ public record ProductImageCleanupResultDto(
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Admin,Manager,Warehouse,Content")]
+[ECommerceBackend.Authorization.HasPermission(ECommerceBackend.Authorization.AppPermissions.ProductsManage)]
 public class ProductImagesController : ControllerBase
 {
     private readonly ECommerceContext _context;

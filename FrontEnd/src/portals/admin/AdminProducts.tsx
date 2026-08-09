@@ -23,6 +23,7 @@ type BusinessStatusFilter = 'all' | 'active' | 'inactive';
 
 const AdminProducts: React.FC = () => {
   const { user } = useAuth();
+  const can = (permission: string) => user?.permissions?.includes('*') || user?.permissions?.includes(permission);
   const { products, loading, error, refetch, deleteProduct } = useProducts(true);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -269,7 +270,7 @@ const AdminProducts: React.FC = () => {
           >
             <Wrench size={12} /> Sửa
           </button>
-          {(user?.rolename === 'Admin' || user?.rolename === 'Manager') && (
+          {can('products.manage') && (
             <button
               type="button"
               onClick={() => { void handleBusinessStatus(product); }}
@@ -283,7 +284,7 @@ const AdminProducts: React.FC = () => {
               {product.isactive ? 'Ngừng bán' : 'Mở bán'}
             </button>
           )}
-          {user?.rolename === 'Admin' && (
+          {can('products.delete') && (
             <button
               type="button"
               onClick={() => handleDelete(product.productid)}
@@ -304,7 +305,7 @@ const AdminProducts: React.FC = () => {
           <div>
             <h1 className="ops-hero-title">Quản lý sản phẩm</h1>
           </div>
-          {(user?.rolename === 'Admin' || user?.rolename === 'Manager') && (
+          {can('products.manage') && (
             <Button
               onClick={() => { void handleCleanupUnusedImages(); }}
               size="sm"
@@ -315,7 +316,7 @@ const AdminProducts: React.FC = () => {
               <ImageOff size={16} /> Dọn ảnh không dùng
             </Button>
           )}
-          {user?.rolename !== 'Content' && (
+          {can('products.manage') && (
             <Button onClick={() => setWizardOpen(true)} size="sm" className="inline-flex items-center gap-2 bg-[#e30613] hover:bg-[#c4000b]">
               <Plus size={16} /> Thêm sản phẩm
             </Button>

@@ -6,6 +6,7 @@ using ECommerceBackend.DTOs.Common;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using System;
+using ECommerceBackend.Authorization;
 
 namespace ECommerceBackend.Controllers
 {
@@ -66,46 +67,47 @@ namespace ECommerceBackend.Controllers
 
         // GET: api/Customers
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager,Sales,Warranty,Consultant")]
-        public async Task<ActionResult<IEnumerable<CustomerDto>>> GetCustomers()
+        [HasPermission(AppPermissions.CustomersView)]
+        public async Task<ActionResult<PagedResultDto<CustomerDto>>> GetCustomers(
+            [FromQuery] string? query = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 5, 100);
             var customerRoleIds = await GetCustomerRoleIdsAsync();
+            var customerQuery = _context.Customers.AsNoTracking().AsQueryable();
 
-            var nonCustomerUsers = await _context.Users
-                .AsNoTracking()
-                .Where(user => !user.Roleid.HasValue || !customerRoleIds.Contains(user.Roleid.Value))
-                .Select(user => new { user.Email, user.Phone })
-                .ToListAsync();
+            customerQuery = customerQuery.Where(customer => !_context.Users.Any(user =>
+                (!user.Roleid.HasValue || !customerRoleIds.Contains(user.Roleid.Value)) &&
+                ((customer.Email != null && user.Email != null && customer.Email.ToLower() == user.Email.ToLower()) ||
+                 (customer.Phone != null && user.Phone != null && customer.Phone == user.Phone))));
 
-            var customerUsers = await _context.Users
-                .AsNoTracking()
-                .Where(user => user.Roleid.HasValue && customerRoleIds.Contains(user.Roleid.Value))
-                .Select(user => new { user.Userid, user.Email, user.Phone, user.Isactive })
-                .ToListAsync();
+            var keyword = query?.Trim().ToLowerInvariant();
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                customerQuery = customerQuery.Where(customer =>
+                    customer.Fullname.ToLower().Contains(keyword) ||
+                    (customer.Email != null && customer.Email.ToLower().Contains(keyword)) ||
+                    (customer.Phone != null && customer.Phone.Contains(keyword)));
+            }
 
-            var internalEmails = nonCustomerUsers
-                .Where(user => !string.IsNullOrWhiteSpace(user.Email))
-                .Select(user => user.Email!.Trim().ToLowerInvariant())
-                .ToHashSet();
-            var internalPhones = nonCustomerUsers
-                .Where(user => !string.IsNullOrWhiteSpace(user.Phone))
-                .Select(user => user.Phone!.Trim())
-                .ToHashSet();
-
-            var customers = await _context.Customers
-                .AsNoTracking()
+            var totalCount = await customerQuery.CountAsync();
+            var customers = await customerQuery
                 .OrderByDescending(customer => customer.Createdat ?? DateTime.MinValue)
                 .ThenByDescending(customer => customer.Customerid)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            var visibleCustomers = customers.Where(customer =>
-            {
-                var email = NormalizeEmail(customer.Email);
-                var phone = NormalizePhone(customer.Phone);
-                var matchesInternalEmail = !string.IsNullOrWhiteSpace(email) && internalEmails.Contains(email);
-                var matchesInternalPhone = !string.IsNullOrWhiteSpace(phone) && internalPhones.Contains(phone);
-                return !matchesInternalEmail && !matchesInternalPhone;
-            }).ToList();
+            var pageEmails = customers.Where(item => item.Email != null).Select(item => item.Email!.ToLower()).ToList();
+            var pagePhones = customers.Where(item => item.Phone != null).Select(item => item.Phone!).ToList();
+            var customerUsers = await _context.Users.AsNoTracking()
+                .Where(user => user.Roleid.HasValue && customerRoleIds.Contains(user.Roleid.Value))
+                .Where(user => (user.Email != null && pageEmails.Contains(user.Email.ToLower())) ||
+                               (user.Phone != null && pagePhones.Contains(user.Phone)))
+                .Select(user => new { user.Userid, user.Email, user.Phone, user.Isactive })
+                .ToListAsync();
 
             User? FindLinkedAccount(Customer customer)
             {
@@ -126,7 +128,13 @@ namespace ECommerceBackend.Controllers
                     };
             }
 
-            return Ok(visibleCustomers.Select(customer => MapToDto(customer, FindLinkedAccount(customer))));
+            return Ok(new PagedResultDto<CustomerDto>
+            {
+                Items = customers.Select(customer => MapToDto(customer, FindLinkedAccount(customer))),
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            });
         }
 
         // GET: api/Customers/5
@@ -162,26 +170,6 @@ namespace ECommerceBackend.Controllers
 
             var account = await FindLinkedCustomerAccountAsync(customer);
             return Ok(MapToDto(customer, account));
-        }
-
-        // POST: api/Customers
-        [HttpPost]
-        [Authorize(Roles = "Admin,Manager,Sales")]
-        public async Task<ActionResult<CustomerDto>> PostCustomer([FromBody] CreateCustomerRequestDto dto)
-        {
-            var customer = new Customer
-            {
-                Fullname = dto.Fullname,
-                Phone = dto.Phone,
-                Email = dto.Email,
-                Address = dto.Address,
-                Createdat = DateTime.UtcNow
-            };
-
-            _context.Customers.Add(customer);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetCustomer), new { id = customer.Customerid }, MapToDto(customer));
         }
 
         // PUT: api/Customers/5
@@ -231,7 +219,7 @@ namespace ECommerceBackend.Controllers
 
         // PATCH: api/Customers/5/account-status
         [HttpPatch("{id}/account-status")]
-        [Authorize(Roles = "Admin,Manager")]
+        [HasPermission(AppPermissions.CustomersManageAccount)]
         public async Task<IActionResult> UpdateCustomerAccountStatus(int id, [FromBody] UpdateCustomerAccountStatusDto dto)
         {
             var customer = await _context.Customers.FindAsync(id);
@@ -253,7 +241,7 @@ namespace ECommerceBackend.Controllers
 
         // DELETE: api/Customers/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission(AppPermissions.CustomersManageAccount)]
         public async Task<IActionResult> DeleteCustomer(int id)
         {
             var customer = await _context.Customers.FindAsync(id);

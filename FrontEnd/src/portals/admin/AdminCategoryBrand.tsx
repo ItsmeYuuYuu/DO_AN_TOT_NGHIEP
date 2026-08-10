@@ -73,8 +73,8 @@ const CategorySection: React.FC = () => {
         <Input placeholder="Tìm danh mục..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
       </div>
 
-      <div className="border border-slate-200 rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               {['STT', 'Tên danh mục', 'Mô tả', 'Sản phẩm', 'Thao tác'].map(h => (
@@ -182,8 +182,8 @@ const BrandSection: React.FC = () => {
         <Input placeholder="Tìm thương hiệu..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
       </div>
 
-      <div className="border border-slate-200 rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               {['STT', 'Thương hiệu', 'Sản phẩm', 'Thao tác'].map(h => (
@@ -318,8 +318,8 @@ const SeriesSection: React.FC = () => {
         </select>
       </div>
 
-      <div className="border border-slate-200 rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+        <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               {['STT', 'Dòng máy', 'Thương hiệu', 'Thứ tự', 'Trạng thái', 'Sản phẩm', 'Thao tác'].map(h => (

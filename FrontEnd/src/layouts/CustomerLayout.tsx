@@ -16,6 +16,7 @@ import {
   Send,
   ShoppingCart,
   User,
+  UserPlus,
   X,
 } from 'lucide-react';
 import { useCart } from '@/features/orders/context/CartContext';
@@ -113,6 +114,10 @@ export const CustomerLayout: React.FC = () => {
   useEffect(() => {
     if (location.pathname !== '/search') return;
     setSearchQuery(new URLSearchParams(location.search).get('q') ?? '');
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -407,7 +412,9 @@ export const CustomerLayout: React.FC = () => {
                 type="button"
                 onClick={() => setMobileMenuOpen(open => !open)}
                 aria-label={mobileMenuOpen ? 'Đóng menu' : 'Mở menu'}
-                className="flex h-12 w-11 items-center justify-center border-l customer-rule text-[#1f2937] md:hidden"
+                aria-expanded={mobileMenuOpen}
+                aria-controls="customer-mobile-menu"
+                className="flex h-12 w-11 items-center justify-center border-l customer-rule text-[#1f2937] min-[1180px]:hidden"
               >
                 {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
@@ -429,7 +436,7 @@ export const CustomerLayout: React.FC = () => {
             </div>
           </form>
 
-          <nav className="relative hidden h-12 items-stretch border-t customer-rule md:flex">
+          <nav className="relative hidden h-12 items-stretch border-t customer-rule min-[1180px]:flex">
             <NavLink
               to="/products?sort=newest"
               className="flex items-center rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#fff1f2] hover:text-[#c4000b]"
@@ -552,7 +559,10 @@ export const CustomerLayout: React.FC = () => {
           </nav>
 
           {mobileMenuOpen && (
-            <div className="border-t customer-rule py-4 md:hidden">
+            <div
+              id="customer-mobile-menu"
+              className="customer-mobile-menu max-h-[calc(100dvh-8.25rem)] overflow-y-auto border-t customer-rule py-4 min-[1180px]:hidden"
+            >
               <div className="grid grid-cols-2 gap-px bg-[#e5e7eb]">
                 <Link
                   to="/products?sort=newest"
@@ -581,6 +591,13 @@ export const CustomerLayout: React.FC = () => {
                   className="rounded-2xl bg-white p-4 text-xs font-black uppercase tracking-wider text-[#1f2937]"
                 >
                   Tra cứu đơn
+                </Link>
+                <Link
+                  to="/news"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="col-span-2 rounded-2xl bg-white p-4 text-xs font-black uppercase tracking-wider text-[#1f2937]"
+                >
+                  Tin công nghệ
                 </Link>
               </div>
 
@@ -618,18 +635,46 @@ export const CustomerLayout: React.FC = () => {
                 ))}
               </div>
 
-              {isLoggedIn && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    logout();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="mt-4 flex w-full items-center gap-2 rounded-full bg-[#1f2937] px-4 py-3 text-xs font-black uppercase tracking-wider text-white"
-                >
-                  <LogOut size={15} /> Đăng xuất
-                </button>
-              )}
+              <div className="mt-5 grid grid-cols-2 gap-2 border-t customer-rule pt-4">
+                {isLoggedIn ? (
+                  <>
+                    <Link
+                      to="/profile"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 rounded-full border border-[#f3b8bd] bg-white px-4 py-3 text-xs font-black uppercase tracking-wider text-[#c4000b]"
+                    >
+                      <User size={15} /> Tài khoản
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logout();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="flex items-center justify-center gap-2 rounded-full bg-[#1f2937] px-4 py-3 text-xs font-black uppercase tracking-wider text-white"
+                    >
+                      <LogOut size={15} /> Đăng xuất
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/auth/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 rounded-full bg-[#1f2937] px-4 py-3 text-xs font-black uppercase tracking-wider text-white"
+                    >
+                      <User size={15} /> Đăng nhập
+                    </Link>
+                    <Link
+                      to="/auth/register"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 rounded-full bg-[#e30613] px-4 py-3 text-xs font-black uppercase tracking-wider text-white"
+                    >
+                      <UserPlus size={15} /> Đăng ký
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>

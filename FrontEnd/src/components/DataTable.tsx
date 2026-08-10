@@ -24,8 +24,8 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+        <table className="w-full min-w-[720px] text-sm">
           <thead className="border-b border-slate-200 bg-slate-100/80">
             <tr>
               {columns.map(col => (
@@ -55,8 +55,8 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+      <table className="w-full min-w-[720px] text-sm">
         <thead className="border-b border-slate-200 bg-slate-100/80">
           <tr>
             {columns.map(col => (

@@ -76,7 +76,7 @@ const StaffOrders: React.FC = () => {
       {loading ? (
         <Skeleton variant="row" />
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
           {/* Table header */}
           <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -92,7 +92,7 @@ const StaffOrders: React.FC = () => {
             )}
           </div>
 
-          <table className="w-full">
+          <table className="w-full min-w-[760px]">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
                 {['Mã đơn', 'Khách hàng', 'SĐT', 'Giá trị', 'Thanh toán', 'Trạng thái', 'Cập nhật'].map((col) => (

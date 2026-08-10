@@ -284,7 +284,7 @@ const StaffInventory: React.FC = () => {
                   setEditingItem(null);
                   setIsModalOpen(true);
                 }}
-                className="rounded-xl border border-amber-200 bg-white/80 px-3 py-2 text-left hover:border-amber-400"
+                className="w-full min-w-0 rounded-xl border border-amber-200 bg-white/80 px-3 py-2 text-left hover:border-amber-400"
               >
                 <p className="truncate text-xs font-bold text-slate-800">{variant.productName ?? `SKU #${variant.variantid}`}</p>
                 <div className="mt-1 flex items-center justify-between gap-2">
@@ -304,8 +304,8 @@ const StaffInventory: React.FC = () => {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
-        <table className="w-full border-collapse text-left">
+      <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+        <table className="w-full min-w-[820px] border-collapse text-left">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
               <th className="p-4">IMEI</th>

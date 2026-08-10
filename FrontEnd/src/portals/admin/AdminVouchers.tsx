@@ -106,8 +106,8 @@ const AdminVouchers: React.FC = () => {
         )}
       </div>
 
-      <div className="ops-card overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="ops-card overflow-x-auto">
+        <table className="w-full min-w-[680px] border-collapse text-left">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
               <th className="p-4">Mã Voucher</th>

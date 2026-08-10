@@ -222,18 +222,69 @@
   }
 
   .auth-form-panel {
-    position: relative;
+    position: absolute;
+    inset: 0;
     width: 100%;
     padding: 2rem 1.5rem;
-    opacity: 1;
-    filter: none;
-    transform: none;
-    transition: opacity 240ms ease;
+    pointer-events: none;
+    transition:
+      opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 420ms ease;
   }
 
-  .auth-motion-card.is-login .auth-form-panel--register,
-  .auth-motion-card.is-register .auth-form-panel--login {
-    display: none;
+  .auth-form-panel--register {
+    transform: translateX(-18%);
+  }
+
+  .auth-form-panel--login {
+    transform: translateX(18%);
+  }
+
+  .auth-motion-card.is-login .auth-form-panel--login,
+  .auth-motion-card.is-register .auth-form-panel--register {
+    position: relative;
+    z-index: 2;
+    opacity: 1;
+    filter: none;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+
+  .auth-motion-card.is-login .auth-form-panel--login {
+    animation: auth-mobile-enter-right 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .auth-motion-card.is-register .auth-form-panel--register {
+    animation: auth-mobile-enter-left 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes auth-mobile-enter-right {
+  from {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateX(18%);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateX(0);
+  }
+}
+
+@keyframes auth-mobile-enter-left {
+  from {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateX(-18%);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateX(0);
   }
 }
 
@@ -249,6 +300,10 @@
     transform: none;
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;
+  }
+
+  .auth-form-panel {
+    animation-duration: 1ms !important;
   }
 }
 
@@ -691,11 +746,6 @@
       box-shadow: 0 6px 16px rgb(15 23 42 / 5%);
     }
 
-    .product-card:hover {
-      transform: none;
-      box-shadow: 0 6px 16px rgb(15 23 42 / 5%);
-    }
-
     .customer-home-product-carousel .product-card,
     .customer-home-product-carousel .product-card:hover {
       box-shadow: none;
@@ -704,6 +754,25 @@
     .customer-button-dark,
     .customer-button-outline {
       @apply px-4 py-2.5 text-[11px];
+    }
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .product-card:active {
+      transform: translateY(-2px) scale(0.99);
+      border-color: rgb(227 6 19 / 32%);
+      box-shadow: 0 12px 24px rgb(15 23 42 / 10%);
+    }
+
+    .product-card:active .card-img-container img {
+      transform: scale(1.05);
+    }
+
+    .customer-button-dark:active,
+    .customer-button-outline:active,
+    .btn-retail-primary:active,
+    .btn-retail-danger:active {
+      transform: translateY(1px) scale(0.98);
     }
   }
 
@@ -736,6 +805,31 @@
   /* Navigation active state */
   .nav-active {
     @apply border-b-2 border-[#e30613] font-bold text-[#e30613];
+  }
+}
+
+.customer-mobile-menu,
+.mobile-nav-panel {
+  transform-origin: top center;
+  animation: mobile-nav-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes mobile-nav-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem) scaleY(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .design-system-shell button:not(:disabled):active,
+  .design-system-shell a:active {
+    filter: brightness(0.96);
   }
 }
 

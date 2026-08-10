@@ -86,7 +86,7 @@ const DonutChart = ({
   const circumference = 2 * Math.PI * radius;
 
   return (
-    <div className="ops-card flex h-[460px] flex-col p-5">
+    <div className="ops-card flex h-[460px] min-w-0 flex-col p-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="ops-label">Cơ cấu đơn hàng</p>
@@ -422,7 +422,7 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="admin-intro-analytics grid gap-6 lg:grid-cols-4">
-        <section className="ops-card flex h-[460px] flex-col p-6 lg:col-span-2">
+        <section className="ops-card flex h-[460px] min-w-0 flex-col p-6 lg:col-span-2">
           <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-start">
             <div>
               <p className="ops-label">Phân tích doanh thu</p>
@@ -548,7 +548,7 @@ const AdminDashboard: React.FC = () => {
           onPeriodChange={setOrderStatusPeriod}
         />
 
-        <section className="ops-card flex h-[460px] flex-col p-5">
+        <section className="ops-card flex h-[460px] min-w-0 flex-col p-5">
           <div className="border-b border-slate-100 pb-3">
             <p className="ops-label">Hoạt động gần đây</p>
             <h2 className="mt-1 text-xl font-black text-[#172033]">Nhật ký hoạt động</h2>

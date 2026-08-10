@@ -216,7 +216,7 @@ export const StaffLayout: React.FC = () => {
         </nav>
 
         {mobileOpen && (
-          <nav className="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-slate-200 px-4 py-3 min-[960px]:hidden">
+          <nav className="mobile-nav-panel max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-slate-200 px-4 py-3 min-[960px]:hidden">
             <div className="grid gap-1">
               {staffNav.map(item => {
                 const active = isPathActive(location.pathname, item);

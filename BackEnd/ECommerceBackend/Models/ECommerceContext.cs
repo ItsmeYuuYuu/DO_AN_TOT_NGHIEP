@@ -967,6 +967,16 @@ public partial class ECommerceContext : DbContext
                 .HasPrecision(18, 2)
                 .HasColumnName("discountamount");
             entity.Property(e => e.Discountpercentage).HasColumnName("discountpercentage");
+            entity.Property(e => e.Minimumorderamount)
+                .HasPrecision(18, 2)
+                .HasColumnName("minimumorderamount");
+            entity.Property(e => e.Maximumdiscountamount)
+                .HasPrecision(18, 2)
+                .HasColumnName("maximumdiscountamount");
+            entity.Property(e => e.Applicableproductids)
+                .HasColumnType("integer[]")
+                .HasDefaultValueSql("ARRAY[]::integer[]")
+                .HasColumnName("applicableproductids");
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");

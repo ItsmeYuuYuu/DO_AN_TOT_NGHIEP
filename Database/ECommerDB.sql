@@ -882,6 +882,9 @@ CREATE TABLE public.vouchers (
     vouchercode character varying(50) NOT NULL,
     discountamount numeric(18,2),
     discountpercentage double precision,
+    minimumorderamount numeric(18,2),
+    maximumdiscountamount numeric(18,2),
+    applicableproductids integer[] DEFAULT ARRAY[]::integer[] NOT NULL,
     validfrom timestamp without time zone,
     validto timestamp without time zone,
     isactive boolean DEFAULT true

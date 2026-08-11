@@ -11,6 +11,12 @@ public partial class Voucher
 
     public double? Discountpercentage { get; set; }
 
+    public decimal? Minimumorderamount { get; set; }
+
+    public decimal? Maximumdiscountamount { get; set; }
+
+    public int[] Applicableproductids { get; set; } = [];
+
     public DateTime? Validfrom { get; set; }
 
     public DateTime? Validto { get; set; }

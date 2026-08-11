@@ -93,7 +93,7 @@ const statusLabel = (status: string) => {
 };
 
 const ProfilePage: React.FC = () => {
-  const { user, isLoggedIn, logout, refreshAuth } = useAuth();
+  const { user, isLoggedIn, isInitializing, logout, refreshAuth } = useAuth();
   const navigate = useNavigate();
   const profileRef = useRef<HTMLDivElement>(null);
   const ordersRef = useRef<HTMLDivElement>(null);
@@ -112,6 +112,8 @@ const ProfilePage: React.FC = () => {
   };
 
   useEffect(() => {
+    if (isInitializing) return;
+
     if (!isLoggedIn) {
       navigate('/auth/login');
       return;
@@ -144,7 +146,7 @@ const ProfilePage: React.FC = () => {
         .then(response => setReturnOrderIds(new Set(response.data.map(request => request.orderid))))
         .catch(() => setReturnOrderIds(new Set()));
     }
-  }, [isLoggedIn, user?.userid, user?.fullname, user?.email, user?.phone, user?.rolename, navigate]);
+  }, [isInitializing, isLoggedIn, user?.userid, user?.fullname, user?.email, user?.phone, user?.rolename, navigate]);
 
   const handleSaveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -228,28 +230,28 @@ const ProfilePage: React.FC = () => {
   ];
 
   return (
-    <div className="customer-shell min-h-screen pb-16">
+    <div className="customer-shell min-h-screen w-full min-w-0 overflow-x-clip pb-16">
       <Seo title="Tài khoản của tôi - Cuồng Điện Thoại" description="Trang tài khoản và lịch sử đơn hàng của khách hàng Cuồng Điện Thoại." noIndex />
       <section className="border-b customer-rule bg-[#ffffff] px-3 py-6 sm:px-4 sm:py-8">
         <div className="customer-container">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <h1 className="text-3xl font-bold text-[#241516] sm:text-4xl">
+              <h1 className="text-2xl font-bold text-[#241516] sm:text-4xl">
                 Tài khoản của tôi
               </h1>
               <p className="mt-2 text-sm text-[#795f61]">
                 Theo dõi đơn hàng, đổi trả, bảo hành và đánh giá sau mua.
               </p>
             </div>
-            <Link to="/products" className="customer-button-outline">
+            <Link to="/products" className="customer-button-outline w-full sm:w-auto">
               Tiếp tục mua sắm <ChevronRight size={15} />
             </Link>
           </div>
         </div>
       </section>
 
-      <main className="customer-container grid gap-6 px-3 py-6 sm:px-4 sm:py-8 lg:grid-cols-[320px_1fr]">
-        <aside className="space-y-5">
+      <main className="customer-container grid w-full min-w-0 gap-6 px-3 py-6 sm:px-4 sm:py-8 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="min-w-0 space-y-5">
           <div className="customer-panel p-5 text-center sm:p-6">
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-[#f3c8cb] bg-[#fff1f2] text-3xl font-bold text-[#c4000b]">
               {avatarLetter}
@@ -338,7 +340,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </aside>
 
-        <section className="space-y-6">
+        <section className="min-w-0 space-y-6">
           <div ref={profileRef} className="scroll-mt-28 customer-panel p-4 sm:p-6">
             <div className="mb-5 flex items-center justify-between gap-4">
               <h2 className="text-xl font-bold text-[#241516]">Thông tin cá nhân</h2>
@@ -430,7 +432,7 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
 
-          <div ref={ordersRef} className="scroll-mt-28 customer-panel p-4 sm:p-6">
+          <div ref={ordersRef} className="scroll-mt-28 customer-panel min-w-0 p-4 sm:p-6">
             <div className="mb-5 flex items-center justify-between gap-4">
               <h2 className="text-xl font-bold text-[#241516]">Lịch sử đơn hàng</h2>
               <div className="hidden gap-3 text-xs font-semibold text-[#795f61] sm:flex">
@@ -439,8 +441,11 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
 
-            <div className="mb-5 overflow-x-auto border-b border-slate-200">
-              <div className="flex min-w-max">
+            <div
+              className="-mx-4 mb-5 overflow-x-auto border-b border-slate-200 px-4 sm:mx-0 sm:px-0"
+              aria-label="Bộ lọc lịch sử đơn hàng"
+            >
+              <div className="flex w-max min-w-full">
                 {orderTabs.map(tab => {
                   const count = orders.filter(order => {
                     if (tab.key === 'all') return true;
@@ -455,7 +460,7 @@ const ProfilePage: React.FC = () => {
                   }).length;
                   return (
                     <button key={tab.key} type="button" onClick={() => setOrderFilter(tab.key)}
-                      className={`border-b-2 px-4 py-3 text-sm font-bold transition ${orderFilter === tab.key ? 'border-[#e30613] text-[#e30613]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
+                      className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-bold transition sm:px-4 ${orderFilter === tab.key ? 'border-[#e30613] text-[#e30613]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
                       {tab.label}{count > 0 && tab.key !== 'all' ? ` (${count})` : ''}
                     </button>
                   );

@@ -11,7 +11,7 @@ export const roleLabels: Record<string, string> = {
   Warehouse: 'Nhân viên kho',
   Warranty: 'Nhân viên bảo hành',
   Content: 'Nhân viên nội dung',
-  Consultant: 'Nhân viên tư vấn AI',
+  Consultant: 'Nhân viên chăm sóc khách hàng',
 };
 
 export const getRoleLabel = (roleName: string): string =>

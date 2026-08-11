@@ -174,8 +174,8 @@ export default function AuthPage() {
 
   const requestCode = async () => {
     const email = registerData.email.trim();
-    if (!email) {
-      setRegisterError('Vui lòng nhập email trước khi gửi mã xác nhận.');
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setRegisterError('Vui lòng nhập địa chỉ email hợp lệ trước khi gửi mã xác nhận.');
       return;
     }
 
@@ -196,6 +196,14 @@ export default function AuthPage() {
     event.preventDefault();
     setRegisterError(null);
 
+    if (!/^\S+@\S+\.\S+$/.test(registerData.email.trim())) {
+      setRegisterError('Vui lòng nhập địa chỉ email hợp lệ.');
+      return;
+    }
+    if (!/^\d{6}$/.test(registerData.verificationCode.trim())) {
+      setRegisterError('Mã xác nhận email phải gồm đúng 6 chữ số.');
+      return;
+    }
     if (!isStrongPassword(registerData.password)) {
       setRegisterError('Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.');
       return;
@@ -279,6 +287,57 @@ export default function AuthPage() {
                 </div>
               ) : (
                 <form onSubmit={handleRegister} className="mt-6 space-y-4">
+                  <div className="rounded-xl border border-[#f3c8cb] bg-[#fff8f8] p-4 sm:p-5">
+                    <div className="mb-4 flex items-start gap-3">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e30613] text-xs font-bold text-white">1</span>
+                      <div>
+                        <p className="text-sm font-bold text-[#1f2937]">Xác nhận địa chỉ email</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">Nhập email, nhận mã rồi xác nhận trước khi điền thông tin tài khoản.</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <AuthField
+                        label="Email"
+                        name="email"
+                        type="email"
+                        required
+                        maxLength={100}
+                        autoComplete="email"
+                        value={registerData.email}
+                        onChange={handleRegisterChange}
+                        action={(
+                          <button
+                            type="button"
+                            onClick={requestCode}
+                            disabled={sendingCode}
+                            className="shrink-0 rounded-lg border border-red-200 px-4 text-xs font-bold text-[#c4000b] transition hover:bg-red-50 disabled:opacity-60 sm:px-5"
+                          >
+                            {sendingCode ? 'Đang gửi...' : 'Gửi mã'}
+                          </button>
+                        )}
+                      />
+                      <AuthField
+                        label="Mã xác nhận email"
+                        name="verificationCode"
+                        required
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        value={registerData.verificationCode}
+                        onChange={handleRegisterChange}
+                      />
+                      {codeMessage && <p className="text-xs font-semibold text-emerald-600">{codeMessage}</p>}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-1">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1f2937] text-xs font-bold text-white">2</span>
+                    <p className="text-sm font-bold text-[#1f2937]">Thông tin tài khoản</p>
+                    <span className="h-px flex-1 bg-slate-200" />
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <AuthField
                       label="Tên đăng nhập"
@@ -299,48 +358,16 @@ export default function AuthPage() {
                   </div>
 
                   <AuthField
-                    label="Email"
-                    name="email"
-                    type="email"
+                    label="Số điện thoại"
+                    name="phone"
+                    type="tel"
                     required
-                    maxLength={100}
-                    autoComplete="email"
-                    value={registerData.email}
+                    inputMode="numeric"
+                    maxLength={10}
+                    autoComplete="tel"
+                    value={registerData.phone}
                     onChange={handleRegisterChange}
-                    action={(
-                      <button
-                        type="button"
-                        onClick={requestCode}
-                        disabled={sendingCode}
-                        className="shrink-0 rounded-full border border-red-200 px-5 text-xs font-bold text-[#c4000b] transition hover:bg-red-50 disabled:opacity-60"
-                      >
-                        {sendingCode ? 'Đang gửi...' : 'Gửi mã'}
-                      </button>
-                    )}
                   />
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <AuthField
-                      label="Mã xác nhận email"
-                      name="verificationCode"
-                      inputMode="numeric"
-                      maxLength={6}
-                      value={registerData.verificationCode}
-                      onChange={handleRegisterChange}
-                    />
-                    <AuthField
-                      label="Số điện thoại"
-                      name="phone"
-                      type="tel"
-                      required
-                      inputMode="numeric"
-                      maxLength={10}
-                      autoComplete="tel"
-                      value={registerData.phone}
-                      onChange={handleRegisterChange}
-                    />
-                  </div>
-                  {codeMessage && <p className="-mt-2 text-xs font-semibold text-emerald-600">{codeMessage}</p>}
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <AuthField

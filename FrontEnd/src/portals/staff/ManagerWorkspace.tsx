@@ -9,7 +9,7 @@ const shortcuts = [
   { label: 'Kho hàng', description: 'Xem tồn kho, IMEI và cảnh báo sắp hết.', to: '/staff/inventory', Icon: Boxes },
   { label: 'Bảo hành', description: 'Theo dõi phiếu tiếp nhận và tiến độ sửa chữa.', to: '/staff/warranties', Icon: ShieldCheck },
   { label: 'Khách hàng', description: 'Tra cứu hồ sơ và lịch sử mua hàng.', to: '/staff/customers', Icon: Users },
-  { label: 'Tư vấn AI', description: 'Giám sát các cuộc hội thoại chuyển cho nhân viên.', to: '/staff/consultations', Icon: Headphones },
+  { label: 'Chăm sóc khách hàng', description: 'Giám sát các cuộc hội thoại chuyển cho nhân viên.', to: '/staff/consultations', Icon: Headphones },
 ];
 
 const ManagerWorkspace: React.FC = () => (

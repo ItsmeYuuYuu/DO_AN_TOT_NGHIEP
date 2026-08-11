@@ -11,13 +11,22 @@ import { notifyError } from '@/utils/notifications';
 const statusLabel: Record<string, string> = {
   Waiting: 'Đang chờ',
   InProgress: 'Đang xử lý',
-  Closed: 'Đã đóng',
+  Closed: 'Đã kết thúc',
 };
 
 const resolutionLabels: Record<string, string> = {
   Resolved: 'Đã giải quyết xong',
   CustomerNoResponse: 'Khách hàng không phản hồi',
   CustomerEnded: 'Khách hàng chủ động kết thúc',
+};
+
+const getSessionStatusLabel = (session: ChatSession) => {
+  if (session.handoffstatus === 'Closed') {
+    return session.resolutioncode
+      ? resolutionLabels[session.resolutioncode] ?? session.resolutioncode
+      : 'Đã kết thúc';
+  }
+  return statusLabel[session.handoffstatus ?? ''] ?? session.handoffstatus ?? 'Mới';
 };
 
 const ConsultantChats = () => {
@@ -173,7 +182,7 @@ const ConsultantChats = () => {
       <section className="ops-hero">
         <div className="grid gap-6 p-6 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
-            <h1 className="ops-hero-title">Tư vấn trực tiếp</h1>
+            <h1 className="ops-hero-title">Chăm sóc khách hàng</h1>
           </div>
           <div className="rounded-full border border-red-100 bg-white px-4 py-2 text-sm font-black text-[#c4000b] shadow-sm">
             {sessions.length} {viewMode === 'history' ? 'phiên tư vấn đã lưu' : 'phiên đang chờ xử lý'}
@@ -230,12 +239,12 @@ const ConsultantChats = () => {
                   <span className="truncate text-sm font-black text-[#172033]">
                     {session.customername ?? `Khách #${session.customerid ?? session.sessionid}`}
                   </span>
-                  <span className={`px-2 py-0.5 text-[10px] font-black ${
+                  <span className={`shrink-0 whitespace-nowrap px-2 py-0.5 text-[10px] font-black ${
                     session.handoffstatus === 'Waiting'
                       ? 'bg-amber-100 text-amber-700'
                       : 'bg-emerald-100 text-emerald-700'
                   }`}>
-                    {statusLabel[session.handoffstatus ?? ''] ?? session.handoffstatus ?? 'Mới'}
+                    {getSessionStatusLabel(session)}
                   </span>
                 </div>
                 <p className="mt-1 truncate text-xs font-semibold text-slate-500">{session.title}</p>

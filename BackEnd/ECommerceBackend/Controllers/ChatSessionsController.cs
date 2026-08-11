@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ECommerceBackend.Authorization;
+using ECommerceBackend.Services.Security;
 
 namespace ECommerceBackend.Controllers
 {
@@ -24,15 +25,18 @@ namespace ECommerceBackend.Controllers
         private readonly ECommerceContext _context;
         private readonly IChatOrchestratorService _chatOrchestrator;
         private readonly IChatTypingService _chatTypingService;
+        private readonly ISensitiveDataProtectionService _sensitiveDataProtection;
 
         public ChatSessionsController(
             ECommerceContext context,
             IChatOrchestratorService chatOrchestrator,
-            IChatTypingService chatTypingService)
+            IChatTypingService chatTypingService,
+            ISensitiveDataProtectionService sensitiveDataProtection)
         {
             _context = context;
             _chatOrchestrator = chatOrchestrator;
             _chatTypingService = chatTypingService;
+            _sensitiveDataProtection = sensitiveDataProtection;
         }
 
         private async Task<int?> GetCurrentCustomerIdAsync()
@@ -248,7 +252,7 @@ namespace ECommerceBackend.Controllers
                 message.Messageid,
                 message.Sessionid,
                 message.Sendertype,
-                message.Messagecontent,
+                _sensitiveDataProtection.Sanitize(message.Messagecontent).SanitizedText,
                 message.Sentat,
                 recommendations,
                 message.Responsetype,
@@ -455,13 +459,15 @@ namespace ECommerceBackend.Controllers
             if (session == null) return NotFound(new ApiErrorDto("Session không tồn tại.", null));
             if (!await IsOwnerAsync(session)) return StatusCode(403, new ApiErrorDto("Bạn không có quyền gửi tin nhắn vào session này.", null));
 
+            var safeContent = _sensitiveDataProtection.Sanitize(dto.Messagecontent.Trim()).SanitizedText;
+
             if (session.Handoffstatus is "Waiting" or "InProgress")
             {
                 var userMessage = new Chatmessage
                 {
                     Sessionid = session.Sessionid,
                     Sendertype = "user",
-                    Messagecontent = dto.Messagecontent.Trim(),
+                    Messagecontent = safeContent,
                     Sentat = DateTime.UtcNow
                 };
                 session.Endtime = DateTime.UtcNow;
@@ -470,7 +476,7 @@ namespace ECommerceBackend.Controllers
                 return Ok(await MapMessageToDtoAsync(userMessage));
             }
 
-            var result = await _chatOrchestrator.ProcessUserMessageAsync(session, dto.Messagecontent);
+            var result = await _chatOrchestrator.ProcessUserMessageAsync(session, safeContent);
 
             return Ok(result);
         }
@@ -692,6 +698,11 @@ namespace ECommerceBackend.Controllers
             int id,
             [FromBody] CreateChatMessageRequestDto dto)
         {
+            if (string.IsNullOrWhiteSpace(dto.Messagecontent) || dto.Messagecontent.Length > 500)
+                return BadRequest(new ApiErrorDto(
+                    "Tin nhắn phải có nội dung và không được vượt quá 500 ký tự.",
+                    null));
+
             var session = await _context.Chatsessions.FindAsync(id);
             if (session == null)
                 return NotFound(new ApiErrorDto("Session không tồn tại.", null));
@@ -702,7 +713,7 @@ namespace ECommerceBackend.Controllers
             {
                 Sessionid = session.Sessionid,
                 Sendertype = "consultant",
-                Messagecontent = dto.Messagecontent.Trim(),
+                Messagecontent = _sensitiveDataProtection.Sanitize(dto.Messagecontent.Trim()).SanitizedText,
                 Sentat = DateTime.UtcNow
             };
             session.Endtime = DateTime.UtcNow;

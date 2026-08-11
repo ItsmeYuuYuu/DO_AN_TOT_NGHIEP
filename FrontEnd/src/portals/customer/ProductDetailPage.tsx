@@ -85,7 +85,7 @@ const ProductDetailPage: React.FC = () => {
     '/favicon.svg';
   const seoDescription = buildSeoDescription(
     product.description,
-    `${product.productname}${product.brand?.name ? ` thương hiệu ${product.brand.name}` : ''}, giá từ ${formatCurrency(currentPrice)} tại Cuồng Điện Thoại. Tư vấn AI, thông số rõ ràng và hỗ trợ bảo hành theo IMEI.`,
+    `${product.productname}${product.brand?.name ? ` thương hiệu ${product.brand.name}` : ''}, giá từ ${formatCurrency(currentPrice)} tại Cuồng Điện Thoại. Chăm sóc khách hàng, thông số rõ ràng và hỗ trợ bảo hành theo IMEI.`,
   );
 
   const askAi = () => {
@@ -191,7 +191,7 @@ const ProductDetailPage: React.FC = () => {
                     { icon: ShieldCheck, title: 'Bảo hành rõ ràng', text: 'Áp dụng theo chính sách của từng sản phẩm.' },
                     { icon: RefreshCcw, title: 'Hỗ trợ đổi trả', text: 'Tiếp nhận và kiểm tra theo lịch sử đơn hàng, IMEI.' },
                     { icon: Truck, title: 'Theo dõi giao hàng', text: 'Cập nhật trạng thái vận chuyển ngay trong hệ thống.' },
-                    { icon: Headphones, title: 'Tư vấn trực tiếp', text: 'Có thể chuyển từ AI sang nhân viên khi cần.' },
+                    { icon: Headphones, title: 'Chăm sóc khách hàng', text: 'Có thể chuyển từ AI sang nhân viên khi cần.' },
                   ].map(({ icon: Icon, title, text }) => (
                     <div key={title} className="flex gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#f3c7cb] bg-[#fff1f2] text-[#c4000b]">

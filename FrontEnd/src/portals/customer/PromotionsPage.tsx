@@ -9,6 +9,9 @@ interface Voucher {
   vouchercode: string;
   discountamount?: number;
   discountpercentage?: number;
+  minimumorderamount?: number;
+  maximumdiscountamount?: number;
+  applicableproductids: number[];
   validfrom?: string;
   validto?: string;
   isactive?: boolean;
@@ -106,6 +109,12 @@ const PromotionsPage: React.FC = () => {
                   </div>
 
                   <p className="customer-display text-3xl font-bold text-[#c4000b]">{formatDiscount(voucher)}</p>
+
+                  <div className="mt-3 space-y-1 text-xs font-semibold text-slate-600">
+                    <p>{voucher.minimumorderamount ? `Đơn từ ${voucher.minimumorderamount.toLocaleString('vi-VN')}đ` : 'Không yêu cầu giá trị tối thiểu'}</p>
+                    {voucher.maximumdiscountamount && <p>Giảm tối đa {voucher.maximumdiscountamount.toLocaleString('vi-VN')}đ</p>}
+                    <p>{voucher.applicableproductids?.length ? `Áp dụng cho ${voucher.applicableproductids.length} sản phẩm được chọn` : 'Áp dụng cho toàn bộ sản phẩm'}</p>
+                  </div>
 
                   <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
                     <Clock size={12} />

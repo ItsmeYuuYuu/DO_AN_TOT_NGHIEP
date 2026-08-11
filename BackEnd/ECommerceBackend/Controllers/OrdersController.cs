@@ -25,6 +25,7 @@ namespace ECommerceBackend.Controllers
         private readonly ECommerceContext _context;
         private readonly ICheckoutAbuseProtectionService _checkoutAbuseProtection;
         private readonly IShippingFeePolicy _shippingFeePolicy;
+        private readonly IVoucherPolicyService _voucherPolicyService;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _environment;
@@ -33,6 +34,7 @@ namespace ECommerceBackend.Controllers
             ECommerceContext context,
             ICheckoutAbuseProtectionService checkoutAbuseProtection,
             IShippingFeePolicy shippingFeePolicy,
+            IVoucherPolicyService voucherPolicyService,
             IEmailService emailService,
             IConfiguration configuration,
             IWebHostEnvironment environment)
@@ -40,6 +42,7 @@ namespace ECommerceBackend.Controllers
             _context = context;
             _checkoutAbuseProtection = checkoutAbuseProtection;
             _shippingFeePolicy = shippingFeePolicy;
+            _voucherPolicyService = voucherPolicyService;
             _emailService = emailService;
             _configuration = configuration;
             _environment = environment;
@@ -812,6 +815,7 @@ namespace ECommerceBackend.Controllers
                     Guesttoken = isGuest ? guestToken : null
                 };
                 var orderedVariantIds = new HashSet<int>();
+                var voucherLines = new List<VoucherLine>();
 
                 foreach (var reqItem in dto.Items)
                 {
@@ -840,6 +844,7 @@ namespace ECommerceBackend.Controllers
 
                     var price = variant.Saleprice ?? variant.Baseprice;
                     orderedVariantIds.Add(reqItem.Variantid);
+                    voucherLines.Add(new VoucherLine(variant.Productid ?? 0, price, reqItem.Quantity));
                     Warrantypackage? package = null;
                     if (reqItem.Packageid.HasValue)
                     {
@@ -875,32 +880,18 @@ namespace ECommerceBackend.Controllers
 
                 if (!string.IsNullOrWhiteSpace(dto.Vouchercode))
                 {
-                    var voucher = await _context.Vouchers.FirstOrDefaultAsync(v =>
-                        v.Vouchercode == dto.Vouchercode && v.Isactive == true);
-                    if (voucher == null)
-                        return BadRequest(new ApiErrorDto("Voucher không hợp lệ hoặc không hoạt động.", null));
+                    var voucherEvaluation = await _voucherPolicyService.EvaluateAsync(
+                        dto.Vouchercode,
+                        voucherLines,
+                        user?.Userid,
+                        customer.Phone,
+                        cancellationToken: HttpContext.RequestAborted);
 
-                    if (voucher.Validfrom.HasValue && voucher.Validfrom > DateTime.UtcNow)
-                        return BadRequest(new ApiErrorDto("Voucher chưa đến thời gian áp dụng.", null));
-                    if (voucher.Validto.HasValue && voucher.Validto < DateTime.UtcNow)
-                        return BadRequest(new ApiErrorDto("Voucher đã hết hạn.", null));
+                    if (!voucherEvaluation.Isvalid)
+                        return BadRequest(new ApiErrorDto(voucherEvaluation.Error ?? "Voucher không hợp lệ.", null));
 
-                    // Verify reuse!
-                    var alreadyUsed = await _context.Orders.AnyAsync(o =>
-                        ((user != null && o.Userid == user.Userid) || (o.Customer != null && o.Customer.Phone == customer.Phone))
-                        && o.Vouchercode == dto.Vouchercode
-                        && o.Orderstatus != "Cancelled");
-                    if (alreadyUsed)
-                        return BadRequest(new ApiErrorDto("Bạn đã sử dụng mã giảm giá này rồi. Mỗi khách hàng chỉ được dùng 1 lần.", null));
-
-                    if (voucher.Discountpercentage.HasValue && voucher.Discountpercentage > 0)
-                    {
-                        order.Discountamount = order.Totalamount * (decimal)(voucher.Discountpercentage / 100.0);
-                    }
-                    else if (voucher.Discountamount.HasValue && voucher.Discountamount > 0)
-                    {
-                        order.Discountamount = voucher.Discountamount.Value;
-                    }
+                    order.Vouchercode = voucherEvaluation.Voucher!.Vouchercode;
+                    order.Discountamount = voucherEvaluation.Discountamount;
                 }
 
                 var merchandiseAmount = Math.Max(0, order.Totalamount - (order.Discountamount ?? 0));

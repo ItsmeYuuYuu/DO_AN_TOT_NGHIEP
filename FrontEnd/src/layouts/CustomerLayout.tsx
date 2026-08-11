@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ClipboardList,
   Headphones,
+  Home,
   LogOut,
   MapPin,
   Menu,
@@ -26,6 +27,11 @@ import type { ChatMessage, ChatSession } from '@/features/chat/api/chatSessionsA
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 import { ChatAssistantSegments } from '@/features/chat/components/ChatAssistantSegments';
 import { ChatLinkifiedText } from '@/features/chat/components/ChatLinkifiedText';
+import { SensitiveDataWarningModal } from '@/features/chat/components/SensitiveDataWarningModal';
+import {
+  analyzeSensitiveData,
+  type SensitiveDataAnalysis,
+} from '@/features/chat/utils/sensitiveDataProtection';
 import { brandsApi, type Brand } from '@/features/brands/api/brandsApi';
 import { categoriesApi, type Category } from '@/features/categories/api/categoriesApi';
 import { productsApi, type Product } from '@/features/products/api/productsApi';
@@ -55,6 +61,8 @@ export const CustomerLayout: React.FC = () => {
   const [aiWidgetLoading, setAiWidgetLoading] = useState(false);
   const [aiWidgetConsultantTyping, setAiWidgetConsultantTyping] = useState(false);
   const [aiWidgetError, setAiWidgetError] = useState<string | null>(null);
+  const [aiWidgetSensitiveWarning, setAiWidgetSensitiveWarning] = useState<SensitiveDataAnalysis | null>(null);
+  const [aiWidgetRedactionConfirmed, setAiWidgetRedactionConfirmed] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const aiWidgetMessagesRef = useRef<HTMLDivElement>(null);
   const aiWidgetTypingSentRef = useRef(0);
@@ -87,6 +95,12 @@ export const CustomerLayout: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!isLoggedIn) {
+      setAiWidgetSession(null);
+      setAiWidgetMessages([]);
+      return;
+    }
+
     let cancelled = false;
 
     const restoreLatestChat = async () => {
@@ -109,7 +123,7 @@ export const CustomerLayout: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (location.pathname !== '/search') return;
@@ -205,6 +219,7 @@ export const CustomerLayout: React.FC = () => {
 
     setAiWidgetError(null);
     setAiWidgetMessage('');
+    setAiWidgetRedactionConfirmed(false);
     setAiWidgetLoading(true);
 
     try {
@@ -272,17 +287,36 @@ export const CustomerLayout: React.FC = () => {
 
   const handleAiWidgetSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    const analysis = analyzeSensitiveData(aiWidgetMessage.trim());
+    if (analysis.detections.length > 0) {
+      setAiWidgetSensitiveWarning(analysis);
+      return;
+    }
     void startAiChat();
   };
 
   const handleAiWidgetInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setAiWidgetMessage(event.target.value);
+    setAiWidgetRedactionConfirmed(false);
     if (!aiWidgetSession || !event.target.value.trim()) return;
 
     const now = Date.now();
     if (now - aiWidgetTypingSentRef.current < 2500) return;
     aiWidgetTypingSentRef.current = now;
     void chatSessionsApi.setTyping(aiWidgetSession.sessionid).catch(() => undefined);
+  };
+
+  const cancelAiWidgetSensitiveMessage = () => {
+    setAiWidgetSensitiveWarning(null);
+    setAiWidgetMessage('');
+    setAiWidgetRedactionConfirmed(false);
+  };
+
+  const confirmAiWidgetSensitiveMessage = () => {
+    if (!aiWidgetSensitiveWarning) return;
+    setAiWidgetMessage(aiWidgetSensitiveWarning.redactedText);
+    setAiWidgetSensitiveWarning(null);
+    setAiWidgetRedactionConfirmed(true);
   };
 
   const requestAiWidgetConsultant = async () => {
@@ -436,13 +470,13 @@ export const CustomerLayout: React.FC = () => {
             </div>
           </form>
 
-          <nav className="relative hidden h-12 items-stretch border-t customer-rule min-[1180px]:flex">
+          <nav className="relative hidden h-12 items-stretch min-[1180px]:flex">
             <NavLink
-              to="/products?sort=newest"
-              className="flex items-center rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#fff1f2] hover:text-[#c4000b]"
+              to="/"
+              end
+              className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#fff1f2] hover:text-[#c4000b]"
             >
-              Máy mới
-              <span className="ml-2 rounded-full bg-[#e30613] px-1.5 py-0.5 text-[8px] text-white">NEW</span>
+              <Home size={14} /> Trang chủ
             </NavLink>
 
             {visibleMenuCategories.map(category => (
@@ -539,12 +573,6 @@ export const CustomerLayout: React.FC = () => {
               Ưu đãi
             </NavLink>
             <NavLink
-              to="/chat"
-              className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#ffd166]"
-            >
-              So sánh bằng AI
-            </NavLink>
-            <NavLink
               to="/order-lookup"
               className="flex items-center gap-2 rounded-t-2xl border-r customer-rule px-5 text-[13px] font-semibold text-[#1f2937] hover:bg-[#fff1f2] hover:text-[#c4000b]"
             >
@@ -565,11 +593,11 @@ export const CustomerLayout: React.FC = () => {
             >
               <div className="grid grid-cols-2 gap-px bg-[#e5e7eb]">
                 <Link
-                  to="/products?sort=newest"
+                  to="/"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-2xl bg-white p-4 text-xs font-black uppercase tracking-wider text-[#1f2937]"
+                  className="flex items-center gap-2 rounded-2xl bg-white p-4 text-xs font-black uppercase tracking-wider text-[#1f2937]"
                 >
-                  Máy mới
+                  <Home size={15} /> Trang chủ
                 </Link>
                 <Link
                   to="/promotions"
@@ -579,16 +607,9 @@ export const CustomerLayout: React.FC = () => {
                   Ưu đãi
                 </Link>
                 <Link
-                  to="/chat"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-2xl bg-[#ffd166] p-4 text-xs font-black uppercase tracking-wider text-[#1f2937]"
-                >
-                  Hỏi AI
-                </Link>
-                <Link
                   to="/order-lookup"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-2xl bg-white p-4 text-xs font-black uppercase tracking-wider text-[#1f2937]"
+                  className="col-span-2 rounded-2xl bg-white p-4 text-xs font-black uppercase tracking-wider text-[#1f2937]"
                 >
                   Tra cứu đơn
                 </Link>
@@ -703,17 +724,19 @@ export const CustomerLayout: React.FC = () => {
                       <Bot size={22} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold">Tư vấn chọn máy</p>
+                      <p className="text-sm font-bold">Chăm sóc khách hàng</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={openAiHistory}
-                      className="rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-wider text-white/85 hover:bg-white/15 hover:text-white"
-                    >
-                      Lịch sử
-                    </button>
+                    {isLoggedIn && (
+                      <button
+                        type="button"
+                        onClick={openAiHistory}
+                        className="rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-wider text-white/85 hover:bg-white/15 hover:text-white"
+                      >
+                        Lịch sử
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setAiWidgetOpen(false)}
@@ -847,6 +870,11 @@ export const CustomerLayout: React.FC = () => {
                 </div>
 
                 <div className="space-y-2 border-t border-[#e5e7eb] bg-white p-3">
+                  {aiWidgetRedactionConfirmed && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-semibold leading-4 text-emerald-800">
+                      Đã ẩn thông tin nhạy cảm. Nhấn Gửi thêm một lần để tiếp tục.
+                    </div>
+                  )}
                   <form onSubmit={handleAiWidgetSubmit} className="flex gap-2">
                     <input
                       value={aiWidgetMessage}
@@ -866,23 +894,25 @@ export const CustomerLayout: React.FC = () => {
                     </button>
                   </form>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void requestAiWidgetConsultant()}
-                      disabled={aiWidgetLoading || aiWidgetHandoffActive}
-                      className="flex items-center justify-center gap-2 rounded-full border border-[#1f2937] px-3 py-2.5 text-[11px] font-black text-[#1f2937] hover:bg-[#1f2937] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                    >
-                      <Headphones size={14} /> {aiWidgetHandoffActive ? 'Đã chuyển' : 'Gặp tư vấn'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openAiHistory}
-                      className="rounded-full border border-[#e5e7eb] px-3 py-2.5 text-[11px] font-black text-[#1f2937] hover:border-[#e30613] hover:text-[#c4000b]"
-                    >
-                      Mở lịch sử
-                    </button>
-                  </div>
+                  {isLoggedIn && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void requestAiWidgetConsultant()}
+                        disabled={aiWidgetLoading || aiWidgetHandoffActive}
+                        className="flex items-center justify-center gap-2 rounded-full border border-[#1f2937] px-3 py-2.5 text-[11px] font-black text-[#1f2937] hover:bg-[#1f2937] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                      >
+                        <Headphones size={14} /> {aiWidgetHandoffActive ? 'Đã chuyển' : 'Gặp tư vấn'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openAiHistory}
+                        className="rounded-full border border-[#e5e7eb] px-3 py-2.5 text-[11px] font-black text-[#1f2937] hover:border-[#e30613] hover:text-[#c4000b]"
+                      >
+                        Mở lịch sử
+                      </button>
+                    </div>
+                  )}
                 </div>
               </section>
             ) : (
@@ -890,9 +920,10 @@ export const CustomerLayout: React.FC = () => {
                 type="button"
                 onClick={() => setAiWidgetOpen(true)}
                 className="group flex items-center gap-3 rounded-full bg-[#e30613] px-3 py-3 text-white shadow-[0_18px_40px_rgba(227,6,19,0.32)] transition hover:-translate-y-1 hover:bg-[#c4000b] sm:px-4"
+                aria-label="Mở chăm sóc khách hàng"
               >
                 <Bot size={20} className="text-[#ffd166]" />
-                <span className="hidden text-xs font-black uppercase tracking-[0.12em] md:inline">Hỏi AI chọn máy</span>
+                <span className="hidden text-xs font-black uppercase tracking-[0.12em] md:inline">Chăm sóc khách hàng</span>
               </button>
             )}
           </div>
@@ -900,7 +931,7 @@ export const CustomerLayout: React.FC = () => {
       </main>
 
       <footer className="border-t border-slate-200 bg-[#fffafa] text-[#1f2937]">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-[1.3fr_1fr_1fr_1.2fr]">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-[1.3fr_1fr_1fr]">
           <div>
             <img src={Logo} alt="Cường Điện Thoại" width={400} height={188} className="h-16 w-auto object-contain" />
             <p className="mt-5 max-w-sm text-sm leading-6 text-[#596273]">
@@ -928,25 +959,6 @@ export const CustomerLayout: React.FC = () => {
             </ul>
           </div>
 
-          <div>
-            <h4 className="text-sm font-bold text-[#b4232d]">Nhận tin mới</h4>
-            <p className="mt-5 text-sm leading-6 text-[#596273]">
-              Sản phẩm mới, cập nhật giá và nội dung công nghệ đáng chú ý.
-            </p>
-            <div className="mt-5 flex overflow-hidden rounded-lg border border-slate-300 bg-white">
-              <input
-                type="email"
-                placeholder="Email của bạn"
-                className="min-w-0 flex-1 bg-transparent px-4 py-3 text-sm text-[#1f2937] outline-none placeholder:text-[#8a94a3]"
-              />
-              <button
-                type="button"
-                className="bg-[#e30613] px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-[#c4000b]"
-              >
-                Gửi
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="border-t border-[#f3c7cb] px-4 py-5">
@@ -955,6 +967,13 @@ export const CustomerLayout: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      <SensitiveDataWarningModal
+        isOpen={aiWidgetSensitiveWarning !== null}
+        detections={aiWidgetSensitiveWarning?.detections ?? []}
+        onCancel={cancelAiWidgetSensitiveMessage}
+        onConfirm={confirmAiWidgetSensitiveMessage}
+      />
     </div>
   );
 };

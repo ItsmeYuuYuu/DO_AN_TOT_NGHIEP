@@ -14,6 +14,11 @@ import type { ChatMessage, ChatSession } from '../../features/chat/api/chatSessi
 import { ChatComparisonTable } from '@/features/chat/components/ChatComparisonTable';
 import { ChatAssistantSegments } from '@/features/chat/components/ChatAssistantSegments';
 import { ChatLinkifiedText } from '@/features/chat/components/ChatLinkifiedText';
+import { SensitiveDataWarningModal } from '@/features/chat/components/SensitiveDataWarningModal';
+import {
+  analyzeSensitiveData,
+  type SensitiveDataAnalysis,
+} from '@/features/chat/utils/sensitiveDataProtection';
 import { formatDateTime, formatTime } from '../../utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { confirmAction, notifyError } from '@/utils/notifications';
@@ -28,6 +33,8 @@ export default function CustomerChat() {
   const [inputMsg, setInputMsg] = useState(() => (searchParams.get('q') ?? '').slice(0, 500));
   const [loading, setLoading] = useState(false);
   const [consultantTyping, setConsultantTyping] = useState(false);
+  const [sensitiveWarning, setSensitiveWarning] = useState<SensitiveDataAnalysis | null>(null);
+  const [redactionConfirmed, setRedactionConfirmed] = useState(false);
   const messagesPaneRef = useRef<HTMLDivElement>(null);
   const initialPromptSentRef = useRef(false);
   const lastTypingSentRef = useRef(0);
@@ -153,6 +160,7 @@ export default function CustomerChat() {
 
     setMessages(prev => [...prev, tempMsg]);
     setInputMsg('');
+    setRedactionConfirmed(false);
     setLoading(true);
     scrollToBottom();
 
@@ -174,11 +182,17 @@ export default function CustomerChat() {
 
   const sendMessage = async (event: FormEvent) => {
     event.preventDefault();
+    const analysis = analyzeSensitiveData(inputMsg.trim());
+    if (analysis.detections.length > 0) {
+      setSensitiveWarning(analysis);
+      return;
+    }
     await submitMessage(inputMsg);
   };
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     setInputMsg(event.target.value);
+    setRedactionConfirmed(false);
     if (!activeSession || !event.target.value.trim()) return;
 
     const now = Date.now();
@@ -192,11 +206,31 @@ export default function CustomerChat() {
     if (!initialPrompt || initialPromptSentRef.current || loading) return;
 
     initialPromptSentRef.current = true;
+    const analysis = analyzeSensitiveData(initialPrompt);
+    if (analysis.detections.length > 0) {
+      setInputMsg(initialPrompt);
+      setSensitiveWarning(analysis);
+      setSearchParams({}, { replace: true });
+      return;
+    }
     void submitMessage(initialPrompt).then(() => {
       setSearchParams({}, { replace: true });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, loading]);
+
+  const cancelSensitiveMessage = () => {
+    setSensitiveWarning(null);
+    setInputMsg('');
+    setRedactionConfirmed(false);
+  };
+
+  const confirmSensitiveMessage = () => {
+    if (!sensitiveWarning) return;
+    setInputMsg(sensitiveWarning.redactedText);
+    setSensitiveWarning(null);
+    setRedactionConfirmed(true);
+  };
 
   const requestConsultant = async () => {
     if (!activeSession) return;
@@ -523,26 +557,41 @@ export default function CustomerChat() {
             )}
           </div>
 
-          <form onSubmit={sendMessage} className="shrink-0 flex items-center gap-2 border-t border-[#e5e7eb] bg-white p-3 md:gap-3 md:p-4">
-            <input
-              type="text"
-              value={inputMsg}
-              onChange={handleInputChange}
-              placeholder="Nhập nhu cầu, ngân sách hoặc tên máy bạn muốn so sánh..."
-              maxLength={500}
-              className="customer-input"
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              disabled={loading || !inputMsg.trim()}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e30613] text-white transition hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              <Send size={20} />
-            </button>
-          </form>
+          <div className="shrink-0 border-t border-[#e5e7eb] bg-white">
+            {redactionConfirmed && (
+              <div className="mx-3 mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 md:mx-4">
+                Đã ẩn thông tin nhạy cảm. Nhấn Gửi thêm một lần để tiếp tục.
+              </div>
+            )}
+            <form onSubmit={sendMessage} className="flex items-center gap-2 p-3 md:gap-3 md:p-4">
+              <input
+                type="text"
+                value={inputMsg}
+                onChange={handleInputChange}
+                placeholder="Nhập nhu cầu, ngân sách hoặc tên máy bạn muốn so sánh..."
+                maxLength={500}
+                className="customer-input"
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                disabled={loading || !inputMsg.trim()}
+                className="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#e30613] text-white transition hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-300"
+                aria-label="Gửi tin nhắn"
+              >
+                <Send size={20} />
+              </button>
+            </form>
+          </div>
         </section>
       </div>
+
+      <SensitiveDataWarningModal
+        isOpen={sensitiveWarning !== null}
+        detections={sensitiveWarning?.detections ?? []}
+        onCancel={cancelSensitiveMessage}
+        onConfirm={confirmSensitiveMessage}
+      />
     </div>
   );
 }

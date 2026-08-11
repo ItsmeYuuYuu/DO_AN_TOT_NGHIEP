@@ -100,41 +100,42 @@ const ForgotPasswordPage: React.FC = () => {
   };
 
   return (
-    <main className="customer-shell min-h-screen px-4 py-8">
+    <main className="customer-shell px-4 py-6">
       <Seo title="Quên mật khẩu - Cuồng Điện Thoại" description="Khôi phục tài khoản Cuồng Điện Thoại." noIndex />
-      <div className="customer-container flex min-h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.14)] lg:grid-cols-[0.9fr_1.1fr]">
-          <section className="relative hidden overflow-hidden bg-[#1f2937] p-10 text-white lg:flex lg:flex-col lg:justify-between">
-            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/5" />
-            <div>
-              <Link to="/" className="inline-flex rounded-2xl bg-white px-5 py-3 shadow-[0_14px_30px_rgba(227,6,19,0.18)]">
-                <img src={Logo} alt="Cuồng Điện Thoại" width={400} height={188} className="h-16 w-auto object-contain" />
-              </Link>
-              <p className="mt-16 text-xs font-black uppercase tracking-[0.28em] text-[#ffd166]">Account recovery</p>
-              <h1 className="customer-display mt-3 max-w-md text-5xl font-black leading-[0.95]">Lấy lại quyền truy cập tài khoản.</h1>
-              <p className="mt-6 max-w-sm text-sm font-medium leading-7 text-white/70">
-                Mã khôi phục gồm 6 chữ số, có hiệu lực trong 10 phút và chỉ được sử dụng một lần.
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-              <div className="mb-2 flex items-center gap-2">
-                <ShieldCheck size={18} className="text-[#ffd166]" />
-                <p className="text-xs font-black uppercase tracking-[0.18em]">Bảo vệ tài khoản</p>
+      <div className="customer-container flex justify-center">
+        <div className="auth-motion-card auth-recovery-card is-login">
+          <aside className="auth-overlay">
+            <div className="auth-overlay-copy auth-overlay-copy--login">
+              <div className="auth-overlay-content">
+                <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#c4000b]">Cuồng Điện Thoại</p>
+                <h1 className="mt-3 max-w-md text-4xl font-bold leading-tight tracking-[-0.03em] text-[#b0000a]">
+                  Khôi phục quyền truy cập tài khoản
+                </h1>
+                <p className="mt-5 max-w-sm leading-7 text-[#4b5563]">
+                  Nhận mã xác nhận qua email và thiết lập mật khẩu mới theo quy trình bảo mật của hệ thống.
+                </p>
+                <div className="mt-6 rounded-xl border border-[#f3c8cb] bg-white/70 p-4">
+                  <div className="mb-2 flex items-center gap-2 text-[#c4000b]">
+                    <ShieldCheck size={18} />
+                    <p className="text-xs font-bold uppercase tracking-[0.12em]">Bảo vệ tài khoản</p>
+                  </div>
+                  <p className="text-xs leading-6 text-[#596273]">
+                    Mã khôi phục gồm 6 chữ số, có hiệu lực trong 10 phút và chỉ được sử dụng một lần.
+                  </p>
+                </div>
+                <Link to="/auth/login" className="auth-overlay-button">Quay lại đăng nhập</Link>
               </div>
-              <p className="text-xs leading-6 text-white/70">
-                Hệ thống không tiết lộ email có tồn tại hay không và sẽ khóa mã sau nhiều lần nhập sai.
-              </p>
             </div>
-          </section>
+          </aside>
 
-          <section className="p-6 md:p-10 lg:p-14">
-            <div className="mx-auto max-w-md">
+          <section className="auth-form-panel auth-form-panel--login auth-recovery-form">
+            <div key={step} className="auth-recovery-step w-full max-w-md">
               <Link to="/" className="mb-8 inline-flex lg:hidden">
                 <img src={Logo} alt="Cuồng Điện Thoại" width={400} height={188} className="h-14 w-auto object-contain" />
               </Link>
 
               <p className="customer-label">Khôi phục tài khoản</p>
-              <h2 className="customer-display mt-2 text-4xl font-black text-[#1f2937]">
+              <h2 className="mt-2 text-4xl font-bold tracking-[-0.03em] text-[#1f2937]">
                 {step === 'request' ? 'Quên mật khẩu?' : step === 'reset' ? 'Đặt mật khẩu mới' : 'Khôi phục thành công'}
               </h2>
               <p className="mt-2 text-sm font-medium text-slate-500">
@@ -146,7 +147,7 @@ const ForgotPasswordPage: React.FC = () => {
               </p>
 
               {error && (
-                <div className="mt-6 flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                <div className="auth-alert auth-alert--error">
                   <AlertCircle size={16} className="shrink-0" /> {error}
                 </div>
               )}
@@ -170,7 +171,7 @@ const ForgotPasswordPage: React.FC = () => {
                       autoComplete="email"
                     />
                   </div>
-                  <button type="submit" disabled={loading || !email.trim()} className="w-full rounded-full bg-[#e30613] py-3.5 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#c4000b] disabled:opacity-60">
+                  <button type="submit" disabled={loading || !email.trim()} className="auth-submit">
                     {loading ? 'Đang gửi...' : 'Gửi mã khôi phục'}
                   </button>
                 </form>
@@ -213,7 +214,7 @@ const ForgotPasswordPage: React.FC = () => {
                   <p className="text-xs font-medium leading-5 text-slate-500">
                     Mật khẩu tối thiểu 8 ký tự, có chữ hoa, chữ thường, chữ số và ký tự đặc biệt.
                   </p>
-                  <button type="submit" disabled={loading} className="w-full rounded-full bg-[#e30613] py-3.5 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#c4000b] disabled:opacity-60">
+                  <button type="submit" disabled={loading} className="auth-submit">
                     {loading ? 'Đang cập nhật...' : 'Đặt lại mật khẩu'}
                   </button>
                   <div className="flex flex-wrap items-center justify-between gap-3 text-sm font-bold">
@@ -229,7 +230,7 @@ const ForgotPasswordPage: React.FC = () => {
                     <CheckCircle2 size={34} />
                   </div>
                   <p className="font-bold leading-relaxed text-[#1f2937]">{message}</p>
-                  <Link to="/auth/login" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#e30613] py-3 text-sm font-black uppercase tracking-[0.14em] text-white hover:bg-[#c4000b]">
+                  <Link to="/auth/login" className="auth-submit mt-6 gap-2">
                     Đăng nhập ngay
                   </Link>
                 </div>

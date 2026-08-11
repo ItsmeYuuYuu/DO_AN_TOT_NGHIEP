@@ -1622,6 +1622,13 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("vouchercode");
 
+                    b.Property<int[]>("Applicableproductids")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer[]")
+                        .HasColumnName("applicableproductids")
+                        .HasDefaultValueSql("ARRAY[]::integer[]");
+
                     b.Property<decimal?>("Discountamount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
@@ -1636,6 +1643,16 @@ namespace ECommerceBackend.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true)
                         .HasColumnName("isactive");
+
+                    b.Property<decimal?>("Maximumdiscountamount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("maximumdiscountamount");
+
+                    b.Property<decimal?>("Minimumorderamount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("minimumorderamount");
 
                     b.Property<DateTime?>("Validfrom")
                         .HasColumnType("timestamp without time zone")

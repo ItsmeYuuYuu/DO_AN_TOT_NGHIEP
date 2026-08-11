@@ -31,6 +31,8 @@ test('customer requests a one-time code and resets the password', async ({ page 
   });
 
   await page.goto('/forgot-password');
+  await expect(page.locator('.auth-recovery-card')).toBeVisible();
+  await expect(page.locator('.auth-recovery-step')).toHaveCSS('animation-name', 'auth-recovery-step-in');
   await page.getByPlaceholder('Nhập địa chỉ email *').fill('customer@example.test');
   await page.getByRole('button', { name: 'Gửi mã khôi phục' }).click();
 

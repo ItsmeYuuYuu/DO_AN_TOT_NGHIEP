@@ -6,7 +6,6 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
-  Clock3,
   CreditCard,
   Gamepad2,
   Headphones,
@@ -67,17 +66,11 @@ const CustomerHome: React.FC = () => {
   const [homeSections, setHomeSections] = useState<HomepageProductSection[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const [isSliderPaused, setIsSliderPaused] = useState(false);
-  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
     promotionsApi.getActive('Banner').then(setBanners).catch(() => {});
     promotionsApi.getActive('Slider').then(setSliders).catch(() => {});
     homepageSectionsApi.getActive().then(setHomeSections).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -144,18 +137,6 @@ const CustomerHome: React.FC = () => {
     : activeSlide;
   const visibleSlides = sliders.filter((_, index) =>
     index === previousSlide || index === activeSlide || index === nextSlide);
-
-  const vietnamNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-  const elapsedVietnamSeconds =
-    vietnamNow.getUTCHours() * 3600 +
-    vietnamNow.getUTCMinutes() * 60 +
-    vietnamNow.getUTCSeconds();
-  const saleRemainingSeconds = Math.max(0, 24 * 60 * 60 - elapsedVietnamSeconds - 1);
-  const countdown = {
-    hours: String(Math.floor(saleRemainingSeconds / 3600)).padStart(2, '0'),
-    minutes: String(Math.floor((saleRemainingSeconds % 3600) / 60)).padStart(2, '0'),
-    seconds: String(saleRemainingSeconds % 60).padStart(2, '0'),
-  };
 
   const showPreviousSlide = () => {
     setActiveSlide(current => (current - 1 + sliders.length) % sliders.length);
@@ -232,7 +213,7 @@ const CustomerHome: React.FC = () => {
                       type="button"
                       onClick={showPreviousSlide}
                       aria-label="Xem banner trước"
-                      className="absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/55 text-[#1f2937] shadow-[0_10px_28px_rgba(15,23,42,0.2)] backdrop-blur transition hover:bg-white sm:left-4 sm:h-11 sm:w-11"
+                      className="pointer-events-none absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/55 text-[#1f2937] opacity-0 shadow-[0_10px_28px_rgba(15,23,42,0.2)] backdrop-blur transition-all duration-200 hover:bg-white focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 sm:left-4 sm:h-11 sm:w-11"
                     >
                       <ChevronLeft size={20} />
                     </button>
@@ -240,7 +221,7 @@ const CustomerHome: React.FC = () => {
                       type="button"
                       onClick={showNextSlide}
                       aria-label="Xem banner tiếp theo"
-                      className="absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/55 text-[#1f2937] shadow-[0_10px_28px_rgba(15,23,42,0.2)] backdrop-blur transition hover:bg-white sm:right-4 sm:h-11 sm:w-11"
+                      className="pointer-events-none absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/55 text-[#1f2937] opacity-0 shadow-[0_10px_28px_rgba(15,23,42,0.2)] backdrop-blur transition-all duration-200 hover:bg-white focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 sm:right-4 sm:h-11 sm:w-11"
                     >
                       <ChevronRight size={20} />
                     </button>
@@ -431,7 +412,7 @@ const CustomerHome: React.FC = () => {
                       <h2 className={`customer-display mt-2 text-2xl font-bold sm:text-3xl md:text-5xl ${
                         isRed ? 'text-white' : 'text-[#1f2937]'
                       }`}>
-                        {section.title}
+                        {section.title.replace(/\bSHOCK\b/gi, 'SỐC')}
                       </h2>
                       {section.subtitle && (
                         <p className={`mt-2 max-w-2xl text-sm font-medium ${
@@ -442,15 +423,7 @@ const CustomerHome: React.FC = () => {
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                      {isRed && (
-                        <div className="flex w-fit items-center gap-2 rounded-full bg-white px-3 py-2 text-[#c4000b] shadow-[0_12px_26px_rgba(0,0,0,0.16)]">
-                          <Clock3 size={15} />
-                          <span className="text-[10px] font-black uppercase tracking-[0.14em]">Kết thúc sau</span>
-                          <span className="rounded-full bg-[#1f2937] px-2 py-1 text-xs font-black text-white">
-                            {countdown.hours}:{countdown.minutes}:{countdown.seconds}
-                          </span>
-                        </div>
-                      )}
+
                       <Link
                         to="/products"
                         className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition ${
@@ -466,7 +439,7 @@ const CustomerHome: React.FC = () => {
 
                   <div
                     className="customer-home-product-carousel relative -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-1 pt-3 pb-5 [scrollbar-width:none] md:gap-4 [&::-webkit-scrollbar]:hidden"
-                    aria-label={`${section.title} - danh sách sản phẩm tự động chuyển sau mỗi 5 giây`}
+                    aria-label={`${section.title.replace(/\bSHOCK\b/gi, 'SỐC')} - danh sách sản phẩm tự động chuyển sau mỗi 5 giây`}
                   >
                     {section.products.map(product => (
                       <div

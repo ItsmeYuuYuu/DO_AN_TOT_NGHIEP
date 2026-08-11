@@ -253,6 +253,9 @@ builder.Services.AddScoped<ECommerceBackend.Services.Chat.IProductConsultationSe
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IAiProvider, ECommerceBackend.Services.Chat.GroundedAiProvider>();
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatOrchestratorService, ECommerceBackend.Services.Chat.ChatOrchestratorService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Chat.IChatTypingService, ECommerceBackend.Services.Chat.ChatTypingService>();
+builder.Services.AddSingleton<
+    ECommerceBackend.Services.Security.ISensitiveDataProtectionService,
+    ECommerceBackend.Services.Security.SensitiveDataProtectionService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Email.IEmailService, ECommerceBackend.Services.Email.SmtpEmailService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Email.IRegistrationOtpService, ECommerceBackend.Services.Email.RegistrationOtpService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Email.IPasswordResetService, ECommerceBackend.Services.Email.PasswordResetService>();
@@ -274,6 +277,7 @@ builder.Services.AddSingleton<
     ECommerceBackend.Services.Auth.StaffSessionService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Checkout.ICheckoutAbuseProtectionService, ECommerceBackend.Services.Checkout.CheckoutAbuseProtectionService>();
 builder.Services.AddSingleton<ECommerceBackend.Services.Checkout.IShippingFeePolicy, ECommerceBackend.Services.Checkout.ShippingFeePolicy>();
+builder.Services.AddScoped<ECommerceBackend.Services.Checkout.IVoucherPolicyService, ECommerceBackend.Services.Checkout.VoucherPolicyService>();
 builder.Services.AddScoped<ECommerceBackend.Services.Returns.IReturnRefundPolicyService, ECommerceBackend.Services.Returns.ReturnRefundPolicyService>();
 builder.Services.AddHostedService<ECommerceBackend.Services.Checkout.ExpiredOrderCleanupService>();
 

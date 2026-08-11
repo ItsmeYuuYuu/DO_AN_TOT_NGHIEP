@@ -50,7 +50,12 @@ interface CreatedOrder {
 interface AppliedVoucher {
   vouchercode: string;
   discountpercentage?: number;
-  discountamount?: number;
+  discountamount: number;
+  eligiblesubtotal: number;
+  minimumorderamount?: number;
+  maximumdiscountamount?: number;
+  applicableproductids: number[];
+  message: string;
 }
 
 const phonePattern = /^0\d{9}$/;
@@ -174,13 +179,7 @@ const CheckoutPage: React.FC = () => {
   }, 0), [items, packages, selectedPackages]);
 
   const merchandiseGross = totalPrice + totalWarrantyPrice;
-  const discountAmount = useMemo(() => {
-    if (!appliedVoucher) return 0;
-    if (appliedVoucher.discountpercentage) {
-      return Math.round(merchandiseGross * (appliedVoucher.discountpercentage / 100));
-    }
-    return appliedVoucher.discountamount || 0;
-  }, [appliedVoucher, merchandiseGross]);
+  const discountAmount = appliedVoucher?.discountamount ?? 0;
 
   const merchandiseAmount = Math.max(0, merchandiseGross - discountAmount);
   const shippingQuote = calculateShippingFee(merchandiseAmount, form.provinceName, form.wardName);
@@ -197,7 +196,10 @@ const CheckoutPage: React.FC = () => {
     setValidatingVoucher(true);
     setVoucherError('');
     try {
-      const res = await apiClient.get<AppliedVoucher>(`/Vouchers/validate/${voucherCodeInput.trim().toUpperCase()}`);
+      const res = await apiClient.post<AppliedVoucher>('/Vouchers/validate', {
+        vouchercode: voucherCodeInput.trim().toUpperCase(),
+        items: items.map(item => ({ variantid: item.variantId, quantity: item.quantity })),
+      });
       setAppliedVoucher(res.data);
       setVoucherCodeInput('');
     } catch (err: unknown) {
@@ -643,16 +645,21 @@ const CheckoutPage: React.FC = () => {
             <div className="mt-5 border-t border-[#e5e7eb] pt-4">
               <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">Mã giảm giá (Voucher)</span>
               {appliedVoucher ? (
-                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs">
-                  <div className="flex items-center gap-2 text-emerald-800">
-                    <span className="font-bold bg-emerald-600 text-white px-2 py-0.5 rounded text-[10px] tracking-wider uppercase">
-                      {appliedVoucher.vouchercode}
-                    </span>
-                    <span className="font-semibold">
-                      - {appliedVoucher.discountpercentage ? `${appliedVoucher.discountpercentage}%` : formatCurrency(appliedVoucher.discountamount || 0)}
-                    </span>
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-xs">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-emerald-800">
+                      <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                        {appliedVoucher.vouchercode}
+                      </span>
+                      <span className="font-semibold">Giảm {formatCurrency(appliedVoucher.discountamount)}</span>
+                    </div>
+                    <button type="button" onClick={handleRemoveVoucher} className="font-bold text-red-500 hover:text-red-700">Gỡ</button>
                   </div>
-                  <button type="button" onClick={handleRemoveVoucher} className="text-red-500 hover:text-red-700 font-bold">Gỡ</button>
+                  <p className="mt-2 text-[11px] text-emerald-700">
+                    Áp dụng trên {formatCurrency(appliedVoucher.eligiblesubtotal)} sản phẩm đủ điều kiện
+                    {appliedVoucher.discountpercentage ? ` · Giảm ${appliedVoucher.discountpercentage}%` : ''}
+                    {appliedVoucher.maximumdiscountamount ? `, tối đa ${formatCurrency(appliedVoucher.maximumdiscountamount)}` : ''}.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">

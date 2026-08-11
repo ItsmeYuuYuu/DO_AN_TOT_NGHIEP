@@ -3,6 +3,7 @@ using ECommerceBackend.DTOs.Chats;
 using ECommerceBackend.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using ECommerceBackend.Services.Security;
 
 namespace ECommerceBackend.Services.Chat;
 
@@ -11,24 +12,28 @@ public sealed class ChatOrchestratorService : IChatOrchestratorService
     private readonly ECommerceContext _context;
     private readonly IAiProvider _aiProvider;
     private readonly AiAssistantOptions _options;
+    private readonly ISensitiveDataProtectionService _sensitiveDataProtection;
 
     public ChatOrchestratorService(
         ECommerceContext context,
         IAiProvider aiProvider,
-        IOptions<AiAssistantOptions> options)
+        IOptions<AiAssistantOptions> options,
+        ISensitiveDataProtectionService sensitiveDataProtection)
     {
         _context = context;
         _aiProvider = aiProvider;
         _options = options.Value;
+        _sensitiveDataProtection = sensitiveDataProtection;
     }
 
     public async Task<ChatMessageDto> ProcessUserMessageAsync(Chatsession session, string content)
     {
+        var safeContent = _sensitiveDataProtection.Sanitize(content.Trim()).SanitizedText;
         var userMessage = new Chatmessage
         {
             Sessionid = session.Sessionid,
             Sendertype = "user",
-            Messagecontent = content.Trim(),
+            Messagecontent = safeContent,
             Sentat = DateTime.UtcNow
         };
         _context.Chatmessages.Add(userMessage);
@@ -47,7 +52,7 @@ public sealed class ChatOrchestratorService : IChatOrchestratorService
 
         var history = historyMessages.Select(message => new AiConversationMessage(
             message.Sendertype == "assistant" ? "assistant" : "user",
-            message.Messagecontent,
+            _sensitiveDataProtection.Sanitize(message.Messagecontent).SanitizedText,
             message.Responsetype,
             ChatRecommendationDataSerializer.Deserialize(message.Recommendations)
                 .Select(item => item.Productid)
@@ -63,11 +68,12 @@ public sealed class ChatOrchestratorService : IChatOrchestratorService
             .Select(group => group.First())
             .ToList();
 
+        var safeAssistantText = _sensitiveDataProtection.Sanitize(aiResponse.Text).SanitizedText;
         var assistantMessage = new Chatmessage
         {
             Sessionid = session.Sessionid,
             Sendertype = "assistant",
-            Messagecontent = aiResponse.Text,
+            Messagecontent = safeAssistantText,
             Responsetype = aiResponse.ResponseType,
             Quickreplies = ChatResponseMetadata.SerializeQuickReplies(aiResponse.QuickReplies),
             Sentat = DateTime.UtcNow

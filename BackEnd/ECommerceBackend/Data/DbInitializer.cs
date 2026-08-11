@@ -555,7 +555,7 @@ public static class DbInitializer
     {
         var sectionSeeds = new[]
         {
-            new { Key = "shock-sale", Title = "KHUYẾN MÃI SHOCK NHẤT", Subtitle = "Các mẫu đang có giá tốt, nên chốt nhanh trước khi hết hàng.", Theme = "Red", Order = 1 },
+            new { Key = "shock-sale", Title = "KHUYẾN MÃI SỐC NHẤT", Subtitle = "Các mẫu đang có giá tốt, nên chốt nhanh trước khi hết hàng.", Theme = "Red", Order = 1 },
             new { Key = "best-sellers", Title = "TOP SẢN PHẨM BÁN CHẠY", Subtitle = "Những máy được khách quan tâm và chọn mua nhiều.", Theme = "LightBlue", Order = 2 },
             new { Key = "flagship", Title = "FLAGSHIP CAO CẤP", Subtitle = "Các mẫu hiệu năng mạnh, camera tốt và trải nghiệm cao cấp.", Theme = "LightBlue", Order = 3 }
         };

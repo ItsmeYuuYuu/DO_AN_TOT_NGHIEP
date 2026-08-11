@@ -71,7 +71,7 @@ const staffNavigation: StaffNavGroup[] = [
       { label: 'Sản phẩm trang chủ', to: '/staff/homepage-sections', icon: <LayoutGrid size={16} />, permission: 'content.manage' },
     ],
   },
-  { label: 'Tư vấn trực tiếp', to: '/staff/consultations', icon: <Headphones size={17} />, permission: 'consultations.manage' },
+  { label: 'Chăm sóc khách hàng', to: '/staff/consultations', icon: <Headphones size={17} />, permission: 'consultations.manage' },
 ];
 
 const isPathActive = (pathname: string, item: StaffNavGroup) => {

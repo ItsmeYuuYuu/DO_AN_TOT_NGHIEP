@@ -54,7 +54,7 @@ namespace ECommerceBackend.Migrations
 
                 INSERT INTO homepageproductsections (sectionkey, title, subtitle, theme, displayorder, isactive)
                 VALUES
-                    ('shock-sale', 'KHUYẾN MÃI SHOCK NHẤT', 'Các mẫu đang có giá tốt, nên chốt nhanh trước khi hết hàng.', 'Red', 1, true),
+                    ('shock-sale', 'KHUYẾN MÃI SỐC NHẤT', 'Các mẫu đang có giá tốt, nên chốt nhanh trước khi hết hàng.', 'Red', 1, true),
                     ('best-sellers', 'TOP SẢN PHẨM BÁN CHẠY', 'Những máy được khách quan tâm và chọn mua nhiều.', 'LightBlue', 2, true),
                     ('flagship', 'FLAGSHIP CAO CẤP', 'Các mẫu hiệu năng mạnh, camera tốt và trải nghiệm cao cấp.', 'LightBlue', 3, true)
                 ON CONFLICT (sectionkey) DO UPDATE

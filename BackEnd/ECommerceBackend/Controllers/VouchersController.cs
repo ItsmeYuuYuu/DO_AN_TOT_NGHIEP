@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace ECommerceBackend.Controllers;
 
@@ -83,6 +84,55 @@ public class VouchersController : ControllerBase
         var normalizedCode = NormalizeCode(code);
         var voucher = await _context.Vouchers.FindAsync(normalizedCode);
         return voucher == null ? NotFound() : Ok(MapToDto(voucher));
+    }
+
+    [HttpGet("active/{code}/details")]
+    public async Task<ActionResult<VoucherDetailsDto>> GetActiveVoucherDetails(
+        string code,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var voucher = await _context.Vouchers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Vouchercode == NormalizeCode(code)
+                && item.Isactive == true
+                && (!item.Validfrom.HasValue || item.Validfrom <= now)
+                && (!item.Validto.HasValue || item.Validto >= now), cancellationToken);
+        if (voucher == null) return NotFound();
+
+        var productIds = voucher.Applicableproductids ?? [];
+        List<Product> products = productIds.Length == 0
+            ? []
+            : await _context.Products
+                .AsNoTracking()
+                .Where(product => product.Isactive && productIds.Contains(product.Productid))
+                .Include(product => product.Brand)
+                .Include(product => product.Productvariants)
+                .OrderBy(product => product.Productname)
+                .ToListAsync(cancellationToken);
+
+        var applicableProducts = products.Select(product => new VoucherApplicableProductDto(
+            product.Productid,
+            product.Productname,
+            product.Slug,
+            product.Brand?.Brandname,
+            GetFirstImageUrl(product.Productvariants),
+            product.Productvariants
+                .Select(variant => variant.Saleprice ?? variant.Baseprice)
+                .DefaultIfEmpty()
+                .Min())).ToList();
+
+        return Ok(new VoucherDetailsDto(
+            voucher.Vouchercode,
+            voucher.Discountamount,
+            voucher.Discountpercentage,
+            voucher.Minimumorderamount,
+            voucher.Maximumdiscountamount,
+            productIds,
+            voucher.Validfrom,
+            voucher.Validto,
+            voucher.Isactive,
+            applicableProducts));
     }
 
     // Kept for backward compatibility. Cart-aware clients should use POST /api/Vouchers/validate.
@@ -235,6 +285,25 @@ public class VouchersController : ControllerBase
         _context.Vouchers.Remove(voucher);
         await _context.SaveChangesAsync(cancellationToken);
         return NoContent();
+    }
+
+    private static string? GetFirstImageUrl(IEnumerable<Productvariant> variants)
+    {
+        foreach (var variant in variants)
+        {
+            if (string.IsNullOrWhiteSpace(variant.Imageurls)) continue;
+            try
+            {
+                var imageUrl = JsonSerializer.Deserialize<List<string>>(variant.Imageurls)?.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(imageUrl)) return imageUrl;
+            }
+            catch (JsonException)
+            {
+                // An invalid legacy image payload must not prevent customers from reading voucher terms.
+            }
+        }
+
+        return null;
     }
 
     private async Task<(List<VoucherLine> Lines, string? Error)> BuildVoucherLinesAsync(

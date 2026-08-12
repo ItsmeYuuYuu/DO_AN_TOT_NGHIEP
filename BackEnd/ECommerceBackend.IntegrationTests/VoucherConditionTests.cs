@@ -116,4 +116,45 @@ public sealed class VoucherConditionTests : IClassFixture<IntegrationTestFactory
         Assert.NotNull(error);
         Assert.Contains("không áp dụng", error["message"].ToString(), StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task Active_Details_Expose_Only_Selected_Product_And_Voucher_Conditions()
+    {
+        int productId;
+        string productName;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ECommerceContext>();
+            var product = await db.Productvariants
+                .Where(variant => variant.Variantid == _factory.Seed.CheckoutVariantId)
+                .Select(variant => variant.Product!)
+                .SingleAsync();
+            productId = product.Productid;
+            productName = product.Productname;
+
+            db.Vouchers.Add(new Voucher
+            {
+                Vouchercode = "ITDETAILS",
+                Discountpercentage = 20,
+                Minimumorderamount = 1_000_000m,
+                Maximumdiscountamount = 300_000m,
+                Applicableproductids = [productId],
+                Validfrom = DateTime.UtcNow.AddDays(-1),
+                Validto = DateTime.UtcNow.AddDays(1),
+                Isactive = true
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await _factory.Client.GetAsync("/api/Vouchers/active/ITDETAILS/details");
+        var details = await response.Content.ReadFromJsonAsync<VoucherDetailsDto>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(details);
+        Assert.Equal(1_000_000m, details.Minimumorderamount);
+        Assert.Equal(300_000m, details.Maximumdiscountamount);
+        var applicableProduct = Assert.Single(details.Applicableproducts);
+        Assert.Equal(productId, applicableProduct.Productid);
+        Assert.Equal(productName, applicableProduct.Productname);
+    }
 }

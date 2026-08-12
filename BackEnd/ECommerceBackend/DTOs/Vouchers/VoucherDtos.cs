@@ -59,6 +59,28 @@ namespace ECommerceBackend.DTOs.Vouchers
         bool? Isactive
     );
 
+    public record VoucherApplicableProductDto(
+        int Productid,
+        string Productname,
+        string? Slug,
+        string? Brandname,
+        string? Imageurl,
+        decimal? Startingprice
+    );
+
+    public record VoucherDetailsDto(
+        string Vouchercode,
+        decimal? Discountamount,
+        double? Discountpercentage,
+        decimal? Minimumorderamount,
+        decimal? Maximumdiscountamount,
+        int[] Applicableproductids,
+        DateTime? Validfrom,
+        DateTime? Validto,
+        bool? Isactive,
+        List<VoucherApplicableProductDto> Applicableproducts
+    );
+
     public record VoucherCartItemDto(
         [Range(1, int.MaxValue)] int Variantid,
         [Range(1, 1000)] int Quantity

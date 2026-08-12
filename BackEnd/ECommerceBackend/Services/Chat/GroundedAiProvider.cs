@@ -162,6 +162,18 @@ public sealed class GroundedAiProvider : IAiProvider
                 new[] { "Điện thoại dưới 15 triệu", "Máy chơi game", "Máy chụp ảnh đẹp" });
         }
 
+        if (request.UserMessage.StartsWith("[PHÂN TÍCH SẢN PHẨM]", StringComparison.OrdinalIgnoreCase) && _options.UseLanguageModel)
+        {
+            try
+            {
+                return await GetLanguageModelAnalysisAsync(request, products, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(exception, "Language model analysis failed. Falling back.");
+            }
+        }
+
         if (_options.UseLanguageModel && !comparisonRequested)
         {
             try
@@ -379,6 +391,73 @@ public sealed class GroundedAiProvider : IAiProvider
             Array.Empty<ProductConsultationResult>(),
             ChatResponseTypes.Clarification,
             Array.Empty<string>());
+
+    private async Task<AiAssistantResponse> GetLanguageModelAnalysisAsync(
+        AiConversationRequest request,
+        IReadOnlyList<ProductConsultationResult> products,
+        CancellationToken cancellationToken)
+    {
+        var client = _httpClientFactory.CreateClient("AiAssistant");
+        client.Timeout = TimeSpan.FromSeconds(Math.Clamp(_options.TimeoutSeconds, 5, 180));
+
+        var endpoint = $"{_options.BaseUrl.TrimEnd('/')}/chat/completions";
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint);
+        if (!string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            httpRequest.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+        }
+
+        var context = string.Join(
+            "\n",
+            products.Select(product =>
+                $"- VariantId={product.VariantId}; Product={product.ProductName}; " +
+                $"Brand={product.Brand}; Category={product.Category}; Condition={product.Condition}; " +
+                $"PriceVND={product.Price:0}; Stock={product.Stock}; " +
+                $"Specifications={string.Join(", ", product.Specifications.Select(item => $"{item.Key}: {item.Value}"))}"));
+
+        var cleanMessage = request.UserMessage.Replace("[PHÂN TÍCH SẢN PHẨM] ", "").Replace("[PHÂN TÍCH SẢN PHẨM]", "");
+
+        var messages = new List<object>
+        {
+            new
+            {
+                role = "system",
+                content = "You are a helpful phone sales assistant at Cuồng Điện Thoại. Analyze the requested product, provide its pros and cons, specify its main target audience or best use cases, and recommend 1-2 alternatives from the CANDIDATES list if available. Do not output JSON. Reply in conversational Vietnamese.\n\nCANDIDATES:\n" + context
+            }
+        };
+        messages.AddRange(request.History.Select(message => (object)new
+        {
+            role = message.Role,
+            content = message.Content
+        }));
+        messages.Add(new { role = "user", content = cleanMessage });
+
+        httpRequest.Content = JsonContent.Create(new
+        {
+            model = _options.Model,
+            messages,
+            temperature = 0.4,
+            max_tokens = 500
+        });
+
+        using var response = await client.SendAsync(httpRequest, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync(cancellationToken));
+
+        var content = document.RootElement
+            .GetProperty("choices")[0]
+            .GetProperty("message")
+            .GetProperty("content")
+            .GetString() ?? "Xin lỗi, em không thể phân tích sản phẩm lúc này.";
+
+        return new AiAssistantResponse(
+            content,
+            Array.Empty<ProductConsultationResult>(),
+            ChatResponseTypes.Text,
+            new[] { "So sánh với máy khác", "Tìm máy pin trâu", "Gặp nhân viên tư vấn" });
+    }
 
     private async Task<IReadOnlyList<int>> GetLanguageModelSelectionAsync(
         AiConversationRequest request,

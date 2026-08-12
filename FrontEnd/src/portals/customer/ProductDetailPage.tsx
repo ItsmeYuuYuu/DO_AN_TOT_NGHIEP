@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ChevronRight,
   Headphones,
-  MessageCircleMore,
   RefreshCcw,
   ShieldCheck,
   Star,
@@ -88,13 +87,7 @@ const ProductDetailPage: React.FC = () => {
     `${product.productname}${product.brand?.name ? ` thương hiệu ${product.brand.name}` : ''}, giá từ ${formatCurrency(currentPrice)} tại Cuồng Điện Thoại. Chăm sóc khách hàng, thông số rõ ràng và hỗ trợ bảo hành theo IMEI.`,
   );
 
-  const askAi = () => {
-    const variantDetails = selectedVariant?.attributes
-      ?.map(attribute => `${attribute.attributename} ${attribute.valuename}`)
-      .join(', ');
-    const question = `Tư vấn giúp tôi sản phẩm ${product.productname}${variantDetails ? ` phiên bản ${variantDetails}` : ''}. Sản phẩm này phù hợp với nhu cầu nào và có lựa chọn nào đáng cân nhắc?`;
-    navigate(`/chat?q=${encodeURIComponent(question)}`);
-  };
+
 
   const tabs: { id: DetailTab; label: string }[] = [
     { id: 'description', label: 'Mô tả sản phẩm' },
@@ -206,23 +199,7 @@ const ProductDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-[#efb2b8] bg-[linear-gradient(145deg,#fff1f2_0%,#ffe4e6_100%)] p-5 text-[#1f2937] shadow-[0_18px_45px_rgba(227,6,19,0.12)]">
-                <MessageCircleMore size={26} className="mb-3 text-[#c4000b]" />
-                <p className="text-xs font-semibold text-[#b4232d]">Tư vấn chọn máy</p>
-                <h3 className="customer-display mt-2 text-2xl font-bold leading-tight text-[#1f2937]">
-                  Chưa chắc máy này phù hợp?
-                </h3>
-                <p className="mt-3 text-xs leading-5 text-[#6f5960]">
-                  Hỏi AI để phân tích cấu hình, nhu cầu sử dụng hoặc so sánh với sản phẩm khác.
-                </p>
-                <button
-                  type="button"
-                  onClick={askAi}
-                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#e30613] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#c4000b]"
-                >
-                  <MessageCircleMore size={16} /> Hỏi AI về sản phẩm
-                </button>
-              </div>
+
 
             </aside>
           </div>

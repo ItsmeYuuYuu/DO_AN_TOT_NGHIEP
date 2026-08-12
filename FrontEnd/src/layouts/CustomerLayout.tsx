@@ -393,7 +393,7 @@ export const CustomerLayout: React.FC = () => {
                     type="text"
                     value={searchQuery}
                     onChange={event => setSearchQuery(event.target.value)}
-                    placeholder="Tìm Pixel, iPhone, máy chơi game..."
+                    placeholder="Iphone, Honor, Xiaomi,..."
                     className="h-full w-full bg-transparent pl-11 pr-4 text-sm font-medium text-[#1f2937] outline-none placeholder:text-slate-400"
                   />
                 </div>

@@ -58,9 +58,8 @@ const donutColors = ['#e30613', '#f59e0b', '#172033', '#22c55e', '#94a3b8'];
 const buildAreaPath = (data: RevenueBreakdownItem[], width: number, height: number) => {
   if (data.length === 0) return { linePath: '', areaPath: '' };
   const max = Math.max(...data.map(item => item.revenue), 1);
-  const step = data.length > 1 ? width / (data.length - 1) : width;
   const points = data.map((item, index) => {
-    const x = data.length > 1 ? index * step : width / 2;
+    const x = (index + 0.5) * (width / data.length);
     const y = height - (item.revenue / max) * (height - 50) - 10;
     return { x, y };
   });
@@ -101,6 +100,9 @@ const DonutChart = ({
             <option value="7d">7 ngày</option>
             <option value="30d">30 ngày</option>
             <option value="this_month">Tháng này</option>
+            {period.startsWith('custom_') && (
+              <option value={period} hidden>Tùy chỉnh</option>
+            )}
           </select>
           <PieChart size={22} className="text-[#e30613]" />
         </div>
@@ -181,7 +183,7 @@ const StatCard = ({ title, value, hint, trend, icon, tone, loading }: StatCardPr
           <p className="mt-2 text-3xl font-black tracking-tight text-[#172033]">{value}</p>
         )}
       </div>
-      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}>{icon}</div>
+      <div className={`${tone}`}>{icon}</div>
     </div>
     <div className="mt-4 border-t border-slate-100 pt-3 text-xs font-bold text-slate-500">
       {loading ? (
@@ -236,6 +238,20 @@ const AdminDashboard: React.FC = () => {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; label: string; revenue: number } | null>(null);
+
+  const [globalDateStart, setGlobalDateStart] = useState('');
+  const [globalDateEnd, setGlobalDateEnd] = useState('');
+
+  const applyGlobalDate = useCallback(() => {
+    if (globalDateStart && globalDateEnd) {
+      const customPeriod = `custom_${globalDateStart}_${globalDateEnd}`;
+      setRevenuePeriod(customPeriod);
+      setOrderStatusPeriod(customPeriod);
+      setTopProductsPeriod(customPeriod);
+      setTopCustomersPeriod(customPeriod);
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [globalDateStart, globalDateEnd]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(searchQuery), 300);
@@ -346,21 +362,29 @@ const AdminDashboard: React.FC = () => {
 
     if (revenuePeriod !== 'today' && revenuePeriod !== 'yesterday' && revenueGroupBy === 'hour') {
       setRevenueGroupBy('day');
+      return;
+    }
+
+    if (revenuePeriod !== '7d' && revenueGroupBy === 'dayofweek') {
+      setRevenueGroupBy('day');
     }
   }, [revenueGroupBy, revenuePeriod]);
 
   const maxRevenue = Math.max(...revenueData.map(item => item.revenue), 0);
   const chartHeightLimit = maxRevenue > 0 ? maxRevenue : 1;
   const totalRevenueInChart = useMemo(
-    () => revenueData.reduce((total, item) => total + item.revenue, 0),
-    [revenueData],
+    () => revenueData.reduce((acc, curr) => acc + curr.revenue, 0),
+    [revenueData]
   );
-  const areaChart = useMemo(() => buildAreaPath(revenueData, 720, 260), [revenueData]);
+  const chartWidth = Math.max(700, revenueData.length * 56);
+  const areaChart = useMemo(() => buildAreaPath(revenueData, chartWidth, 260), [revenueData, chartWidth]);
   const topProductMaxRevenue = Math.max(...topProducts.map(product => product.revenue), 1);
   const topCustomerMaxSpent = Math.max(...topCustomers.map(customer => customer.totalSpent), 1);
   const revenueGroupOptions = revenuePeriod === 'today' || revenuePeriod === 'yesterday'
     ? (['hour'] as const)
-    : (['day', 'dayofweek'] as const);
+    : revenuePeriod === '7d'
+    ? (['day', 'dayofweek'] as const)
+    : (['day'] as const);
 
   return (
     <div className={`mx-auto max-w-[1600px] space-y-6 pb-10 ${playIntro ? 'admin-dashboard-intro' : ''}`}>
@@ -369,14 +393,40 @@ const AdminDashboard: React.FC = () => {
           <div>
             <h1 className="ops-hero-title">Tổng quan vận hành</h1>
           </div>
-          <button
-            type="button"
-            onClick={() => setRefreshKey(prev => prev + 1)}
-            className="ops-hero-action"
-          >
-            <RefreshCw size={16} className={`${todayLoading || revenueLoading || activitiesLoading || aiMetricsLoading ? 'animate-spin' : ''}`} />
-            Tải lại dữ liệu
-          </button>
+          <div className="flex flex-wrap gap-3 lg:justify-end">
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
+              <span className="text-xs font-bold text-slate-500">Từ</span>
+              <input
+                type="date"
+                value={globalDateStart}
+                onChange={e => setGlobalDateStart(e.target.value)}
+                className="bg-transparent text-xs font-bold text-[#172033] outline-none"
+              />
+              <span className="text-xs font-bold text-slate-500">Đến</span>
+              <input
+                type="date"
+                value={globalDateEnd}
+                onChange={e => setGlobalDateEnd(e.target.value)}
+                className="bg-transparent text-xs font-bold text-[#172033] outline-none"
+              />
+              <button
+                type="button"
+                onClick={applyGlobalDate}
+                disabled={!globalDateStart || !globalDateEnd}
+                className="ml-2 rounded-full bg-[#e30613] px-3 py-1 text-xs font-black text-white hover:bg-[#c4000b] disabled:opacity-50"
+              >
+                Áp dụng KPI
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRefreshKey(prev => prev + 1)}
+              className="ops-hero-action"
+            >
+              <RefreshCw size={16} className={`${todayLoading || revenueLoading || activitiesLoading || aiMetricsLoading ? 'animate-spin' : ''}`} />
+              Tải lại
+            </button>
+          </div>
         </div>
         {todayError && (
           <div className="border-t border-rose-200 bg-rose-50 px-6 py-3 text-sm font-bold text-rose-700">
@@ -392,7 +442,7 @@ const AdminDashboard: React.FC = () => {
           hint="so với 30 ngày liền trước"
           trend={todayResults?.changeVsYesterdayPercentage}
           icon={<DollarSign size={24} />}
-          tone="bg-red-50 text-[#e30613]"
+          tone="text-[#e30613]"
           loading={todayLoading}
         />
         <StatCard
@@ -400,7 +450,7 @@ const AdminDashboard: React.FC = () => {
           value={todayResults ? `${todayResults.invoicesToday} đơn` : '0 đơn'}
           hint={todayResults && todayResults.invoicesToday > 0 ? `AOV ${formatCurrency(todayResults.netRevenueToday / todayResults.invoicesToday)}` : 'Chưa có đơn hoàn tất'}
           icon={<FileText size={24} />}
-          tone="bg-amber-50 text-amber-700"
+          tone="text-amber-700"
           loading={todayLoading}
         />
         <StatCard
@@ -408,7 +458,7 @@ const AdminDashboard: React.FC = () => {
           value={todayResults ? `${todayResults.returnsToday} đơn` : '0 đơn'}
           hint="cần theo dõi nguyên nhân"
           icon={<XOctagon size={24} />}
-          tone="bg-slate-100 text-[#172033]"
+          tone="text-[#172033]"
           loading={todayLoading}
         />
         <StatCard
@@ -416,7 +466,7 @@ const AdminDashboard: React.FC = () => {
           value={`${aiRecommendationCount} lượt`}
           hint="sản phẩm được AI gợi ý"
           icon={<Bot size={24} />}
-          tone="bg-violet-50 text-violet-700"
+          tone="text-violet-700"
           loading={aiMetricsLoading}
         />
       </div>
@@ -454,6 +504,9 @@ const AdminDashboard: React.FC = () => {
                 <option value="7d">7 ngày qua</option>
                 <option value="30d">30 ngày qua</option>
                 <option value="this_month">Tháng này</option>
+                {revenuePeriod.startsWith('custom_') && (
+                  <option value={revenuePeriod} hidden>Tùy chỉnh ({globalDateStart || '?'} - {globalDateEnd || '?'})</option>
+                )}
               </select>
             </div>
           </div>
@@ -474,64 +527,66 @@ const AdminDashboard: React.FC = () => {
                 Không có dữ liệu doanh thu trong kỳ.
               </div>
             ) : (
-              <div className="relative h-full w-full overflow-hidden rounded-[24px] border border-slate-100 bg-gradient-to-br from-white via-[#fff7f7] to-[#f8fafc] p-3">
-                <div className="relative h-[calc(100%-36px)] w-full">
-                  <svg viewBox="0 0 720 260" preserveAspectRatio="none" className="admin-intro-revenue-chart h-full w-full">
-                    <defs>
-                      <linearGradient id="revenue-area-gradient" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#e30613" stopOpacity="0.34" />
-                        <stop offset="60%" stopColor="#f59e0b" stopOpacity="0.16" />
-                        <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-                      </linearGradient>
-                      <linearGradient id="revenue-line-gradient" x1="0" x2="1" y1="0" y2="0">
-                        <stop offset="0%" stopColor="#e30613" />
-                        <stop offset="100%" stopColor="#f59e0b" />
-                      </linearGradient>
-                    </defs>
-                    <path d={areaChart.areaPath} fill="url(#revenue-area-gradient)" />
-                    <path d={areaChart.linePath} fill="none" stroke="url(#revenue-line-gradient)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="6" />
-                    {revenueData.map((item, index) => {
-                      const x = revenueData.length > 1 ? (index * 720) / (revenueData.length - 1) : 360;
-                      const y = 260 - (item.revenue / chartHeightLimit) * (260 - 50) - 10;
-                      return (
-                        <circle
-                          key={`${item.label}-${index}`}
-                          cx={x}
-                          cy={y}
-                          r="6"
-                          fill="#fff"
-                          stroke="#e30613"
-                          strokeWidth="4"
-                          className="cursor-pointer transition-all duration-150 hover:r-8 hover:stroke-[#f59e0b]"
-                          onMouseEnter={() => setHoveredPoint({ x, y, label: item.label, revenue: item.revenue })}
-                          onMouseLeave={() => setHoveredPoint(null)}
-                        />
-                      );
-                    })}
-                  </svg>
-                  {hoveredPoint && (
-                    <div
-                      className="absolute pointer-events-none rounded-2xl bg-[#172033]/95 px-3 py-2 text-xs font-bold text-white shadow-xl -translate-x-1/2 -translate-y-full mb-3 backdrop-blur-sm transition-all duration-150"
-                      style={{
-                        left: `${(hoveredPoint.x / 720) * 100}%`,
-                        top: `${(hoveredPoint.y / 260) * 100}%`,
-                      }}
-                    >
-                      <div className="text-[10px] text-slate-400 font-semibold">{hoveredPoint.label}</div>
-                      <div className="mt-0.5 text-xs font-black text-[#ffd166]">{formatCurrency(hoveredPoint.revenue)}</div>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                  {revenueData.map((item, index) => (
-                    <div key={`${item.label}-${index}`} className="group relative min-w-12 flex-1 text-center">
-                      <div className="mx-auto h-2 w-2 rounded-full bg-[#e30613]" />
-                      <span className="mt-1 block truncate text-[10px] font-bold text-slate-500">{item.label}</span>
-                      <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 rounded-2xl bg-[#172033] px-3 py-2 text-[10px] font-bold text-white shadow-xl group-hover:block">
-                        {formatCurrency(item.revenue)}
+              <div className="relative h-full w-full overflow-x-auto overflow-y-hidden rounded-[24px] border border-slate-100 bg-gradient-to-br from-white via-[#fff7f7] to-[#f8fafc]">
+                <div className="flex h-full flex-col p-3" style={{ minWidth: chartWidth }}>
+                  <div className="relative h-[calc(100%-36px)] w-full">
+                    <svg viewBox={`0 0 ${chartWidth} 260`} preserveAspectRatio="none" className="admin-intro-revenue-chart h-full w-full">
+                      <defs>
+                        <linearGradient id="revenue-area-gradient" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stopColor="#e30613" stopOpacity="0.34" />
+                          <stop offset="60%" stopColor="#f59e0b" stopOpacity="0.16" />
+                          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+                        </linearGradient>
+                        <linearGradient id="revenue-line-gradient" x1="0" x2="1" y1="0" y2="0">
+                          <stop offset="0%" stopColor="#e30613" />
+                          <stop offset="100%" stopColor="#f59e0b" />
+                        </linearGradient>
+                      </defs>
+                      <path d={areaChart.areaPath} fill="url(#revenue-area-gradient)" />
+                      <path d={areaChart.linePath} fill="none" stroke="url(#revenue-line-gradient)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
+                      {revenueData.map((item, index) => {
+                        const x = (index + 0.5) * (chartWidth / revenueData.length);
+                        const y = 260 - (item.revenue / chartHeightLimit) * (260 - 50) - 10;
+                        return (
+                          <circle
+                            key={`${item.label}-${index}`}
+                            cx={x}
+                            cy={y}
+                            r="5"
+                            fill="#fff"
+                            stroke="#e30613"
+                            strokeWidth="3"
+                            className="cursor-pointer transition-all duration-150 hover:r-[7px] hover:stroke-[#f59e0b]"
+                            onMouseEnter={() => setHoveredPoint({ x, y, label: item.label, revenue: item.revenue })}
+                            onMouseLeave={() => setHoveredPoint(null)}
+                          />
+                        );
+                      })}
+                    </svg>
+                    {hoveredPoint && (
+                      <div
+                        className="absolute pointer-events-none rounded-2xl bg-[#172033]/95 px-3 py-2 text-xs font-bold text-white shadow-xl -translate-x-1/2 -translate-y-full mb-3 backdrop-blur-sm transition-all duration-150"
+                        style={{
+                          left: `${(hoveredPoint.x / chartWidth) * 100}%`,
+                          top: `${(hoveredPoint.y / 260) * 100}%`,
+                        }}
+                      >
+                        <div className="text-[10px] text-slate-400 font-semibold">{hoveredPoint.label}</div>
+                        <div className="mt-0.5 text-xs font-black text-[#ffd166]">{formatCurrency(hoveredPoint.revenue)}</div>
                       </div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
+                  <div className="mt-2 flex w-full pb-1">
+                    {revenueData.map((item, index) => (
+                      <div key={`${item.label}-${index}`} className="group relative flex-1 text-center">
+                        <div className="mx-auto h-1.5 w-1.5 rounded-full bg-[#e30613]" />
+                        <span className="mt-1 block truncate text-[10px] font-bold text-slate-500">{item.label}</span>
+                        <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 rounded-2xl bg-[#172033] px-3 py-2 text-[10px] font-bold text-white shadow-xl group-hover:block">
+                          {formatCurrency(item.revenue)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -642,6 +697,9 @@ const AdminDashboard: React.FC = () => {
               <option value="7d">7 ngày qua</option>
               <option value="30d">30 ngày qua</option>
               <option value="this_month">Tháng này</option>
+              {topProductsPeriod.startsWith('custom_') && (
+                <option value={topProductsPeriod} hidden>Tùy chỉnh ({globalDateStart || '?'} - {globalDateEnd || '?'})</option>
+              )}
             </select>
           </div>
           {topProductsLoading ? (
@@ -686,6 +744,9 @@ const AdminDashboard: React.FC = () => {
               <option value="7d">7 ngày qua</option>
               <option value="30d">30 ngày qua</option>
               <option value="this_month">Tháng này</option>
+              {topCustomersPeriod.startsWith('custom_') && (
+                <option value={topCustomersPeriod} hidden>Tùy chỉnh ({globalDateStart || '?'} - {globalDateEnd || '?'})</option>
+              )}
             </select>
           </div>
           {topCustomersLoading ? (

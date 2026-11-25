@@ -14,6 +14,7 @@ interface InventoryItem {
   importedat?: string;
   variantSku?: string;
   productName?: string;
+  brandName?: string;
 }
 
 interface InventoryTransaction {
@@ -64,6 +65,9 @@ const StaffInventory: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState('importedat_desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
   const [variantSearch, setVariantSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -78,13 +82,41 @@ const StaffInventory: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const parsedImeis = useMemo(() => splitImeis(imeiBatch), [imeiBatch]);
   const normalizedSearchTerm = useMemo(() => normalizeSearch(searchTerm), [searchTerm]);
-  const filteredItems = useMemo(() => {
-    if (!normalizedSearchTerm) return items;
+  const sortedAndFilteredItems = useMemo(() => {
+    let result = items;
+    if (normalizedSearchTerm) {
+      result = items.filter(item =>
+        [item.imei, item.productName, item.variantSku, item.brandName]
+          .some(value => normalizeSearch(value).includes(normalizedSearchTerm)));
+    }
+    
+    return [...result].sort((a, b) => {
+      if (sortOption === 'importedat_desc') {
+        return (b.importedat ? new Date(b.importedat).getTime() : 0) - (a.importedat ? new Date(a.importedat).getTime() : 0);
+      }
+      if (sortOption === 'importedat_asc') {
+        return (a.importedat ? new Date(a.importedat).getTime() : 0) - (b.importedat ? new Date(b.importedat).getTime() : 0);
+      }
+      if (sortOption === 'brandName_asc') {
+        return (a.brandName || '').localeCompare(b.brandName || '');
+      }
+      if (sortOption === 'brandName_desc') {
+        return (b.brandName || '').localeCompare(a.brandName || '');
+      }
+      return 0;
+    });
+  }, [items, normalizedSearchTerm, sortOption]);
 
-    return items.filter(item =>
-      [item.imei, item.productName, item.variantSku]
-        .some(value => normalizeSearch(value).includes(normalizedSearchTerm)));
-  }, [items, normalizedSearchTerm]);
+  const totalPages = Math.ceil(sortedAndFilteredItems.length / itemsPerPage);
+  
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedAndFilteredItems.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedAndFilteredItems, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [normalizedSearchTerm, sortOption, statusFilter]);
   const filteredLowStockVariants = useMemo(() => {
     if (!normalizedSearchTerm) return lowStockVariants;
 
@@ -219,7 +251,7 @@ const StaffInventory: React.FC = () => {
       </div>
 
       <div className="mb-6 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_480px]">
           <div className="relative">
             <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -239,24 +271,38 @@ const StaffInventory: React.FC = () => {
               </button>
             )}
           </div>
-          <div className="relative">
-            <Filter size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <select
-              value={statusFilter}
-              onChange={event => setStatusFilter(event.target.value)}
-              className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-700 outline-none transition focus:border-[#e30613] focus:bg-white"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="InStock">Trong kho</option>
-              <option value="Sold">Đã bán</option>
-              <option value="Reserved">Đã giữ cho đơn hàng</option>
-              <option value="Shipping">Đang giao</option>
-              <option value="Defective">Lỗi</option>
-            </select>
+          <div className="flex gap-3">
+            <div className="relative w-full">
+              <Filter size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <select
+                value={statusFilter}
+                onChange={event => setStatusFilter(event.target.value)}
+                className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-700 outline-none transition focus:border-[#e30613] focus:bg-white"
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="InStock">Trong kho</option>
+                <option value="Sold">Đã bán</option>
+                <option value="Reserved">Đã giữ</option>
+                <option value="Shipping">Đang giao</option>
+                <option value="Defective">Lỗi</option>
+              </select>
+            </div>
+            <div className="relative w-full">
+              <select
+                value={sortOption}
+                onChange={event => setSortOption(event.target.value)}
+                className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-[#e30613] focus:bg-white"
+              >
+                <option value="importedat_desc">Ngày nhập (Mới nhất)</option>
+                <option value="importedat_asc">Ngày nhập (Cũ nhất)</option>
+                <option value="brandName_asc">Thương hiệu (A-Z)</option>
+                <option value="brandName_desc">Thương hiệu (Z-A)</option>
+              </select>
+            </div>
           </div>
         </div>
         <p className="mt-2 text-xs text-slate-400">
-          Đang hiển thị <span className="font-bold text-slate-700">{filteredItems.length}/{items.length}</span> thiết bị.
+          Đang hiển thị <span className="font-bold text-slate-700">{sortedAndFilteredItems.length}/{items.length}</span> thiết bị.
           Có thể tìm SKU trước khi bấm nhập kho.
         </p>
       </div>
@@ -319,12 +365,12 @@ const StaffInventory: React.FC = () => {
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr><td colSpan={6} className="p-4"><Skeleton className="h-10 w-full" /></td></tr>
-            ) : filteredItems.length === 0 ? (
+            ) : paginatedItems.length === 0 ? (
               <tr><td colSpan={6} className="p-8 text-center text-slate-400">Không có thiết bị phù hợp.</td></tr>
-            ) : filteredItems.map(item => (
+            ) : paginatedItems.map(item => (
               <tr key={item.imei} className="transition-colors hover:bg-red-50/40">
                 <td className="flex items-center gap-2 p-4 font-bold text-slate-800"><Package size={16} className="text-[#e30613]" /> {item.imei}</td>
-                <td className="p-4 text-sm font-bold text-slate-700">{item.productName || `Variant #${item.variantid}`}</td>
+                <td className="p-4 text-sm font-bold text-slate-700">{item.productName || `Variant #${item.variantid}`}{item.brandName ? ` (${item.brandName})` : ''}</td>
                 <td className="p-4 text-sm text-slate-500">{item.variantSku}</td>
                 <td className="p-4 text-sm text-slate-500">{item.importedat ? formatDate(item.importedat) : '—'}</td>
                 <td className="p-4 text-center">
@@ -353,6 +399,27 @@ const StaffInventory: React.FC = () => {
             ))}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-between border-t border-slate-100 p-4">
+            <p className="text-sm text-slate-500">Trang {currentPage} / {totalPages}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Trước
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
@@ -441,7 +508,7 @@ const StaffInventory: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-bold uppercase text-slate-600">IMEI thực tế *</label>
+                    <label className="mb-1 block text-xs font-bold uppercase text-slate-600">IMEI *</label>
                     <input
                       required
                       autoFocus

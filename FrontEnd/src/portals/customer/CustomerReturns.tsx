@@ -513,8 +513,8 @@ const CustomerReturns: React.FC = () => {
               <option value="Other">Lý do khác</option>
             </select>
             <p className="mt-2 text-xs leading-5 text-slate-500">
-              Đổi ý: khấu hao 10% trong 7 ngày, 15% từ ngày 8–15 và 20% từ ngày 16–30.
-              Lỗi thuộc nhà sản xuất, cửa hàng hoặc vận chuyển được xác nhận sẽ không khấu hao.
+              Đổi ý: Còn nguyên seal trong 7 ngày hoàn 100%; Đã bóc seal: khấu hao 10% trong 7 ngày, 15% (ngày 8–15) và 20% (ngày 16–30).
+              Lỗi thuộc nhà sản xuất, cửa hàng hoặc vận chuyển được xác nhận sẽ hoàn 100% không khấu hao.
             </p>
           </div>
           <div>

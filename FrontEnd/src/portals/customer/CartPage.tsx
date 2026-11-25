@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Minus, Plus, ShieldCheck, ShoppingBag, Tag, Trash2, Truck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Minus, Plus, ShieldCheck, Tag, Trash2, Truck } from 'lucide-react';
 import { useCart } from '@/features/orders/context/CartContext';
 import { formatCurrency } from '@/utils/formatters';
 import { Seo } from '@/components/Seo';
@@ -15,10 +15,6 @@ const CartPage: React.FC = () => {
       <div className="customer-shell min-h-screen px-4 py-16">
         <Seo title="Giỏ hàng - Cuồng Điện Thoại" description="Giỏ hàng mua smartphone tại Cuồng Điện Thoại." noIndex />
         <div className="customer-panel-soft mx-auto max-w-2xl px-6 py-20 text-center">
-          <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center bg-[#1f2937] text-white">
-            <ShoppingBag size={42} />
-          </div>
-          <p className="customer-label">Cart</p>
           <h2 className="customer-display mt-2 text-4xl font-bold text-[#1f2937]">
             Giỏ hàng đang trống
           </h2>
@@ -47,7 +43,7 @@ const CartPage: React.FC = () => {
       <section className="border-b customer-rule bg-[#ffffff] px-3 py-6 sm:px-4 sm:py-8">
         <div className="customer-container flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
-            <p className="customer-label">Shopping cart</p>
+
             <h1 className="customer-display mt-2 text-3xl font-bold text-[#1f2937] sm:text-4xl">
               Giỏ hàng của bạn
             </h1>
@@ -119,7 +115,8 @@ const CartPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
-                    className="flex h-9 w-9 items-center justify-center text-slate-500 hover:bg-[#f3f4f6]"
+                    disabled={item.availableStock !== undefined && item.quantity >= item.availableStock}
+                    className="flex h-9 w-9 items-center justify-center text-slate-500 hover:bg-[#f3f4f6] disabled:opacity-30 disabled:hover:bg-transparent"
                     aria-label="Tăng số lượng"
                   >
                     <Plus size={14} />
@@ -136,7 +133,7 @@ const CartPage: React.FC = () => {
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="customer-panel p-6">
-            <p className="customer-label">Order summary</p>
+
             <h2 className="customer-display mt-2 text-3xl font-bold text-[#1f2937]">
               Tạm tính đơn hàng
             </h2>

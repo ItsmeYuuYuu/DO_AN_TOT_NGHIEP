@@ -258,6 +258,10 @@ public class OrderAssignmentsController : ControllerBase
         }
         var now = DateTime.UtcNow;
         order.Orderstatus = "Shipped";
+
+        if (dto.Estimateddeliveryat.HasValue && dto.Estimateddeliveryat.Value.Date < now.AddHours(7).Date)
+            return BadRequest(new ApiErrorDto("Ngày giao dự kiến không được ở trong quá khứ.", null));
+
         var shipment = new Shipment
         {
             Orderid = orderId, Carrier = carrier,

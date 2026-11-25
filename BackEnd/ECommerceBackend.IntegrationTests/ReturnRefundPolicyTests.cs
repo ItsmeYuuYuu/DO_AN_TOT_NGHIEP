@@ -7,6 +7,29 @@ public sealed class ReturnRefundPolicyTests
     private readonly ReturnRefundPolicyService _policy = new();
 
     [Theory]
+    [InlineData(0, 0)]
+    [InlineData(7, 0)]
+    [InlineData(8, 5)]
+    [InlineData(15, 5)]
+    [InlineData(16, 10)]
+    [InlineData(30, 10)]
+    [InlineData(31, 100)]
+    public void Change_Of_Mind_NewSeal_Uses_Special_Delivery_Bands(int days, decimal expectedRate)
+    {
+        var result = _policy.Calculate(
+            1,
+            "IMEI-1",
+            10_000_000m,
+            days,
+            "NewSeal",
+            "NoFault",
+            missingBox: false,
+            missingAccessoryCount: 0);
+
+        Assert.Equal(expectedRate, result.Totaldeductionrate);
+    }
+
+    [Theory]
     [InlineData(0, 10)]
     [InlineData(7, 10)]
     [InlineData(8, 15)]

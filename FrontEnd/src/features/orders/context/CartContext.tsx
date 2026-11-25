@@ -12,6 +12,7 @@ export interface CartItem {
   imageUrl: string;
   price: number;        // sale price
   quantity: number;
+  availableStock?: number;
 }
 
 interface CartContextValue {

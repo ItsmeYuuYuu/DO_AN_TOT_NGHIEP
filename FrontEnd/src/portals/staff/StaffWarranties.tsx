@@ -210,13 +210,11 @@ const StaffWarranties: React.FC = () => {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map(({ label, value, Icon, color }) => (
           <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-slate-400">{label}</p>
-                <p className="mt-1 text-2xl font-black text-slate-900">{value}</p>
-              </div>
-              <Icon size={24} className={color} />
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-2xl font-black text-slate-900">{value}</p>
+              <Icon size={20} className={color} />
             </div>
+            <p className="text-xs font-bold text-slate-400">{label}</p>
           </div>
         ))}
       </div>

@@ -2,9 +2,11 @@ import React from 'react';
 import { useOrders } from '@/features/orders/hooks/useOrders';
 import { Skeleton } from '@/components/Skeleton';
 import { formatCurrency, generateOrderCode } from '@/utils/formatters';
-import { Package, Clock, Truck } from 'lucide-react';
+import { Package, Clock, Truck, MapPin } from 'lucide-react';
 import { ordersApi } from '@/features/orders/api/ordersApi';
+import type { Order } from '@/features/orders/api/ordersApi';
 import { getApiErrorMessage } from '@/utils/apiError';
+import { Modal } from '@/components/Modal';
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   Pending:    { label: 'Chờ xử lý', cls: 'bg-amber-100 text-amber-700 border border-amber-200' },
@@ -18,6 +20,7 @@ const StaffOrders: React.FC = () => {
   const { orders, loading, error, refetch, updateStatus } = useOrders();
   const [updatingId, setUpdatingId] = React.useState<number | null>(null);
   const [actionError, setActionError] = React.useState('');
+  const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
   const pendingOrders = orders.filter((o) => ['Pending', 'Processing'].includes(o.orderstatus ?? ''));
 
   const changeStatus = async (orderId: number, status: string) => {
@@ -55,16 +58,16 @@ const StaffOrders: React.FC = () => {
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Chờ xử lý', value: orders.filter((o) => o.orderstatus === 'Pending').length, icon: <Clock size={20} className="text-[#c4000b]" />, bg: 'bg-red-50', val: 'text-[#c4000b]' },
-          { label: 'Đang xử lý', value: orders.filter((o) => o.orderstatus === 'Processing').length, icon: <Package size={20} className="text-[#c4000b]" />, bg: 'bg-red-50', val: 'text-[#c4000b]' },
-          { label: 'Đang giao', value: orders.filter((o) => o.orderstatus === 'Shipped').length, icon: <Truck size={20} className="text-[#c4000b]" />, bg: 'bg-red-50', val: 'text-[#c4000b]' },
+          { label: 'Chờ xử lý', value: orders.filter((o) => o.orderstatus === 'Pending').length, icon: <Clock size={20} /> },
+          { label: 'Đang xử lý', value: orders.filter((o) => o.orderstatus === 'Processing').length, icon: <Package size={20} /> },
+          { label: 'Đang giao', value: orders.filter((o) => o.orderstatus === 'Shipped').length, icon: <Truck size={20} /> },
         ].map((s) => (
-          <div key={s.label} className={`${s.bg} rounded-xl p-4 border border-slate-100`}>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{s.label}</p>
-              {s.icon}
+          <div key={s.label} className="bg-white rounded-2xl p-4 border border-slate-200 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-2xl font-black text-slate-900">{loading ? '...' : s.value}</p>
+              <div className="text-[#c4000b]">{s.icon}</div>
             </div>
-            <p className={`text-3xl font-black ${s.val}`}>{loading ? '—' : s.value}</p>
+            <p className="text-xs font-bold text-slate-400">{s.label}</p>
           </div>
         ))}
       </div>
@@ -105,8 +108,14 @@ const StaffOrders: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {orders.map((order) => (
                 <tr key={order.orderid} className="hover:bg-red-50/40 transition-colors">
-                  <td className="px-4 py-3 text-sm font-bold text-[#e30613]">
-                    {generateOrderCode(order.orderid)}
+                  <td className="px-4 py-3 text-sm font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrder(order)}
+                      className="text-[#e30613] hover:underline"
+                    >
+                      {generateOrderCode(order.orderid)}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold text-slate-800">
                     {order.customer?.fullname ?? '—'}
@@ -168,6 +177,103 @@ const StaffOrders: React.FC = () => {
           </table>
         </div>
       )}
+
+      <Modal
+        isOpen={!!selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        title={`Chi tiết đơn hàng ${selectedOrder ? generateOrderCode(selectedOrder.orderid) : ''}`}
+        size="lg"
+      >
+        {selectedOrder && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap gap-4 items-start justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div>
+                <p className="text-xs font-bold uppercase text-slate-500 mb-1">Trạng thái hiện tại</p>
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${(statusConfig[selectedOrder.orderstatus ?? ''] ?? statusConfig['Pending']).cls}`}>
+                  {(statusConfig[selectedOrder.orderstatus ?? ''] ?? { label: selectedOrder.orderstatus }).label}
+                </span>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold uppercase text-slate-500 mb-1">Tổng thanh toán</p>
+                <p className="text-lg font-black text-[#e30613]">{formatCurrency(selectedOrder.finalamount ?? selectedOrder.totalamount ?? 0)}</p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
+                <MapPin size={16} className="text-[#c4000b]" /> Thông tin giao hàng
+              </h3>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 text-sm space-y-2">
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <span className="font-bold text-slate-500">Khách hàng:</span>
+                  <span className="font-semibold text-slate-900">{selectedOrder.shippingname || selectedOrder.customer?.fullname || '—'}</span>
+                </div>
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <span className="font-bold text-slate-500">Số điện thoại:</span>
+                  <span className="font-semibold text-slate-900">{selectedOrder.shippingphone || selectedOrder.customer?.phone || '—'}</span>
+                </div>
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <span className="font-bold text-slate-500">Địa chỉ:</span>
+                  <span className="font-semibold text-slate-900">{selectedOrder.shippingaddress || '—'}</span>
+                </div>
+                {selectedOrder.customernote && (
+                  <div className="grid grid-cols-[120px_1fr] gap-2">
+                    <span className="font-bold text-slate-500">Ghi chú:</span>
+                    <span className="font-semibold text-slate-900">{selectedOrder.customernote}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
+                <Package size={16} className="text-[#c4000b]" /> Danh sách sản phẩm
+              </h3>
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-4 py-2 font-bold">Sản phẩm</th>
+                      <th className="px-4 py-2 font-bold text-right">Đơn giá</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {selectedOrder.orderitems?.map((item) => (
+                      <tr key={item.orderitemid} className="bg-white">
+                        <td className="px-4 py-3">
+                          <p className="font-bold text-slate-800">{item.productname}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Phân loại: {item.variantsku ?? '—'}</p>
+                          {item.imei && <p className="text-xs font-semibold text-blue-600 mt-0.5">IMEI: {item.imei}</p>}
+                          {item.packagename && <p className="text-[11px] text-slate-400 mt-0.5">+ {item.packagename}</p>}
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-slate-900">
+                          <p>{formatCurrency(item.sellingprice)}</p>
+                          {!!item.warrantyprice && <p className="text-[11px] font-normal text-slate-400">+{formatCurrency(item.warrantyprice)}</p>}
+                        </td>
+                      </tr>
+                    ))}
+                    {(!selectedOrder.orderitems || selectedOrder.orderitems.length === 0) && (
+                      <tr>
+                        <td colSpan={2} className="px-4 py-6 text-center text-slate-400">Không có sản phẩm nào.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSelectedOrder(null)}
+                className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

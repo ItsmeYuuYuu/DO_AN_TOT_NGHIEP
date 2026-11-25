@@ -282,12 +282,9 @@ namespace ECommerceBackend.Controllers
                 var related = await _context.Products
                     .Include(p => p.Brand)
                     .Include(p => p.Category)
-                    
-                    .Include(p => p.Productvariants)
-                        
                     .Include(p => p.Productvariants)
                         .ThenInclude(v => v.Inventoryitems)
-                    .Where(p => p.Brandid == product.Brandid && p.Productid != product.Productid)
+                    .Where(p => p.Brandid == product.Brandid && p.Productid != product.Productid && p.Isactive)
                     .Take(5)
                     .ToListAsync();
                 relatedProducts = related.Select(MapToDto).ToList();

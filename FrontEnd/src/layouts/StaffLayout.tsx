@@ -16,6 +16,7 @@ import {
   Package,
   RotateCcw,
   ShieldCheck,
+  Star,
   Truck,
   UserCheck,
   Users,
@@ -61,7 +62,12 @@ const staffNavigation: StaffNavGroup[] = [
     ],
   },
   { label: 'Bảo hành', to: '/staff/warranties', icon: <ShieldCheck size={17} />, permission: 'warranties.view' },
-  { label: 'Khách hàng', to: '/staff/customers', icon: <Users size={17} />, permission: 'customers.view' },
+  {
+    label: 'Khách hàng', icon: <Users size={17} />, items: [
+      { label: 'Danh sách khách hàng', to: '/staff/customers', icon: <Users size={16} />, permission: 'customers.view' },
+      { label: 'Quản lý đánh giá', to: '/staff/reviews', icon: <Star size={16} />, permission: 'reviews.view' },
+    ],
+  },
   { label: 'Voucher', to: '/staff/vouchers', icon: <Gift size={17} />, permission: 'vouchers.manage' },
   {
     label: 'Nội dung', icon: <Newspaper size={17} />, items: [

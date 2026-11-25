@@ -48,6 +48,7 @@ const AdminUsers         = lazy(() => import('@/portals/admin/AdminUsers'));
 const AdminRoles         = lazy(() => import('@/portals/admin/AdminRoles'));
 const AdminCategoryBrand = lazy(() => import('@/portals/admin/AdminCategoryBrand'));
 const AdminCustomers     = lazy(() => import('@/portals/admin/AdminCustomers'));
+const AdminReviews       = lazy(() => import('@/portals/admin/AdminReviews'));
 const AdminVouchers      = lazy(() => import('@/portals/admin/AdminVouchers'));
 const AdminWarrantyPackages = lazy(() => import('@/portals/admin/AdminWarrantyPackages'));
 const AdminNews          = lazy(() => import('@/portals/admin/AdminNews'));
@@ -82,6 +83,7 @@ const StaffHomeRedirect = () => {
     ['content.manage', '/staff/content'],
     ['consultations.manage', '/staff/consultations'],
     ['customers.view', '/staff/customers'],
+    ['reviews.view', '/staff/reviews'],
   ];
   return <Navigate to={destinations.find(([permission]) => permissions.includes(permission))?.[1] ?? '/unauthorized'} replace />;
 };
@@ -144,6 +146,7 @@ const App: React.FC = () => {
             <Route path="users"           element={<AdminUsers />} />
             <Route path="roles"           element={<AdminRoles />} />
             <Route path="customers"       element={<AdminCustomers />} />
+            <Route path="reviews"         element={<AdminReviews />} />
             <Route path="categories"      element={<AdminCategoryBrand />} />
             <Route path="brands"          element={<Navigate to="/admin/categories" replace />} />
             <Route path="vouchers"        element={<AdminVouchers />} />
@@ -157,7 +160,7 @@ const App: React.FC = () => {
         </Route>
 
         {/* ═══ PROTECTED — Employee portal ═════════════════════════════════ */}
-        <Route element={<AuthGuard allowedPermissions={['dashboard.view', 'orders.view', 'inventory.view', 'warranties.view', 'content.manage', 'consultations.manage', 'customers.view']} />}>
+        <Route element={<AuthGuard allowedPermissions={['dashboard.view', 'orders.view', 'inventory.view', 'warranties.view', 'content.manage', 'consultations.manage', 'customers.view', 'reviews.view', 'reviews.manage']} />}>
           <Route path="/staff" element={<StaffLayout />}>
             <Route index element={<StaffHomeRedirect />} />
 
@@ -192,6 +195,9 @@ const App: React.FC = () => {
             </Route>
             <Route element={<AuthGuard allowedPermissions={['customers.view']} />}>
               <Route path="customers" element={<AdminCustomers />} />
+            </Route>
+            <Route element={<AuthGuard allowedPermissions={['reviews.view', 'reviews.manage']} />}>
+              <Route path="reviews" element={<AdminReviews />} />
             </Route>
             <Route element={<AuthGuard allowedPermissions={['vouchers.manage']} />}>
               <Route path="vouchers" element={<AdminVouchers />} />

@@ -407,18 +407,13 @@ const CheckoutPage: React.FC = () => {
       <Seo title="Thanh toán - Cuồng Điện Thoại" description="Hoàn tất thông tin đặt hàng tại Cuồng Điện Thoại." noIndex />
       <section className="border-b customer-rule bg-[#ffffff] px-3 py-6 sm:px-4 sm:py-8">
         <div className="customer-container">
-          <p className="customer-label">Checkout desk</p>
+
           <div className="mt-2 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
               <h1 className="customer-display text-3xl font-bold text-[#1f2937] sm:text-4xl md:text-5xl">Thanh toán</h1>
               <p className="mt-3 text-sm text-slate-500">
                 {totalItems} sản phẩm · Tổng tạm tính {formatCurrency(grandTotal)}
               </p>
-            </div>
-            <div className="grid grid-cols-3 border border-[#e5e7eb] bg-white text-center text-[9px] font-black uppercase tracking-[0.1em] text-slate-500 sm:text-[10px] sm:tracking-[0.14em]">
-              {['Nhận hàng', 'Thanh toán', 'Xác nhận'].map(step => (
-                <span key={step} className="border-r border-[#e5e7eb] px-3 py-2 last:border-r-0">{step}</span>
-              ))}
             </div>
           </div>
         </div>
@@ -442,7 +437,7 @@ const CheckoutPage: React.FC = () => {
                 <MapPin size={20} />
               </div>
               <div>
-                <p className="customer-label">Step 1</p>
+                <p className="customer-label">Bước 1</p>
                 <h2 className="text-xl font-black text-[#1f2937]">Thông tin nhận hàng</h2>
               </div>
             </div>
@@ -510,9 +505,6 @@ const CheckoutPage: React.FC = () => {
                 <input name="note" value={form.note} onChange={handleChange} placeholder="Giao giờ hành chính..." className={inputClass} />
               </label>
             </div>
-            <p className="mt-3 text-xs font-semibold text-slate-400">
-              Dữ liệu tỉnh/phường được lấy theo danh mục hành chính mới; nếu mất mạng hệ thống sẽ dùng dữ liệu dự phòng để vẫn đặt hàng được.
-            </p>
           </section>
 
           <section className="customer-panel p-4 sm:p-6">
@@ -521,7 +513,7 @@ const CheckoutPage: React.FC = () => {
                 <CreditCard size={20} />
               </div>
               <div>
-                <p className="customer-label">Step 2</p>
+                <p className="customer-label">Bước 2</p>
                 <h2 className="text-xl font-black text-[#1f2937]">Phương thức thanh toán</h2>
               </div>
             </div>
@@ -529,11 +521,10 @@ const CheckoutPage: React.FC = () => {
               {paymentMethods.map(method => (
                 <label
                   key={method.value}
-                  className={`flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition ${
-                    form.paymentMethod === method.value
-                      ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_12px_28px_rgba(227,6,19,0.18)]'
-                      : 'border-[#e5e7eb] bg-white text-[#1f2937] hover:border-[#1f2937]'
-                  }`}
+                  className={`flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition ${form.paymentMethod === method.value
+                    ? 'border-[#e30613] bg-[#e30613] text-white shadow-[0_12px_28px_rgba(227,6,19,0.18)]'
+                    : 'border-[#e5e7eb] bg-white text-[#1f2937] hover:border-[#1f2937]'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -561,11 +552,10 @@ const CheckoutPage: React.FC = () => {
                 ].map(option => (
                   <label
                     key={option.value}
-                    className={`cursor-pointer rounded-2xl border p-4 transition ${
-                      form.paymentOption === option.value
-                        ? 'border-[#e30613] bg-[#e30613]/10'
-                        : 'border-[#e5e7eb] bg-white hover:border-[#e30613]'
-                    }`}
+                    className={`cursor-pointer rounded-2xl border p-4 transition ${form.paymentOption === option.value
+                      ? 'border-[#e30613] bg-[#e30613]/10'
+                      : 'border-[#e5e7eb] bg-white hover:border-[#e30613]'
+                      }`}
                   >
                     <input
                       type="radio"
@@ -595,7 +585,7 @@ const CheckoutPage: React.FC = () => {
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="customer-panel p-4 sm:p-6">
-            <p className="customer-label">Order summary</p>
+
             <h2 className="customer-display mt-2 text-3xl font-bold text-[#1f2937]">Đơn hàng</h2>
 
             <div className="mt-5 max-h-72 space-y-3 overflow-y-auto pr-1">

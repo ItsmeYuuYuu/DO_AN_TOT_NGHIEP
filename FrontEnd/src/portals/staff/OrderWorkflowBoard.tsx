@@ -20,7 +20,7 @@ import {
   type OrderWorkflowItem,
   type WorkflowDepartment,
 } from '@/features/orders/api/orderAssignmentsApi';
-import { formatCurrency, formatDateTime } from '@/utils/formatters';
+import { formatCurrency, formatDateTime, formatDateInput } from '@/utils/formatters';
 import { getApiErrorMessage } from '@/utils/apiError';
 
 interface OrderWorkflowBoardProps {
@@ -185,14 +185,16 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
 
       <div className="grid gap-4 sm:grid-cols-4">
         {[
-          { label: 'Tổng việc', value: stats.total, icon: <ClipboardCheck size={20} />, tone: 'bg-red-50 text-[#c4000b]' },
-          { label: 'Chưa nhận', value: stats.unassigned, icon: <Clock3 size={20} />, tone: 'bg-red-50 text-[#c4000b]' },
-          { label: 'Tôi phụ trách', value: stats.mine, icon: <UserCheck size={20} />, tone: 'bg-red-50 text-[#c4000b]' },
-          { label: 'Sẵn sàng xử lý', value: stats.ready, icon: <PackageCheck size={20} />, tone: 'bg-red-50 text-[#c4000b]' },
+          { label: 'Tổng việc', value: stats.total, icon: <ClipboardCheck size={20} /> },
+          { label: 'Chưa nhận', value: stats.unassigned, icon: <Clock3 size={20} /> },
+          { label: 'Tôi phụ trách', value: stats.mine, icon: <UserCheck size={20} /> },
+          { label: 'Sẵn sàng xử lý', value: stats.ready, icon: <PackageCheck size={20} /> },
         ].map(stat => (
           <div key={stat.label} className="ops-card p-4">
-            <div className={`mb-3 flex h-10 w-10 items-center justify-center ${stat.tone}`}>{stat.icon}</div>
-            <p className="text-2xl font-black text-[#172033]">{loading ? '...' : stat.value}</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-2xl font-black text-[#172033]">{loading ? '...' : stat.value}</p>
+              <div className="text-[#c4000b]">{stat.icon}</div>
+            </div>
             <p className="text-xs font-bold text-slate-400">{stat.label}</p>
           </div>
         ))}
@@ -461,7 +463,7 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                 </label>
                 <label className="rounded-2xl border border-slate-200 bg-white p-4 text-xs font-bold uppercase tracking-wide text-slate-500 shadow-sm">
                   Ngày giao dự kiến
-                  <input type="date" value={estimatedDeliveryDate} onChange={event => setEstimatedDeliveryDate(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold normal-case text-[#172033] outline-none focus:border-[#e30613]" />
+                  <input type="date" value={estimatedDeliveryDate} onChange={event => setEstimatedDeliveryDate(event.target.value)} min={formatDateInput(new Date())} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold normal-case text-[#172033] outline-none focus:border-[#e30613]" />
                 </label>
               </div>
             </div>
@@ -493,7 +495,8 @@ const OrderWorkflowBoard: React.FC<OrderWorkflowBoardProps> = ({ department }) =
                     verificationOrder.devices.length === 0 ||
                     confirmedImeis.size !== verificationOrder.devices.length ||
                     !carrier ||
-                    shippingFee < 0
+                    shippingFee < 0 ||
+                    !estimatedDeliveryDate
                   }
                   onClick={confirmShipment}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#e30613] px-5 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(227,6,19,0.2)] transition hover:bg-[#c4000b] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"

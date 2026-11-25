@@ -85,7 +85,7 @@ public sealed class ReturnRefundPolicyService : IReturnRefundPolicyService
             imei,
             originalPaidAmount,
             daysSinceDelivery,
-            "Grade99",
+            daysSinceDelivery <= 7 ? "NewSeal" : "Grade99",
             assumedResponsibility,
             missingBox: false,
             missingAccessoryCount: 0);
@@ -135,13 +135,27 @@ public sealed class ReturnRefundPolicyService : IReturnRefundPolicyService
         }
         else
         {
-            timeRate = daysSinceDelivery switch
+            if (grade == "NewSeal")
             {
-                <= 7 => 10m,
-                <= 15 => 15m,
-                _ => 20m
-            };
-            conditionRate = grade == "Grade98" ? 5m : 0m;
+                timeRate = daysSinceDelivery switch
+                {
+                    <= 7 => 0m,
+                    <= 15 => 5m,
+                    _ => 10m
+                };
+                conditionRate = 0m;
+            }
+            else
+            {
+                timeRate = daysSinceDelivery switch
+                {
+                    <= 7 => 10m,
+                    <= 15 => 15m,
+                    _ => 20m
+                };
+                conditionRate = grade == "Grade98" ? 5m : 0m;
+            }
+
             missingBoxRate = missingBox ? 2m : 0m;
             missingAccessoryRate = missingAccessoryCount * 5m;
         }

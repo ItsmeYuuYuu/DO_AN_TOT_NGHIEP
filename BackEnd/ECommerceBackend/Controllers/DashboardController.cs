@@ -30,6 +30,18 @@ namespace ECommerceBackend.Controllers
             DateTime localStart = today;
             DateTime localEnd = today.AddDays(1);
 
+            if (period.StartsWith("custom_", StringComparison.OrdinalIgnoreCase))
+            {
+                var parts = period.Substring(7).Split('_');
+                if (parts.Length == 2 && 
+                    DateTime.TryParse(parts[0], out var customStart) && 
+                    DateTime.TryParse(parts[1], out var customEnd))
+                {
+                    // Assuming parts are YYYY-MM-DD
+                    return (VietnamTime.ToUtc(customStart.Date), VietnamTime.ToUtc(customEnd.Date.AddDays(1)));
+                }
+            }
+
             switch (period.ToLower())
             {
                 case "today":
@@ -123,7 +135,7 @@ namespace ECommerceBackend.Controllers
 
             var orders = await _context.Orders
                 .Where(o => (o.Orderstatus == "Completed" || o.Paymentstatus == "Paid" || o.Paymentstatus == "DepositPaid") && o.Orderdate != null && o.Orderdate >= start && o.Orderdate < end)
-                .Select(o => new { o.Orderdate, Finalamount = o.Paidamount ?? 0 })
+                .Select(o => new { o.Orderdate, Finalamount = o.Paidamount ?? o.Finalamount })
                 .ToListAsync();
 
             var result = new List<RevenueBreakdownItemDto>();

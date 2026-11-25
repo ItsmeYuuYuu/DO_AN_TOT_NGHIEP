@@ -830,9 +830,12 @@ namespace ECommerceBackend.Controllers
                             null));
 
                     var availableItems = await _context.Inventoryitems
-                        .Where(i => i.Variantid == reqItem.Variantid && i.Status == "InStock")
-                        .OrderBy(i => i.Importedat)
-                        .Take(reqItem.Quantity)
+                        .FromSqlInterpolated($@"
+                            SELECT * FROM inventoryitems
+                            WHERE variantid = {reqItem.Variantid} AND status = 'InStock'
+                            ORDER BY importedat
+                            LIMIT {reqItem.Quantity}
+                            FOR UPDATE SKIP LOCKED")
                         .ToListAsync();
 
                     if (availableItems.Count < reqItem.Quantity)

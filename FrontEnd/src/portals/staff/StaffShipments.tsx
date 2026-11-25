@@ -62,6 +62,7 @@ const StaffShipments: React.FC = () => {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [selected, setSelected] = useState<Shipment | null>(null);
   const [filter, setFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [working, setWorking] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -139,9 +140,11 @@ const StaffShipments: React.FC = () => {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {statCards.map(({ label, value, icon: Icon }) => (
           <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
-            <Icon size={20} className="mb-3 text-[#e30613]" />
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-2xl font-black text-slate-900">{value}</p>
+              <Icon size={20} className="text-[#e30613]" />
+            </div>
             <p className="text-xs font-bold text-slate-400">{label}</p>
-            <p className="mt-1 text-2xl font-black text-slate-900">{value}</p>
           </div>
         ))}
       </div>
@@ -149,16 +152,27 @@ const StaffShipments: React.FC = () => {
       <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
           <h2 className="font-black text-slate-900">Danh sách vận đơn</h2>
-          <select value={filter} onChange={event => setFilter(event.target.value)} className="rounded-2xl border border-slate-200 px-3 py-2 text-sm">
-            <option value="">Tất cả trạng thái</option>
-            {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="Tìm theo mã vận đơn..."
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+            />
+            <select value={filter} onChange={event => setFilter(event.target.value)} className="rounded-2xl border border-slate-200 px-3 py-2 text-sm">
+              <option value="">Tất cả trạng thái</option>
+              {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-4 py-3">Vận đơn</th>
+                <th className="px-4 py-3">STT</th>
+                <th className="px-4 py-3">Mã đơn</th>
+                <th className="px-4 py-3">Mã vận đơn</th>
                 <th className="px-4 py-3">Khách nhận</th>
                 <th className="px-4 py-3">Dự kiến</th>
                 <th className="px-4 py-3">Trạng thái</th>
@@ -167,14 +181,16 @@ const StaffShipments: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400">Đang tải...</td></tr>
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-400">Đang tải...</td></tr>
               ) : shipments.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400">Chưa có vận đơn phù hợp.</td></tr>
-              ) : shipments.map(item => (
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-400">Chưa có vận đơn phù hợp.</td></tr>
+              ) : shipments.filter(item => !search || item.trackingcode.toLowerCase().includes(search.toLowerCase())).map((item, index) => (
                 <tr key={item.shipmentid} className="hover:bg-red-50/40">
+                  <td className="px-4 py-3 font-medium text-slate-500">{index + 1}</td>
+                  <td className="px-4 py-3 font-bold text-[#c4000b]">#{item.orderid.toString().padStart(5, '0')}</td>
                   <td className="px-4 py-3">
                     <p className="font-black text-slate-900">{item.trackingcode}</p>
-                    <p className="text-xs text-slate-400">{item.carrier} · Đơn #{item.orderid}</p>
+                    <p className="text-xs text-slate-400">{item.carrier}</p>
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-bold text-slate-800">{item.shippingname ?? '—'}</p>

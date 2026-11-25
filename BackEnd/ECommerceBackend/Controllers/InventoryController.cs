@@ -33,7 +33,8 @@ namespace ECommerceBackend.Controllers
             i.Variant?.Product?.Productname,
             i.Warrantystartdate,
             i.Warrantyenddate,
-            i.Warrantystatus
+            i.Warrantystatus,
+            i.Variant?.Product?.Brand?.Brandname
         );
 
         [HttpGet]
@@ -43,6 +44,7 @@ namespace ECommerceBackend.Controllers
             var items = await _context.Inventoryitems
                 .Include(i => i.Variant)
                 .ThenInclude(v => v!.Product)
+                .ThenInclude(p => p!.Brand)
                 .ToListAsync();
             return Ok(items.Select(MapToDto));
         }
@@ -54,6 +56,7 @@ namespace ECommerceBackend.Controllers
             var item = await _context.Inventoryitems
                 .Include(i => i.Variant)
                 .ThenInclude(v => v!.Product)
+                .ThenInclude(p => p!.Brand)
                 .FirstOrDefaultAsync(i => i.Imei == imei);
             if (item == null) return NotFound();
             return Ok(MapToDto(item));
@@ -66,6 +69,7 @@ namespace ECommerceBackend.Controllers
             var items = await _context.Inventoryitems
                 .Include(i => i.Variant)
                 .ThenInclude(v => v!.Product)
+                .ThenInclude(p => p!.Brand)
                 .Where(i => i.Variantid == variantId)
                 .ToListAsync();
             return Ok(items.Select(MapToDto));
@@ -78,6 +82,7 @@ namespace ECommerceBackend.Controllers
             var items = await _context.Inventoryitems
                 .Include(i => i.Variant)
                 .ThenInclude(v => v!.Product)
+                .ThenInclude(p => p!.Brand)
                 .Where(i => i.Status == status)
                 .ToListAsync();
             return Ok(items.Select(MapToDto));
@@ -270,6 +275,7 @@ namespace ECommerceBackend.Controllers
             var createdItem = await _context.Inventoryitems
                 .Include(i => i.Variant)
                 .ThenInclude(v => v!.Product)
+                .ThenInclude(p => p!.Brand)
                 .FirstOrDefaultAsync(i => i.Imei == item.Imei);
 
             return CreatedAtAction(nameof(GetInventoryItem), new { imei = item.Imei }, MapToDto(createdItem!));
@@ -317,6 +323,7 @@ namespace ECommerceBackend.Controllers
             var updatedItem = await _context.Inventoryitems
                 .Include(i => i.Variant)
                 .ThenInclude(v => v!.Product)
+                .ThenInclude(p => p!.Brand)
                 .FirstOrDefaultAsync(i => i.Imei == imei);
 
             return Ok(MapToDto(updatedItem!));
@@ -340,6 +347,7 @@ namespace ECommerceBackend.Controllers
             var item = await _context.Inventoryitems
                 .Include(inventoryItem => inventoryItem.Variant)
                 .ThenInclude(variant => variant!.Product)
+                .ThenInclude(product => product!.Brand)
                 .Include(inventoryItem => inventoryItem.Inventorytransactions)
                 .FirstOrDefaultAsync(inventoryItem => inventoryItem.Imei == imei);
             if (item == null) return NotFound();
@@ -437,13 +445,15 @@ namespace ECommerceBackend.Controllers
         {
             var item = await _context.Inventoryitems.FindAsync(imei);
             if (item == null) return NotFound();
-            if (await _context.Inventorytransactions.AnyAsync(transaction => transaction.Imei == imei))
+            if (await _context.Orderitems.AnyAsync(orderItem => orderItem.Imei == imei))
             {
                 return Conflict(new
                 {
-                    message = "Không thể xóa IMEI đã có lịch sử giao dịch kho."
+                    message = "Không thể xóa IMEI đã được bán (có trong đơn hàng)."
                 });
             }
+            var transactions = await _context.Inventorytransactions.Where(t => t.Imei == imei).ToListAsync();
+            _context.Inventorytransactions.RemoveRange(transactions);
             _context.Inventoryitems.Remove(item);
             await _context.SaveChangesAsync();
             return NoContent();

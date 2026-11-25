@@ -557,9 +557,7 @@ export const ProductFormWizard: React.FC<ProductFormWizardProps> = ({ isOpen, on
               </div>
             </div>
 
-            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-              Sản phẩm và SKU được tạo với tồn kho bằng 0. Nhân viên kho sẽ nhập từng thiết bị bằng IMEI thật tại màn hình Quản lý IMEI tồn kho.
-            </div>
+
           </div>
         )}
 

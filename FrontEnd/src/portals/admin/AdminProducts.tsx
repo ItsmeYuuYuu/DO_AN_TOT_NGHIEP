@@ -118,7 +118,7 @@ const AdminProducts: React.FC = () => {
     const confirmed = await confirmAction(
       nextActive
         ? `Mở bán lại sản phẩm "${product.productname}"?`
-        : `Ngừng kinh doanh sản phẩm "${product.productname}"? Khách vẫn xem được thông tin nhưng không thể mua hoặc thêm vào giỏ.`,
+        : `Ngừng kinh doanh sản phẩm "${product.productname}"? Việc này sẽ khiến sản phẩm không còn hiển thị trên trang khách hàng.`,
       {
         title: nextActive ? 'Mở bán lại' : 'Ngừng kinh doanh',
         confirmLabel: nextActive ? 'Mở bán' : 'Ngừng kinh doanh',
@@ -326,14 +326,16 @@ const AdminProducts: React.FC = () => {
 
       <div className="grid gap-4 md:grid-cols-4">
         {[
-          { label: 'Tổng sản phẩm', value: products.length, icon: <Package size={19} />, tone: 'bg-red-50 text-[#c4000b]' },
-          { label: 'Biến thể', value: totalVariants, icon: <Tags size={19} />, tone: 'bg-red-50 text-[#c4000b]' },
-          { label: 'Tổng tồn kho', value: totalStock, icon: <Boxes size={19} />, tone: 'bg-red-50 text-[#c4000b]' },
-          { label: 'Đang giảm giá', value: discountedProducts, icon: <Search size={19} />, tone: 'bg-red-50 text-[#c4000b]' },
+          { label: 'Tổng sản phẩm', value: products.length, icon: <Package size={19} /> },
+          { label: 'Biến thể', value: totalVariants, icon: <Tags size={19} /> },
+          { label: 'Tổng tồn kho', value: totalStock, icon: <Boxes size={19} /> },
+          { label: 'Đang giảm giá', value: discountedProducts, icon: <Search size={19} /> },
         ].map(item => (
           <div key={item.label} className="ops-card p-4">
-            <div className={`mb-3 flex h-10 w-10 items-center justify-center ${item.tone}`}>{item.icon}</div>
-            <p className="text-2xl font-black text-[#172033]">{loading ? '...' : item.value}</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-2xl font-black text-[#172033]">{loading ? '...' : item.value}</p>
+              <div className="text-[#c4000b]">{item.icon}</div>
+            </div>
             <p className="text-xs font-bold text-slate-400">{item.label}</p>
           </div>
         ))}

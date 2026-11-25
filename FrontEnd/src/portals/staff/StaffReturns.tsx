@@ -512,17 +512,20 @@ const StaffReturns: React.FC = () => {
                             className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                           >
                             <option value="false">Đủ vỏ hộp</option>
-                            <option value="true">Thiếu vỏ hộp</option>
+                            <option value="true">Thiếu vỏ hộp (-2%)</option>
                           </select>
-                          <input
-                            type="number"
-                            min="0"
-                            max="10"
+                          <select
                             value={form?.missingaccessorycount ?? '0'}
                             onChange={event => updateReceiveItem(item.returnitemid, 'missingaccessorycount', event.target.value)}
-                            placeholder="Số phụ kiện bị thiếu"
                             className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
-                          />
+                          >
+                            <option value="0">Đủ toàn bộ phụ kiện</option>
+                            <option value="1">Thiếu 1 phụ kiện (-5%)</option>
+                            <option value="2">Thiếu 2 phụ kiện (-10%)</option>
+                            <option value="3">Thiếu 3 phụ kiện (-15%)</option>
+                            <option value="4">Thiếu 4 phụ kiện (-20%)</option>
+                            <option value="5">Thiếu 5 phụ kiện (-25%)</option>
+                          </select>
                         </div>
                         <select
                           value={form?.disposition ?? 'Restock'}

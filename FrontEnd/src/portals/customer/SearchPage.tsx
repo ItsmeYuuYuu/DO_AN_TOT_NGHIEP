@@ -44,32 +44,10 @@ const SearchPage: React.FC = () => {
       />
       <section className="border-b customer-rule bg-[#ffffff] px-4 py-8 md:py-10">
         <div className="customer-container">
-          <div className="grid gap-6 lg:grid-cols-[1.45fr_0.75fr] lg:items-end">
-            <div>
-              <p className="customer-label">Search desk</p>
-              <h1 className="customer-display mt-2 text-4xl font-bold leading-tight text-[#1f2937] md:text-5xl">
-                Kết quả tìm kiếm
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                Từ khóa được lấy trực tiếp từ ô tìm kiếm phía trên để trang không bị lặp thao tác.
-              </p>
-            </div>
-
-            <div className="customer-panel-soft p-5">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-[#1f2937] text-white">
-                  <SearchCheck size={22} />
-                </div>
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c4000b]">
-                    Đang tìm
-                  </p>
-                  <p className="mt-1 line-clamp-1 text-lg font-black text-[#1f2937]">
-                    {query || 'Chưa có từ khóa'}
-                  </p>
-                </div>
-              </div>
-            </div>
+          <div>
+            <h1 className="customer-display mt-2 text-4xl font-bold leading-tight text-[#1f2937] md:text-5xl">
+              Kết quả tìm kiếm
+            </h1>
           </div>
 
           {query && !loading && (

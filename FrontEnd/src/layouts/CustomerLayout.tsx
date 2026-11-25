@@ -894,16 +894,16 @@ export const CustomerLayout: React.FC = () => {
                     </button>
                   </form>
 
-                  {isLoggedIn && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void requestAiWidgetConsultant()}
-                        disabled={aiWidgetLoading || aiWidgetHandoffActive}
-                        className="flex items-center justify-center gap-2 rounded-full border border-[#1f2937] px-3 py-2.5 text-[11px] font-black text-[#1f2937] hover:bg-[#1f2937] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                      >
-                        <Headphones size={14} /> {aiWidgetHandoffActive ? 'Đã chuyển' : 'Gặp tư vấn'}
-                      </button>
+                  <div className={`grid gap-2 mt-2 ${isLoggedIn ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    <button
+                      type="button"
+                      onClick={() => void requestAiWidgetConsultant()}
+                      disabled={aiWidgetLoading || aiWidgetHandoffActive || !aiWidgetMessages.some(m => m.sendertype === 'user')}
+                      className="flex items-center justify-center gap-2 rounded-full border border-[#1f2937] px-3 py-2.5 text-[11px] font-black text-[#1f2937] hover:bg-[#1f2937] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                    >
+                      <Headphones size={14} /> {aiWidgetHandoffActive ? 'Đã chuyển' : 'Gặp tư vấn'}
+                    </button>
+                    {isLoggedIn && (
                       <button
                         type="button"
                         onClick={openAiHistory}
@@ -911,8 +911,8 @@ export const CustomerLayout: React.FC = () => {
                       >
                         Mở lịch sử
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </section>
             ) : (

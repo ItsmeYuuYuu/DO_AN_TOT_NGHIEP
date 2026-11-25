@@ -9,6 +9,26 @@ export interface Review {
   createdat?: string;
   customerName?: string;
   variantSku?: string;
+  productName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+}
+
+export interface ReviewSummary {
+  total: number;
+  fiveStar: number;
+  fourStar: number;
+  threeStar: number;
+  lowStar: number;
+  averageRating: number;
+}
+
+export interface ReviewPage {
+  items: Review[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export interface CreateReviewRequest {
@@ -25,6 +45,21 @@ export interface UpdateReviewRequest {
 export const reviewsApi = {
   getAll: async (): Promise<Review[]> => {
     const { data } = await apiClient.get('/reviews');
+    return data;
+  },
+
+  getSummary: async (): Promise<ReviewSummary> => {
+    const { data } = await apiClient.get('/reviews/summary');
+    return data;
+  },
+
+  getAdminReviews: async (params: {
+    query?: string;
+    rating?: number;
+    page?: number;
+    pageSize?: number;
+  }): Promise<ReviewPage> => {
+    const { data } = await apiClient.get('/reviews/admin', { params });
     return data;
   },
 

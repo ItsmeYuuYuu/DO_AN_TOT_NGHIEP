@@ -11,7 +11,10 @@ namespace ECommerceBackend.DTOs.Reviews
         string? Comment,
         DateTime? Createdat,
         string? CustomerName,
-        string? VariantSku
+        string? VariantSku,
+        string? ProductName = null,
+        string? CustomerEmail = null,
+        string? CustomerPhone = null
     );
 
     public record CreateReviewRequestDto(

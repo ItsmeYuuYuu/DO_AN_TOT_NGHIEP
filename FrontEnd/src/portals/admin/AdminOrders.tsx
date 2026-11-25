@@ -292,14 +292,16 @@ const AdminOrders: React.FC = () => {
 
       <div className="grid gap-4 md:grid-cols-4">
         {[
-          { label: 'Tổng đơn lọc được', value: filtered.length, icon: <ShoppingCart size={19} />, tone: 'bg-[#fff1f2] text-[#c4000b]' },
-          { label: 'Chờ duyệt', value: pendingCount, icon: <Clock3 size={19} />, tone: 'bg-[#fff1f2] text-[#c4000b]' },
-          { label: 'Đang xử lý', value: processingCount, icon: <PackageCheck size={19} />, tone: 'bg-[#fff1f2] text-[#c4000b]' },
-          { label: 'Đã có thanh toán', value: paidCount, icon: <WalletCards size={19} />, tone: 'bg-[#fff1f2] text-[#c4000b]' },
+          { label: 'Tổng đơn lọc được', value: filtered.length, icon: <ShoppingCart size={19} /> },
+          { label: 'Chờ duyệt', value: pendingCount, icon: <Clock3 size={19} /> },
+          { label: 'Đang xử lý', value: processingCount, icon: <PackageCheck size={19} /> },
+          { label: 'Đã có thanh toán', value: paidCount, icon: <WalletCards size={19} /> },
         ].map(item => (
           <div key={item.label} className="ops-card p-4">
-            <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${item.tone}`}>{item.icon}</div>
-            <p className="text-2xl font-black text-[#172033]">{loading ? '...' : item.value}</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-2xl font-black text-[#172033]">{loading ? '...' : item.value}</p>
+              <div className="text-[#c4000b]">{item.icon}</div>
+            </div>
             <p className="text-xs font-bold text-slate-400">{item.label}</p>
           </div>
         ))}

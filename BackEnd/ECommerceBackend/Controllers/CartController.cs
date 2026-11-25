@@ -129,6 +129,12 @@ namespace ECommerceBackend.Controllers
                 .Where(v => variantIds.Contains(v.Variantid))
                 .ToDictionaryAsync(v => v.Variantid);
 
+            var inventoryCounts = await _context.Inventoryitems
+                .Where(i => variantIds.Contains(i.Variantid ?? 0) && i.Status == "InStock")
+                .GroupBy(i => i.Variantid)
+                .Select(g => new { VariantId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.VariantId, x => x.Count);
+
             var items = new List<CartItemDto>();
             foreach (var ci in itemsJson)
             {
@@ -154,6 +160,7 @@ namespace ECommerceBackend.Controllers
                 string productName = product?.Productname ?? "Sản phẩm";
                 string variantName = GetVariantName(variant);
                 decimal price = variant.Saleprice ?? variant.Baseprice;
+                int availableStock = inventoryCounts.TryGetValue(variant.Variantid, out int count) ? count : 0;
 
                 items.Add(new CartItemDto(
                     VariantId: variant.Variantid,
@@ -163,7 +170,8 @@ namespace ECommerceBackend.Controllers
                     Sku: variant.Sku ?? "",
                     ImageUrl: imageUrl,
                     Price: price,
-                    Quantity: ci.Quantity
+                    Quantity: ci.Quantity,
+                    AvailableStock: availableStock
                 ));
             }
 

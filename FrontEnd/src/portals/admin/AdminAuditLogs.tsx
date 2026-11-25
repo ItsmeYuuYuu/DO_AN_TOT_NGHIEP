@@ -58,20 +58,20 @@ const StatCard = ({
   tone?: 'red' | 'amber' | 'slate';
 }) => {
   const tones = {
-    red: 'bg-red-50 text-red-600 shadow-red-100',
-    amber: 'bg-red-50 text-red-600 shadow-red-100',
-    slate: 'bg-red-50 text-red-600 shadow-red-100',
+    red: 'text-red-600',
+    amber: 'text-amber-600',
+    slate: 'text-slate-600',
   };
 
   return (
-    <div className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+    <div className="rounded-[22px] border border-slate-200 bg-white p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-bold text-slate-400">{label}</p>
           <p className="mt-3 truncate text-2xl font-black text-slate-900">{value}</p>
           <p className="mt-1 text-sm font-semibold text-slate-500">{hint}</p>
         </div>
-        <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl shadow-lg ${tones[tone]}`}>
+        <div className={`grid shrink-0 place-items-center ${tones[tone]}`}>
           {icon}
         </div>
       </div>

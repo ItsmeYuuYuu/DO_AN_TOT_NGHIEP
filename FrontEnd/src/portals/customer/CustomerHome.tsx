@@ -68,9 +68,9 @@ const CustomerHome: React.FC = () => {
   const [isSliderPaused, setIsSliderPaused] = useState(false);
 
   useEffect(() => {
-    promotionsApi.getActive('Banner').then(setBanners).catch(() => {});
-    promotionsApi.getActive('Slider').then(setSliders).catch(() => {});
-    homepageSectionsApi.getActive().then(setHomeSections).catch(() => {});
+    promotionsApi.getActive('Banner').then(setBanners).catch(() => { });
+    promotionsApi.getActive('Slider').then(setSliders).catch(() => { });
+    homepageSectionsApi.getActive().then(setHomeSections).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -174,36 +174,35 @@ const CustomerHome: React.FC = () => {
                   const isActive = index === activeSlide;
 
                   return (
-                  <div
-                    key={slider.contentid}
-                    className={`absolute inset-0 transition-opacity duration-700 ${
-                      isActive ? 'z-10 opacity-100' : 'z-0 opacity-0'
-                    }`}
-                  >
-                    <img
-                      src={slider.imageurl}
-                      alt={slider.title || 'Chương trình nổi bật'}
-                      width={1280}
-                      height={720}
-                      className="h-full w-full object-cover"
-                      loading={index === 0 ? 'eager' : 'lazy'}
-                      decoding="async"
-                      fetchPriority={isActive ? 'high' : 'low'}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1f2937]/65 via-transparent to-transparent" />
-                    {slider.title && (
-                      <p className="customer-display absolute bottom-6 left-5 right-20 z-10 text-2xl font-bold text-white sm:bottom-8 sm:left-7 sm:right-24 md:text-4xl">
-                        {slider.title}
-                      </p>
-                    )}
-                    {slider.linkurl && (
-                      <Link
-                        to={slider.linkurl}
-                        className="absolute inset-0 z-20"
-                        aria-label={slider.title || 'Xem chương trình'}
+                    <div
+                      key={slider.contentid}
+                      className={`absolute inset-0 transition-opacity duration-700 ${isActive ? 'z-10 opacity-100' : 'z-0 opacity-0'
+                        }`}
+                    >
+                      <img
+                        src={slider.imageurl}
+                        alt={slider.title || 'Chương trình nổi bật'}
+                        width={1280}
+                        height={720}
+                        className="h-full w-full object-cover"
+                        loading={index === 0 ? 'eager' : 'lazy'}
+                        decoding="async"
+                        fetchPriority={isActive ? 'high' : 'low'}
                       />
-                    )}
-                  </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#1f2937]/65 via-transparent to-transparent" />
+                      {slider.title && (
+                        <p className="customer-display absolute bottom-6 left-5 right-20 z-10 text-2xl font-bold text-white sm:bottom-8 sm:left-7 sm:right-24 md:text-4xl">
+                          {slider.title}
+                        </p>
+                      )}
+                      {slider.linkurl && (
+                        <Link
+                          to={slider.linkurl}
+                          className="absolute inset-0 z-20"
+                          aria-label={slider.title || 'Xem chương trình'}
+                        />
+                      )}
+                    </div>
                   );
                 })}
 
@@ -229,35 +228,8 @@ const CustomerHome: React.FC = () => {
                 )}
               </>
             ) : (
-              <div className="customer-grid-pattern relative flex h-full flex-col justify-between rounded-xl p-7 text-white md:p-10">
-                <div className="flex items-center justify-between">
-                  <span className="border border-[#ffd166] px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-[#ffd166]">
-                    Tech selection 2026
-                  </span>
-                  <Sparkles className="text-[#e30613]" size={26} />
-                </div>
-                <div className="max-w-xl">
-                  <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-[#ffd166]">
-                    Chọn đúng máy, dùng đúng nhu cầu
-                  </p>
-                  <h1 className="customer-display text-4xl font-bold leading-[1.05] md:text-6xl">
-                    Công nghệ tốt không cần phải chọn trong mơ hồ.
-                  </h1>
-                  <div className="mt-7 flex flex-wrap gap-3">
-                    <Link
-                      to="/chat"
-                      className="inline-flex items-center gap-2 rounded-full bg-[#e30613] px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-white hover:bg-[#c4000b]"
-                    >
-                      Nhờ AI tư vấn <ArrowRight size={16} />
-                    </Link>
-                    <Link
-                      to="/products"
-                      className="inline-flex items-center gap-2 rounded-full border border-white/50 px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-white hover:bg-white hover:text-[#1f2937]"
-                    >
-                      Xem toàn bộ máy
-                    </Link>
-                  </div>
-                </div>
+              <div className="flex h-full w-full items-center justify-center rounded-xl border border-dashed border-[#d7dce3] bg-white/70 p-4 text-center text-sm font-bold text-slate-400 shadow-[0_12px_28px_rgba(15,23,42,0.06)] sm:p-6">
+                Chưa cấu hình Slider
               </div>
             )}
           </div>
@@ -396,11 +368,10 @@ const CustomerHome: React.FC = () => {
               return (
                 <div
                   key={section.sectionid || section.sectionkey}
-                  className={`relative overflow-hidden rounded-2xl p-3 shadow-[0_22px_55px_rgba(15,23,42,0.12)] sm:p-4 md:p-6 ${
-                    isRed
+                  className={`relative overflow-hidden rounded-2xl p-3 shadow-[0_22px_55px_rgba(15,23,42,0.12)] sm:p-4 md:p-6 ${isRed
                       ? 'bg-gradient-to-r from-[#e30613] via-[#ca000c] to-[#a80009] ring-1 ring-red-900/10'
                       : 'bg-gradient-to-br from-[#eaf4ff] via-[#f4f9ff] to-[#dcecff]'
-                  }`}
+                    }`}
                 >
                   <div className="relative mb-4 flex flex-col justify-between gap-3 sm:mb-5 md:flex-row md:items-end">
                     <div>
@@ -409,15 +380,13 @@ const CustomerHome: React.FC = () => {
                           <Sparkles size={13} className="text-[#ffd166]" /> Giá tốt hôm nay
                         </div>
                       )}
-                      <h2 className={`customer-display mt-2 text-2xl font-bold sm:text-3xl md:text-5xl ${
-                        isRed ? 'text-white' : 'text-[#1f2937]'
-                      }`}>
+                      <h2 className={`customer-display mt-2 text-2xl font-bold sm:text-3xl md:text-5xl ${isRed ? 'text-white' : 'text-[#1f2937]'
+                        }`}>
                         {section.title.replace(/\bSHOCK\b/gi, 'SỐC')}
                       </h2>
                       {section.subtitle && (
-                        <p className={`mt-2 max-w-2xl text-sm font-medium ${
-                          isRed ? 'text-white/75' : 'text-slate-500'
-                        }`}>
+                        <p className={`mt-2 max-w-2xl text-sm font-medium ${isRed ? 'text-white/75' : 'text-slate-500'
+                          }`}>
                           {section.subtitle}
                         </p>
                       )}
@@ -426,11 +395,10 @@ const CustomerHome: React.FC = () => {
 
                       <Link
                         to="/products"
-                        className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition ${
-                          isRed
+                        className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition ${isRed
                             ? 'bg-white text-[#c4000b] hover:bg-[#ffd166]'
                             : 'bg-[#1f2937] text-white hover:bg-[#e30613]'
-                        }`}
+                          }`}
                       >
                         Xem tất cả <ArrowRight size={14} />
                       </Link>

@@ -35,6 +35,7 @@ public static class AppPermissions
     public const string ContentManage = "content.manage";
     public const string VouchersManage = "vouchers.manage";
     public const string ConsultationsManage = "consultations.manage";
+    public const string ReviewsView = "reviews.view";
     public const string ReviewsManage = "reviews.manage";
     public const string EmailTest = "email.test";
 
@@ -68,7 +69,8 @@ public static class AppPermissions
         new PermissionDefinition(ContentManage, "Quản lý tin tức và nội dung trang chủ", "Nội dung"),
         new PermissionDefinition(VouchersManage, "Quản lý voucher", "Khuyến mãi"),
         new PermissionDefinition(ConsultationsManage, "Tiếp nhận và xử lý tư vấn trực tiếp", "Tư vấn"),
-        new PermissionDefinition(ReviewsManage, "Kiểm duyệt đánh giá", "Khách hàng"),
+        new PermissionDefinition(ReviewsView, "Xem và tra cứu đánh giá", "Khách hàng"),
+        new PermissionDefinition(ReviewsManage, "Kiểm duyệt và xóa đánh giá", "Khách hàng"),
         new PermissionDefinition(EmailTest, "Gửi email kiểm thử", "Quản trị"),
     };
 

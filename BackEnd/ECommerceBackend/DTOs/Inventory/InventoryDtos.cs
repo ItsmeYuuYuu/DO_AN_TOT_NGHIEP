@@ -13,7 +13,8 @@ namespace ECommerceBackend.DTOs.Inventory
         string? ProductName,
         DateTime? Warrantystartdate = null,
         DateTime? Warrantyenddate = null,
-        string? Warrantystatus = null
+        string? Warrantystatus = null,
+        string? BrandName = null
     );
 
     public record CreateInventoryItemRequestDto(

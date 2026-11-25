@@ -11,7 +11,8 @@ namespace ECommerceBackend.DTOs.Cart
         string Sku,
         string ImageUrl,
         decimal Price,
-        int Quantity
+        int Quantity,
+        int AvailableStock
     );
 
     public record CartDto(

@@ -53,7 +53,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
   onSelectVariant,
 }) => {
   const navigate = useNavigate();
-  const { addToCart, isInCart } = useCart();
+  const { addToCart, isInCart, items } = useCart();
   const [addedToCart, setAddedToCart] = useState(false);
   const [cartError, setCartError] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
@@ -143,6 +143,13 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
 
   const handleAddToCart = async () => {
     if (!isActive || !selectedVariant || isOutOfStock) return false;
+
+    const qtyInCart = items.find(i => i.variantId === selectedVariant.variantid)?.quantity ?? 0;
+    if (qtyInCart >= stock) {
+      setCartError('Bạn đã thêm tối đa số lượng tồn kho vào giỏ hàng.');
+      return false;
+    }
+
     const images = selectedVariant.productimages ?? [];
     const primary = images.find(image => image.ismain) ?? images[0];
 
@@ -163,6 +170,7 @@ export const ProductPurchasePanel: React.FC<ProductPurchasePanelProps> = ({
       sku: selectedVariant.sku ?? '',
       imageUrl: primary?.imageurl ?? `https://placehold.co/400x400?text=${encodeURIComponent(productName)}`,
       price: selectedVariant.saleprice ?? selectedVariant.baseprice,
+      availableStock: stock
     }, 1);
 
     if (!added) {

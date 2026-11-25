@@ -17,6 +17,7 @@ import {
   RotateCcw,
   ShieldCheck,
   ShoppingCart,
+  Star,
   Tags,
   Truck,
   UserCheck,
@@ -72,6 +73,7 @@ const adminNav: NavGroup[] = [
     items: [
       { label: 'Danh sách khách hàng', to: '/admin/customers', icon: <Users2 size={16} /> },
       { label: 'Chăm sóc khách hàng', to: '/admin/consultations', icon: <Headphones size={16} /> },
+      { label: 'Quản lý đánh giá', to: '/admin/reviews', icon: <Star size={16} /> },
     ],
   },
   { label: 'Nhân viên', to: '/admin/users', icon: <Users size={17} /> },

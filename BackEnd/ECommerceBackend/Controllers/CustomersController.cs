@@ -65,11 +65,48 @@ namespace ECommerceBackend.Controllers
                 (phone != null && user.Phone == phone));
         }
 
+        public record CustomerSummaryDto(
+            int Total,
+            int ActiveAccounts,
+            int DisabledAccounts,
+            int GuestProfiles
+        );
+
+        [HttpGet("summary")]
+        [HasPermission(AppPermissions.CustomersView)]
+        public async Task<ActionResult<CustomerSummaryDto>> GetCustomerSummary()
+        {
+            var customerRoleIds = await GetCustomerRoleIdsAsync();
+            var customerQuery = _context.Customers.AsNoTracking().Where(customer => !_context.Users.Any(user =>
+                (!user.Roleid.HasValue || !customerRoleIds.Contains(user.Roleid.Value)) &&
+                ((customer.Email != null && user.Email != null && customer.Email.ToLower() == user.Email.ToLower()) ||
+                 (customer.Phone != null && user.Phone != null && customer.Phone == user.Phone))));
+
+            var total = await customerQuery.CountAsync();
+            var allCustomerEmails = await customerQuery.Where(c => c.Email != null).Select(c => c.Email!.ToLower()).ToListAsync();
+            var allCustomerPhones = await customerQuery.Where(c => c.Phone != null).Select(c => c.Phone!).ToListAsync();
+
+            var users = await _context.Users.AsNoTracking()
+                .Where(u => u.Roleid.HasValue && customerRoleIds.Contains(u.Roleid.Value))
+                .Where(u => (u.Email != null && allCustomerEmails.Contains(u.Email.ToLower())) ||
+                            (u.Phone != null && allCustomerPhones.Contains(u.Phone)))
+                .Select(u => new { u.Email, u.Phone, u.Isactive })
+                .ToListAsync();
+
+            var activeUsers = users.Count(u => u.Isactive == true);
+            var disabledUsers = users.Count(u => u.Isactive == false);
+            var withAccount = users.Count;
+            var guestProfiles = Math.Max(0, total - withAccount);
+
+            return Ok(new CustomerSummaryDto(total, activeUsers, disabledUsers, guestProfiles));
+        }
+
         // GET: api/Customers
         [HttpGet]
         [HasPermission(AppPermissions.CustomersView)]
         public async Task<ActionResult<PagedResultDto<CustomerDto>>> GetCustomers(
             [FromQuery] string? query = null,
+            [FromQuery] string? accountType = null,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
@@ -82,6 +119,28 @@ namespace ECommerceBackend.Controllers
                 (!user.Roleid.HasValue || !customerRoleIds.Contains(user.Roleid.Value)) &&
                 ((customer.Email != null && user.Email != null && customer.Email.ToLower() == user.Email.ToLower()) ||
                  (customer.Phone != null && user.Phone != null && customer.Phone == user.Phone))));
+
+            if (accountType == "active")
+            {
+                customerQuery = customerQuery.Where(c => _context.Users.Any(u =>
+                    u.Roleid.HasValue && customerRoleIds.Contains(u.Roleid.Value) && u.Isactive == true &&
+                    ((c.Email != null && u.Email != null && c.Email.ToLower() == u.Email.ToLower()) ||
+                     (c.Phone != null && u.Phone != null && c.Phone == u.Phone))));
+            }
+            else if (accountType == "disabled")
+            {
+                customerQuery = customerQuery.Where(c => _context.Users.Any(u =>
+                    u.Roleid.HasValue && customerRoleIds.Contains(u.Roleid.Value) && u.Isactive == false &&
+                    ((c.Email != null && u.Email != null && c.Email.ToLower() == u.Email.ToLower()) ||
+                     (c.Phone != null && u.Phone != null && c.Phone == u.Phone))));
+            }
+            else if (accountType == "guest")
+            {
+                customerQuery = customerQuery.Where(c => !_context.Users.Any(u =>
+                    u.Roleid.HasValue && customerRoleIds.Contains(u.Roleid.Value) &&
+                    ((c.Email != null && u.Email != null && c.Email.ToLower() == u.Email.ToLower()) ||
+                     (c.Phone != null && u.Phone != null && c.Phone == u.Phone))));
+            }
 
             var keyword = query?.Trim().ToLowerInvariant();
             if (!string.IsNullOrWhiteSpace(keyword))
